@@ -29,16 +29,7 @@ void AApSubsystem::BeginPlay()
 		});
 
 	AP_Start();
-
-	//GetWorldTimerManager().SetTimer(timerHandle, this, &AApSubsystem::SecondThick, 1.0f, true, 2.0f);
 }
-
-void AApSubsystem::SecondThick() {
-	UE_LOG(ApSubsystem, Display, TEXT("AApSubsystem::SecondThick()"));
-
-	//AP_SetServerDataRaw("EnergyLink", "add", "10", "0");
-}
-
 
 // Called every frame
 void AApSubsystem::Tick(float DeltaTime)
