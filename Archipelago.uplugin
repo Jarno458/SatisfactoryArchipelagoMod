@@ -6,19 +6,19 @@
 	"Description": "Provides connection to an Archipelago multiworld",
 	"Category": "Randomizer",
 	"CreatedBy": "Jarno",
-	"CreatedByURL": "https://github.com/ArchipelagoMW/Archipelago/pulls/Jarno458",
-	"DocsURL": "",
+	"CreatedByURL": "https://github.com/Jarno458",
+	"DocsURL": "https://archipelago.gg/games/Satisfactory/info/en",
 	"MarketplaceURL": "",
-	"SupportURL": "",
+	"SupportURL": "https://github.com/Jarno458/SatisfactoryArchipelagoMod",
 	"CanContainContent": true,
 	"IsBetaVersion": false,
 	"IsExperimentalVersion": false,
 	"Installed": false,
 	"Modules": [
-        {
-            "Name": "Archipelago",
-            "Type": "Runtime",
-            "LoadingPhase": "Default"
-        }
-    ]
+		{
+			"Name": "Archipelago",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		}
+	]
 }
