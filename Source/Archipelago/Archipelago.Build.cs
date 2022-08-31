@@ -27,6 +27,7 @@ public class Archipelago : ModuleRules
             "Json"
             });
 
+       PrivateDependencyModuleNames.AddRange(new string[] { "ContentLib" });
 
         if (Target.Type == TargetRules.TargetType.Editor) {
 			PublicDependencyModuleNames.AddRange(new string[] {"OnlineBlueprintSupport", "AnimGraph"});

@@ -1,7 +1,6 @@
-// Copyright Coffee Stain Studios. All Rights Reserved.
-
-
 #include "EnergyLinkBuildable.h"
+
+DEFINE_LOG_CATEGORY(EnergyLinkBuildable);
 
 // Sets default values
 AEnergyLinkBuildable::AEnergyLinkBuildable()
@@ -15,6 +14,8 @@ AEnergyLinkBuildable::AEnergyLinkBuildable()
 void AEnergyLinkBuildable::BeginPlay()
 {
 	Super::BeginPlay();
+
+	UE_LOG(EnergyLinkBuildable, Display, TEXT("AEnergyLinkBuildable::BeginPlay()"));
 	
 }
 
@@ -22,7 +23,6 @@ void AEnergyLinkBuildable::BeginPlay()
 void AEnergyLinkBuildable::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-
 }
 
 bool AEnergyLinkBuildable::Factory_HasPower() const
@@ -33,5 +33,7 @@ bool AEnergyLinkBuildable::Factory_HasPower() const
 }
 
 void AEnergyLinkBuildable::Factory_Tick(float dt) {
+	//UE_LOG(EnergyLinkBuildable, Display, TEXT("AEnergyLinkBuildable::Factory_Tick()"));
+
 
 }

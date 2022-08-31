@@ -1,9 +1,11 @@
-// Copyright Coffee Stain Studios. All Rights Reserved.
-
 #pragma once
 
 #include "CoreMinimal.h"
+
 #include "Buildables/FGBuildablePowerStorage.h"
+
+DECLARE_LOG_CATEGORY_EXTERN(EnergyLinkBuildable, Log, All);
+
 #include "EnergyLinkBuildable.generated.h"
 
 UCLASS()

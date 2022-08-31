@@ -3,6 +3,9 @@
 #include "CoreMinimal.h"
 
 #include "Subsystem/ModSubsystem.h"
+#include "Patching/NativeHookManager.h"
+
+#include "Buildables/FGBuildablePowerStorage.h"
 
 #include "ApSubsystem.h"
 
@@ -19,8 +22,6 @@ public:
 	// Sets default values for this actor's properties
 	AEnergyLinkSubsystem();
 
-	FTimerHandle timerHandle;
-
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -29,7 +30,11 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
-private:
-	void SecondThick();
+	float GetPowerStore();
 
+private:
+	int localStorage;
+	FTimerHandle timerHandle;
+
+	void SecondThick();
 };

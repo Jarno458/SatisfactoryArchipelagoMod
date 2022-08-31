@@ -31,8 +31,6 @@ public:
 	UPROPERTY()
 		AFGResearchManager* RManager;
 
-	FTimerHandle timerHandle;
-
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -40,8 +38,4 @@ protected:
 public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
-
-private:
-	void SecondThick();
-
 };
