@@ -30,11 +30,14 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
-	float GetPowerStore();
-
 private:
+	const int max_capacity = 9999999;
+	int currentServerStorage = 9999999;
+
 	int localStorage;
 	FTimerHandle timerHandle;
+
+	TArray<AFGBuildablePowerStorage*> PowerStorages;
 
 	void SecondThick();
 };

@@ -38,40 +38,101 @@ void AEnergyLinkSubsystem::BeginPlay()
 		UE_LOG(ApSubsystem, Error, TEXT("AEnergyLinkSubsystem:BeginPlay(), Failed to patch BuildEnergyLink baseclass"));
 	}*/
 
-	SUBSCRIBE_METHOD(AFGBuildablePowerStorage::GetPowerStore, [](auto& scope, const AFGBuildablePowerStorage* self) {
-		UE_LOG(ApSubsystem, Display, TEXT("AFGBuildablePowerStorage::GetPowerStore"));
-	});
+	AFGBuildablePowerStorage* bpscdo = GetMutableDefault<AFGBuildablePowerStorage>();
+	SUBSCRIBE_METHOD_VIRTUAL(AFGBuildablePowerStorage::BeginPlay, bpscdo, [this](auto& scope, AFGBuildablePowerStorage* self) {
+		UE_LOG(ApSubsystem, Display, TEXT("AFGBuildablePowerStorage::BeginPlay()"));
 
+		if (!PowerStorages.Contains(self)) {
+			PowerStorages.Add(self);
+		}
+	});
+	/*SUBSCRIBE_METHOD(AFGBuildablePowerStorage::EndPlay, [this](auto& scope, AFGBuildablePowerStorage* self, const EEndPlayReason::Type EndPlayReason) {
+		UE_LOG(ApSubsystem, Display, TEXT("AFGBuildablePowerStorage::EndPlay()"));
+
+		if (PowerStorages.Contains(self)) {
+			PowerStorages.Remove(self);
+		}
+	});*/
+
+	//Called for UI, percentage from 0.0f to 100.0f of how full specific power storage is
+	/*SUBSCRIBE_METHOD(AFGBuildablePowerStorage::GetPowerStore, [](auto& scope, const AFGBuildablePowerStorage* self) {
+		float f = scope(self);
+		UE_LOG(ApSubsystem, Display, TEXT("AFGBuildablePowerStorage::GetPowerStore(): %f"), f);
+	});*/
+	
 	SUBSCRIBE_METHOD(AFGBuildablePowerStorage::IndicatorLevelChanged, [](auto& scope, AFGBuildablePowerStorage* self, uint8 indicatorLevel) {
-		UE_LOG(ApSubsystem, Display, TEXT("AFGBuildablePowerStorage::IndicatorLevelChanged"));
+		UE_LOG(ApSubsystem, Display, TEXT("AFGBuildablePowerStorage::IndicatorLevelChanged(indicatorLevel: %d)"), indicatorLevel);
 	});
 
+	//Called when status of individual power storage changes, idle / charging / draining etc
 	SUBSCRIBE_METHOD(AFGBuildablePowerStorage::StatusChanged, [](auto& scope, AFGBuildablePowerStorage* self, EBatteryStatus newStatus) {
-		UE_LOG(ApSubsystem, Display, TEXT("AFGBuildablePowerStorage::StatusChanged"));
+		UE_LOG(ApSubsystem, Display, TEXT("AFGBuildablePowerStorage::StatusChanged(newStatus: %d)"), newStatus);
 	});
 
-	SUBSCRIBE_METHOD(AFGBuildablePowerStorage::GetPowerStoreCapacity, [](auto& scope, const AFGBuildablePowerStorage* self) {
-		UE_LOG(ApSubsystem, Display, TEXT("AFGBuildablePowerStorage::GetPowerStoreCapacity"));
-	});
+	/*SUBSCRIBE_METHOD(AFGBuildablePowerStorage::GetPowerStoreCapacity, [](auto& scope, const AFGBuildablePowerStorage* self) {
+		float f = scope(self);
+		UE_LOG(ApSubsystem, Display, TEXT("AFGBuildablePowerStorage::GetPowerStoreCapacity(): %f"), f);
+	});*/
 
 	SUBSCRIBE_METHOD(AFGBuildablePowerStorage::GetPowerStorePercent, [](auto& scope, const AFGBuildablePowerStorage* self) {
-		UE_LOG(ApSubsystem, Display, TEXT("AFGBuildablePowerStorage::GetPowerStorePercent"));
-	})
+		float f = scope(self);
+		UE_LOG(ApSubsystem, Display, TEXT("AFGBuildablePowerStorage::GetPowerStorePercent(): %f"), f);
+	});
 
-	GetWorldTimerManager().SetTimer(timerHandle, this, &AEnergyLinkSubsystem::SecondThick, 1.0f, true, 2.0f);
+	//Called for UI, current charge added or drained from the grid for specific power storage
+	SUBSCRIBE_METHOD(AFGBuildablePowerStorage::GetNetPowerInput, [](auto& scope, const AFGBuildablePowerStorage* self) {
+		float f = scope(self);
+		UE_LOG(ApSubsystem, Display, TEXT("AFGBuildablePowerStorage::GetNetPowerInput(): %f"), f);
+	});
+
+	//Called repeatingly for indicator at the outside
+	SUBSCRIBE_METHOD(AFGBuildablePowerStorage::CalculateIndicatorLevel, [](auto& scope, const AFGBuildablePowerStorage* self) {
+		//float f = scope(self);
+		//UE_LOG(ApSubsystem, Display, TEXT("AFGBuildablePowerStorage::CalculateIndicatorLevel(): %f"), f);
+		scope.Override(5.0f);
+	});
+
+	GetWorldTimerManager().SetTimer(timerHandle, this, &AEnergyLinkSubsystem::SecondThick, 1.0f, true);
 }
 
 void AEnergyLinkSubsystem::SecondThick() {
 	//UE_LOG(ApSubsystem, Display, TEXT("AEnergyLinkSubsystem::SecondThick()"));
 
+	int numberOfDrainingStorages = 0;
+	float totalChargePerSecond = 0.0f;
 
+	TArray<AFGBuildablePowerStorage*> scheduledForRemoval;
+
+	for (AFGBuildablePowerStorage* powerStorage : PowerStorages) {
+		if (!powerStorage || powerStorage->IsPendingKill())
+		{
+			scheduledForRemoval.Add(powerStorage);
+			continue;
+		}
+
+		float chargePerSecond = powerStorage->GetNetPowerInput();
+		if (chargePerSecond != 0.0f)
+			chargePerSecond /= 60 * 60;
+
+		if (chargePerSecond < 0.0f)
+			numberOfDrainingStorages++;
+
+		totalChargePerSecond += chargePerSecond;
+
+		powerStorage->mPowerStoreCapacity = (float)max_capacity;
+		powerStorage->mPowerStore = (float)currentServerStorage / (float)PowerStorages.Num();
+
+		UFGBatteryInfo* info = powerStorage->mBatteryInfo;
+		TSubclassOf<class UFGPowerInfoComponent> powerInfo = powerStorage->mPowerInfoClass;
+	}
+
+	for (AFGBuildablePowerStorage* powerStorageToRemove : scheduledForRemoval) {
+		if (powerStorageToRemove)
+			PowerStorages.Remove(powerStorageToRemove);
+	}
+
+	UE_LOG(ApSubsystem, Display, TEXT("AEnergyLinkSubsystem::SecondThick() total power balance: %f, (max float %f)"), totalChargePerSecond, FLT_MAX);
 }
-
-/*float AEnergyLinkSubsystem::GetPowerStore(auto& scope, AFGBuildablePowerStorage* self) {
-	UE_LOG(ApSubsystem, Display, TEXT("AFGBuildablePowerStorage::GetPowerStore"));
-	return 1.1f;
-}*/
-
 
 // Called every frame
 void AEnergyLinkSubsystem::Tick(float DeltaTime)

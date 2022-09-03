@@ -22,11 +22,11 @@ void AApSubsystem::BeginPlay()
 
 	AP_Init("localhost:38281", "Timespinner", "Jarno", "");
 
-	AP_SetItemClearCallback([]() {});
+	AP_SetItemClearCallback([](){});
 	AP_SetItemRecvCallback([](int id, bool notify) {
-		});
+	});
 	AP_SetLocationCheckedCallback([](int id) {
-		});
+	});
 
 	AP_Start();
 }
