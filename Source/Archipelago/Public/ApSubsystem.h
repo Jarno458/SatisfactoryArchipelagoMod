@@ -38,4 +38,9 @@ protected:
 public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
+
+	AApSubsystem* Get(UObject* WorldContext);
+
+private:
+	void SetReply_Callback(AP_SetReply setReply);
 };

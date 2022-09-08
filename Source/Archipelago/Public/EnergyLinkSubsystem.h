@@ -3,8 +3,9 @@
 #include "CoreMinimal.h"
 
 #include "Subsystem/ModSubsystem.h"
+#include "Subsystem/SubsystemActorManager.h"
 #include "Patching/NativeHookManager.h"
-
+#include "FGPowerInfoComponent.h"
 #include "Buildables/FGBuildablePowerStorage.h"
 
 #include "ApSubsystem.h"
@@ -34,10 +35,12 @@ private:
 	const int max_capacity = 9999999;
 	int currentServerStorage = 9999999;
 
-	int localStorage;
+	float localStorage;
 	FTimerHandle timerHandle;
 
 	TArray<AFGBuildablePowerStorage*> PowerStorages;
+
+	AApSubsystem* ap;
 
 	void SecondThick();
 };
