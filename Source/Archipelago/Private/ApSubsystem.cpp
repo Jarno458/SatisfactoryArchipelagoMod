@@ -34,22 +34,47 @@ void AApSubsystem::BeginPlay()
 
 
 		std::string x = setReply.key;
-		
-		//UE_LOG(ApSubsystem, Display, TEXT("AApSubsystem::BeginPlay(), %s"), x);
+
+		FString json(x.c_str());
+
+		UE_LOG(ApSubsystem, Display, TEXT("AApSubsystem::AP_RegisterSetReplyCallback(setReply), %s"), *json);
 	});
 
 	std::map<std::string, AP_DataType> keylist = { { "EnergyLink", AP_DataType::Raw } };
 	AP_SetNotify(keylist);
 }
 
-void AApSubsystem::SetReply_Callback(AP_SetReply setReply) {
+void AApSubsystem::MonitorDataStoreValue(std::string key, AP_DataType dataType, void (*callback)(AP_SetReply)) {
+	//TODO have a mapping for callbacks per key
 
+	AP_RegisterSetReplyCallback([](AP_SetReply setReply) {
+		//if (key == setReply.key)
+		//	callback(setReply);
+	});
+
+	std::map<std::string, AP_DataType> keylist = { { key, dataType } };
+	AP_SetNotify(keylist);
+
+	AP_SetServerDataRequest setDefaultAndRecieceUpdate;
+	setDefaultAndRecieceUpdate.key = key;
+
+	AP_DataStorageOperation setDefault;
+	setDefault.operation = "default";
+	setDefault.value = 0;
+
+	std::vector<AP_DataStorageOperation> operations;
+	operations.push_back(setDefault);
+
+	setDefaultAndRecieceUpdate.operations = operations;
+	setDefaultAndRecieceUpdate.default_value = 0;
+	setDefaultAndRecieceUpdate.type = dataType;
+	setDefaultAndRecieceUpdate.want_reply = true;
+
+	AP_SetServerData(&setDefaultAndRecieceUpdate);
 }
-
 
 // Called every frame
 void AApSubsystem::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 }
-

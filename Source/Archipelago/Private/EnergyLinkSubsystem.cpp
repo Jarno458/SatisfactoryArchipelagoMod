@@ -23,6 +23,15 @@ void AEnergyLinkSubsystem::BeginPlay()
 	check(SubsystemActorManager);
 
 	ap = SubsystemActorManager->GetSubsystemActor<AApSubsystem>();
+	ap->MonitorDataStoreValue("EnergyLink", AP_DataType::Raw, [](AP_SetReply setReply) {
+
+
+		std::string x = setReply.key;
+
+		FString json(x.c_str());
+
+		UE_LOG(ApSubsystem, Display, TEXT("AApSubsystem::AP_RegisterSetReplyCallback(setReply), %s"), *json);
+	});
 
 
 	/*FString changeBaseClassJson = TEXT(R"({

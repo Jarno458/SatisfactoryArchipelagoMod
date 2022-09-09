@@ -41,6 +41,8 @@ public:
 
 	AApSubsystem* Get(UObject* WorldContext);
 
+	void MonitorDataStoreValue(std::string key, AP_DataType dataType, void (*callback)(AP_SetReply));
+
 private:
-	void SetReply_Callback(AP_SetReply setReply);
+
 };
