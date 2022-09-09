@@ -129,14 +129,21 @@ void AEnergyLinkSubsystem::SecondThick() {
 			chargePerSecond /= 60 * 60;
 
 		totalChargePerSecond += chargePerSecond;
-
-		powerStorage->mPowerStoreCapacity = (float)currentServerStorage;
-		powerStorage->mBatteryInfo->mPowerStoreCapacity = (float)currentServerStorage + 100; //make sure it keeps charging even if at max
-		powerStorage->mPowerStore = (float)currentServerStorage;
-		powerStorage->mBatteryInfo->mPowerStore = (float)currentServerStorage;
 	}
 
 	localStorage += totalChargePerSecond;
+
+	for (AFGBuildablePowerStorage* powerStorageToRemove : scheduledForRemoval) {
+		if (powerStorageToRemove)
+			PowerStorages.Remove(powerStorageToRemove);
+	}
+
+	for (AFGBuildablePowerStorage* powerStorage : PowerStorages) {
+		powerStorage->mPowerStoreCapacity = (float)currentServerStorage + localStorage;
+		powerStorage->mBatteryInfo->mPowerStoreCapacity = (float)currentServerStorage + localStorage + 100; //make sure it keeps charging even if at max
+		powerStorage->mPowerStore = (float)currentServerStorage + localStorage;
+		powerStorage->mBatteryInfo->mPowerStore = (float)currentServerStorage + localStorage;
+	}
 
 	if (localStorage > 1 || localStorage < -1) {
 		float chargeToSend;
@@ -146,11 +153,6 @@ void AEnergyLinkSubsystem::SecondThick() {
 		UE_LOG(ApSubsystem, Display, TEXT("AEnergyLinkSubsystem::SecondThick() sending power to AP: %i"), (long)chargeToSend);
 	}
 	
-	for (AFGBuildablePowerStorage* powerStorageToRemove : scheduledForRemoval) {
-		if (powerStorageToRemove)
-			PowerStorages.Remove(powerStorageToRemove);
-	}
-
 	UE_LOG(ApSubsystem, Display, TEXT("AEnergyLinkSubsystem::SecondThick() local storage: %f"), localStorage);
 }
 

@@ -3,7 +3,7 @@
 DEFINE_LOG_CATEGORY(ApSubsystem);
 
 // Sets default values
-AApSubsystem::AApSubsystem() : Super()
+AApSubsystem::AApSubsystem() /* : Super()*/
 {
 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
@@ -27,30 +27,16 @@ void AApSubsystem::BeginPlay()
 	});
 	AP_SetLocationCheckedCallback([](int id) {
 	});
-
-	AP_Start();
-
-	AP_RegisterSetReplyCallback([](AP_SetReply setReply) {
-
-
-		std::string x = setReply.key;
-
-		FString json(x.c_str());
-
-		UE_LOG(ApSubsystem, Display, TEXT("AApSubsystem::AP_RegisterSetReplyCallback(setReply), %s"), *json);
+	AP_RegisterSetReplyCallback([&](AP_SetReply setReply) {
+		if (callbacks.count(setReply.key))
+			callbacks[setReply.key](setReply);
 	});
 
-	std::map<std::string, AP_DataType> keylist = { { "EnergyLink", AP_DataType::Raw } };
-	AP_SetNotify(keylist);
+	AP_Start();
 }
 
 void AApSubsystem::MonitorDataStoreValue(std::string key, AP_DataType dataType, void (*callback)(AP_SetReply)) {
-	//TODO have a mapping for callbacks per key
-
-	AP_RegisterSetReplyCallback([](AP_SetReply setReply) {
-		//if (key == setReply.key)
-		//	callback(setReply);
-	});
+	callbacks[key] = callback;
 
 	std::map<std::string, AP_DataType> keylist = { { key, dataType } };
 	AP_SetNotify(keylist);

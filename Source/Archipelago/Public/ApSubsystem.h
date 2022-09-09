@@ -1,5 +1,8 @@
 #pragma once
 
+#include <functional>
+#include <map>
+
 #include "CoreMinimal.h"
 
 #include "FGSchematicManager.h"
@@ -44,5 +47,6 @@ public:
 	void MonitorDataStoreValue(std::string key, AP_DataType dataType, void (*callback)(AP_SetReply));
 
 private:
+	std::map<std::string, std::function<void(AP_SetReply)>> callbacks;
 
 };
