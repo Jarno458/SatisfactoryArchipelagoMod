@@ -5,7 +5,7 @@
 DEFINE_LOG_CATEGORY(ApEnergyLink);
 
 // Sets default values
-AEnergyLinkSubsystem::AEnergyLinkSubsystem() : Super()
+AEnergyLinkSubsystem::AEnergyLinkSubsystem()
 {
 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
@@ -24,8 +24,6 @@ void AEnergyLinkSubsystem::BeginPlay()
 
 	ap = SubsystemActorManager->GetSubsystemActor<AApSubsystem>();
 	ap->MonitorDataStoreValue("EnergyLink", AP_DataType::Raw, [](AP_SetReply setReply) {
-
-
 		std::string x = setReply.key;
 
 		FString json(x.c_str());

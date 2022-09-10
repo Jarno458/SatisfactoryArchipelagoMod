@@ -42,11 +42,10 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
-	AApSubsystem* Get(UObject* WorldContext);
-
-	void MonitorDataStoreValue(std::string key, AP_DataType dataType, void (*callback)(AP_SetReply));
+	void MonitorDataStoreValue(std::string key, AP_DataType dataType, std::function<void(AP_SetReply)> callback);
 
 private:
-	std::map<std::string, std::function<void(AP_SetReply)>> callbacks;
+	static std::map<std::string, std::function<void(AP_SetReply)>> callbacks;
 
+	static void SetReplyCallback(AP_SetReply setReply);
 };

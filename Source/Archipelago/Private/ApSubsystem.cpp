@@ -3,7 +3,7 @@
 DEFINE_LOG_CATEGORY(ApSubsystem);
 
 // Sets default values
-AApSubsystem::AApSubsystem() /* : Super()*/
+AApSubsystem::AApSubsystem()
 {
 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
@@ -27,15 +27,17 @@ void AApSubsystem::BeginPlay()
 	});
 	AP_SetLocationCheckedCallback([](int id) {
 	});
-	AP_RegisterSetReplyCallback([&](AP_SetReply setReply) {
-		if (callbacks.count(setReply.key))
-			callbacks[setReply.key](setReply);
-	});
+	AP_RegisterSetReplyCallback(AApSubsystem::SetReplyCallback);
 
 	AP_Start();
 }
 
-void AApSubsystem::MonitorDataStoreValue(std::string key, AP_DataType dataType, void (*callback)(AP_SetReply)) {
+void AApSubsystem::SetReplyCallback(AP_SetReply setReply) {
+	if (callbacks.count(setReply.key))
+		callbacks[setReply.key](setReply);
+}
+
+void AApSubsystem::MonitorDataStoreValue(std::string key, AP_DataType dataType, std::function<void(AP_SetReply)> callback) {
 	callbacks[key] = callback;
 
 	std::map<std::string, AP_DataType> keylist = { { key, dataType } };
@@ -64,3 +66,5 @@ void AApSubsystem::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 }
+
+std::map<std::string, std::function<void(AP_SetReply)>> AApSubsystem::callbacks;
