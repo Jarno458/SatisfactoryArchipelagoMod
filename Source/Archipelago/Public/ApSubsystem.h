@@ -39,13 +39,19 @@ protected:
 	virtual void BeginPlay() override;
 
 public:
+	bool isInitialized = false;
+
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
 	void MonitorDataStoreValue(std::string key, AP_DataType dataType, std::function<void(AP_SetReply)> callback);
+	void SetServerData(AP_SetServerDataRequest* setDataRequest);
 
 private:
 	static std::map<std::string, std::function<void(AP_SetReply)>> callbacks;
 
 	static void SetReplyCallback(AP_SetReply setReply);
+	static void ItemClearCallback();
+	static void ItemReceivedCallback(int id, bool notify);
+	static void LocationCheckedCallback(int id);
 };

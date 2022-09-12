@@ -28,19 +28,21 @@ protected:
 	virtual void BeginPlay() override;
 
 public:
+	bool apInitialized = false;
+
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
 private:
-	const int max_capacity = 9999999;
-	int currentServerStorage = 9999999;
+	long currentServerStorage = 999999;
 
-	float localStorage;
+	float localStorage = 0.0f;
 	FTimerHandle timerHandle;
 
 	TArray<AFGBuildablePowerStorage*> PowerStorages;
 
-	AApSubsystem* ap;
+	AApSubsystem* ap = nullptr;
 
 	void SecondThick();
+	void SendEnergyToServer(long amount);
 };

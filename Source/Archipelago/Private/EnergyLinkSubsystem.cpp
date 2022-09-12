@@ -1,7 +1,5 @@
 #include "EnergyLinkSubsystem.h"
 
-#include "CLCDOBPFLib.h"
-
 DEFINE_LOG_CATEGORY(ApEnergyLink);
 
 // Sets default values
@@ -19,38 +17,6 @@ void AEnergyLinkSubsystem::BeginPlay()
 	
 	UE_LOG(ApSubsystem, Display, TEXT("AEnergyLinkSubsystem:BeginPlay()"));
 
-	USubsystemActorManager* SubsystemActorManager = GetWorld()->GetSubsystem<USubsystemActorManager>();
-	check(SubsystemActorManager);
-
-	ap = SubsystemActorManager->GetSubsystemActor<AApSubsystem>();
-	ap->MonitorDataStoreValue("EnergyLink", AP_DataType::Raw, [](AP_SetReply setReply) {
-		std::string x = setReply.key;
-
-		FString json(x.c_str());
-
-		UE_LOG(ApSubsystem, Display, TEXT("AApSubsystem::AP_RegisterSetReplyCallback(setReply), %s"), *json);
-	});
-
-
-	/*FString changeBaseClassJson = TEXT(R"({
-		"$schema": "https://raw.githubusercontent.com/budak7273/ContentLib_Documentation/main/JsonSchemas/CL_CDO.json",
-		"Class" : "/Game/FactoryGame/Buildable/Factory/PowerStorage/Build_PowerStorageMk1.Build_PowerStorageMk1",
-		"Edits" : [
-			{
-				"Property": "Parent",
-				"Value" : "/Archipelago/Buildables/EnergyLinkBuildable.EnergyLinkBuildable"
-			}
-		]
-	})");
-
-	if (UCLCDOBPFLib::GenerateCLCDOFromString(changeBaseClassJson, true)) {
-		UE_LOG(ApSubsystem, Display, TEXT("AEnergyLinkSubsystem:BeginPlay(), Patched BuildEnergyLink baseclass"));
-	}
-	else
-	{
-		UE_LOG(ApSubsystem, Error, TEXT("AEnergyLinkSubsystem:BeginPlay(), Failed to patch BuildEnergyLink baseclass"));
-	}*/
-
 	AFGBuildablePowerStorage* bpscdo = GetMutableDefault<AFGBuildablePowerStorage>();
 	SUBSCRIBE_METHOD_VIRTUAL(AFGBuildablePowerStorage::BeginPlay, bpscdo, [this](auto& scope, AFGBuildablePowerStorage* self) {
 		UE_LOG(ApSubsystem, Display, TEXT("AFGBuildablePowerStorage::BeginPlay()"));
@@ -59,13 +25,6 @@ void AEnergyLinkSubsystem::BeginPlay()
 			PowerStorages.Add(self);
 		}
 	});
-	/*SUBSCRIBE_METHOD(AFGBuildablePowerStorage::EndPlay, [this](auto& scope, AFGBuildablePowerStorage* self, const EEndPlayReason::Type EndPlayReason) {
-		UE_LOG(ApSubsystem, Display, TEXT("AFGBuildablePowerStorage::EndPlay()"));
-
-		if (PowerStorages.Contains(self)) {
-			PowerStorages.Remove(self);
-		}
-	});*/
 
 	//Called for UI, percentage from 0.0f to 100.0f of how full specific power storage is
 	/*SUBSCRIBE_METHOD(AFGBuildablePowerStorage::GetPowerStore, [](auto& scope, const AFGBuildablePowerStorage* self) {
@@ -104,9 +63,39 @@ void AEnergyLinkSubsystem::BeginPlay()
 		//UE_LOG(ApSubsystem, Display, TEXT("AFGBuildablePowerStorage::CalculateIndicatorLevel(): %f"), f);
 		scope.Override(5.0f);
 	});*/
-
-	//GetWorldTimerManager().SetTimer(timerHandle, this, &AEnergyLinkSubsystem::SecondThick, 1.0f, true);
 }
+
+// Called every frame
+void AEnergyLinkSubsystem::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+
+	if (!apInitialized) {
+		USubsystemActorManager* SubsystemActorManager = GetWorld()->GetSubsystem<USubsystemActorManager>();
+		check(SubsystemActorManager);
+
+		ap = SubsystemActorManager->GetSubsystemActor<AApSubsystem>();
+
+		if (ap->isInitialized)
+		{
+			ap->MonitorDataStoreValue("EnergyLink", AP_DataType::Raw, [&](AP_SetReply setReply) {
+				std::string valueStr = (*(std::string*)setReply.value).c_str();
+
+				//TODO parse numeric value to update serverCharge
+				if (valueStr.length() > 6)
+					currentServerStorage = 999999;
+				else
+					currentServerStorage = stol(valueStr);
+			});
+
+			apInitialized = true;
+		}
+	}
+
+	if (apInitialized)
+		SecondThick();
+}
+
 
 void AEnergyLinkSubsystem::SecondThick() {
 	//TODO move to power update tick
@@ -148,17 +137,42 @@ void AEnergyLinkSubsystem::SecondThick() {
 
 		localStorage = modff(localStorage, &chargeToSend);
 
-		UE_LOG(ApSubsystem, Display, TEXT("AEnergyLinkSubsystem::SecondThick() sending power to AP: %i"), (long)chargeToSend);
+		SendEnergyToServer((long)chargeToSend);
 	}
-	
+
 	UE_LOG(ApSubsystem, Display, TEXT("AEnergyLinkSubsystem::SecondThick() local storage: %f"), localStorage);
 }
 
-// Called every frame
-void AEnergyLinkSubsystem::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
 
-	SecondThick();
+void AEnergyLinkSubsystem::SendEnergyToServer(long amount) {
+	UE_LOG(ApSubsystem, Display, TEXT("AEnergyLinkSubsystem::SendEnergyToServer(%i)"), amount);
+
+	if (!apInitialized)
+		return;
+
+	AP_SetServerDataRequest sendEnergyLinkUpdate;
+	sendEnergyLinkUpdate.key = "EnergyLink";
+
+	std::string valueToAdd = std::to_string(amount);
+	std::string minimalValue = "0";
+
+	AP_DataStorageOperation add;
+	add.operation = "add";
+	add.value = &valueToAdd;
+
+	AP_DataStorageOperation lowerBoundry;
+	add.operation = "max";
+	add.value = &minimalValue;
+
+	std::vector<AP_DataStorageOperation> operations;
+	operations.push_back(add);
+	operations.push_back(lowerBoundry);
+
+	sendEnergyLinkUpdate.operations = operations;
+	sendEnergyLinkUpdate.default_value = &minimalValue;
+	sendEnergyLinkUpdate.type = AP_DataType::Raw;
+	sendEnergyLinkUpdate.want_reply = true;
+
+	ap->SetServerData(&sendEnergyLinkUpdate);
 }
 
