@@ -37,7 +37,6 @@ private:
 	long currentServerStorage = 999999;
 
 	float localStorage = 0.0f;
-	FTimerHandle timerHandle;
 
 	TArray<AFGBuildablePowerStorage*> PowerStorages;
 
@@ -45,4 +44,5 @@ private:
 
 	void SecondThick();
 	void SendEnergyToServer(long amount);
+	void OnEnergyLinkValueChanged(AP_SetReply setReply);
 };

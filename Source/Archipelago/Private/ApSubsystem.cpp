@@ -28,8 +28,6 @@ void AApSubsystem::BeginPlay()
 	AP_RegisterSetReplyCallback(AApSubsystem::SetReplyCallback);
 
 	AP_Start();
-
-	isInitialized = true;
 }
 
 void AApSubsystem::ItemClearCallback() {
@@ -50,8 +48,8 @@ void AApSubsystem::LocationCheckedCallback(int id) {
 void AApSubsystem::SetReplyCallback(AP_SetReply setReply) {
 	UE_LOG(ApSubsystem, Display, TEXT("AApSubsystem::SetReplyCallback()"));
 
-	if (callbacks.count(setReply.key))
-		callbacks[setReply.key](setReply);
+	/*if (callbacks.count(setReply.key))
+		callbacks[setReply.key](setReply);*/
 }
 
 void AApSubsystem::MonitorDataStoreValue(std::string key, AP_DataType dataType, std::function<void(AP_SetReply)> callback) {
@@ -90,6 +88,12 @@ void AApSubsystem::SetServerData(AP_SetServerDataRequest* setDataRequest) {
 void AApSubsystem::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+
+	if (!isInitialized && (AP_GetConnectionStatus() == AP_ConnectionStatus::Authenticated)) {
+		isInitialized = true;
+
+		UE_LOG(ApSubsystem, Display, TEXT("AApSubsystem::Tick(), Successfully Authenticated"));
+	}
 }
 
 std::map<std::string, std::function<void(AP_SetReply)>> AApSubsystem::callbacks;

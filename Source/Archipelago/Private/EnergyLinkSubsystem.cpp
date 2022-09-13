@@ -79,13 +79,7 @@ void AEnergyLinkSubsystem::Tick(float DeltaTime)
 		if (ap->isInitialized)
 		{
 			ap->MonitorDataStoreValue("EnergyLink", AP_DataType::Raw, [&](AP_SetReply setReply) {
-				std::string valueStr = (*(std::string*)setReply.value).c_str();
-
-				//TODO parse numeric value to update serverCharge
-				if (valueStr.length() > 6)
-					currentServerStorage = 999999;
-				else
-					currentServerStorage = stol(valueStr);
+				OnEnergyLinkValueChanged(setReply);
 			});
 
 			apInitialized = true;
@@ -96,6 +90,22 @@ void AEnergyLinkSubsystem::Tick(float DeltaTime)
 		SecondThick();
 }
 
+void AEnergyLinkSubsystem::OnEnergyLinkValueChanged(AP_SetReply setReply) {
+/*	std::string valueStr = (*(std::string*)setReply.value).c_str();
+
+	if (valueStr.length() > 6)
+		currentServerStorage = 999999;
+	else
+	{
+		long l = stol(valueStr);
+
+		UE_LOG(ApSubsystem, Display, TEXT("AEnergyLinkSubsystem::OnEnergyLinkValueChanged(), parsed served value: %i"), l);
+
+		currentServerStorage = l;
+	}*/
+
+	UE_LOG(ApSubsystem, Display, TEXT("AEnergyLinkSubsystem::OnEnergyLinkValueChanged(), new serverStorage: %i"), currentServerStorage);
+}
 
 void AEnergyLinkSubsystem::SecondThick() {
 	//TODO move to power update tick
@@ -140,14 +150,14 @@ void AEnergyLinkSubsystem::SecondThick() {
 		SendEnergyToServer((long)chargeToSend);
 	}
 
-	UE_LOG(ApSubsystem, Display, TEXT("AEnergyLinkSubsystem::SecondThick() local storage: %f"), localStorage);
+	//UE_LOG(ApSubsystem, Display, TEXT("AEnergyLinkSubsystem::SecondThick() local storage: %f"), localStorage);
 }
 
 
 void AEnergyLinkSubsystem::SendEnergyToServer(long amount) {
 	UE_LOG(ApSubsystem, Display, TEXT("AEnergyLinkSubsystem::SendEnergyToServer(%i)"), amount);
 
-	if (!apInitialized)
+	/*if (!apInitialized)
 		return;
 
 	AP_SetServerDataRequest sendEnergyLinkUpdate;
@@ -173,6 +183,6 @@ void AEnergyLinkSubsystem::SendEnergyToServer(long amount) {
 	sendEnergyLinkUpdate.type = AP_DataType::Raw;
 	sendEnergyLinkUpdate.want_reply = true;
 
-	ap->SetServerData(&sendEnergyLinkUpdate);
+	ap->SetServerData(&sendEnergyLinkUpdate);*/
 }
 
