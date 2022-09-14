@@ -43,6 +43,6 @@ private:
 	AApSubsystem* ap = nullptr;
 
 	void SecondThick();
-	void SendEnergyToServer(long amount);
+	void SendEnergyToServer(int amount);
 	void OnEnergyLinkValueChanged(AP_SetReply setReply);
 };

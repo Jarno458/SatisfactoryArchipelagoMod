@@ -48,8 +48,10 @@ void AApSubsystem::LocationCheckedCallback(int id) {
 void AApSubsystem::SetReplyCallback(AP_SetReply setReply) {
 	UE_LOG(ApSubsystem, Display, TEXT("AApSubsystem::SetReplyCallback()"));
 
-	/*if (callbacks.count(setReply.key))
-		callbacks[setReply.key](setReply);*/
+	if (callbacks.count(setReply.key))
+		callbacks[setReply.key](setReply);
+
+	UE_LOG(ApSubsystem, Display, TEXT("AApSubsystem::SetReplyCallback() FINISHED"));
 }
 
 void AApSubsystem::MonitorDataStoreValue(std::string key, AP_DataType dataType, std::function<void(AP_SetReply)> callback) {
@@ -77,7 +79,7 @@ void AApSubsystem::MonitorDataStoreValue(std::string key, AP_DataType dataType, 
 	setDefaultAndRecieceUpdate.type = dataType;
 	setDefaultAndRecieceUpdate.want_reply = true;
 
-	AP_SetServerData(&setDefaultAndRecieceUpdate);
+	AP_SetServerData(&setDefaultAndRecieceUpdate); //hard crash
 }
 
 void AApSubsystem::SetServerData(AP_SetServerDataRequest* setDataRequest) {

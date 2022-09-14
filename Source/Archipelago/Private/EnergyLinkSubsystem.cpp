@@ -91,7 +91,7 @@ void AEnergyLinkSubsystem::Tick(float DeltaTime)
 }
 
 void AEnergyLinkSubsystem::OnEnergyLinkValueChanged(AP_SetReply setReply) {
-/*	std::string valueStr = (*(std::string*)setReply.value).c_str();
+	std::string valueStr = (*(std::string*)setReply.value).c_str();
 
 	if (valueStr.length() > 6)
 		currentServerStorage = 999999;
@@ -102,7 +102,7 @@ void AEnergyLinkSubsystem::OnEnergyLinkValueChanged(AP_SetReply setReply) {
 		UE_LOG(ApSubsystem, Display, TEXT("AEnergyLinkSubsystem::OnEnergyLinkValueChanged(), parsed served value: %i"), l);
 
 		currentServerStorage = l;
-	}*/
+	}
 
 	UE_LOG(ApSubsystem, Display, TEXT("AEnergyLinkSubsystem::OnEnergyLinkValueChanged(), new serverStorage: %i"), currentServerStorage);
 }
@@ -147,17 +147,19 @@ void AEnergyLinkSubsystem::SecondThick() {
 
 		localStorage = modff(localStorage, &chargeToSend);
 
-		SendEnergyToServer((long)chargeToSend);
+		int numericChargeToSend = (int)chargeToSend;
+
+		SendEnergyToServer(numericChargeToSend);
 	}
 
 	//UE_LOG(ApSubsystem, Display, TEXT("AEnergyLinkSubsystem::SecondThick() local storage: %f"), localStorage);
 }
 
 
-void AEnergyLinkSubsystem::SendEnergyToServer(long amount) {
+void AEnergyLinkSubsystem::SendEnergyToServer(int amount) {
 	UE_LOG(ApSubsystem, Display, TEXT("AEnergyLinkSubsystem::SendEnergyToServer(%i)"), amount);
 
-	/*if (!apInitialized)
+	if (!apInitialized)
 		return;
 
 	AP_SetServerDataRequest sendEnergyLinkUpdate;
@@ -171,8 +173,8 @@ void AEnergyLinkSubsystem::SendEnergyToServer(long amount) {
 	add.value = &valueToAdd;
 
 	AP_DataStorageOperation lowerBoundry;
-	add.operation = "max";
-	add.value = &minimalValue;
+	lowerBoundry.operation = "max";
+	lowerBoundry.value = &minimalValue;
 
 	std::vector<AP_DataStorageOperation> operations;
 	operations.push_back(add);
@@ -183,6 +185,6 @@ void AEnergyLinkSubsystem::SendEnergyToServer(long amount) {
 	sendEnergyLinkUpdate.type = AP_DataType::Raw;
 	sendEnergyLinkUpdate.want_reply = true;
 
-	ap->SetServerData(&sendEnergyLinkUpdate);*/
+	ap->SetServerData(&sendEnergyLinkUpdate);
 }
 
