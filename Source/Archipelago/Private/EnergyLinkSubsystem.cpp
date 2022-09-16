@@ -78,7 +78,7 @@ void AEnergyLinkSubsystem::Tick(float DeltaTime)
 
 		if (ap->isInitialized)
 		{
-			ap->MonitorDataStoreValue("EnergyLink", AP_DataType::Raw, [&](AP_SetReply setReply) {
+			ap->MonitorDataStoreValue("EnergyLink", AP_DataType::Raw, energyLinkDefault, [&](AP_SetReply setReply) {
 				OnEnergyLinkValueChanged(setReply);
 			});
 
@@ -93,18 +93,15 @@ void AEnergyLinkSubsystem::Tick(float DeltaTime)
 void AEnergyLinkSubsystem::OnEnergyLinkValueChanged(AP_SetReply setReply) {
 	std::string valueStr = (*(std::string*)setReply.value).c_str();
 
-	if (valueStr.length() > 6)
-		currentServerStorage = 999999;
+	if (valueStr.length() > 6 || valueStr.length() == 0)
+		currentServerStorage = maxPowerStorage;
 	else
 	{
 		long l = stol(valueStr);
-
-		UE_LOG(ApSubsystem, Display, TEXT("AEnergyLinkSubsystem::OnEnergyLinkValueChanged(), parsed served value: %i"), l);
-
 		currentServerStorage = l;
 	}
 
-	UE_LOG(ApSubsystem, Display, TEXT("AEnergyLinkSubsystem::OnEnergyLinkValueChanged(), new serverStorage: %i"), currentServerStorage);
+	//UE_LOG(ApSubsystem, Display, TEXT("AEnergyLinkSubsystem::OnEnergyLinkValueChanged(), new serverStorage: %i"), currentServerStorage);
 }
 
 void AEnergyLinkSubsystem::SecondThick() {
@@ -135,30 +132,28 @@ void AEnergyLinkSubsystem::SecondThick() {
 			PowerStorages.Remove(powerStorageToRemove);
 	}
 
-	for (AFGBuildablePowerStorage* powerStorage : PowerStorages) {
-		powerStorage->mPowerStoreCapacity = (float)currentServerStorage + localStorage;
-		powerStorage->mBatteryInfo->mPowerStoreCapacity = (float)currentServerStorage + localStorage + 100; //make sure it keeps charging even if at max
-		powerStorage->mPowerStore = (float)currentServerStorage + localStorage;
-		powerStorage->mBatteryInfo->mPowerStore = (float)currentServerStorage + localStorage;
-	}
-
-	if (localStorage > 1 || localStorage < -1) {
+	if (localStorage < 0 && currentServerStorage == 0)
+		localStorage = 0.0f; //trip powah
+	else if (localStorage > 1 || localStorage < -1) {
 		float chargeToSend;
 
 		localStorage = modff(localStorage, &chargeToSend);
 
-		int numericChargeToSend = (int)chargeToSend;
-
-		SendEnergyToServer(numericChargeToSend);
+		SendEnergyToServer((long)chargeToSend);
 	}
 
-	//UE_LOG(ApSubsystem, Display, TEXT("AEnergyLinkSubsystem::SecondThick() local storage: %f"), localStorage);
+	for (AFGBuildablePowerStorage* powerStorage : PowerStorages) {
+		powerStorage->mPowerStoreCapacity = maxPowerStorage;
+		powerStorage->mBatteryInfo->mPowerStoreCapacity = maxPowerStorage * 2; //make sure it keeps charging even if at max
+		powerStorage->mPowerStore = (float)currentServerStorage + localStorage;
+		powerStorage->mBatteryInfo->mPowerStore = (float)currentServerStorage + localStorage;
+	}
+
+	//UE_LOG(ApSubsystem, Display, TEXT("AEnergyLinkSubsystem::SecondThick() server storage: %i, local storage: %f"), currentServerStorage, localStorage);
 }
 
 
-void AEnergyLinkSubsystem::SendEnergyToServer(int amount) {
-	UE_LOG(ApSubsystem, Display, TEXT("AEnergyLinkSubsystem::SendEnergyToServer(%i)"), amount);
-
+void AEnergyLinkSubsystem::SendEnergyToServer(long amount) {
 	if (!apInitialized)
 		return;
 
@@ -166,7 +161,6 @@ void AEnergyLinkSubsystem::SendEnergyToServer(int amount) {
 	sendEnergyLinkUpdate.key = "EnergyLink";
 
 	std::string valueToAdd = std::to_string(amount);
-	std::string minimalValue = "0";
 
 	AP_DataStorageOperation add;
 	add.operation = "add";
@@ -174,14 +168,14 @@ void AEnergyLinkSubsystem::SendEnergyToServer(int amount) {
 
 	AP_DataStorageOperation lowerBoundry;
 	lowerBoundry.operation = "max";
-	lowerBoundry.value = &minimalValue;
+	lowerBoundry.value = &energyLinkDefault;
 
 	std::vector<AP_DataStorageOperation> operations;
 	operations.push_back(add);
 	operations.push_back(lowerBoundry);
 
 	sendEnergyLinkUpdate.operations = operations;
-	sendEnergyLinkUpdate.default_value = &minimalValue;
+	sendEnergyLinkUpdate.default_value = &energyLinkDefault;
 	sendEnergyLinkUpdate.type = AP_DataType::Raw;
 	sendEnergyLinkUpdate.want_reply = true;
 

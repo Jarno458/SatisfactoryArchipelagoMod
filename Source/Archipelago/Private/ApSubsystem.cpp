@@ -15,7 +15,7 @@ void AApSubsystem::BeginPlay()
 {
 	Super::BeginPlay();
 
-	UE_LOG(ApSubsystem, Display, TEXT("AApSubsystem::BeginPlay()"));
+	//UE_LOG(ApSubsystem, Display, TEXT("AApSubsystem::BeginPlay()"));
 
 	SManager = AFGSchematicManager::Get(GetWorld());
 	RManager = AFGResearchManager::Get(GetWorld());
@@ -46,23 +46,17 @@ void AApSubsystem::LocationCheckedCallback(int id) {
 }
 
 void AApSubsystem::SetReplyCallback(AP_SetReply setReply) {
-	UE_LOG(ApSubsystem, Display, TEXT("AApSubsystem::SetReplyCallback()"));
-
 	if (callbacks.count(setReply.key))
 		callbacks[setReply.key](setReply);
-
-	UE_LOG(ApSubsystem, Display, TEXT("AApSubsystem::SetReplyCallback() FINISHED"));
 }
 
-void AApSubsystem::MonitorDataStoreValue(std::string key, AP_DataType dataType, std::function<void(AP_SetReply)> callback) {
-	UE_LOG(ApSubsystem, Display, TEXT("AApSubsystem::MonitorDataStoreValue()"));
+void AApSubsystem::MonitorDataStoreValue(std::string key, AP_DataType dataType, std::string defaultValue, std::function<void(AP_SetReply)> callback) {
+	//UE_LOG(ApSubsystem, Display, TEXT("AApSubsystem::MonitorDataStoreValue()"));
 
 	callbacks[key] = callback;
 
 	std::map<std::string, AP_DataType> keylist = { { key, dataType } };
 	AP_SetNotify(keylist);
-
-	std::string defaultValue = "0";
 
 	AP_SetServerDataRequest setDefaultAndRecieceUpdate;
 	setDefaultAndRecieceUpdate.key = key;
@@ -79,7 +73,7 @@ void AApSubsystem::MonitorDataStoreValue(std::string key, AP_DataType dataType, 
 	setDefaultAndRecieceUpdate.type = dataType;
 	setDefaultAndRecieceUpdate.want_reply = true;
 
-	AP_SetServerData(&setDefaultAndRecieceUpdate); //hard crash
+	AP_SetServerData(&setDefaultAndRecieceUpdate);
 }
 
 void AApSubsystem::SetServerData(AP_SetServerDataRequest* setDataRequest) {

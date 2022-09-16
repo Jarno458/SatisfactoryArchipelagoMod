@@ -11,9 +11,9 @@ bool AP_IsInit();
 void AP_Start();
 
 struct AP_NetworkVersion {
-   int major;
-   int minor;
-   int build;
+    int major;
+    int minor;
+    int build;
 };
 
 // Set current client version
@@ -30,7 +30,7 @@ void AP_SetDeathLinkSupported(bool);
 //Parameter Function must reset local state
 void AP_SetItemClearCallback(void (*f_itemclr)());
 //Parameter Function must collect item id given with parameter. Secound parameter indicates whether or not to notify player
-void AP_SetItemRecvCallback(void (*f_itemrecv)(int, bool));
+void AP_SetItemRecvCallback(void (*f_itemrecv)(int,bool));
 //Parameter Function must mark given location id as checked
 void AP_SetLocationCheckedCallback(void (*f_locrecv)(int));
 
@@ -41,7 +41,8 @@ void AP_SetDeathLinkRecvCallback(void (*f_deathrecv)());
 
 // Parameter Function receives Slotdata of respective type
 void AP_RegisterSlotDataIntCallback(std::string, void (*f_slotdata)(int));
-void AP_RegisterSlotDataMapIntIntCallback(std::string, void (*f_slotdata)(std::map<int, int>));
+void AP_RegisterSlotDataMapIntIntCallback(std::string, void (*f_slotdata)(std::map<int,int>));
+void AP_RegisterSlotDataRawCallback(std::string, void (*f_slotdata)(std::string));
 
 /* Game Management Functions */
 
@@ -60,34 +61,34 @@ void AP_DeathLinkSend();
 /* Message Management Types */
 
 enum AP_MessageType {
-   Plaintext, ItemSend, ItemRecv, Hint, Countdown
+    Plaintext, ItemSend, ItemRecv, Hint, Countdown
 };
 
 struct AP_Message {
-   AP_MessageType type = AP_MessageType::Plaintext;
-   std::string text;
+    AP_MessageType type = AP_MessageType::Plaintext;
+    std::string text;
 };
 
 struct AP_ItemSendMessage : AP_Message {
-   std::string item;
-   std::string recvPlayer;
+    std::string item;
+    std::string recvPlayer;
 };
 
 struct AP_ItemRecvMessage : AP_Message {
-   std::string item;
-   std::string sendPlayer;
+    std::string item;
+    std::string sendPlayer;
 };
 
 struct AP_HintMessage : AP_Message {
-   std::string item;
-   std::string sendPlayer;
-   std::string recvPlayer;
-   std::string location;
-   bool checked;
+    std::string item;
+    std::string sendPlayer;
+    std::string recvPlayer;
+    std::string location;
+    bool checked;
 };
 
 struct AP_CountdownMessage : AP_Message {
-   int timer;
+    int timer;
 };
 
 /* Message Management Functions */
@@ -99,7 +100,7 @@ AP_Message* AP_GetLatestMessage();
 /* Connection Information Types */
 
 enum AP_ConnectionStatus {
-   Disconnected, Connected, Authenticated
+    Disconnected, Connected, Authenticated
 };
 
 #define AP_PERMISSION_DISABLED 0b000
@@ -108,18 +109,18 @@ enum AP_ConnectionStatus {
 #define AP_PERMISSION_AUTO 0b110
 
 struct AP_RoomInfo {
-   AP_NetworkVersion version;
-   std::vector<std::string> tags;
-   bool password_required;
-   std::map<std::string, int> permissions;
-   int hint_cost;
-   int location_check_points;
-   //MISSING: players
-   //MISSING: games
-   int datapackage_version;
-   std::map<std::string, int> datapackage_versions;
-   std::string seed_name;
-   float time;
+    AP_NetworkVersion version;
+    std::vector<std::string> tags;
+    bool password_required;
+    std::map<std::string, int> permissions;
+    int hint_cost;
+    int location_check_points;
+    //MISSING: players
+    //MISSING: games
+    int datapackage_version;
+    std::map<std::string, int> datapackage_versions;
+    std::string seed_name;
+    float time;
 };
 
 /* Connection Information Functions */
@@ -131,38 +132,38 @@ int AP_GetUUID();
 /* Serverside Data Types */
 
 enum AP_RequestStatus {
-   Pending, Done, Error
+    Pending, Done, Error
 };
 
 enum AP_DataType {
-   Raw, Int, Double
+    Raw, Int, Double
 };
 
 struct AP_GetServerDataRequest {
-   AP_RequestStatus status;
-   std::string key;
-   void* value;
-   AP_DataType type;
+    AP_RequestStatus status;
+    std::string key;
+    void* value;
+    AP_DataType type;
 };
 
 struct AP_DataStorageOperation {
-   std::string operation;
-   void* value;
+    std::string operation;
+    void* value;
 };
 
 struct AP_SetServerDataRequest {
-   AP_RequestStatus status;
-   std::string key;
-   std::vector<AP_DataStorageOperation> operations;
-   void* default_value;
-   AP_DataType type;
-   bool want_reply;
+    AP_RequestStatus status;
+    std::string key;
+    std::vector<AP_DataStorageOperation> operations;
+    void* default_value;
+    AP_DataType type;
+    bool want_reply;
 };
 
 struct AP_SetReply {
-   std::string key;
-   void* original_value;
-   void* value;
+    std::string key;
+    void* original_value;
+    void* value;
 };
 
 /* Serverside Data Functions */
@@ -175,6 +176,6 @@ void AP_GetServerData(AP_GetServerDataRequest* request);
 void AP_RegisterSetReplyCallback(void (*f_setreply)(AP_SetReply));
 
 // Receive all SetReplys with Keys in parameter list
-void AP_SetNotify(std::map<std::string, AP_DataType>);
+void AP_SetNotify(std::map<std::string,AP_DataType>);
 // Single Key version of above for convenience
 void AP_SetNotify(std::string, AP_DataType);

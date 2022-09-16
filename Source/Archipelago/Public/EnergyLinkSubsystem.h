@@ -34,7 +34,7 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
 private:
-	long currentServerStorage = 999999;
+	long currentServerStorage = 0;
 
 	float localStorage = 0.0f;
 
@@ -43,6 +43,9 @@ private:
 	AApSubsystem* ap = nullptr;
 
 	void SecondThick();
-	void SendEnergyToServer(int amount);
+	void SendEnergyToServer(long amount);
 	void OnEnergyLinkValueChanged(AP_SetReply setReply);
+
+	const long maxPowerStorage = 999999;
+	std::string energyLinkDefault = "0";
 };

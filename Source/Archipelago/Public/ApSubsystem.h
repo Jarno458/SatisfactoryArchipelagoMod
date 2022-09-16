@@ -44,7 +44,7 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
-	void MonitorDataStoreValue(std::string key, AP_DataType dataType, std::function<void(AP_SetReply)> callback);
+	void MonitorDataStoreValue(std::string key, AP_DataType dataType, std::string defaultValue, std::function<void(AP_SetReply)> callback);
 	void SetServerData(AP_SetServerDataRequest* setDataRequest);
 
 private:
