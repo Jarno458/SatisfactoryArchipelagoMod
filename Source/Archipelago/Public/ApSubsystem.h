@@ -13,6 +13,7 @@
 #include "Registry/ModContentRegistry.h"
 #include "Util/BlueprintLoggingLibrary.h"
 #include "Subsystem/ModSubsystem.h"
+#include "Configuration/ModConfiguration.h"
 
 #include "Archipelago.h"
 

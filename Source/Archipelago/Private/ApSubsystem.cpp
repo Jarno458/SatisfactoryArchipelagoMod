@@ -2,20 +2,15 @@
 
 DEFINE_LOG_CATEGORY(ApSubsystem);
 
-// Sets default values
 AApSubsystem::AApSubsystem()
 {
-	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 	PrimaryActorTick.TickInterval = 1.0f;
 }
 
-// Called when the game starts or when spawned
 void AApSubsystem::BeginPlay()
 {
 	Super::BeginPlay();
-
-	//UE_LOG(ApSubsystem, Display, TEXT("AApSubsystem::BeginPlay()"));
 
 	SManager = AFGSchematicManager::Get(GetWorld());
 	RManager = AFGResearchManager::Get(GetWorld());
@@ -51,8 +46,6 @@ void AApSubsystem::SetReplyCallback(AP_SetReply setReply) {
 }
 
 void AApSubsystem::MonitorDataStoreValue(std::string key, AP_DataType dataType, std::string defaultValue, std::function<void(AP_SetReply)> callback) {
-	//UE_LOG(ApSubsystem, Display, TEXT("AApSubsystem::MonitorDataStoreValue()"));
-
 	callbacks[key] = callback;
 
 	std::map<std::string, AP_DataType> keylist = { { key, dataType } };
