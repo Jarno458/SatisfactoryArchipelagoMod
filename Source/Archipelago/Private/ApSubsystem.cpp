@@ -12,10 +12,20 @@ void AApSubsystem::BeginPlay()
 {
 	Super::BeginPlay();
 
-	SManager = AFGSchematicManager::Get(GetWorld());
-	RManager = AFGResearchManager::Get(GetWorld());
+	auto config = FApConfigurationStruct::GetActiveConfig();
 
-	AP_Init("localhost:38281", "Timespinner", "Jarno", "");
+	if (!config.Enabled)
+		return;
+
+	//SManager = AFGSchematicManager::Get(GetWorld());
+	//RManager = AFGResearchManager::Get(GetWorld());
+
+	std::string const uri = TCHAR_TO_UTF8(*config.Url);
+	std::string const game = TCHAR_TO_UTF8(*config.Game);
+	std::string const user = TCHAR_TO_UTF8(*config.Login);
+	std::string const password = TCHAR_TO_UTF8(*config.Password);
+
+	AP_Init(uri.c_str(), game.c_str(), user.c_str(), password.c_str());
 
 	AP_SetItemClearCallback(AApSubsystem::ItemClearCallback);
 	AP_SetItemRecvCallback(AApSubsystem::ItemReceivedCallback);

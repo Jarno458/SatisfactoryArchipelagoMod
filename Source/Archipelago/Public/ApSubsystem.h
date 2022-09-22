@@ -15,6 +15,7 @@
 #include "Subsystem/ModSubsystem.h"
 #include "Configuration/ModConfiguration.h"
 
+#include "ApConfigurationStruct.h"
 #include "Archipelago.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(ApSubsystem, Log, All);
