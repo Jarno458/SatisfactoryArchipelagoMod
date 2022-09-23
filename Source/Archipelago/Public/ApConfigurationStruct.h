@@ -10,16 +10,16 @@ struct FApConfigurationStruct {
     GENERATED_BODY()
 public:
     UPROPERTY(BlueprintReadWrite)
-    FString Url;
+    int32 Url;
 
     UPROPERTY(BlueprintReadWrite)
-    FString Login;
+    int32 Login;
 
     UPROPERTY(BlueprintReadWrite)
-    FString Password;
+    int32 Password;
 
     UPROPERTY(BlueprintReadWrite)
-    FString Game;
+    int32 Game;
 
     UPROPERTY(BlueprintReadWrite)
     bool Enabled;
