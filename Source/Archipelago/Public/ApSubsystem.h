@@ -55,6 +55,8 @@ public:
 	void MonitorDataStoreValue(std::string key, AP_DataType dataType, std::string defaultValue, std::function<void(AP_SetReply)> callback);
 	void SetServerData(AP_SetServerDataRequest* setDataRequest);
 
+	static FApConfigurationStruct GetActiveConfig();
+
 private:
 	static std::map<std::string, std::function<void(AP_SetReply)>> callbacks;
 
