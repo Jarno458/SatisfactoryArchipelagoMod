@@ -14,6 +14,12 @@
 #include "Util/BlueprintLoggingLibrary.h"
 #include "Subsystem/ModSubsystem.h"
 #include "Configuration/ModConfiguration.h"
+#include "Configuration/ConfigProperty.h"
+#include "Configuration/ConfigManager.h"
+#include "Util/RuntimeBlueprintFunctionLibrary.h"
+#include "Kismet/KismetSystemLibrary.h"
+#include "Engine/Engine.h"
+#include "Configuration/Properties/ConfigPropertySection.h"
 
 #include "ApConfigurationStruct.h"
 #include "Archipelago.h"

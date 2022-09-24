@@ -12,7 +12,30 @@ void AApSubsystem::BeginPlay()
 {
 	Super::BeginPlay();
 
-	auto config = FApConfigurationStruct::GetActiveConfig();
+	FApConfigurationStruct config; // = FApConfigurationStruct::GetActiveConfig();
+
+	UConfigManager* ConfigManager = GEngine->GetEngineSubsystem<UConfigManager>();
+	FConfigId ConfigId{ "Archipelago", "" };
+	auto Config = ConfigManager->GetConfigurationById(ConfigId);
+	auto ConfigProperty = URuntimeBlueprintFunctionLibrary::GetModConfigurationPropertyByClass(Config);
+	auto CPSection = Cast<UConfigPropertySection>(ConfigProperty);
+
+	auto mk1Prop = CPSection->SectionProperties["Url"];
+	auto uriStringProp = Cast<UConfigPropertyString>(mk1Prop);
+	auto mk2Prop = CPSection->SectionProperties["Game"];
+	auto gameStringProp = Cast<UConfigPropertyString>(mk2Prop);
+	auto mk3Prop = CPSection->SectionProperties["Login"];
+	auto userStringProp = Cast<UConfigPropertyString>(mk3Prop);
+	auto railProp = CPSection->SectionProperties["Password"];
+	auto passwordStringProp = Cast<UConfigPropertyString>(railProp);
+	auto elseProp = CPSection->SectionProperties["Enabled"];
+	auto enabledBooleanProp = Cast<UConfigPropertyBool>(elseProp);
+
+	config.Enabled = enabledBooleanProp->Value;
+	config.Url = uriStringProp->Value;
+	config.Game = gameStringProp->Value;
+	config.Login = userStringProp->Value;
+	config.Password = passwordStringProp->Value;
 
 	if (!config.Enabled)
 		return;
