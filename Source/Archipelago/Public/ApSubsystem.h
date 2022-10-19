@@ -20,6 +20,9 @@
 #include "Kismet/KismetSystemLibrary.h"
 #include "Engine/Engine.h"
 #include "Configuration/Properties/ConfigPropertySection.h"
+#include "Templates/SubclassOf.h"
+#include "FGChatManager.h"
+#include "Module/ModModule.h"
 
 #include "ApConfigurationStruct.h"
 #include "Archipelago.h"
@@ -51,6 +54,7 @@ public:
 
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
+	void DispatchLifecycleEvent(ELifecyclePhase phase);
 
 	void MonitorDataStoreValue(std::string key, AP_DataType dataType, std::string defaultValue, std::function<void(AP_SetReply)> callback);
 	void SetServerData(AP_SetServerDataRequest* setDataRequest);
@@ -64,4 +68,15 @@ private:
 	static void ItemClearCallback();
 	static void ItemReceivedCallback(int id, bool notify);
 	static void LocationCheckedCallback(int id);
+
+	FTimerHandle connectionTimeoutHandler;
+	void ConnectToArchipelago(FApConfigurationStruct config);
+	void TimeoutConnectionIfNotConnected();
+
+	void SendChatMessage(const FString& Message, const FLinearColor& Color);
+
+	UFUNCTION()
+	void OnResearchCompleted(TSubclassOf<class UFGSchematic> schematic);
+
+	static TMap<long long, std::string> ItemIdToSchematicName;
 };

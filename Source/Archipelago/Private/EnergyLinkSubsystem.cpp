@@ -14,14 +14,18 @@ void AEnergyLinkSubsystem::BeginPlay()
 	
 	UE_LOG(ApSubsystem, Display, TEXT("AEnergyLinkSubsystem:BeginPlay()"));
 
-	AFGBuildablePowerStorage* bpscdo = GetMutableDefault<AFGBuildablePowerStorage>();
-	SUBSCRIBE_METHOD_VIRTUAL(AFGBuildablePowerStorage::BeginPlay, bpscdo, [this](auto& scope, AFGBuildablePowerStorage* self) {
-		UE_LOG(ApSubsystem, Display, TEXT("AFGBuildablePowerStorage::BeginPlay()"));
+	if (!hooksInitialized) {
+		AFGBuildablePowerStorage* bpscdo = GetMutableDefault<AFGBuildablePowerStorage>();
+		SUBSCRIBE_METHOD_VIRTUAL(AFGBuildablePowerStorage::BeginPlay, bpscdo, [this](auto& scope, AFGBuildablePowerStorage* self) {
+			UE_LOG(ApSubsystem, Display, TEXT("AFGBuildablePowerStorage::BeginPlay()"));
 
-		if (!PowerStorages.Contains(self)) {
-			PowerStorages.Add(self);
-		}
-	});
+			if (!PowerStorages.Contains(self)) {
+				PowerStorages.Add(self);
+			}
+		});
+
+		hooksInitialized = true;
+	}
 }
 
 void AEnergyLinkSubsystem::Tick(float DeltaTime)

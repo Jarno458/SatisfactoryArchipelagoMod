@@ -1,7 +1,8 @@
 {
 	"FileVersion": 3,
-	"Version": 1,
-	"VersionName": "1.0",
+	"Version": 0,
+	"VersionName": "0.0.1",
+	"SemVersion": "0.0.1",
 	"FriendlyName": "Archipelago",
 	"Description": "Provides connection to an Archipelago multiworld",
 	"Category": "Randomizer",

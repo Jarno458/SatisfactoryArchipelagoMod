@@ -34,6 +34,8 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
 private:
+	bool hooksInitialized = false;
+
 	long currentServerStorage = 0;
 
 	float localStorage = 0.0f;

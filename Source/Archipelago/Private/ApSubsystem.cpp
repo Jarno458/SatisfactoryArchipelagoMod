@@ -2,6 +2,8 @@
 
 DEFINE_LOG_CATEGORY(ApSubsystem);
 
+#pragma optimize("", off)
+
 AApSubsystem::AApSubsystem()
 {
 	PrimaryActorTick.bCanEverTick = true;
@@ -12,17 +14,39 @@ void AApSubsystem::BeginPlay()
 {
 	Super::BeginPlay();
 
-	FApConfigurationStruct config = GetActiveConfig();
 
-	if (!config.Enabled)
-	{
-		PrimaryActorTick.bCanEverTick = false;
-		return;
+
+	SManager = AFGSchematicManager::Get(GetWorld());
+	RManager = AFGResearchManager::Get(GetWorld());
+
+	RManager->ResearchCompletedDelegate.AddDynamic(this, &AApSubsystem::OnResearchCompleted);
+
+
+}
+
+void AApSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase) {
+	if (phase == ELifecyclePhase::POST_INITIALIZATION) {
+		FApConfigurationStruct config = GetActiveConfig();
+
+		if (!config.Enabled)
+		{
+			SetActorTickEnabled(false);
+			return;
+		}
+
+		ConnectToArchipelago(config);
+
+		TArray<TSubclassOf<UFGSchematic>> availableSchematics;
+		TArray<TSubclassOf<UFGSchematic>> allSchematics;
+		TArray<TSubclassOf<UFGSchematic>> milestones;
+
+		SManager->GetAvailableSchematics(availableSchematics);
+		SManager->GetAllSchematics(allSchematics);
+		SManager->GetAllSchematicsOfType(ESchematicType::EST_Milestone, milestones);
 	}
+}
 
-	//SManager = AFGSchematicManager::Get(GetWorld());
-	//RManager = AFGResearchManager::Get(GetWorld());
-
+void AApSubsystem::ConnectToArchipelago(FApConfigurationStruct config) {
 	std::string const uri = TCHAR_TO_UTF8(*config.Url);
 	std::string const game = TCHAR_TO_UTF8(*config.Game);
 	std::string const user = TCHAR_TO_UTF8(*config.Login);
@@ -36,6 +60,15 @@ void AApSubsystem::BeginPlay()
 	AP_RegisterSetReplyCallback(AApSubsystem::SetReplyCallback);
 
 	AP_Start();
+
+	GetWorldTimerManager().SetTimer(connectionTimeoutHandler, this, &AApSubsystem::TimeoutConnectionIfNotConnected, 5.0f, false);
+}
+
+void AApSubsystem::OnResearchCompleted(TSubclassOf<class UFGSchematic> schematic) {
+	UE_LOG(ApSubsystem, Display, TEXT("AApSubSystem::OnResearchCompleted(schematic), Schematic Completed"));
+
+	//if (schematic.) //if name is Archipelago #xxxx send check to server
+
 }
 
 void AApSubsystem::ItemClearCallback() {
@@ -46,6 +79,10 @@ void AApSubsystem::ItemClearCallback() {
 void AApSubsystem::ItemReceivedCallback(int id, bool notify) {
 	UE_LOG(ApSubsystem, Display, TEXT("AApSubsystem::ItemReceivedCallback(%i, %s)"), id, (notify ? TEXT("true") : TEXT("false")));
 
+
+
+
+	//map to Schematic and unlock it
 }
 
 void AApSubsystem::LocationCheckedCallback(int id) {
@@ -91,10 +128,41 @@ void AApSubsystem::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	if (!isInitialized && (AP_GetConnectionStatus() == AP_ConnectionStatus::Authenticated)) {
+	if (!isInitialized && AP_GetConnectionStatus() == AP_ConnectionStatus::Authenticated) {
 		isInitialized = true;
 
 		UE_LOG(ApSubsystem, Display, TEXT("AApSubsystem::Tick(), Successfully Authenticated"));
+
+		FApConfigurationStruct config = GetActiveConfig();
+
+		FString message = FString::Printf(TEXT("Congratulation you somehow managed to connect to Archipelago server: \"%s\", for user \"%s\""), *config.Url, *config.Login);
+
+		SendChatMessage(message, FLinearColor::Green);
+	}
+}
+
+void AApSubsystem::SendChatMessage(const FString& Message, const FLinearColor& Color) {
+	AFGChatManager* ChatManager = AFGChatManager::Get(GetWorld());
+	FChatMessageStruct MessageStruct;
+	MessageStruct.MessageString = Message;
+	MessageStruct.MessageType = EFGChatMessageType::CMT_SystemMessage;
+	MessageStruct.ServerTimeStamp = GetWorld()->TimeSeconds;
+	MessageStruct.CachedColor = Color;
+	ChatManager->AddChatMessageToReceived(MessageStruct);
+}
+
+void AApSubsystem::TimeoutConnectionIfNotConnected() {
+	if (!isInitialized)
+	{
+		SetActorTickEnabled(false);
+
+		UE_LOG(ApSubsystem, Display, TEXT("AApSubsystem::TimeoutConnectionIfNotConnected(), Authenticated Failed"));
+
+		FApConfigurationStruct config = GetActiveConfig();
+
+		FString message = FString::Printf(TEXT("Failed to connect to Archipelago server: \"%s\", for user \"%s\""), *config.Url, *config.Login);
+
+		SendChatMessage(message, FLinearColor::Red);
 	}
 }
 
@@ -116,7 +184,20 @@ FApConfigurationStruct AApSubsystem::GetActiveConfig() {
 }
 
 std::map<std::string, std::function<void(AP_SetReply)>> AApSubsystem::callbacks;
+TMap<long long, std::string> ItemIdToSchematicName = {
+	{1337500, "Schematic_HUB_Schematic_1-1" },
+	{1337501, "Schematic_HUB_Schematic_1-2" },
+	{1337502, "Schematic_HUB_Schematic_1-3" },
+	{1337503, "Schematic_HUB_Schematic_1-4" },
+	{1337504, "Schematic_HUB_Schematic_1-5" },
+	{1337505, "Schematic_HUB_Schematic_2-1" },
+	{1337506, "Schematic_HUB_Schematic_2-2" },
+	{1337507, "Schematic_HUB_Schematic_2-3" },
+	{1337508, "Schematic_HUB_Schematic_2-4" },
+	{1337509, "Schematic_HUB_Schematic_2-5" }
+};
 
+#pragma optimize("", on)
 
 //#include "CLCDOBPFLib.h"
 /*FString changeBaseClassJson = TEXT(R"({
