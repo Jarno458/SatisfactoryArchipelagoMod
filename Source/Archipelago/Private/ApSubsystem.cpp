@@ -14,14 +14,10 @@ void AApSubsystem::BeginPlay()
 {
 	Super::BeginPlay();
 
-
-
 	SManager = AFGSchematicManager::Get(GetWorld());
 	RManager = AFGResearchManager::Get(GetWorld());
 
 	RManager->ResearchCompletedDelegate.AddDynamic(this, &AApSubsystem::OnResearchCompleted);
-
-
 }
 
 void AApSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase) {
@@ -40,6 +36,7 @@ void AApSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase) {
 		TArray<TSubclassOf<UFGSchematic>> allSchematics;
 		TArray<TSubclassOf<UFGSchematic>> milestones;
 
+		SManager->PopulateSchematicsLists();
 		SManager->GetAvailableSchematics(availableSchematics);
 		SManager->GetAllSchematics(allSchematics);
 		SManager->GetAllSchematicsOfType(ESchematicType::EST_Milestone, milestones);
