@@ -8,30 +8,55 @@ public class Archipelago : ModuleRules
     {
         PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 
-		PublicDependencyModuleNames.AddRange(new string[] {
+        // FactoryGame transitive dependencies
+        // Not all of these are required, but including the extra ones saves you from having to add them later.
+        PublicDependencyModuleNames.AddRange(new[] {
             "Core", "CoreUObject",
             "Engine",
+            "DeveloperSettings",
+            "PhysicsCore",
             "InputCore",
-            "OnlineSubsystem", "OnlineSubsystemUtils", "OnlineSubsystemNULL",
+            "OnlineSubsystem", "OnlineSubsystemNull", "OnlineSubsystemUtils",
             "SignificanceManager",
-            "PhysX", "APEX", "PhysXVehicles", "ApexDestruction",
-            "AkAudio",
-            "ReplicationGraph",
-            "UMG",
-            "AIModule",
-            "NavigationSystem",
-            "AssetRegistry",
-            "GameplayTasks",
+            "GeometryCollectionEngine",
+            "ChaosVehiclesCore", "ChaosVehicles", "ChaosSolverEngine",
             "AnimGraphRuntime",
-            "Slate", "SlateCore",
-            "Json"
-            });
+            "AkAudio",
+            "AssetRegistry",
+            "NavigationSystem",
+            "ReplicationGraph",
+            "AIModule",
+            "GameplayTasks",
+            "SlateCore", "Slate", "UMG",
+            "InstancedSplines",
+            "RenderCore",
+            "CinematicCamera",
+            "Foliage",
+            "Niagara",
+            "EnhancedInput",
+            "GameplayCameras",
+            "TemplateSequence",
+            "NetCore",
+            "GameplayTags",
+		});
 
-       PrivateDependencyModuleNames.AddRange(new string[] { "ContentLib" });
+        // FactoryGame plugins
+        PublicDependencyModuleNames.AddRange(new[] {
+            "AbstractInstance",
+            "InstancedSplinesComponent",
+            "SignificanceISPC"
+        });
+
+        // Header stubs
+        PublicDependencyModuleNames.AddRange(new[] {
+            "DummyHeaders",
+        });
+
+        //PrivateDependencyModuleNames.AddRange(new string[] { "ContentLib" });
 
         if (Target.Type == TargetRules.TargetType.Editor) {
-			PublicDependencyModuleNames.AddRange(new string[] {"OnlineBlueprintSupport", "AnimGraph"});
-		}
+            PublicDependencyModuleNames.AddRange(new string[] {"OnlineBlueprintSupport", "AnimGraph"});
+        }
         PublicDependencyModuleNames.AddRange(new string[] {"FactoryGame", "SML"});
 
         var modelThirdPartyDir = Path.Combine(ModuleDirectory, "ThirdParty");

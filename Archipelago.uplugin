@@ -26,12 +26,12 @@
 		{
 			"Name": "SML",
 			"Enabled": true,
-			"SemVersion": "^3.3.2"
+			"SemVersion": "^3.5.0"
 		},
-		{
-			"Name": "ContentLib",
-			"Enabled": true,
-			"SemVersion": "^1.0.0"
-		}
+    {
+      "Name": "ContentLib",
+      "Enabled": true,
+      "SemVersion": "^1.0.2"
+    }
 	]
 }
