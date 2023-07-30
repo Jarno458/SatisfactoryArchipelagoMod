@@ -16,35 +16,35 @@ public class Archipelago : ModuleRules
             "DeveloperSettings",
             "PhysicsCore",
             "InputCore",
-            "OnlineSubsystem", "OnlineSubsystemUtils", "OnlineSubsystemNull",
-            "SignificanceManager",
+            //"OnlineSubsystem", "OnlineSubsystemUtils", "OnlineSubsystemNull",
+            //"SignificanceManager",
             "GeometryCollectionEngine",
-            "ChaosVehiclesCore", "ChaosVehicles", "ChaosSolverEngine",
+            //"ChaosVehiclesCore", "ChaosVehicles", "ChaosSolverEngine",
             "AnimGraphRuntime",
-            "AkAudio",
+            //"AkAudio",
             "AssetRegistry",
             "NavigationSystem",
-            "ReplicationGraph",
+            //"ReplicationGraph",
             "AIModule",
             "GameplayTasks",
             "SlateCore", "Slate", "UMG",
-            "InstancedSplines",
+            //"InstancedSplines",
             "RenderCore",
             "CinematicCamera",
             "Foliage",
-            "Niagara",
+            //"Niagara",
             "EnhancedInput",
-            "GameplayCameras",
-            "TemplateSequence",
+            //"GameplayCameras",
+            //"TemplateSequence",
             "NetCore",
             "GameplayTags",
 		});
 
         // FactoryGame plugins
         PublicDependencyModuleNames.AddRange(new string[] {
-            "AbstractInstance",
-            "InstancedSplinesComponent",
-            "SignificanceISPC"
+            //"AbstractInstance",
+            //"InstancedSplinesComponent",
+            //"SignificanceISPC"
         });
 
         // Header stubs
