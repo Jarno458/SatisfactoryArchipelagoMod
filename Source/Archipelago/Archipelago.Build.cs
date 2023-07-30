@@ -10,13 +10,13 @@ public class Archipelago : ModuleRules
 
         // FactoryGame transitive dependencies
         // Not all of these are required, but including the extra ones saves you from having to add them later.
-        PublicDependencyModuleNames.AddRange(new[] {
+        PublicDependencyModuleNames.AddRange(new string[] {
             "Core", "CoreUObject",
             "Engine",
             "DeveloperSettings",
             "PhysicsCore",
             "InputCore",
-            "OnlineSubsystem", "OnlineSubsystemNull", "OnlineSubsystemUtils",
+            "OnlineSubsystem", "OnlineSubsystemUtils", "OnlineSubsystemNull",
             "SignificanceManager",
             "GeometryCollectionEngine",
             "ChaosVehiclesCore", "ChaosVehicles", "ChaosSolverEngine",
@@ -41,28 +41,27 @@ public class Archipelago : ModuleRules
 		});
 
         // FactoryGame plugins
-        PublicDependencyModuleNames.AddRange(new[] {
+        PublicDependencyModuleNames.AddRange(new string[] {
             "AbstractInstance",
             "InstancedSplinesComponent",
             "SignificanceISPC"
         });
 
         // Header stubs
-        PublicDependencyModuleNames.AddRange(new[] {
+        PublicDependencyModuleNames.AddRange(new string[] {
             "DummyHeaders",
         });
 
-        //PrivateDependencyModuleNames.AddRange(new string[] { "ContentLib" });
+        PrivateDependencyModuleNames.AddRange(new string[] { "ContentLib" });
 
         if (Target.Type == TargetRules.TargetType.Editor) {
             PublicDependencyModuleNames.AddRange(new string[] {"OnlineBlueprintSupport", "AnimGraph"});
         }
         PublicDependencyModuleNames.AddRange(new string[] {"FactoryGame", "SML"});
 
-        var modelThirdPartyDir = Path.Combine(ModuleDirectory, "ThirdParty");
-        PublicAdditionalLibraries.Add(Path.Combine(modelThirdPartyDir, "lib", "jsoncpp.lib"));
-        PublicAdditionalLibraries.Add(Path.Combine(modelThirdPartyDir, "lib", "ixwebsocket.lib"));
-        PublicAdditionalLibraries.Add(Path.Combine(modelThirdPartyDir, "lib", "APCpp-static.lib"));
-        PublicIncludePaths.Add(Path.Combine(modelThirdPartyDir, "include"));
+        var thirdPartyDir = Path.Combine(ModuleDirectory, "ThirdParty");
+        PublicIncludePaths.Add(Path.Combine(thirdPartyDir, "include"));
+        PublicAdditionalLibraries.Add(Path.Combine(thirdPartyDir, "lib", "APCpp.lib"));
+        RuntimeDependencies.Add("$(BinaryOutputDir)/APCpp.dll", Path.Combine(thirdPartyDir, "dll", "APCpp.dll"));
     }
 }

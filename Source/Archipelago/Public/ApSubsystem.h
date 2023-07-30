@@ -66,8 +66,8 @@ private:
 
 	static void SetReplyCallback(AP_SetReply setReply);
 	static void ItemClearCallback();
-	static void ItemReceivedCallback(int id, bool notify);
-	static void LocationCheckedCallback(int id);
+	static void ItemReceivedCallback(int64_t id, bool notify);
+	static void LocationCheckedCallback(int64_t id);
 
 	FTimerHandle connectionTimeoutHandler;
 	void ConnectToArchipelago(FApConfigurationStruct config);

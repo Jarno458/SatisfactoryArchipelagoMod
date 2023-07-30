@@ -2,6 +2,7 @@
 
 DEFINE_LOG_CATEGORY(ApSubsystem);
 
+//TODO REMOVE
 #pragma optimize("", off)
 
 AApSubsystem::AApSubsystem()
@@ -73,7 +74,7 @@ void AApSubsystem::ItemClearCallback() {
 
 }
 
-void AApSubsystem::ItemReceivedCallback(int id, bool notify) {
+void AApSubsystem::ItemReceivedCallback(int64_t id, bool notify) {
 	UE_LOG(ApSubsystem, Display, TEXT("AApSubsystem::ItemReceivedCallback(%i, %s)"), id, (notify ? TEXT("true") : TEXT("false")));
 
 
@@ -82,7 +83,7 @@ void AApSubsystem::ItemReceivedCallback(int id, bool notify) {
 	//map to Schematic and unlock it
 }
 
-void AApSubsystem::LocationCheckedCallback(int id) {
+void AApSubsystem::LocationCheckedCallback(int64_t id) {
 	UE_LOG(ApSubsystem, Display, TEXT("AApSubsystem::LocationCheckedCallback(%i)"), id);
 
 }

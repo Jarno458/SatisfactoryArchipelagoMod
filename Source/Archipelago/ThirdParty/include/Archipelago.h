@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <cstdint>
 
 void AP_Init(const char*, const char*, const char*, const char*);
 void AP_Init(const char*);
@@ -30,9 +31,9 @@ void AP_SetDeathLinkSupported(bool);
 //Parameter Function must reset local state
 void AP_SetItemClearCallback(void (*f_itemclr)());
 //Parameter Function must collect item id given with parameter. Secound parameter indicates whether or not to notify player
-void AP_SetItemRecvCallback(void (*f_itemrecv)(int,bool));
+void AP_SetItemRecvCallback(void (*f_itemrecv)(int64_t,bool));
 //Parameter Function must mark given location id as checked
-void AP_SetLocationCheckedCallback(void (*f_locrecv)(int));
+void AP_SetLocationCheckedCallback(void (*f_locrecv)(int64_t));
 
 /* Optional Callback Functions */
 
@@ -47,7 +48,7 @@ void AP_RegisterSlotDataRawCallback(std::string, void (*f_slotdata)(std::string)
 /* Game Management Functions */
 
 // Sends LocationCheck for given index
-void AP_SendItem(int);
+void AP_SendItem(int64_t);
 
 // Called when Story completed, sends StatusUpdate
 void AP_StoryComplete();
@@ -60,7 +61,7 @@ void AP_DeathLinkSend();
 
 /* Message Management Types */
 
-enum AP_MessageType {
+enum struct AP_MessageType {
     Plaintext, ItemSend, ItemRecv, Hint, Countdown
 };
 
@@ -99,8 +100,8 @@ AP_Message* AP_GetLatestMessage();
 
 /* Connection Information Types */
 
-enum AP_ConnectionStatus {
-    Disconnected, Connected, Authenticated
+enum struct AP_ConnectionStatus {
+    Disconnected, Connected, Authenticated, ConnectionRefused
 };
 
 #define AP_PERMISSION_DISABLED 0b000
@@ -131,11 +132,11 @@ int AP_GetUUID();
 
 /* Serverside Data Types */
 
-enum AP_RequestStatus {
+enum struct AP_RequestStatus {
     Pending, Done, Error
 };
 
-enum AP_DataType {
+enum struct AP_DataType {
     Raw, Int, Double
 };
 
@@ -173,6 +174,8 @@ void AP_SetServerData(AP_SetServerDataRequest* request);
 void AP_GetServerData(AP_GetServerDataRequest* request);
 
 // Parameter Function receives all SetReply's
+// ! Pointers in AP_SetReply struct only valid within function !
+// If values are required beyond that a copy is needed
 void AP_RegisterSetReplyCallback(void (*f_setreply)(AP_SetReply));
 
 // Receive all SetReplys with Keys in parameter list
