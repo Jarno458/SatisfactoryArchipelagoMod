@@ -63,20 +63,22 @@ public:
 
 private:
 	static std::map<std::string, std::function<void(AP_SetReply)>> callbacks;
+	static TMap<int64_t, std::string> ItemIdToSchematicName;
+	static std::vector<AP_NetworkItem>* lastLocationScout;
 
 	static void SetReplyCallback(AP_SetReply setReply);
 	static void ItemClearCallback();
 	static void ItemReceivedCallback(int64_t id, bool notify);
 	static void LocationCheckedCallback(int64_t id);
+	static void LocationScoutedCallback(std::vector<AP_NetworkItem>);
 
 	FTimerHandle connectionTimeoutHandler;
 	void ConnectToArchipelago(FApConfigurationStruct config);
 	void TimeoutConnectionIfNotConnected();
 
 	void SendChatMessage(const FString& Message, const FLinearColor& Color);
+	void HintUnlockedHubRecipies();
 
 	UFUNCTION()
 	void OnResearchCompleted(TSubclassOf<class UFGSchematic> schematic);
-
-	static TMap<long long, std::string> ItemIdToSchematicName;
 };

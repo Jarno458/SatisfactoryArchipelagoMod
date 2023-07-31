@@ -5,6 +5,23 @@ DEFINE_LOG_CATEGORY(ApSubsystem);
 //TODO REMOVE
 #pragma optimize("", off)
 
+std::map<std::string, std::function<void(AP_SetReply)>> AApSubsystem::callbacks;
+
+TMap<int64_t, std::string> AApSubsystem::ItemIdToSchematicName = {
+	{1337500, "Schematic_HUB_Schematic_1-1" },
+	{1337501, "Schematic_HUB_Schematic_1-2" },
+	{1337502, "Schematic_HUB_Schematic_1-3" },
+	{1337503, "Schematic_HUB_Schematic_1-4" },
+	{1337504, "Schematic_HUB_Schematic_1-5" },
+	{1337505, "Schematic_HUB_Schematic_2-1" },
+	{1337506, "Schematic_HUB_Schematic_2-2" },
+	{1337507, "Schematic_HUB_Schematic_2-3" },
+	{1337508, "Schematic_HUB_Schematic_2-4" },
+	{1337509, "Schematic_HUB_Schematic_2-5" }
+};
+
+std::vector<AP_NetworkItem>* AApSubsystem::lastLocationScout = NULL;
+
 AApSubsystem::AApSubsystem()
 {
 	PrimaryActorTick.bCanEverTick = true;
@@ -56,6 +73,7 @@ void AApSubsystem::ConnectToArchipelago(FApConfigurationStruct config) {
 	AP_SetItemRecvCallback(AApSubsystem::ItemReceivedCallback);
 	AP_SetLocationCheckedCallback(AApSubsystem::LocationCheckedCallback);
 	AP_RegisterSetReplyCallback(AApSubsystem::SetReplyCallback);
+	AP_SetLocationInfoCallback(AApSubsystem::LocationScoutedCallback);
 
 	AP_Start();
 
@@ -89,8 +107,17 @@ void AApSubsystem::LocationCheckedCallback(int64_t id) {
 }
 
 void AApSubsystem::SetReplyCallback(AP_SetReply setReply) {
+	FString fstringKey(setReply.key.c_str());
+	UE_LOG(ApSubsystem, Display, TEXT("AApSubsystem::SetReplyCallback(%s)"), *fstringKey);
+
 	if (callbacks.count(setReply.key))
 		callbacks[setReply.key](setReply);
+}
+
+void AApSubsystem::LocationScoutedCallback(std::vector<AP_NetworkItem> scoutedLocations) {
+	UE_LOG(ApSubsystem, Display, TEXT("AApSubsystem::HintUnlockedHubRecipies(vector[%i])"), scoutedLocations.size());
+
+	lastLocationScout = &scoutedLocations;
 }
 
 void AApSubsystem::MonitorDataStoreValue(std::string key, AP_DataType dataType, std::string defaultValue, std::function<void(AP_SetReply)> callback) {
@@ -136,6 +163,8 @@ void AApSubsystem::Tick(float DeltaTime)
 		FString message = FString::Printf(TEXT("Congratulation you somehow managed to connect to Archipelago server: \"%s\", for user \"%s\""), *config.Url, *config.Login);
 
 		SendChatMessage(message, FLinearColor::Green);
+
+		HintUnlockedHubRecipies();
 	}
 }
 
@@ -147,6 +176,19 @@ void AApSubsystem::SendChatMessage(const FString& Message, const FLinearColor& C
 	MessageStruct.ServerTimeStamp = GetWorld()->TimeSeconds;
 	MessageStruct.CachedColor = Color;
 	ChatManager->AddChatMessageToReceived(MessageStruct);
+}
+
+void AApSubsystem::HintUnlockedHubRecipies() {
+	UE_LOG(ApSubsystem, Display, TEXT("AApSubsystem::HintUnlockedHubRecipies()"));
+
+	std::vector<int64_t> locations;
+
+	for (auto const& item : ItemIdToSchematicName) {
+		locations.push_back(item.Key);
+	}
+
+	UE_LOG(ApSubsystem, Display, TEXT("AApSubsystem::HintUnlockedHubRecipies() Scouting..."));
+	AP_SendLocationScouts(locations, 0); //idally this we created a hint without spamming
 }
 
 void AApSubsystem::TimeoutConnectionIfNotConnected() {
@@ -180,20 +222,6 @@ FApConfigurationStruct AApSubsystem::GetActiveConfig() {
 
 	return config;
 }
-
-std::map<std::string, std::function<void(AP_SetReply)>> AApSubsystem::callbacks;
-TMap<long long, std::string> ItemIdToSchematicName = {
-	{1337500, "Schematic_HUB_Schematic_1-1" },
-	{1337501, "Schematic_HUB_Schematic_1-2" },
-	{1337502, "Schematic_HUB_Schematic_1-3" },
-	{1337503, "Schematic_HUB_Schematic_1-4" },
-	{1337504, "Schematic_HUB_Schematic_1-5" },
-	{1337505, "Schematic_HUB_Schematic_2-1" },
-	{1337506, "Schematic_HUB_Schematic_2-2" },
-	{1337507, "Schematic_HUB_Schematic_2-3" },
-	{1337508, "Schematic_HUB_Schematic_2-4" },
-	{1337509, "Schematic_HUB_Schematic_2-5" }
-};
 
 #pragma optimize("", on)
 
