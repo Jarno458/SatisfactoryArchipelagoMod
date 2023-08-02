@@ -67,7 +67,10 @@ public class Archipelago : ModuleRules
         PublicAdditionalLibraries.Add(Path.Combine(thirdPartyDir, "lib", "mbedcrypto.lib"));
         PublicAdditionalLibraries.Add(Path.Combine(thirdPartyDir, "lib", "mbedtls.lib"));
         PublicAdditionalLibraries.Add(Path.Combine(thirdPartyDir, "lib", "mbedx509.lib"));
-        PublicAdditionalLibraries.Add(Path.Combine(thirdPartyDir, "lib", "crypt32.lib"));
-        //RuntimeDependencies.Add("$(BinaryOutputDir)/APCpp.dll", Path.Combine(thirdPartyDir, "dll", "APCpp.dll"));
+
+        if (Target.Platform == UnrealTargetPlatform.Win64)
+        {
+            PublicSystemLibraries.Add("crypt32.lib");
+        }
     }
 }
