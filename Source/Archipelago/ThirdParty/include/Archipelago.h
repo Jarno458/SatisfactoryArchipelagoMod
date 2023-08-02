@@ -1,15 +1,9 @@
 #pragma once
 
-#include "Windows/AllowWindowsPlatformTypes.h"
-
-THIRD_PARTY_INCLUDES_START
-
 #include <string>
 #include <vector>
 #include <map>
 #include <cstdint>
-
-THIRD_PARTY_INCLUDES_END
 
 void AP_Init(const char*, const char*, const char*, const char*);
 void AP_Init(const char*);
@@ -200,5 +194,3 @@ void AP_RegisterSetReplyCallback(void (*f_setreply)(AP_SetReply));
 void AP_SetNotify(std::map<std::string,AP_DataType>);
 // Single Key version of above for convenience
 void AP_SetNotify(std::string, AP_DataType);
-
-#include "Windows/HideWindowsPlatformTypes.h"
