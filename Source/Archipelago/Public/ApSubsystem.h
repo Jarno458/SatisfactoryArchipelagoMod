@@ -26,9 +26,7 @@
 
 #include "ApConfigurationStruct.h"
 
-#include "Windows/AllowWindowsPlatformTypes.h"
 #include "Archipelago.h"
-#include "Windows/HideWindowsPlatformTypes.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(ApSubsystem, Log, All);
 

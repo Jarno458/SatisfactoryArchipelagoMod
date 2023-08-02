@@ -61,7 +61,13 @@ public class Archipelago : ModuleRules
 
         var thirdPartyDir = Path.Combine(ModuleDirectory, "ThirdParty");
         PublicIncludePaths.Add(Path.Combine(thirdPartyDir, "include"));
-        PublicAdditionalLibraries.Add(Path.Combine(thirdPartyDir, "lib", "APCpp.lib"));
-        RuntimeDependencies.Add("$(BinaryOutputDir)/APCpp.dll", Path.Combine(thirdPartyDir, "dll", "APCpp.dll"));
+        PublicAdditionalLibraries.Add(Path.Combine(thirdPartyDir, "lib", "APCpp-static.lib"));
+        PublicAdditionalLibraries.Add(Path.Combine(thirdPartyDir, "lib", "ixwebsocket.lib"));
+        PublicAdditionalLibraries.Add(Path.Combine(thirdPartyDir, "lib", "jsoncpp.lib"));
+        PublicAdditionalLibraries.Add(Path.Combine(thirdPartyDir, "lib", "mbedcrypto.lib"));
+        PublicAdditionalLibraries.Add(Path.Combine(thirdPartyDir, "lib", "mbedtls.lib"));
+        PublicAdditionalLibraries.Add(Path.Combine(thirdPartyDir, "lib", "mbedx509.lib"));
+        PublicAdditionalLibraries.Add(Path.Combine(thirdPartyDir, "lib", "crypt32.lib"));
+        //RuntimeDependencies.Add("$(BinaryOutputDir)/APCpp.dll", Path.Combine(thirdPartyDir, "dll", "APCpp.dll"));
     }
 }
