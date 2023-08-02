@@ -1,5 +1,7 @@
 #include "ApSubsystem.h"
 
+#include "Windows/AllowWindowsPlatformTypes.h"
+
 DEFINE_LOG_CATEGORY(ApSubsystem);
 
 //TODO REMOVE
@@ -164,7 +166,7 @@ void AApSubsystem::Tick(float DeltaTime)
 
 		SendChatMessage(message, FLinearColor::Green);
 
-		HintUnlockedHubRecipies();
+		//HintUnlockedHubRecipies();
 	}
 }
 
@@ -188,7 +190,7 @@ void AApSubsystem::HintUnlockedHubRecipies() {
 	}
 
 	UE_LOG(ApSubsystem, Display, TEXT("AApSubsystem::HintUnlockedHubRecipies() Scouting..."));
-	AP_SendLocationScouts(locations, 0); //idally this we created a hint without spamming
+	//AP_SendLocationScouts(locations, 0); //idally this we created a hint without spamming
 }
 
 void AApSubsystem::TimeoutConnectionIfNotConnected() {
@@ -222,6 +224,8 @@ FApConfigurationStruct AApSubsystem::GetActiveConfig() {
 
 	return config;
 }
+
+#include "Windows/HideWindowsPlatformTypes.h"
 
 #pragma optimize("", on)
 
