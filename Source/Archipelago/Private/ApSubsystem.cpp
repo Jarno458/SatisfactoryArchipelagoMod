@@ -119,7 +119,7 @@ void AApSubsystem::SetReplyCallback(AP_SetReply setReply) {
 void AApSubsystem::LocationScoutedCallback(std::vector<AP_NetworkItem> scoutedLocations) {
 	UE_LOG(ApSubsystem, Display, TEXT("AApSubsystem::HintUnlockedHubRecipies(vector[%i])"), scoutedLocations.size());
 
-	lastLocationScout = &scoutedLocations;
+
 }
 
 void AApSubsystem::MonitorDataStoreValue(std::string key, AP_DataType dataType, std::string defaultValue, std::function<void(AP_SetReply)> callback) {
@@ -166,7 +166,7 @@ void AApSubsystem::Tick(float DeltaTime)
 
 		SendChatMessage(message, FLinearColor::Green);
 
-		//HintUnlockedHubRecipies();
+		HintUnlockedHubRecipies();
 	}
 }
 
@@ -190,7 +190,7 @@ void AApSubsystem::HintUnlockedHubRecipies() {
 	}
 
 	UE_LOG(ApSubsystem, Display, TEXT("AApSubsystem::HintUnlockedHubRecipies() Scouting..."));
-	//AP_SendLocationScouts(locations, 0); //idally this we created a hint without spamming
+	AP_SendLocationScouts(locations, 0); //idally this we created a hint without spamming
 }
 
 void AApSubsystem::TimeoutConnectionIfNotConnected() {
