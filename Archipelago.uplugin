@@ -17,6 +17,11 @@
 	"Installed": false,
 	"Modules": [
 		{
+			"Name": "APCpp",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		},
+		{
 			"Name": "Archipelago",
 			"Type": "Runtime",
 			"LoadingPhase": "Default"
@@ -28,10 +33,10 @@
 			"Enabled": true,
 			"SemVersion": "^3.5.0"
 		},
-    {
-      "Name": "ContentLib",
-      "Enabled": true,
-      "SemVersion": "^1.0.2"
-    }
+		{
+		"Name": "ContentLib",
+		"Enabled": true,
+		"SemVersion": "^1.0.2"
+		}
 	]
 }

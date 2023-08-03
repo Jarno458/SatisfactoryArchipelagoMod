@@ -22,8 +22,6 @@ TMap<int64_t, std::string> AApSubsystem::ItemIdToSchematicName = {
 	{1337509, "Schematic_HUB_Schematic_2-5" }
 };
 
-std::vector<AP_NetworkItem>* AApSubsystem::lastLocationScout = NULL;
-
 AApSubsystem::AApSubsystem()
 {
 	PrimaryActorTick.bCanEverTick = true;

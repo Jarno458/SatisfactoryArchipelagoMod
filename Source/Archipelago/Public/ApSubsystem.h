@@ -65,7 +65,6 @@ public:
 private:
 	static std::map<std::string, std::function<void(AP_SetReply)>> callbacks;
 	static TMap<int64_t, std::string> ItemIdToSchematicName;
-	static std::vector<AP_NetworkItem>* lastLocationScout;
 
 	static void SetReplyCallback(AP_SetReply setReply);
 	static void ItemClearCallback();
