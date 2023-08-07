@@ -76,6 +76,7 @@ private:
 	void ConnectToArchipelago(FApConfigurationStruct config);
 	void TimeoutConnectionIfNotConnected();
 
+	void HandleAPMessages();
 	void SendChatMessage(const FString& Message, const FLinearColor& Color);
 	void HintUnlockedHubRecipies();
 

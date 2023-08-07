@@ -1,6 +1,6 @@
 #include "ApSubsystem.h"
 
-#include "Windows/AllowWindowsPlatformTypes.h"
+#include "CLSchematicBPFLib.h"
 
 DEFINE_LOG_CATEGORY(ApSubsystem);
 
@@ -25,7 +25,7 @@ TMap<int64_t, std::string> AApSubsystem::ItemIdToSchematicName = {
 AApSubsystem::AApSubsystem()
 {
 	PrimaryActorTick.bCanEverTick = true;
-	PrimaryActorTick.TickInterval = 1.0f;
+	PrimaryActorTick.TickInterval = 0.5f;
 }
 
 void AApSubsystem::BeginPlay()
@@ -117,7 +117,21 @@ void AApSubsystem::SetReplyCallback(AP_SetReply setReply) {
 void AApSubsystem::LocationScoutedCallback(std::vector<AP_NetworkItem> scoutedLocations) {
 	UE_LOG(ApSubsystem, Display, TEXT("AApSubsystem::HintUnlockedHubRecipies(vector[%i])"), scoutedLocations.size());
 
+	for (auto& item : scoutedLocations) {
 
+		FString itemName(item.itemName.c_str());
+		FString schematic = FString::Printf(TEXT(R"({
+    "$schema": "https://raw.githubusercontent.com/budak7273/ContentLib_Documentation/main/JsonSchemas/CL_Schematic.json",
+    "Name": "%s",
+    "Type": "Milestone",
+    "Time": 1,
+    "Tier": 1,
+    "Cost": [],
+    "Recipes": []
+})"), *itemName);
+
+		UCLSchematicBPFLib::GenerateCLSchematicFromString(schematic);
+	}
 }
 
 void AApSubsystem::MonitorDataStoreValue(std::string key, AP_DataType dataType, std::string defaultValue, std::function<void(AP_SetReply)> callback) {
@@ -153,18 +167,46 @@ void AApSubsystem::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	if (!isInitialized && AP_GetConnectionStatus() == AP_ConnectionStatus::Authenticated) {
-		isInitialized = true;
+	if (!isInitialized){
+		AP_ConnectionStatus status = AP_GetConnectionStatus();
 
-		UE_LOG(ApSubsystem, Display, TEXT("AApSubsystem::Tick(), Successfully Authenticated"));
+		if (status == AP_ConnectionStatus::Authenticated) {
+			isInitialized = true;
 
-		FApConfigurationStruct config = GetActiveConfig();
+			UE_LOG(ApSubsystem, Display, TEXT("AApSubsystem::Tick(), Successfully Authenticated"));
 
-		FString message = FString::Printf(TEXT("Congratulation you somehow managed to connect to Archipelago server: \"%s\", for user \"%s\""), *config.Url, *config.Login);
+			FApConfigurationStruct config = GetActiveConfig();
 
-		SendChatMessage(message, FLinearColor::Green);
+			FString message = FString::Printf(TEXT("Congratulation you somehow managed to connect to Archipelago server: \"%s\", for user \"%s\""), *config.Url, *config.Login);
 
-		HintUnlockedHubRecipies();
+			SendChatMessage(message, FLinearColor::Green);
+
+			HintUnlockedHubRecipies();
+		}
+		else if (status == AP_ConnectionStatus::ConnectionRefused) {
+			FApConfigurationStruct config = GetActiveConfig();
+
+			FString message = FString::Printf(TEXT("Failed to connect to Archipelago server: \"%s\", for user \"%s\""), *config.Url, *config.Login);
+
+			SendChatMessage(message, FLinearColor::Green);
+		}
+	} else {
+		HandleAPMessages();
+	}
+}
+
+void AApSubsystem::HandleAPMessages() {
+	for (int i = 0; i < 10; i++)
+	{
+		if (!AP_IsMessagePending())
+			return;
+
+		AP_Message* message = AP_GetLatestMessage();
+		FString fStringMessage(message->text.c_str());
+
+		SendChatMessage(fStringMessage, FLinearColor::White);
+
+		AP_ClearLatestMessage();
 	}
 }
 
@@ -222,8 +264,6 @@ FApConfigurationStruct AApSubsystem::GetActiveConfig() {
 
 	return config;
 }
-
-#include "Windows/HideWindowsPlatformTypes.h"
 
 #pragma optimize("", on)
 
