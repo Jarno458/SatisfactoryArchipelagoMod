@@ -17,11 +17,6 @@
 	"Installed": false,
 	"Modules": [
 		{
-			"Name": "APCpp",
-			"Type": "Runtime",
-			"LoadingPhase": "Default"
-		},
-		{
 			"Name": "Archipelago",
 			"Type": "Runtime",
 			"LoadingPhase": "Default"

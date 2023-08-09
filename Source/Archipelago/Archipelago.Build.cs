@@ -53,8 +53,8 @@ public class Archipelago : ModuleRules
         });
 
         PrivateDependencyModuleNames.AddRange(new string[] { 
-            "APCpp", 
-            "ContentLib" 
+            "ContentLib",
+            "APCpp",
         });
 
         if (Target.Type == TargetRules.TargetType.Editor) {
