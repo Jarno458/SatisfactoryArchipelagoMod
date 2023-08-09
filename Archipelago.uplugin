@@ -34,9 +34,9 @@
 			"SemVersion": "^3.5.0"
 		},
 		{
-		"Name": "ContentLib",
-		"Enabled": true,
-		"SemVersion": "^1.0.2"
+			"Name": "ContentLib",
+			"Enabled": true,
+			"SemVersion": "^1.0.2"
 		}
 	]
 }

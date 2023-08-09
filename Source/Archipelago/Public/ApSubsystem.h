@@ -8,11 +8,13 @@
 #include "FGSchematicManager.h"
 #include "FGResearchManager.h"
 
+#include "GenericPlatform/GenericPlatformProcess.h"
 #include "Patching/BlueprintHookHelper.h"
 #include "Patching/BlueprintHookManager.h"
 #include "Registry/ModContentRegistry.h"
 #include "Kismet/BlueprintLoggingLibrary.h"
 #include "Subsystem/ModSubsystem.h"
+#include "Subsystem/SubsystemActorManager.h"
 #include "Configuration/ModConfiguration.h"
 #include "Configuration/ConfigProperty.h"
 #include "Configuration/ConfigManager.h"
@@ -23,8 +25,12 @@
 #include "Templates/SubclassOf.h"
 #include "FGChatManager.h"
 #include "Module/ModModule.h"
+#include "Reflection/ClassGenerator.h"
 
 #include "ApConfigurationStruct.h"
+
+#include "ContentLibSubsystem.h"
+#include "CLSchematicBPFLib.h"
 
 #include "Archipelago.h"
 
@@ -52,6 +58,8 @@ protected:
 
 public:
 	bool isInitialized = false;
+	bool isConnecting = false;
+	bool hasFininshedInitialization = false;
 
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
@@ -65,6 +73,9 @@ public:
 private:
 	static std::map<std::string, std::function<void(AP_SetReply)>> callbacks;
 	static TMap<int64_t, std::string> ItemIdToSchematicName;
+	static UContentLibSubsystem* ContentLibSubsystem;
+	static std::vector<AP_NetworkItem> ScoutedLocations;
+	static bool ShouldParseItemsToScout;
 
 	static void SetReplyCallback(AP_SetReply setReply);
 	static void ItemClearCallback();
@@ -76,6 +87,8 @@ private:
 	void ConnectToArchipelago(FApConfigurationStruct config);
 	void TimeoutConnectionIfNotConnected();
 
+	void CheckConnectionState(FApConfigurationStruct config);
+	void ParseScoutedItems();
 	void HandleAPMessages();
 	void SendChatMessage(const FString& Message, const FLinearColor& Color);
 	void HintUnlockedHubRecipies();

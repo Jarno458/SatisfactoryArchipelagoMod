@@ -1,13 +1,14 @@
 #include "ApSubsystem.h"
 
-#include "CLSchematicBPFLib.h"
-
 DEFINE_LOG_CATEGORY(ApSubsystem);
 
 //TODO REMOVE
 #pragma optimize("", off)
 
 std::map<std::string, std::function<void(AP_SetReply)>> AApSubsystem::callbacks;
+UContentLibSubsystem* AApSubsystem::ContentLibSubsystem;
+std::vector<AP_NetworkItem> AApSubsystem::ScoutedLocations;
+bool AApSubsystem::ShouldParseItemsToScout = false;
 
 TMap<int64_t, std::string> AApSubsystem::ItemIdToSchematicName = {
 	{1337500, "Schematic_HUB_Schematic_1-1" },
@@ -39,7 +40,10 @@ void AApSubsystem::BeginPlay()
 }
 
 void AApSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase) {
-	if (phase == ELifecyclePhase::POST_INITIALIZATION) {
+	if (phase == ELifecyclePhase::INITIALIZATION) {
+		ContentLibSubsystem = GetWorld()->GetGameInstance()->GetSubsystem<UContentLibSubsystem>();
+		check(ContentLibSubsystem)
+
 		FApConfigurationStruct config = GetActiveConfig();
 
 		if (!config.Enabled)
@@ -49,15 +53,15 @@ void AApSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase) {
 		}
 
 		ConnectToArchipelago(config);
+	
+		FGenericPlatformProcess::ConditionalSleep([this, config]() { 
+			if (isConnecting)
+				CheckConnectionState(config);
+			else
+				ParseScoutedItems();
 
-		TArray<TSubclassOf<UFGSchematic>> availableSchematics;
-		TArray<TSubclassOf<UFGSchematic>> allSchematics;
-		TArray<TSubclassOf<UFGSchematic>> milestones;
-
-		SManager->PopulateSchematicsLists();
-		SManager->GetAvailableSchematics(availableSchematics);
-		SManager->GetAllSchematics(allSchematics);
-		SManager->GetAllSchematicsOfType(ESchematicType::EST_Milestone, milestones);
+			return hasFininshedInitialization;
+		}, 1);
 	}
 }
 
@@ -74,6 +78,8 @@ void AApSubsystem::ConnectToArchipelago(FApConfigurationStruct config) {
 	AP_SetLocationCheckedCallback(AApSubsystem::LocationCheckedCallback);
 	AP_RegisterSetReplyCallback(AApSubsystem::SetReplyCallback);
 	AP_SetLocationInfoCallback(AApSubsystem::LocationScoutedCallback);
+	
+	isConnecting = true;
 
 	AP_Start();
 
@@ -117,21 +123,8 @@ void AApSubsystem::SetReplyCallback(AP_SetReply setReply) {
 void AApSubsystem::LocationScoutedCallback(std::vector<AP_NetworkItem> scoutedLocations) {
 	UE_LOG(ApSubsystem, Display, TEXT("AApSubsystem::HintUnlockedHubRecipies(vector[%i])"), scoutedLocations.size());
 
-	for (auto& item : scoutedLocations) {
-
-		FString itemName(item.itemName.c_str());
-		FString schematic = FString::Printf(TEXT(R"({
-    "$schema": "https://raw.githubusercontent.com/budak7273/ContentLib_Documentation/main/JsonSchemas/CL_Schematic.json",
-    "Name": "%s",
-    "Type": "Milestone",
-    "Time": 1,
-    "Tier": 1,
-    "Cost": [],
-    "Recipes": []
-})"), *itemName);
-
-		UCLSchematicBPFLib::GenerateCLSchematicFromString(schematic);
-	}
+	ScoutedLocations = scoutedLocations;
+	ShouldParseItemsToScout = true;
 }
 
 void AApSubsystem::MonitorDataStoreValue(std::string key, AP_DataType dataType, std::string defaultValue, std::function<void(AP_SetReply)> callback) {
@@ -167,32 +160,75 @@ void AApSubsystem::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	if (!isInitialized){
+	if (!isInitialized)
+		return;
+
+	HandleAPMessages();
+}
+
+void AApSubsystem::CheckConnectionState(FApConfigurationStruct config) {
+	if (isConnecting) {
 		AP_ConnectionStatus status = AP_GetConnectionStatus();
 
 		if (status == AP_ConnectionStatus::Authenticated) {
 			isInitialized = true;
+			isConnecting = false;
 
 			UE_LOG(ApSubsystem, Display, TEXT("AApSubsystem::Tick(), Successfully Authenticated"));
-
-			FApConfigurationStruct config = GetActiveConfig();
-
-			FString message = FString::Printf(TEXT("Congratulation you somehow managed to connect to Archipelago server: \"%s\", for user \"%s\""), *config.Url, *config.Login);
-
-			SendChatMessage(message, FLinearColor::Green);
 
 			HintUnlockedHubRecipies();
 		}
 		else if (status == AP_ConnectionStatus::ConnectionRefused) {
-			FApConfigurationStruct config = GetActiveConfig();
+			isConnecting = false;
 
 			FString message = FString::Printf(TEXT("Failed to connect to Archipelago server: \"%s\", for user \"%s\""), *config.Url, *config.Login);
 
 			SendChatMessage(message, FLinearColor::Green);
 		}
-	} else {
-		HandleAPMessages();
 	}
+}
+
+void AApSubsystem::ParseScoutedItems() {
+	if (!ShouldParseItemsToScout)
+		return;
+
+	UE_LOG(ApSubsystem, Display, TEXT("AApSubsystem::ParseScoutedItems(vector[%i])"), ScoutedLocations.size());
+
+	AModContentRegistry* contentRegistry = AModContentRegistry::Get(GetWorld());
+
+	for (auto& item : ScoutedLocations) {
+		FString itemName(item.itemName.c_str());
+		FString json = FString::Printf(TEXT(R"({
+			"$schema": "https://raw.githubusercontent.com/budak7273/ContentLib_Documentation/main/JsonSchemas/CL_Schematic.json",
+			"Name": "%s",
+			"Type": "Milestone",
+			"Time": 1,
+			"Tier": 1,
+			"Category": "SC_Logistics",
+			"VisualKit": "Kit_AP_Logo",
+			"Cost": [
+				{
+				  "Item": "Desc_CopperSheet",
+				  "Amount": 200
+				},
+			],
+			"Recipes": [
+				"Recipe_WaterPump"
+			]
+		})"), *itemName);
+
+		FContentLib_Schematic schematic = UCLSchematicBPFLib::GenerateCLSchematicFromString(json);
+		TSubclassOf<UFGSchematic> factorySchematic = FClassGenerator::GenerateSimpleClass(TEXT("/Archipelago/"), *itemName, UFGSchematic::StaticClass());
+		UCLSchematicBPFLib::InitSchematicFromStruct(schematic, factorySchematic, ContentLibSubsystem);
+
+		contentRegistry->RegisterSchematic(FName(TEXT("Archipelago")), factorySchematic);
+	}
+
+	//UWorld* world = GEngine->GameViewport->GetWorld();
+
+	ScoutedLocations.clear();
+	ShouldParseItemsToScout = false;
+	hasFininshedInitialization = true;
 }
 
 void AApSubsystem::HandleAPMessages() {
