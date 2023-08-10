@@ -64,11 +64,11 @@ protected:
 public:
 	bool isInitialized = false;
 	bool isConnecting = false;
-	bool hasFininshedInitialization = false;
 	TMap<TSubclassOf<class UFGSchematic>, TArray<int64_t>> locationsPerMileStone;
 
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
+	bool InitializeTick(FApConfigurationStruct config);
 
 	void DispatchLifecycleEvent(ELifecyclePhase phase);
 
@@ -83,12 +83,16 @@ private:
 	static UContentLibSubsystem* ContentLibSubsystem;
 	static std::vector<AP_NetworkItem> ScoutedLocations;
 	static bool ShouldParseItemsToScout;
+	static int FirstHubLocation;
+	static int LastHubLocation;
 
 	static void SetReplyCallback(AP_SetReply setReply);
 	static void ItemClearCallback();
 	static void ItemReceivedCallback(int64_t id, bool notify);
 	static void LocationCheckedCallback(int64_t id);
 	static void LocationScoutedCallback(std::vector<AP_NetworkItem>);
+	static void SlotDataFirstHubLocation(int locationId);
+	static void SlotDataLastHubLocation(int locationId);
 
 	FTimerHandle connectionTimeoutHandler;
 	void ConnectToArchipelago(FApConfigurationStruct config);

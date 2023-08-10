@@ -9,6 +9,8 @@ std::map<std::string, std::function<void(AP_SetReply)>> AApSubsystem::callbacks;
 UContentLibSubsystem* AApSubsystem::ContentLibSubsystem;
 std::vector<AP_NetworkItem> AApSubsystem::ScoutedLocations;
 bool AApSubsystem::ShouldParseItemsToScout = false;
+int AApSubsystem::FirstHubLocation = 0;
+int AApSubsystem::LastHubLocation = 0;
 
 TMap<int64_t, std::string> AApSubsystem::ItemIdToSchematicName = {
 	{1337500, "Schematic_HUB_Schematic_1-1" },
@@ -47,23 +49,34 @@ void AApSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase) {
 
 		FApConfigurationStruct config = GetActiveConfig();
 
-		if (!config.Enabled)
-		{
+		if (!config.Enabled)	{
 			SetActorTickEnabled(false);
 			return;
 		}
 
 		ConnectToArchipelago(config);
 	
-		FGenericPlatformProcess::ConditionalSleep([this, config]() { 
-			if (isConnecting)
-				CheckConnectionState(config);
-			else
-				ParseScoutedItems();
-
-			return hasFininshedInitialization;
-		}, 1);
+		FGenericPlatformProcess::ConditionalSleep([this, config]() { return InitializeTick(config); }, 1);
 	}
+}
+
+bool AApSubsystem::InitializeTick(FApConfigurationStruct config) {
+	if (isConnecting) {
+		CheckConnectionState(config);
+	}
+	else {
+		if (!ShouldParseItemsToScout) {
+			if (FirstHubLocation != 0 && LastHubLocation != 0) {
+				HintUnlockedHubRecipies();
+			}
+		}
+		else {
+			ParseScoutedItems();
+			return true;
+		}
+	}
+
+	return false;
 }
 
 void AApSubsystem::ConnectToArchipelago(FApConfigurationStruct config) {
@@ -79,7 +92,9 @@ void AApSubsystem::ConnectToArchipelago(FApConfigurationStruct config) {
 	AP_SetLocationCheckedCallback(AApSubsystem::LocationCheckedCallback);
 	AP_RegisterSetReplyCallback(AApSubsystem::SetReplyCallback);
 	AP_SetLocationInfoCallback(AApSubsystem::LocationScoutedCallback);
-	
+	AP_RegisterSlotDataIntCallback("FirstHubLocation", AApSubsystem::SlotDataFirstHubLocation);
+	AP_RegisterSlotDataIntCallback("LastHubLocation", AApSubsystem::SlotDataLastHubLocation);
+
 	isConnecting = true;
 
 	AP_Start();
@@ -140,6 +155,14 @@ void AApSubsystem::LocationScoutedCallback(std::vector<AP_NetworkItem> scoutedLo
 	ShouldParseItemsToScout = true;
 }
 
+void AApSubsystem::SlotDataFirstHubLocation(int locationId) {
+	FirstHubLocation = locationId;
+}
+
+void AApSubsystem::SlotDataLastHubLocation(int locationId) {
+	LastHubLocation = locationId;
+}
+
 void AApSubsystem::MonitorDataStoreValue(std::string key, AP_DataType dataType, std::string defaultValue, std::function<void(AP_SetReply)> callback) {
 	callbacks[key] = callback;
 
@@ -188,8 +211,6 @@ void AApSubsystem::CheckConnectionState(FApConfigurationStruct config) {
 			isConnecting = false;
 
 			UE_LOG(ApSubsystem, Display, TEXT("AApSubsystem::Tick(), Successfully Authenticated"));
-
-			HintUnlockedHubRecipies();
 		}
 		else if (status == AP_ConnectionStatus::ConnectionRefused) {
 			isConnecting = false;
@@ -202,9 +223,6 @@ void AApSubsystem::CheckConnectionState(FApConfigurationStruct config) {
 }
 
 void AApSubsystem::ParseScoutedItems() {
-	if (!ShouldParseItemsToScout)
-		return;
-
 	UE_LOG(ApSubsystem, Display, TEXT("AApSubsystem::ParseScoutedItems(vector[%i])"), ScoutedLocations.size());
 
 	AModContentRegistry* contentRegistry = AModContentRegistry::Get(GetWorld());
@@ -236,7 +254,6 @@ void AApSubsystem::ParseScoutedItems() {
 
 	ScoutedLocations.clear();
 	ShouldParseItemsToScout = false;
-	hasFininshedInitialization = true;
 }
 
 void AApSubsystem::CreateRecipe(AModContentRegistry* contentRegistry, AP_NetworkItem item) {
@@ -378,11 +395,9 @@ void AApSubsystem::HintUnlockedHubRecipies() {
 
 	std::vector<int64_t> locations;
 
-	for (auto const& item : ItemIdToSchematicName) {
-		locations.push_back(item.Key);
-	}
+	for (int64_t i = FirstHubLocation; i <= LastHubLocation; i++)
+		locations.push_back(i);
 
-	UE_LOG(ApSubsystem, Display, TEXT("AApSubsystem::HintUnlockedHubRecipies() Scouting..."));
 	AP_SendLocationScouts(locations, 0); //idally this we created a hint without spamming
 }
 
