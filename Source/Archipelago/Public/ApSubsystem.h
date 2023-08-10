@@ -65,9 +65,11 @@ public:
 	bool isInitialized = false;
 	bool isConnecting = false;
 	bool hasFininshedInitialization = false;
+	TMap<TSubclassOf<class UFGSchematic>, TArray<int64_t>> locationsPerMileStone;
 
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
+
 	void DispatchLifecycleEvent(ELifecyclePhase phase);
 
 	void MonitorDataStoreValue(std::string key, AP_DataType dataType, std::string defaultValue, std::function<void(AP_SetReply)> callback);
@@ -102,9 +104,8 @@ private:
 	void CreateItem(AModContentRegistry* contentRegistry, AP_NetworkItem item);
 	void CreateHubSchematic(AModContentRegistry* contentRegistry, std::string milestoneName, std::vector<AP_NetworkItem> items);
 	
-	UFUNCTION()
+	UFUNCTION() //required for event
 	void OnMamResearchCompleted(TSubclassOf<class UFGSchematic> schematic);
+	UFUNCTION() //required for event
 	void OnSchematicCompleted(TSubclassOf<class UFGSchematic> schematic);
-	void OnSchematicPaidOff(AFGSchematicManager* manager);
-	void OnSchematicPurchasedInstigator(TSubclassOf<class UFGSchematic> schematic, AFGCharacterPlayer* player);
 };

@@ -33,20 +33,11 @@ void AApSubsystem::BeginPlay()
 {
 	Super::BeginPlay();
 
-	//SManager = AFGSchematicManager::Get(GetWorld());
 	RManager = AFGResearchManager::Get(GetWorld());
-	// AFGGamePhaseManager <- likely for space elevatah
-	// AFGMapManager::AddNewMapMarker <- maybe got hinted things
-	// AFGPlayerControllerBase
-	// AFGTutorialIntroManager <- should interact with unlocking i guess
-	// AFGGameState contains almost everything
-
-	// AFGUnlockSubsystem intresting
+	SManager = AFGSchematicManager::Get(GetWorld());
 
 	RManager->ResearchCompletedDelegate.AddDynamic(this, &AApSubsystem::OnMamResearchCompleted);
-	//SManager->PurchasedSchematicDelegate.AddDynamic(this, &AApSubsystem::OnSchematicCompleted);
-	//SManager->PaidOffOnSchematicDelegate.AddDynamic(this, &AApSubsystem::OnSchematicPaidOff);
-	//SManager->PurchasedSchematicInstigatorDelegate.AddDynamic(this, &AApSubsystem::OnSchematicPurchasedInstigator);
+	SManager->PurchasedSchematicDelegate.AddDynamic(this, &AApSubsystem::OnSchematicCompleted);
 }
 
 void AApSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase) {
@@ -72,13 +63,6 @@ void AApSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase) {
 
 			return hasFininshedInitialization;
 		}, 1);
-	}
-	else if (phase == ELifecyclePhase::POST_INITIALIZATION) {
-		SManager = AFGSchematicManager::Get(GetWorld());
-
-		SManager->PurchasedSchematicDelegate.AddDynamic(this, &AApSubsystem::OnSchematicCompleted);
-		SManager->PaidOffOnSchematicDelegate.AddDynamic(this, &AApSubsystem::OnSchematicPaidOff);
-		SManager->PurchasedSchematicInstigatorDelegate.AddDynamic(this, &AApSubsystem::OnSchematicPurchasedInstigator);
 	}
 }
 
@@ -113,22 +97,14 @@ void AApSubsystem::OnMamResearchCompleted(TSubclassOf<class UFGSchematic> schema
 void AApSubsystem::OnSchematicCompleted(TSubclassOf<class UFGSchematic> schematic) {
 	UE_LOG(ApSubsystem, Display, TEXT("AApSubSystem::OnSchematicCompleted(schematic), Schematic Completed"));
 
-	//if (schematic.) //if name is Archipelago #xxxx send check to server
+	ESchematicType type = UFGSchematic::GetType(schematic);
+
+	if (type != ESchematicType::EST_Milestone || !locationsPerMileStone.Contains(schematic))
+		return;
+
+	for (auto location : locationsPerMileStone[schematic])
+		AP_SendItem(location);
 }
-
-void AApSubsystem::OnSchematicPaidOff(AFGSchematicManager* manager) {
-	UE_LOG(ApSubsystem, Display, TEXT("AApSubSystem::OnSchematicPaidOff(manager)"));
-
-	//if (schematic.) //if name is Archipelago #xxxx send check to server
-}
-
-
-void AApSubsystem::OnSchematicPurchasedInstigator(TSubclassOf<class UFGSchematic> schematic, AFGCharacterPlayer* player) {
-	UE_LOG(ApSubsystem, Display, TEXT("AApSubSystem::OnSchematicPurchasedInstigator(schematic, player)"));
-
-	//if (schematic.) //if name is Archipelago #xxxx send check to server
-}
-
 
 void AApSubsystem::ItemClearCallback() {
 	UE_LOG(ApSubsystem, Display, TEXT("AApSubsystem::ItemClearCallback()"));
@@ -356,12 +332,17 @@ void AApSubsystem::CreateHubSchematic(AModContentRegistry* contentRegistry, std:
 				"Amount": 1
 			},
 		],
-		"Recipes": [ "Recipe_WaterPump" ]
+		"Recipes": [ "%s" ]
 	})"), *name, *tier, *recipies);
-	//		"Recipes": [ "%s" ]
+
+	TSubclassOf<UFGSchematic> factorySchematic = FClassGenerator::GenerateSimpleClass(TEXT("/Archipelago/"), *name, UFGSchematic::StaticClass());
+
+	locationsPerMileStone.Add(factorySchematic, TArray<int64_t>());
+	for (auto& item : items) {
+		locationsPerMileStone[factorySchematic].Add(item.location);
+	}
 
 	FContentLib_Schematic schematic = UCLSchematicBPFLib::GenerateCLSchematicFromString(json);
-	TSubclassOf<UFGSchematic> factorySchematic = FClassGenerator::GenerateSimpleClass(TEXT("/Archipelago/"), *name, UFGSchematic::StaticClass());
 	UCLSchematicBPFLib::InitSchematicFromStruct(schematic, factorySchematic, ContentLibSubsystem);
 
 	contentRegistry->RegisterSchematic(FName(TEXT("Archipelago")), factorySchematic);
