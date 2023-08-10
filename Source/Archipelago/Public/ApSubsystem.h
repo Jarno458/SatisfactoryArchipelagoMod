@@ -2,6 +2,9 @@
 
 #include <functional>
 #include <map>
+#include <string>
+#include <vector>
+#include <numeric>
 
 #include "CoreMinimal.h"
 
@@ -31,6 +34,8 @@
 
 #include "ContentLibSubsystem.h"
 #include "CLSchematicBPFLib.h"
+#include "CLItemBPFLib.h"
+#include "CLRecipeBPFLib.h"
 
 #include "Archipelago.h"
 
@@ -93,6 +98,13 @@ private:
 	void SendChatMessage(const FString& Message, const FLinearColor& Color);
 	void HintUnlockedHubRecipies();
 
+	void CreateRecipe(AModContentRegistry* contentRegistry, AP_NetworkItem item);
+	void CreateItem(AModContentRegistry* contentRegistry, AP_NetworkItem item);
+	void CreateHubSchematic(AModContentRegistry* contentRegistry, std::string milestoneName, std::vector<AP_NetworkItem> items);
+	
 	UFUNCTION()
-	void OnResearchCompleted(TSubclassOf<class UFGSchematic> schematic);
+	void OnMamResearchCompleted(TSubclassOf<class UFGSchematic> schematic);
+	void OnSchematicCompleted(TSubclassOf<class UFGSchematic> schematic);
+	void OnSchematicPaidOff(AFGSchematicManager* manager);
+	void OnSchematicPurchasedInstigator(TSubclassOf<class UFGSchematic> schematic, AFGCharacterPlayer* player);
 };

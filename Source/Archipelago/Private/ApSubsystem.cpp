@@ -33,10 +33,20 @@ void AApSubsystem::BeginPlay()
 {
 	Super::BeginPlay();
 
-	SManager = AFGSchematicManager::Get(GetWorld());
+	//SManager = AFGSchematicManager::Get(GetWorld());
 	RManager = AFGResearchManager::Get(GetWorld());
+	// AFGGamePhaseManager <- likely for space elevatah
+	// AFGMapManager::AddNewMapMarker <- maybe got hinted things
+	// AFGPlayerControllerBase
+	// AFGTutorialIntroManager <- should interact with unlocking i guess
+	// AFGGameState contains almost everything
 
-	RManager->ResearchCompletedDelegate.AddDynamic(this, &AApSubsystem::OnResearchCompleted);
+	// AFGUnlockSubsystem intresting
+
+	RManager->ResearchCompletedDelegate.AddDynamic(this, &AApSubsystem::OnMamResearchCompleted);
+	//SManager->PurchasedSchematicDelegate.AddDynamic(this, &AApSubsystem::OnSchematicCompleted);
+	//SManager->PaidOffOnSchematicDelegate.AddDynamic(this, &AApSubsystem::OnSchematicPaidOff);
+	//SManager->PurchasedSchematicInstigatorDelegate.AddDynamic(this, &AApSubsystem::OnSchematicPurchasedInstigator);
 }
 
 void AApSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase) {
@@ -63,6 +73,13 @@ void AApSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase) {
 			return hasFininshedInitialization;
 		}, 1);
 	}
+	else if (phase == ELifecyclePhase::POST_INITIALIZATION) {
+		SManager = AFGSchematicManager::Get(GetWorld());
+
+		SManager->PurchasedSchematicDelegate.AddDynamic(this, &AApSubsystem::OnSchematicCompleted);
+		SManager->PaidOffOnSchematicDelegate.AddDynamic(this, &AApSubsystem::OnSchematicPaidOff);
+		SManager->PurchasedSchematicInstigatorDelegate.AddDynamic(this, &AApSubsystem::OnSchematicPurchasedInstigator);
+	}
 }
 
 void AApSubsystem::ConnectToArchipelago(FApConfigurationStruct config) {
@@ -86,12 +103,32 @@ void AApSubsystem::ConnectToArchipelago(FApConfigurationStruct config) {
 	GetWorldTimerManager().SetTimer(connectionTimeoutHandler, this, &AApSubsystem::TimeoutConnectionIfNotConnected, 5.0f, false);
 }
 
-void AApSubsystem::OnResearchCompleted(TSubclassOf<class UFGSchematic> schematic) {
-	UE_LOG(ApSubsystem, Display, TEXT("AApSubSystem::OnResearchCompleted(schematic), Schematic Completed"));
+void AApSubsystem::OnMamResearchCompleted(TSubclassOf<class UFGSchematic> schematic) {
+	UE_LOG(ApSubsystem, Display, TEXT("AApSubSystem::OnResearchCompleted(schematic), Mam Research Completed"));
 
 	//if (schematic.) //if name is Archipelago #xxxx send check to server
-
 }
+
+
+void AApSubsystem::OnSchematicCompleted(TSubclassOf<class UFGSchematic> schematic) {
+	UE_LOG(ApSubsystem, Display, TEXT("AApSubSystem::OnSchematicCompleted(schematic), Schematic Completed"));
+
+	//if (schematic.) //if name is Archipelago #xxxx send check to server
+}
+
+void AApSubsystem::OnSchematicPaidOff(AFGSchematicManager* manager) {
+	UE_LOG(ApSubsystem, Display, TEXT("AApSubSystem::OnSchematicPaidOff(manager)"));
+
+	//if (schematic.) //if name is Archipelago #xxxx send check to server
+}
+
+
+void AApSubsystem::OnSchematicPurchasedInstigator(TSubclassOf<class UFGSchematic> schematic, AFGCharacterPlayer* player) {
+	UE_LOG(ApSubsystem, Display, TEXT("AApSubSystem::OnSchematicPurchasedInstigator(schematic, player)"));
+
+	//if (schematic.) //if name is Archipelago #xxxx send check to server
+}
+
 
 void AApSubsystem::ItemClearCallback() {
 	UE_LOG(ApSubsystem, Display, TEXT("AApSubsystem::ItemClearCallback()"));
@@ -196,32 +233,27 @@ void AApSubsystem::ParseScoutedItems() {
 
 	AModContentRegistry* contentRegistry = AModContentRegistry::Get(GetWorld());
 
+	std::map<std::string, std::vector<AP_NetworkItem>> itmesPerMilestone;
+
 	for (auto& item : ScoutedLocations) {
-		FString itemName(item.itemName.c_str());
-		FString json = FString::Printf(TEXT(R"({
-			"$schema": "https://raw.githubusercontent.com/budak7273/ContentLib_Documentation/main/JsonSchemas/CL_Schematic.json",
-			"Name": "%s",
-			"Type": "Milestone",
-			"Time": 1,
-			"Tier": 1,
-			"Category": "SC_Logistics",
-			"VisualKit": "Kit_AP_Logo",
-			"Cost": [
-				{
-				  "Item": "Desc_CopperSheet",
-				  "Amount": 200
-				},
-			],
-			"Recipes": [
-				"Recipe_WaterPump"
-			]
-		})"), *itemName);
+		if (item.locationName.starts_with("Hub"))
+		{
+			std::string milestoneString = item.locationName.substr(0, item.locationName.find(","));
 
-		FContentLib_Schematic schematic = UCLSchematicBPFLib::GenerateCLSchematicFromString(json);
-		TSubclassOf<UFGSchematic> factorySchematic = FClassGenerator::GenerateSimpleClass(TEXT("/Archipelago/"), *itemName, UFGSchematic::StaticClass());
-		UCLSchematicBPFLib::InitSchematicFromStruct(schematic, factorySchematic, ContentLibSubsystem);
+			if (!itmesPerMilestone.contains(milestoneString)) {
+				itmesPerMilestone.insert(std::pair<std::string, std::vector<AP_NetworkItem>>(milestoneString, { item }));
+			} else {
+				itmesPerMilestone[milestoneString].push_back(item);
+			}
+		}
+	}
 
-		contentRegistry->RegisterSchematic(FName(TEXT("Archipelago")), factorySchematic);
+	for (auto& itemPerMilestone : itmesPerMilestone) {
+		for (auto& item : itemPerMilestone.second) {
+			CreateRecipe(contentRegistry, item);
+		}
+
+		CreateHubSchematic(contentRegistry, itemPerMilestone.first, itemPerMilestone.second);
 	}
 
 	//UWorld* world = GEngine->GameViewport->GetWorld();
@@ -229,6 +261,110 @@ void AApSubsystem::ParseScoutedItems() {
 	ScoutedLocations.clear();
 	ShouldParseItemsToScout = false;
 	hasFininshedInitialization = true;
+}
+
+void AApSubsystem::CreateRecipe(AModContentRegistry* contentRegistry, AP_NetworkItem item) {
+	FString name((item.playerName + " - " + item.itemName).c_str());
+	FString uniqueId(std::to_string(item.location).c_str());
+	// https://raw.githubusercontent.com/budak7273/ContentLib_Documentation/main/JsonSchemas/CL_Recipe.json
+	FString json = FString::Printf(TEXT(R"({
+		 "Name": "%s",
+		 "Ingredients": [],
+		 "Products": [
+			  {
+					"Item": "AP_Logo_Item",
+					"Amount": 1
+			  }
+		 ],
+		 "ManufacturingDuration": 1,
+		 "ProducedIn": [
+			  "Build_HadronCollider"
+		 ]
+	})"), *name);
+
+	FContentLib_Recipe clRecipy = UCLRecipeBPFLib::GenerateCLRecipeFromString(json);
+	TSubclassOf<UFGRecipe> factoryRecipy = FClassGenerator::GenerateSimpleClass(TEXT("/Archipelago/"), *uniqueId, UFGRecipe::StaticClass());
+	UCLRecipeBPFLib::InitRecipeFromStruct(ContentLibSubsystem, clRecipy, factoryRecipy);
+
+	contentRegistry->RegisterRecipe(FName(TEXT("Archipelago")), factoryRecipy);
+}
+
+void AApSubsystem::CreateItem(AModContentRegistry* contentRegistry, AP_NetworkItem item) {
+	FString name((item.playerName + " " + item.itemName).c_str());
+	FString uniqueId(std::to_string(item.location).c_str());
+	// https://raw.githubusercontent.com/budak7273/ContentLib_Documentation/main/JsonSchemas/CL_Item.json
+	FString json = FString::Printf(TEXT(R"({
+		 "Name": "%s",
+		 "Description": "TODO: Implement",
+		 "StackSize": "One",
+		 "Category": "AP",
+		 "VisualKit": "Kit_AP_Logo",
+		 "NameShort": "APITM",
+		 "CanBeDiscarded": false,
+		 "RememberPickUp": false,
+		 "EnergyValue": 0,
+		 "RadioactiveDecay": 0,
+		 "ResourceSinkPoints": 0
+	})"), *name);
+
+	FContentLib_Item clItem = UCLItemBPFLib::GenerateCLItemFromString(json);
+	TSubclassOf<UFGItemDescriptor> factoryItem = FClassGenerator::GenerateSimpleClass(TEXT("/Archipelago/"), *uniqueId, UFGItemDescriptor::StaticClass());
+	UCLItemBPFLib::InitItemFromStruct(factoryItem, clItem, ContentLibSubsystem);
+
+	//contentRegistry->RegisterItem(FName(TEXT("Archipelago")), factoryItem);
+}
+
+void AApSubsystem::CreateHubSchematic(AModContentRegistry* contentRegistry, std::string milestoneName, std::vector<AP_NetworkItem> items) {
+	std::string buildRecipies = "";
+	/*for (auto& item : items) {
+		if (buildRecipies.length() > 0)
+			buildRecipies = +"\", \"" + item.itemName;
+		else
+			buildRecipies = item.itemName;
+	}*/
+
+	/*for (auto& item : items) {
+		if (buildRecipies.length() > 0)
+			buildRecipies += "\", \"/Archipelago/" + std::to_string(item.location);
+		else
+			buildRecipies = "/Archipelago/" + std::to_string(item.location);
+	}*/
+
+	for (auto& item : items) {
+		if (buildRecipies.length() > 0)
+			buildRecipies += "\", \"" + std::to_string(item.location);
+		else
+			buildRecipies = std::to_string(item.location);
+	}
+
+	int delimierPos = milestoneName.find("-");
+	std::string tierString = milestoneName.substr(delimierPos - 1, 1);
+
+	FString name(milestoneName.c_str());
+	FString tier(tierString.c_str());
+	FString recipies(buildRecipies.c_str());
+	// https://raw.githubusercontent.com/budak7273/ContentLib_Documentation/main/JsonSchemas/CL_Schematic.json
+	FString json = FString::Printf(TEXT(R"({
+		"Name": "%s",
+		"Type": "Milestone",
+		"Time": 100,
+		"Tier": %s,
+		"VisualKit": "Kit_AP_Logo",
+		"Cost": [
+			{
+				"Item": "Desc_CopperSheet",
+				"Amount": 1
+			},
+		],
+		"Recipes": [ "Recipe_WaterPump" ]
+	})"), *name, *tier, *recipies);
+	//		"Recipes": [ "%s" ]
+
+	FContentLib_Schematic schematic = UCLSchematicBPFLib::GenerateCLSchematicFromString(json);
+	TSubclassOf<UFGSchematic> factorySchematic = FClassGenerator::GenerateSimpleClass(TEXT("/Archipelago/"), *name, UFGSchematic::StaticClass());
+	UCLSchematicBPFLib::InitSchematicFromStruct(schematic, factorySchematic, ContentLibSubsystem);
+
+	contentRegistry->RegisterSchematic(FName(TEXT("Archipelago")), factorySchematic);
 }
 
 void AApSubsystem::HandleAPMessages() {
@@ -302,23 +438,3 @@ FApConfigurationStruct AApSubsystem::GetActiveConfig() {
 }
 
 #pragma optimize("", on)
-
-//#include "CLCDOBPFLib.h"
-/*FString changeBaseClassJson = TEXT(R"({
-	"$schema": "https://raw.githubusercontent.com/budak7273/ContentLib_Documentation/main/JsonSchemas/CL_CDO.json",
-	"Class" : "/Game/FactoryGame/Buildable/Factory/PowerStorage/Build_PowerStorageMk1.Build_PowerStorageMk1",
-	"Edits" : [
-		{
-			"Property": "Parent",
-			"Value" : "/Archipelago/Buildables/EnergyLinkBuildable.EnergyLinkBuildable"
-		}
-	]
-})");
-
-if (UCLCDOBPFLib::GenerateCLCDOFromString(changeBaseClassJson, true)) {
-	UE_LOG(ApSubsystem, Display, TEXT("AEnergyLinkSubsystem:BeginPlay(), Patched BuildEnergyLink baseclass"));
-}
-else
-{
-	UE_LOG(ApSubsystem, Error, TEXT("AEnergyLinkSubsystem:BeginPlay(), Failed to patch BuildEnergyLink baseclass"));
-}*/
