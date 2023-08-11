@@ -6,11 +6,6 @@ DEFINE_LOG_CATEGORY(ApSubsystem);
 #pragma optimize("", off)
 
 std::map<std::string, std::function<void(AP_SetReply)>> AApSubsystem::callbacks;
-UContentLibSubsystem* AApSubsystem::ContentLibSubsystem;
-std::vector<AP_NetworkItem> AApSubsystem::ScoutedLocations;
-bool AApSubsystem::ShouldParseItemsToScout = false;
-int AApSubsystem::FirstHubLocation = 0;
-int AApSubsystem::LastHubLocation = 0;
 
 TMap<int64_t, std::string> AApSubsystem::ItemIdToSchematicName = {
 	{1337500, "Schematic_HUB_Schematic_1-1" },
@@ -31,6 +26,17 @@ AApSubsystem::AApSubsystem()
 	PrimaryActorTick.TickInterval = 0.5f;
 }
 
+AApSubsystem* AApSubsystem::Get() {
+	return Get(GEngine->GameViewport->GetWorld());
+}
+
+AApSubsystem* AApSubsystem::Get(class UWorld* world) {
+	USubsystemActorManager* SubsystemActorManager = world->GetSubsystem<USubsystemActorManager>();
+	check(SubsystemActorManager);
+
+	return SubsystemActorManager->GetSubsystemActor<AApSubsystem>();
+}
+
 void AApSubsystem::BeginPlay()
 {
 	Super::BeginPlay();
@@ -44,8 +50,8 @@ void AApSubsystem::BeginPlay()
 
 void AApSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase) {
 	if (phase == ELifecyclePhase::INITIALIZATION) {
-		ContentLibSubsystem = GetWorld()->GetGameInstance()->GetSubsystem<UContentLibSubsystem>();
-		check(ContentLibSubsystem)
+		contentLibSubsystem = GetWorld()->GetGameInstance()->GetSubsystem<UContentLibSubsystem>();
+		check(contentLibSubsystem)
 
 		FApConfigurationStruct config = GetActiveConfig();
 
@@ -55,28 +61,40 @@ void AApSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase) {
 		}
 
 		ConnectToArchipelago(config);
+
+		FDateTime connectingStartedTime = FDateTime::Now();
 	
-		FGenericPlatformProcess::ConditionalSleep([this, config]() { return InitializeTick(config); }, 1);
+		FGenericPlatformProcess::ConditionalSleep([this, config, connectingStartedTime]() { return InitializeTick(config, connectingStartedTime); }, 1);
+	}
+	else if (phase == ELifecyclePhase::INITIALIZATION) {
+		if (ConnectionState != EApConnectionState::Connected) {
+			FApConfigurationStruct config = GetActiveConfig();
+
+			FString message = FString::Printf(TEXT("Failed to connect to Archipelago server: \"%s\", for user \"%s\""), *config.Url, *config.Login);
+
+			SendChatMessage(message, FLinearColor::Red);
+		}
 	}
 }
 
-bool AApSubsystem::InitializeTick(FApConfigurationStruct config) {
-	if (isConnecting) {
-		CheckConnectionState(config);
-	}
-	else {
-		if (!ShouldParseItemsToScout) {
-			if (FirstHubLocation != 0 && LastHubLocation != 0) {
+bool AApSubsystem::InitializeTick(FApConfigurationStruct config, FDateTime connectingStartedTime) {
+	if (ConnectionState == EApConnectionState::Connecting) {
+		if ((FDateTime::Now() - connectingStartedTime).GetSeconds() > 5)
+			TimeoutConnectionIfNotConnected();
+		else
+			CheckConnectionState(config);
+	} else if (ConnectionState == EApConnectionState::Connected) {
+		if (!shouldParseItemsToScout) {
+			if (firstHubLocation != 0 && lastHubLocation != 0) {
 				HintUnlockedHubRecipies();
 			}
-		}
-		else {
+		} else {
 			ParseScoutedItems();
 			return true;
 		}
 	}
 
-	return false;
+	return ConnectionState == EApConnectionState::ConnectionFailed;
 }
 
 void AApSubsystem::ConnectToArchipelago(FApConfigurationStruct config) {
@@ -95,11 +113,9 @@ void AApSubsystem::ConnectToArchipelago(FApConfigurationStruct config) {
 	AP_RegisterSlotDataIntCallback("FirstHubLocation", AApSubsystem::SlotDataFirstHubLocation);
 	AP_RegisterSlotDataIntCallback("LastHubLocation", AApSubsystem::SlotDataLastHubLocation);
 
-	isConnecting = true;
+	ConnectionState = EApConnectionState::Connecting;
 
 	AP_Start();
-
-	GetWorldTimerManager().SetTimer(connectionTimeoutHandler, this, &AApSubsystem::TimeoutConnectionIfNotConnected, 5.0f, false);
 }
 
 void AApSubsystem::OnMamResearchCompleted(TSubclassOf<class UFGSchematic> schematic) {
@@ -110,7 +126,7 @@ void AApSubsystem::OnMamResearchCompleted(TSubclassOf<class UFGSchematic> schema
 
 
 void AApSubsystem::OnSchematicCompleted(TSubclassOf<class UFGSchematic> schematic) {
-	UE_LOG(ApSubsystem, Display, TEXT("AApSubSystem::OnSchematicCompleted(schematic), Schematic Completed"));
+	UE_LOG(ApSubsystem, Display, TEXT("AApSubSystem::OnSchematicCompleted(schematic)"));
 
 	ESchematicType type = UFGSchematic::GetType(schematic);
 
@@ -118,7 +134,7 @@ void AApSubsystem::OnSchematicCompleted(TSubclassOf<class UFGSchematic> schemati
 		return;
 
 	for (auto location : locationsPerMileStone[schematic])
-		AP_SendItem(location);
+		AP_SendItem(location.location);
 }
 
 void AApSubsystem::ItemClearCallback() {
@@ -151,16 +167,26 @@ void AApSubsystem::SetReplyCallback(AP_SetReply setReply) {
 void AApSubsystem::LocationScoutedCallback(std::vector<AP_NetworkItem> scoutedLocations) {
 	UE_LOG(ApSubsystem, Display, TEXT("AApSubsystem::HintUnlockedHubRecipies(vector[%i])"), scoutedLocations.size());
 
-	ScoutedLocations = scoutedLocations;
-	ShouldParseItemsToScout = true;
+	AApSubsystem* self = AApSubsystem::Get();
+
+	self->scoutedLocations = TArray<AP_NetworkItem>();
+
+	for (auto location : scoutedLocations)
+		self->scoutedLocations.Add(location);
+	
+	self->shouldParseItemsToScout = true;
 }
 
 void AApSubsystem::SlotDataFirstHubLocation(int locationId) {
-	FirstHubLocation = locationId;
+	AApSubsystem* self = AApSubsystem::Get();
+
+	self->firstHubLocation = locationId;
 }
 
 void AApSubsystem::SlotDataLastHubLocation(int locationId) {
-	LastHubLocation = locationId;
+	AApSubsystem* self = AApSubsystem::Get();
+
+	self->lastHubLocation = locationId;
 }
 
 void AApSubsystem::MonitorDataStoreValue(std::string key, AP_DataType dataType, std::string defaultValue, std::function<void(AP_SetReply)> callback) {
@@ -196,24 +222,23 @@ void AApSubsystem::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	if (!isInitialized)
+	if (ConnectionState != EApConnectionState::Connected)
 		return;
 
 	HandleAPMessages();
 }
 
 void AApSubsystem::CheckConnectionState(FApConfigurationStruct config) {
-	if (isConnecting) {
+	if (ConnectionState == EApConnectionState::Connecting) {
 		AP_ConnectionStatus status = AP_GetConnectionStatus();
 
 		if (status == AP_ConnectionStatus::Authenticated) {
-			isInitialized = true;
-			isConnecting = false;
+			ConnectionState = EApConnectionState::Connected;
 
 			UE_LOG(ApSubsystem, Display, TEXT("AApSubsystem::Tick(), Successfully Authenticated"));
 		}
 		else if (status == AP_ConnectionStatus::ConnectionRefused) {
-			isConnecting = false;
+			ConnectionState = EApConnectionState::ConnectionFailed;
 
 			FString message = FString::Printf(TEXT("Failed to connect to Archipelago server: \"%s\", for user \"%s\""), *config.Url, *config.Login);
 
@@ -223,37 +248,52 @@ void AApSubsystem::CheckConnectionState(FApConfigurationStruct config) {
 }
 
 void AApSubsystem::ParseScoutedItems() {
-	UE_LOG(ApSubsystem, Display, TEXT("AApSubsystem::ParseScoutedItems(vector[%i])"), ScoutedLocations.size());
+	UE_LOG(ApSubsystem, Display, TEXT("AApSubsystem::ParseScoutedItems(vector[%i])"), scoutedLocations.Num());
 
-	AModContentRegistry* contentRegistry = AModContentRegistry::Get(GetWorld());
+	TMap<FString, TSubclassOf<UFGSchematic>> schematicsPerMilestone = TMap<FString, TSubclassOf<UFGSchematic>>();
 
-	std::map<std::string, std::vector<AP_NetworkItem>> itmesPerMilestone;
-
-	for (auto& item : ScoutedLocations) {
-		if (item.locationName.starts_with("Hub"))
+	for (auto& location : scoutedLocations) {
+		if (location.locationName.starts_with("Hub"))
 		{
-			std::string milestoneString = item.locationName.substr(0, item.locationName.find(","));
+			std::string milestoneString = location.locationName.substr(0, location.locationName.find(","));
+			FString milestone = FString(milestoneString.c_str());
 
-			if (!itmesPerMilestone.contains(milestoneString)) {
-				itmesPerMilestone.insert(std::pair<std::string, std::vector<AP_NetworkItem>>(milestoneString, { item }));
+			if (!schematicsPerMilestone.Contains(milestone)) {
+				TSubclassOf<UFGSchematic> schematic = FClassGenerator::GenerateSimpleClass(TEXT("/Archipelago/"), *milestone, UFGSchematic::StaticClass());
+
+				schematicsPerMilestone.Add(milestone, schematic);
+			}
+
+			if (!locationsPerMileStone.Contains(schematicsPerMilestone[milestone])) {
+				locationsPerMileStone.Add(schematicsPerMilestone[milestone], TArray<AP_NetworkItem>{ location });
 			} else {
-				itmesPerMilestone[milestoneString].push_back(item);
+				locationsPerMileStone[schematicsPerMilestone[milestone]].Add(location);
 			}
 		}
 	}
 
-	for (auto& itemPerMilestone : itmesPerMilestone) {
-		for (auto& item : itemPerMilestone.second) {
+	AModContentRegistry* contentRegistry = AModContentRegistry::Get(GetWorld());
+
+	for (auto& itemPerMilestone : locationsPerMileStone) {
+		for (auto& item : itemPerMilestone.Value) {
 			CreateRecipe(contentRegistry, item);
 		}
 
-		CreateHubSchematic(contentRegistry, itemPerMilestone.first, itemPerMilestone.second);
+		FString schematicName;
+		for (auto schematicAndName : schematicsPerMilestone)
+		{
+			if (itemPerMilestone.Key == schematicAndName.Value)
+			{
+				schematicName = schematicAndName.Key;
+				break;
+			}
+		}
+
+		CreateHubSchematic(contentRegistry, schematicName, itemPerMilestone.Key, itemPerMilestone.Value);
 	}
 
-	//UWorld* world = GEngine->GameViewport->GetWorld();
-
-	ScoutedLocations.clear();
-	ShouldParseItemsToScout = false;
+	scoutedLocations.Empty();
+	shouldParseItemsToScout = false;
 }
 
 void AApSubsystem::CreateRecipe(AModContentRegistry* contentRegistry, AP_NetworkItem item) {
@@ -277,7 +317,7 @@ void AApSubsystem::CreateRecipe(AModContentRegistry* contentRegistry, AP_Network
 
 	FContentLib_Recipe clRecipy = UCLRecipeBPFLib::GenerateCLRecipeFromString(json);
 	TSubclassOf<UFGRecipe> factoryRecipy = FClassGenerator::GenerateSimpleClass(TEXT("/Archipelago/"), *uniqueId, UFGRecipe::StaticClass());
-	UCLRecipeBPFLib::InitRecipeFromStruct(ContentLibSubsystem, clRecipy, factoryRecipy);
+	UCLRecipeBPFLib::InitRecipeFromStruct(contentLibSubsystem, clRecipy, factoryRecipy);
 
 	contentRegistry->RegisterRecipe(FName(TEXT("Archipelago")), factoryRecipy);
 }
@@ -302,12 +342,12 @@ void AApSubsystem::CreateItem(AModContentRegistry* contentRegistry, AP_NetworkIt
 
 	FContentLib_Item clItem = UCLItemBPFLib::GenerateCLItemFromString(json);
 	TSubclassOf<UFGItemDescriptor> factoryItem = FClassGenerator::GenerateSimpleClass(TEXT("/Archipelago/"), *uniqueId, UFGItemDescriptor::StaticClass());
-	UCLItemBPFLib::InitItemFromStruct(factoryItem, clItem, ContentLibSubsystem);
+	UCLItemBPFLib::InitItemFromStruct(factoryItem, clItem, contentLibSubsystem);
 
-	//contentRegistry->RegisterItem(FName(TEXT("Archipelago")), factoryItem);
+	//contentRegistry->RegisterItem(FName(TEXT("Archipelago")), factoryItem); //no idea how/where to register items
 }
 
-void AApSubsystem::CreateHubSchematic(AModContentRegistry* contentRegistry, std::string milestoneName, std::vector<AP_NetworkItem> items) {
+void AApSubsystem::CreateHubSchematic(AModContentRegistry* contentRegistry, FString name, TSubclassOf<UFGSchematic> factorySchematic, TArray<AP_NetworkItem> items) {
 	std::string buildRecipies = "";
 	/*for (auto& item : items) {
 		if (buildRecipies.length() > 0)
@@ -330,11 +370,10 @@ void AApSubsystem::CreateHubSchematic(AModContentRegistry* contentRegistry, std:
 			buildRecipies = std::to_string(item.location);
 	}
 
-	int delimierPos = milestoneName.find("-");
-	std::string tierString = milestoneName.substr(delimierPos - 1, 1);
+	int delimeterPos;
+	name.FindChar('-', delimeterPos);
 
-	FString name(milestoneName.c_str());
-	FString tier(tierString.c_str());
+	FString tier = name.RightChop(delimeterPos + 1);
 	FString recipies(buildRecipies.c_str());
 	// https://raw.githubusercontent.com/budak7273/ContentLib_Documentation/main/JsonSchemas/CL_Schematic.json
 	FString json = FString::Printf(TEXT(R"({
@@ -352,15 +391,8 @@ void AApSubsystem::CreateHubSchematic(AModContentRegistry* contentRegistry, std:
 		"Recipes": [ "%s" ]
 	})"), *name, *tier, *recipies);
 
-	TSubclassOf<UFGSchematic> factorySchematic = FClassGenerator::GenerateSimpleClass(TEXT("/Archipelago/"), *name, UFGSchematic::StaticClass());
-
-	locationsPerMileStone.Add(factorySchematic, TArray<int64_t>());
-	for (auto& item : items) {
-		locationsPerMileStone[factorySchematic].Add(item.location);
-	}
-
 	FContentLib_Schematic schematic = UCLSchematicBPFLib::GenerateCLSchematicFromString(json);
-	UCLSchematicBPFLib::InitSchematicFromStruct(schematic, factorySchematic, ContentLibSubsystem);
+	UCLSchematicBPFLib::InitSchematicFromStruct(schematic, factorySchematic, contentLibSubsystem);
 
 	contentRegistry->RegisterSchematic(FName(TEXT("Archipelago")), factorySchematic);
 }
@@ -395,30 +427,26 @@ void AApSubsystem::HintUnlockedHubRecipies() {
 
 	std::vector<int64_t> locations;
 
-	for (int64_t i = FirstHubLocation; i <= LastHubLocation; i++)
+	for (int64_t i = firstHubLocation; i <= lastHubLocation; i++)
 		locations.push_back(i);
 
-	AP_SendLocationScouts(locations, 0); //idally this we created a hint without spamming
+	AP_SendLocationScouts(locations, 0);
 }
 
 void AApSubsystem::TimeoutConnectionIfNotConnected() {
-	if (!isInitialized)
-	{
-		SetActorTickEnabled(false);
+	if (ConnectionState != EApConnectionState::Connecting)
+		return;
+	
+	UE_LOG(ApSubsystem, Display, TEXT("AApSubsystem::TimeoutConnectionIfNotConnected(), Authenticated Failed"));
 
-		UE_LOG(ApSubsystem, Display, TEXT("AApSubsystem::TimeoutConnectionIfNotConnected(), Authenticated Failed"));
+	SetActorTickEnabled(false);
 
-		FApConfigurationStruct config = GetActiveConfig();
-
-		FString message = FString::Printf(TEXT("Failed to connect to Archipelago server: \"%s\", for user \"%s\""), *config.Url, *config.Login);
-
-		SendChatMessage(message, FLinearColor::Red);
-	}
+	ConnectionState = EApConnectionState::ConnectionFailed;
 }
 
 FApConfigurationStruct AApSubsystem::GetActiveConfig() {
 	UConfigManager* ConfigManager = GEngine->GetEngineSubsystem<UConfigManager>();
-	FConfigId ConfigId{ "Archipelago", "" };
+	FConfigId ConfigId { "Archipelago", "" };
 	auto Config = ConfigManager->GetConfigurationById(ConfigId);
 	auto ConfigProperty = URuntimeBlueprintFunctionLibrary::GetModConfigurationPropertyByClass(Config);
 	auto CPSection = Cast<UConfigPropertySection>(ConfigProperty);

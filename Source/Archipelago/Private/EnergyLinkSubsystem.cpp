@@ -33,12 +33,9 @@ void AEnergyLinkSubsystem::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 
 	if (!apInitialized) {
-		USubsystemActorManager* SubsystemActorManager = GetWorld()->GetSubsystem<USubsystemActorManager>();
-		check(SubsystemActorManager);
+		ap = AApSubsystem::Get(GetWorld());
 
-		ap = SubsystemActorManager->GetSubsystemActor<AApSubsystem>();
-
-		if (ap->isInitialized)
+		if (ap->ConnectionState == EApConnectionState::Connected)
 		{
 			ap->MonitorDataStoreValue("EnergyLink", AP_DataType::Raw, energyLinkDefault, [&](AP_SetReply setReply) {
 				OnEnergyLinkValueChanged(setReply);
@@ -72,7 +69,7 @@ void AEnergyLinkSubsystem::SecondThick() {
 	TArray<AFGBuildablePowerStorage*> scheduledForRemoval;
 
 	for (AFGBuildablePowerStorage* powerStorage : PowerStorages) {
-		if (!powerStorage || powerStorage->IsPendingKill())
+		if (!IsValid(powerStorage))
 		{
 			scheduledForRemoval.Add(powerStorage);
 			continue;

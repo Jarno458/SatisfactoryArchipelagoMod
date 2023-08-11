@@ -43,7 +43,13 @@ DECLARE_LOG_CATEGORY_EXTERN(ApSubsystem, Log, All);
 
 #include "ApSubsystem.generated.h"
 
-UCLASS(Blueprintable)
+enum EApConnectionState {
+	Connecting,
+	Connected,
+	ConnectionFailed
+};
+
+UCLASS()
 class ARCHIPELAGO_API AApSubsystem : public AModSubsystem
 {
 	GENERATED_BODY()
@@ -53,38 +59,34 @@ public:
 	AApSubsystem();
 
 	UPROPERTY()
-		AFGSchematicManager* SManager;
+	AFGSchematicManager* SManager;
 	UPROPERTY()
-		AFGResearchManager* RManager;
+	AFGResearchManager* RManager;
 
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
+	virtual void Tick(float DeltaTime) override;
 
 public:
-	bool isInitialized = false;
-	bool isConnecting = false;
-	TMap<TSubclassOf<class UFGSchematic>, TArray<int64_t>> locationsPerMileStone;
+	EApConnectionState ConnectionState;
+
+	static AApSubsystem* Get();
+	static AApSubsystem* Get(class UWorld* world);
+
+	static FApConfigurationStruct GetActiveConfig();
 
 	// Called every frame
-	virtual void Tick(float DeltaTime) override;
-	bool InitializeTick(FApConfigurationStruct config);
+	bool InitializeTick(FApConfigurationStruct config, FDateTime connectingStartedTime);
 
 	void DispatchLifecycleEvent(ELifecyclePhase phase);
 
 	void MonitorDataStoreValue(std::string key, AP_DataType dataType, std::string defaultValue, std::function<void(AP_SetReply)> callback);
 	void SetServerData(AP_SetServerDataRequest* setDataRequest);
 
-	static FApConfigurationStruct GetActiveConfig();
-
 private:
 	static std::map<std::string, std::function<void(AP_SetReply)>> callbacks;
 	static TMap<int64_t, std::string> ItemIdToSchematicName;
-	static UContentLibSubsystem* ContentLibSubsystem;
-	static std::vector<AP_NetworkItem> ScoutedLocations;
-	static bool ShouldParseItemsToScout;
-	static int FirstHubLocation;
-	static int LastHubLocation;
 
 	static void SetReplyCallback(AP_SetReply setReply);
 	static void ItemClearCallback();
@@ -94,19 +96,30 @@ private:
 	static void SlotDataFirstHubLocation(int locationId);
 	static void SlotDataLastHubLocation(int locationId);
 
+	UContentLibSubsystem* contentLibSubsystem;
 	FTimerHandle connectionTimeoutHandler;
+
+	TMap<TSubclassOf<class UFGSchematic>, TArray<AP_NetworkItem>> locationsPerMileStone;
+
+	TArray<AP_NetworkItem> scoutedLocations;
+	bool shouldParseItemsToScout;
+	int firstHubLocation;
+	int lastHubLocation;
+
 	void ConnectToArchipelago(FApConfigurationStruct config);
+	UFUNCTION() //required for event
 	void TimeoutConnectionIfNotConnected();
 
 	void CheckConnectionState(FApConfigurationStruct config);
 	void ParseScoutedItems();
 	void HandleAPMessages();
-	void SendChatMessage(const FString& Message, const FLinearColor& Color);
 	void HintUnlockedHubRecipies();
+
+	void SendChatMessage(const FString& Message, const FLinearColor& Color);
 
 	void CreateRecipe(AModContentRegistry* contentRegistry, AP_NetworkItem item);
 	void CreateItem(AModContentRegistry* contentRegistry, AP_NetworkItem item);
-	void CreateHubSchematic(AModContentRegistry* contentRegistry, std::string milestoneName, std::vector<AP_NetworkItem> items);
+	void CreateHubSchematic(AModContentRegistry* contentRegistry, FString name, TSubclassOf<UFGSchematic> factorySchematic, TArray<AP_NetworkItem> items);
 	
 	UFUNCTION() //required for event
 	void OnMamResearchCompleted(TSubclassOf<class UFGSchematic> schematic);
