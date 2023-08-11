@@ -7,17 +7,210 @@ DEFINE_LOG_CATEGORY(ApSubsystem);
 
 std::map<std::string, std::function<void(AP_SetReply)>> AApSubsystem::callbacks;
 
-TMap<int64_t, std::string> AApSubsystem::ItemIdToSchematicName = {
-	{1337500, "Schematic_HUB_Schematic_1-1" },
-	{1337501, "Schematic_HUB_Schematic_1-2" },
-	{1337502, "Schematic_HUB_Schematic_1-3" },
-	{1337503, "Schematic_HUB_Schematic_1-4" },
-	{1337504, "Schematic_HUB_Schematic_1-5" },
-	{1337505, "Schematic_HUB_Schematic_2-1" },
-	{1337506, "Schematic_HUB_Schematic_2-2" },
-	{1337507, "Schematic_HUB_Schematic_2-3" },
-	{1337508, "Schematic_HUB_Schematic_2-4" },
-	{1337509, "Schematic_HUB_Schematic_2-5" }
+TMap<int64_t, FString> AApSubsystem::ItemIdToGameName = {
+	{1337500, TEXT("Desc_SpaceElevatorPart_5_C")}, //Adaptive Control Unit
+	{1337501, TEXT("Desc_CircuitBoardHighSpeed_C")}, //AI Limiter
+	{1337502, TEXT("Desc_AluminumPlate_C")},
+	{1337503, TEXT("Desc_Crystal_C")}, //Blue Power Slug
+	{1337504, TEXT("Desc_Crystal_mk2_C")}, //Yellow Power Slug
+	{1337505, TEXT("Desc_AlienProtein_C")},
+	{1337506, TEXT("Desc_Crystal_mk3_C")}, //Purple Power Slug
+	{1337507, TEXT("Desc_AluminumCasing_C")},
+	{1337508, TEXT("Desc_AluminumIngot_C")},
+	{1337509, TEXT("Desc_AluminumScrap_C")},
+	{1337510, TEXT("Desc_SpaceElevatorPart_7_C")}, //Assembly Director System
+	{1337511, TEXT("Desc_SpaceElevatorPart_3_C")}, //Automated Wiring
+	{1337512, TEXT("Desc_Battery_C")},
+	{1337513, TEXT("Desc_OreBauxite_C")},
+	{1337514, TEXT("BP_EquipmentDescriptorBeacon_C")}, //Beacon
+	{1337515, TEXT("Desc_GenericBiomass_C")},
+	{1337516, TEXT("Desc_Gunpowder_C")}, //Black Powder
+	{1337517, TEXT("Desc_Cable_C")},
+	{1337518, TEXT("Desc_GoldIngot_C")}, //Caterium Ingot
+	{1337519, TEXT("Desc_OreGold_C")}, //Caterium Ore
+	{1337520, TEXT("Desc_CircuitBoard_C")},
+	{1337521, TEXT("Desc_Coal_C")},
+	{1337522, TEXT("Desc_ColorCartridge_C")},
+	{1337523, TEXT("Desc_CompactedCoal_C")},
+	{1337524, TEXT("Desc_Computer_C")},
+	{1337525, TEXT("Desc_Cement_C")}, //Concrete
+	{1337526, TEXT("Desc_CoolingSystem_C")},
+	{1337527, TEXT("Desc_CopperIngot_C")},
+	{1337528, TEXT("Desc_OreCopper_C")}, //Copper Ore
+	{1337529, TEXT("Desc_CopperDust_C")},
+	{1337530, TEXT("Desc_CopperSheet_C")},
+	{1337531, TEXT("Desc_CharacterRunStatue_C")},
+	{1337532, TEXT("Desc_CrystalOscillator_C")},
+	{1337533, TEXT("Desc_ElectromagneticControlRod_C")},
+	{1337534, TEXT("Desc_FluidCanister_C")},
+	{1337535, TEXT("Desc_GasTank_C")}, //Empty Fluid Tank
+	{1337536, TEXT("Desc_SteelPlateReinforced_C")}, //Encased Industrial Beam
+	{1337537, TEXT("Desc_PlutoniumCell_C")},
+	{1337538, TEXT("Desc_UraniumCell_C")},
+	{1337539, TEXT("Desc_Fabric_C")},
+	{1337540, TEXT("Desc_ResourceSinkCoupon_C")},
+	{1337541, TEXT("Desc_FlowerPetals_C")},
+	{1337542, TEXT("Desc_ModularFrameFused_C")},
+	{1337543, TEXT("Desc_HardDrive_C")},
+	{1337544, TEXT("Desc_AluminumPlateReinforced_C")}, //Heatsink
+	{1337545, TEXT("Desc_ModularFrameHeavy_C")},
+	{1337546, TEXT("Desc_HighSpeedConnector_C")},
+	{1337547, TEXT("Desc_CharacterSpin_Statue_C")},
+	{1337548, TEXT("Desc_CharacterClap_Statue_C")},
+	{1337549, TEXT("Desc_IronIngot_C")},
+	{1337550, TEXT("Desc_OreIron_C")},
+	{1337551, TEXT("Desc_IronPlate_C")},
+	{1337552, TEXT("Desc_IronRod_C")},
+	{1337553, TEXT("Desc_GoldenNut_Statue_C")},
+	{1337554, TEXT("Desc_Leaves_C")},
+	{1337555, TEXT("Desc_Stone_C")}, //Limestone
+	{1337556, TEXT("Desc_SpaceElevatorPart_6_C")}, //Magnetic Field Generator
+	{1337557, TEXT("Desc_WAT2_C")}, //Mercer Sphere
+	{1337558, TEXT("Desc_SpaceElevatorPart_4_C")}, //Modular Engine
+	{1337559, TEXT("Desc_ModularFrame_C")},
+	{1337560, TEXT("Desc_Motor_C")},
+	{1337561, TEXT("Desc_Mycelia_C")},
+	{1337562, TEXT("Desc_NonFissibleUranium_C")},
+	{1337563, TEXT("Desc_SpaceElevatorPart_9_C")}, //Nuclear Pasta
+	{1337564, TEXT("Desc_DoggoStatue_C")},
+	{1337565, TEXT("Desc_AlienDNACapsule_C")},
+	{1337566, TEXT("Desc_PackagedAlumina_C")},
+	{1337567, TEXT("Desc_Fuel_C")},
+	{1337568, TEXT("Desc_PackagedOilResidue_C")},
+	{1337569, TEXT("Desc_PackagedBiofuel_C")},
+	{1337570, TEXT("Desc_PackagedNitricAcid_C")},
+	{1337571, TEXT("Desc_PackagedNitrogenGas_C")},
+	{1337572, TEXT("Desc_PackagedOil_C")},
+	{1337573, TEXT("Desc_PackagedSulfuricAcid_C")},
+	{1337574, TEXT("Desc_TurboFuel_C")}, //Packaged Turno Fuel
+	{1337575, TEXT("Desc_PackagedWater_C")},
+	{1337576, TEXT("Desc_PetroleumCoke_C")},
+	{1337577, TEXT("Desc_Plastic_C")},
+	{1337578, TEXT("Desc_PlutoniumFuelRod_C")},
+	{1337579, TEXT("Desc_PlutoniumPellet_C")},
+	{1337580, TEXT("Desc_PlutoniumWaste_C")},
+	{1337581, TEXT("Desc_PolymerResin_C")},
+	{1337582, TEXT("Desc_CrystalShard_C")}, //Power Shard
+	{1337583, TEXT("Desc_SpaceGiraffeStatue_C"))},
+	{1337584, TEXT("Desc_PressureConversionCube_C")},
+	{1337585, TEXT("Desc_ComputerQuantum_C")},
+	{1337586, TEXT("Desc_QuartzCrystal_C")},
+	{1337587, TEXT("Desc_HighSpeedWire_C")},
+	{1337588, TEXT("Desc_ModularFrameLightweight_C")},
+	{1337589, TEXT("Desc_RawQuartz_C")},
+	{1337590, TEXT("Desc_IronPlateReinforced_C")},
+	{1337591, TEXT("Desc_Rotor_C")},
+	{1337592, TEXT("Desc_Rubber_C")},
+	{1337593, TEXT("Desc_SAM_C")},
+	{1337594, TEXT("Desc_IronScrew_C")},
+	{1337595, TEXT("Desc_Silica_C")},
+	{1337596, TEXT("Desc_SpaceElevatorPart_1_C")}, //Smart Plating
+	{1337597, TEXT("Desc_GunpowderMK2_C")}, //Smokeless Powder
+	{1337598, TEXT("Desc_Biofuel_C")}, //Solid Biofuel
+	{1337599, TEXT("Desc_WAT1_C")}, //Somersloop
+	{1337600, TEXT("Desc_Stator_C")},
+	{1337601, TEXT("Desc_Hog_Statue_C")},
+	{1337502, TEXT("Desc_SteelPlate_C")},
+	{1337503, TEXT("Desc_SteelIngot_C")},
+	{1337504, TEXT("Desc_SteelPipe_C")},
+	{1337505, TEXT("Desc_Sulfur_C")},
+	{1337506, TEXT("Desc_ComputerSuper_C")},
+	{1337507, TEXT("Desc_QuantumOscillator_C")},
+	{1337508, TEXT("Desc_SpaceElevatorPart_8_C")}, //Thermal Propulsion Rocket
+	{1337509, TEXT("Desc_MotorLightweight_C")},
+	{1337510, TEXT("Desc_HogParts_C'")},
+	{1337511, TEXT("Desc_OreUranium_C")},
+	{1337512, TEXT("Desc_NuclearFuelRod_C")},
+	{1337513, TEXT("Desc_NuclearWaste_C")},
+	{1337514, TEXT("Desc_SpaceElevatorPart_2_C")}, //Versatile Framework
+	{1337515, TEXT("Desc_Wire_C")},
+	{1337516, TEXT("Desc_Wood_C")},
+	{1337517, TEXT("Desc_SpitterParts_C")},
+	{1337518, TEXT("Desc_StingerParts_C")},
+	{1337519, TEXT("Desc_HatcherParts_C")},
+};
+
+TMap<int64_t, FString> AApSubsystem::ItemIdToGameName2 = {
+	{1337520, TEXT("Desc_CircuitBoard_C")},
+	{1337521, TEXT("Desc_Coal_C")},
+	{1337522, TEXT("Desc_ColorCartridge_C")},
+	{1337523, TEXT("Desc_CompactedCoal_C")},
+	{1337524, TEXT("Desc_Computer_C")},
+	{1337525, TEXT("Desc_Cement_C")}, //Concrete
+	{1337526, TEXT("Desc_CoolingSystem_C")},
+	{1337527, TEXT("Desc_CopperIngot_C")},
+	{1337528, TEXT("Desc_OreCopper_C")}, //Copper Ore
+	{1337529, TEXT("Desc_CopperDust_C")},
+	{1337530, TEXT("Desc_CopperSheet_C")},
+	//{1337531, TEXT("Desc_LiquidOil_C")},
+	{1337532, TEXT("Desc_CrystalOscillator_C")},
+	{1337533, TEXT("Desc_ElectromagneticControlRod_C")},
+	{1337534, TEXT("Desc_FluidCanister_C")},
+	{1337535, TEXT("Desc_GasTank_C")}, //Empty Fluid Tank
+	{1337536, TEXT("Desc_SteelPlateReinforced_C")}, //Encased Industrial Beam
+	{1337537, TEXT("Desc_PlutoniumCell_C")},
+	{1337538, TEXT("Desc_UraniumCell_C")},
+	{1337539, TEXT("Desc_Fabric_C")},
+	{1337540, TEXT("Desc_ResourceSinkCoupon_C")},
+	{1337541, TEXT("Desc_FlowerPetals_C")},
+	{1337542, TEXT("Desc_ModularFrameFused_C")},
+	{1337543, TEXT("Desc_HardDrive_C")},
+	{1337544, TEXT("Desc_AluminumPlateReinforced_C")}, //Heatsink
+	{1337545, TEXT("Desc_ModularFrameHeavy_C")},
+	{1337546, TEXT("Desc_HighSpeedConnector_C")},
+	//{1337547, "Duplicate"},
+	//{1337548, "HUB Parts"},
+	{1337549, TEXT("Desc_IronIngot_C")},
+	{1337550, TEXT("Desc_OreIron_C")},
+	{1337551, TEXT("Desc_IronPlate_C")},
+	{1337552, TEXT("Desc_IronRod_C")},
+	//{1337553, "Duplicate"},
+	{1337554, TEXT("Desc_Leaves_C")},
+	{1337555, TEXT("Desc_Stone_C")}, //Limestone
+	{1337556, TEXT("Desc_SpaceElevatorPart_6_C")}, //Magnetic Field Generator
+	{1337557, TEXT("Desc_WAT2_C")}, //Mercer Sphere
+	{1337558, TEXT("Desc_SpaceElevatorPart_4_C")}, //Modular Engine
+	{1337559, TEXT("Desc_ModularFrame_C")},
+	{1337560, TEXT("Desc_Motor_C")},
+	{1337561, TEXT("Desc_Mycelia_C")},
+	{1337562, TEXT("Desc_NonFissibleUranium_C")},
+	{1337563, TEXT("Desc_SpaceElevatorPart_9_C")}, //Nuclear Pasta
+	//{1337564, "Duplicated"},
+	{1337565, TEXT("Desc_AlienDNACapsule_C")},
+	{1337566, TEXT("Desc_PackagedAlumina_C")},
+	{1337567, TEXT("Desc_Fuel_C")},
+	{1337568, TEXT("Desc_PackagedOilResidue_C")},
+	{1337569, TEXT("Desc_PackagedBiofuel_C")},
+	{1337570, TEXT("Desc_PackagedNitricAcid_C")},
+	{1337571, TEXT("Desc_PackagedNitrogenGas_C")},
+	{1337572, TEXT("Desc_PackagedOil_C")},
+	{1337573, TEXT("Desc_PackagedSulfuricAcid_C")},
+	{1337574, TEXT("Desc_TurboFuel_C")}, //Packaged Turno Fuel
+	{1337575, TEXT("Desc_PackagedWater_C")},
+	{1337576, TEXT("Desc_PetroleumCoke_C")},
+	{1337577, TEXT("Desc_Plastic_C")},
+	{1337578, TEXT("Desc_PlutoniumFuelRod_C")},
+	{1337579, TEXT("Desc_PlutoniumPellet_C")},
+	{1337580, TEXT("Desc_PlutoniumWaste_C")},
+	{1337581, TEXT("Desc_PolymerResin_C")},
+	{1337582, TEXT("Desc_CrystalShard_C")}, //Power Shard
+	//{1337583, "Unused")},
+	{1337584, TEXT("Desc_PressureConversionCube_C")},
+	{1337585, TEXT("Desc_ComputerQuantum_C")},
+	{1337586, TEXT("Desc_QuartzCrystal_C")},
+	{1337587, TEXT("Desc_HighSpeedWire_C")},
+	{1337588, TEXT("Desc_ModularFrameLightweight_C")},
+	{1337589, TEXT("Desc_RawQuartz_C")},
+	{1337590, TEXT("Desc_IronPlateReinforced_C")},
+	{1337591, TEXT("Desc_Rotor_C")},
+	{1337592, TEXT("Desc_Rubber_C")},
+	{1337593, TEXT("Desc_SAM_C")},
+	{1337594, TEXT("Desc_IronScrew_C")},
+	{1337595, TEXT("Desc_Silica_C")},
+	{1337596, TEXT("Desc_SpaceElevatorPart_1_C")}, //Smart Plating
+	{1337597, TEXT("Desc_GunpowderMK2_C")}, //Smokeless Powder
+	{1337598, TEXT("Desc_Biofuel_C")}, //Solid Biofuel
+	{1337699, TEXT("Desc_WAT1_C")}, //Somersloop
 };
 
 AApSubsystem::AApSubsystem()
@@ -275,9 +468,8 @@ void AApSubsystem::ParseScoutedItems() {
 	AModContentRegistry* contentRegistry = AModContentRegistry::Get(GetWorld());
 
 	for (auto& itemPerMilestone : locationsPerMileStone) {
-		for (auto& item : itemPerMilestone.Value) {
+		for (auto& item : itemPerMilestone.Value)
 			CreateRecipe(contentRegistry, item);
-		}
 
 		FString schematicName;
 		for (auto schematicAndName : schematicsPerMilestone)

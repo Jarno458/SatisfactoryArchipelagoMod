@@ -86,7 +86,8 @@ public:
 
 private:
 	static std::map<std::string, std::function<void(AP_SetReply)>> callbacks;
-	static TMap<int64_t, std::string> ItemIdToSchematicName;
+	static TMap<int64_t, FString> ItemIdToGameName;
+	static TMap<int64_t, FString> ItemIdToGameName2;
 
 	static void SetReplyCallback(AP_SetReply setReply);
 	static void ItemClearCallback();
