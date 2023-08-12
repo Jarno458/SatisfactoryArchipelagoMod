@@ -105,6 +105,7 @@ private:
 
 	TMap<TSubclassOf<class UFGSchematic>, TArray<AP_NetworkItem>> locationsPerMileStone;
 	TMap<int64_t, TSubclassOf<class UFGSchematic>> ItemSchematics;
+	TQueue<int64_t> ReceivedItems;
 
 	TArray<AP_NetworkItem> scoutedLocations;
 	bool shouldParseItemsToScout;
