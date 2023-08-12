@@ -5,7 +5,7 @@
 	"SemVersion": "0.0.1",
 	"FriendlyName": "Archipelago",
 	"Description": "Provides connection to an Archipelago multiworld",
-	"Category": "Randomizer",
+	"Category": "Modding",
 	"CreatedBy": "Jarno",
 	"CreatedByURL": "https://github.com/Jarno458",
 	"DocsURL": "https://archipelago.gg/games/Satisfactory/info/en",
@@ -31,7 +31,7 @@
 		{
 			"Name": "ContentLib",
 			"Enabled": true,
-			"SemVersion": "^1.0.2"
+			"SemVersion": "^1.1.0"
 		}
 	]
 }
