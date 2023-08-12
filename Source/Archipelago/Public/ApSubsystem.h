@@ -88,6 +88,7 @@ private:
 	static std::map<std::string, std::function<void(AP_SetReply)>> callbacks;
 	static TMap<int64_t, FString> ItemIdToGameName;
 	static TMap<int64_t, FString> ItemIdToGameName2;
+	static TMap<int64_t, FString> ItemIdToGameSchematic;
 
 	static void SetReplyCallback(AP_SetReply setReply);
 	static void ItemClearCallback();
@@ -98,9 +99,12 @@ private:
 	static void SlotDataLastHubLocation(int locationId);
 
 	UContentLibSubsystem* contentLibSubsystem;
+	AModContentRegistry* contentRegistry;
+
 	FTimerHandle connectionTimeoutHandler;
 
 	TMap<TSubclassOf<class UFGSchematic>, TArray<AP_NetworkItem>> locationsPerMileStone;
+	TMap<int64_t, TSubclassOf<class UFGSchematic>> ItemSchematics;
 
 	TArray<AP_NetworkItem> scoutedLocations;
 	bool shouldParseItemsToScout;
@@ -118,9 +122,10 @@ private:
 
 	void SendChatMessage(const FString& Message, const FLinearColor& Color);
 
-	void CreateRecipe(AModContentRegistry* contentRegistry, AP_NetworkItem item);
-	void CreateItem(AModContentRegistry* contentRegistry, AP_NetworkItem item);
-	void CreateHubSchematic(AModContentRegistry* contentRegistry, FString name, TSubclassOf<UFGSchematic> factorySchematic, TArray<AP_NetworkItem> items);
+	void CreateSchematicBoundToItemId(int64_t item);
+	void CreateRecipe(AP_NetworkItem item);
+	void CreateItem(AP_NetworkItem item);
+	void CreateHubSchematic(FString name, TSubclassOf<UFGSchematic> factorySchematic, TArray<AP_NetworkItem> items);
 	
 	UFUNCTION() //required for event
 	void OnMamResearchCompleted(TSubclassOf<class UFGSchematic> schematic);
