@@ -10,7 +10,7 @@
 
 #include "ApSubsystem.h"
 
-DECLARE_LOG_CATEGORY_EXTERN(ApEnergyLink, Log, All);
+DECLARE_LOG_CATEGORY_EXTERN(LogApEnergyLink, Log, All);
 
 #include "EnergyLinkSubsystem.generated.h"
 

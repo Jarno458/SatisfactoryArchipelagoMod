@@ -1,6 +1,6 @@
 #include "EnergyLinkSubsystem.h"
 
-DEFINE_LOG_CATEGORY(ApEnergyLink);
+DEFINE_LOG_CATEGORY(LogApEnergyLink);
 
 AEnergyLinkSubsystem::AEnergyLinkSubsystem()
 {
