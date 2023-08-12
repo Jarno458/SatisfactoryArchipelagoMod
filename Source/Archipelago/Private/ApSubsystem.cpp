@@ -438,11 +438,7 @@ void AApSubsystem::ItemReceivedCallback(int64_t item, bool notify) {
 	UE_LOG(ApSubsystem, Display, TEXT("AApSubsystem::ItemReceivedCallback(%i, %s)"), item, (notify ? TEXT("true") : TEXT("false")));
 
 	AApSubsystem* self = AApSubsystem::Get();
-
-	if (self->ItemSchematics.Contains(item))
-		self->SManager->GiveAccessToSchematic(self->ItemSchematics[item], nullptr);
-
-	//TODO award items
+	self->ReceivedItems.Enqueue(item);
 }
 
 void AApSubsystem::LocationCheckedCallback(int64_t id) {
@@ -519,6 +515,13 @@ void AApSubsystem::Tick(float DeltaTime)
 	if (ConnectionState != EApConnectionState::Connected)
 		return;
 
+	int64_t item;
+	while (ReceivedItems.Dequeue(item)) {
+		if (ItemSchematics.Contains(item))
+			SManager->GiveAccessToSchematic(ItemSchematics[item], nullptr);
+	}
+
+
 	HandleAPMessages();
 }
 
@@ -591,9 +594,7 @@ void AApSubsystem::CreateSchematicBoundToItemId(int64_t item) {
 	if (!ItemIdToGameSchematic.Contains(item))
 		return;
 	
-	std::string itemName = "AP_ITEM_" + item;
-
-	FString name(itemName.c_str());
+	FString name(("AP_ITEM_" + std::to_string(item)).c_str());
 	// https://raw.githubusercontent.com/budak7273/ContentLib_Documentation/main/JsonSchemas/CL_Schematic.json
 	FString json = FString::Printf(TEXT(R"({
 		"Name": "%s",
