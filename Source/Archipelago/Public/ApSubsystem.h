@@ -41,12 +41,16 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(LogApSubsystem, Log, All);
 
+DECLARE_LOG_CATEGORY_EXTERN(LogApChat, All, All);
+
 #include "ApSubsystem.generated.h"
 
+UENUM(BlueprintType)
 enum EApConnectionState {
-	Connecting,
-	Connected,
-	ConnectionFailed
+	NotYetAttempted UMETA(DisplayName = "Not Yet Attempted"),
+	Connecting UMETA(DisplayName = "Connecting"),
+	Connected UMETA(DisplayName = "Connection Successful"),
+	ConnectionFailed UMETA(DisplayName = "Connection Failed")
 };
 
 UCLASS()
@@ -70,7 +74,11 @@ protected:
 
 public:
 	EApConnectionState ConnectionState;
+	UPROPERTY(BlueprintReadOnly)
+	FText ConnectionStateDescription;
 
+	// Get a copy of the subsystem
+	UFUNCTION(BlueprintCallable, BlueprintPure, meta = (DisplayName = "Get ApSubsystem"))
 	static AApSubsystem* Get();
 	static AApSubsystem* Get(class UWorld* world);
 
@@ -83,6 +91,9 @@ public:
 
 	void MonitorDataStoreValue(std::string key, AP_DataType dataType, std::string defaultValue, std::function<void(AP_SetReply)> callback);
 	void SetServerData(AP_SetServerDataRequest* setDataRequest);
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	TEnumAsByte<EApConnectionState> GetConnectionState();
 
 private:
 	static std::map<std::string, std::function<void(AP_SetReply)>> callbacks;

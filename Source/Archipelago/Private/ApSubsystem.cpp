@@ -2,8 +2,12 @@
 
 DEFINE_LOG_CATEGORY(LogApSubsystem);
 
+DEFINE_LOG_CATEGORY(LogApChat);
+
 //TODO REMOVE
 #pragma optimize("", off)
+
+#define LOCTEXT_NAMESPACE "Archipelago"
 
 std::map<std::string, std::function<void(AP_SetReply)>> AApSubsystem::callbacks;
 
@@ -310,6 +314,8 @@ AApSubsystem::AApSubsystem()
 {
 	PrimaryActorTick.bCanEverTick = true;
 	PrimaryActorTick.TickInterval = 0.5f;
+	ConnectionState = NotYetAttempted;
+	ConnectionStateDescription = LOCTEXT("NotYetAttempted", "A connection has not yet been attempted. Load a save file to attempt to connect.");
 }
 
 AApSubsystem* AApSubsystem::Get() {
@@ -406,6 +412,7 @@ void AApSubsystem::ConnectToArchipelago(FApConfigurationStruct config) {
 	AP_RegisterSlotDataIntCallback("LastHubLocation", AApSubsystem::SlotDataLastHubLocation);
 
 	ConnectionState = EApConnectionState::Connecting;
+	ConnectionStateDescription = LOCTEXT("Connecting", "Connecting...");
 
 	AP_Start();
 }
@@ -507,6 +514,10 @@ void AApSubsystem::SetServerData(AP_SetServerDataRequest* setDataRequest) {
 	AP_SetServerData(setDataRequest);
 }
 
+TEnumAsByte<EApConnectionState> AApSubsystem::GetConnectionState() {
+	return TEnumAsByte<EApConnectionState>(ConnectionState);
+}
+
 // Called every frame
 void AApSubsystem::Tick(float DeltaTime)
 {
@@ -521,7 +532,6 @@ void AApSubsystem::Tick(float DeltaTime)
 			SManager->GiveAccessToSchematic(ItemSchematics[item], nullptr);
 	}
 
-
 	HandleAPMessages();
 }
 
@@ -531,15 +541,16 @@ void AApSubsystem::CheckConnectionState(FApConfigurationStruct config) {
 
 		if (status == AP_ConnectionStatus::Authenticated) {
 			ConnectionState = EApConnectionState::Connected;
-
+			ConnectionStateDescription = LOCTEXT("AuthSuccess", "Authentication succeeded.");
 			UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::Tick(), Successfully Authenticated"));
 		}
 		else if (status == AP_ConnectionStatus::ConnectionRefused) {
 			ConnectionState = EApConnectionState::ConnectionFailed;
+			ConnectionStateDescription = LOCTEXT("ConnectionRefused", "Connection refused by server. Check your connection details and load the save again.");
 
 			FString message = FString::Printf(TEXT("Failed to connect to Archipelago server: \"%s\", for user \"%s\""), *config.Url, *config.Login);
 
-			SendChatMessage(message, FLinearColor::Green);
+			SendChatMessage(message, FLinearColor::Red);
 		}
 	}
 }
@@ -722,6 +733,7 @@ void AApSubsystem::HandleAPMessages() {
 		FString fStringMessage(message->text.c_str());
 
 		SendChatMessage(fStringMessage, FLinearColor::White);
+		UE_LOG(LogApChat, Display, TEXT("%s"), *fStringMessage);
 
 		AP_ClearLatestMessage();
 	}
@@ -751,12 +763,12 @@ void AApSubsystem::HintUnlockedHubRecipies() {
 void AApSubsystem::TimeoutConnectionIfNotConnected() {
 	if (ConnectionState != EApConnectionState::Connecting)
 		return;
-	
+
+	ConnectionState = EApConnectionState::ConnectionFailed;
+	ConnectionStateDescription = LOCTEXT("AuthFailed", "Authentication failed. Check your connection details and load the save again.");
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::TimeoutConnectionIfNotConnected(), Authenticated Failed"));
 
 	SetActorTickEnabled(false);
-
-	ConnectionState = EApConnectionState::ConnectionFailed;
 }
 
 FApConfigurationStruct AApSubsystem::GetActiveConfig() {
@@ -777,3 +789,5 @@ FApConfigurationStruct AApSubsystem::GetActiveConfig() {
 }
 
 #pragma optimize("", on)
+
+#undef LOCTEXT_NAMESPACE
