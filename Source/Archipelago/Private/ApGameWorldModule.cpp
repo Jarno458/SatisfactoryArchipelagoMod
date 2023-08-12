@@ -1,6 +1,6 @@
 #include "ApGameWorldModule.h"
 
-DEFINE_LOG_CATEGORY(ApGameWorldModule);
+DEFINE_LOG_CATEGORY(LogApGameWorldModule);
 
 UApGameWorldModule::UApGameWorldModule() {
 	bRootModule = true;

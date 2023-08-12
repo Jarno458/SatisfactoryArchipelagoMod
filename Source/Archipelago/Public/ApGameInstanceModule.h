@@ -4,7 +4,7 @@
 
 #include "Kismet/BlueprintFunctionLibrary.h"
 
-DECLARE_LOG_CATEGORY_EXTERN(ApGameInstanceModule, Log, All);
+DECLARE_LOG_CATEGORY_EXTERN(LogApGameInstanceModule, Log, All);
 
 #include "ApGameInstanceModule.generated.h"
 

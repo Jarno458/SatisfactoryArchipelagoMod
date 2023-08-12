@@ -4,7 +4,7 @@
 
 #include "Kismet/BlueprintFunctionLibrary.h"
 
-DECLARE_LOG_CATEGORY_EXTERN(ApMainMenuModule, Log, All);
+DECLARE_LOG_CATEGORY_EXTERN(LogApMainMenuModule, Log, All);
 
 #include "ApMainMenuModule.generated.h"
 

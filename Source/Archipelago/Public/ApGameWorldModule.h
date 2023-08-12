@@ -9,7 +9,7 @@
 #include "ApSubsystem.h"
 #include "EnergyLinkSubsystem.h"
 
-DECLARE_LOG_CATEGORY_EXTERN(ApGameWorldModule, Log, All);
+DECLARE_LOG_CATEGORY_EXTERN(LogApGameWorldModule, Log, All);
 
 #include "ApGameWorldModule.generated.h"
 

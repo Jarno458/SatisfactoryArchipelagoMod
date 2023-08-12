@@ -39,7 +39,7 @@
 
 #include "Archipelago.h"
 
-DECLARE_LOG_CATEGORY_EXTERN(ApSubsystem, Log, All);
+DECLARE_LOG_CATEGORY_EXTERN(LogApSubsystem, Log, All);
 
 #include "ApSubsystem.generated.h"
 

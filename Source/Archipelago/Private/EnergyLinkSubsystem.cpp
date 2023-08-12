@@ -12,12 +12,12 @@ void AEnergyLinkSubsystem::BeginPlay()
 {
 	Super::BeginPlay();
 	
-	UE_LOG(ApSubsystem, Display, TEXT("AEnergyLinkSubsystem:BeginPlay()"));
+	UE_LOG(LogApSubsystem, Display, TEXT("AEnergyLinkSubsystem:BeginPlay()"));
 
 	if (!hooksInitialized) {
 		AFGBuildablePowerStorage* bpscdo = GetMutableDefault<AFGBuildablePowerStorage>();
 		SUBSCRIBE_METHOD_VIRTUAL(AFGBuildablePowerStorage::BeginPlay, bpscdo, [this](auto& scope, AFGBuildablePowerStorage* self) {
-			UE_LOG(ApSubsystem, Display, TEXT("AFGBuildablePowerStorage::BeginPlay()"));
+			UE_LOG(LogApSubsystem, Display, TEXT("AFGBuildablePowerStorage::BeginPlay()"));
 
 			if (!PowerStorages.Contains(self)) {
 				PowerStorages.Add(self);
@@ -139,37 +139,37 @@ void AEnergyLinkSubsystem::SendEnergyToServer(long amount) {
 	//Called for UI, percentage from 0.0f to 100.0f of how full specific power storage is
 	/*SUBSCRIBE_METHOD(AFGBuildablePowerStorage::GetPowerStore, [](auto& scope, const AFGBuildablePowerStorage* self) {
 		float f = scope(self);
-		UE_LOG(ApSubsystem, Display, TEXT("AFGBuildablePowerStorage::GetPowerStore(): %f"), f);
+		UE_LOG(LogApSubsystem, Display, TEXT("AFGBuildablePowerStorage::GetPowerStore(): %f"), f);
 	});*/
 
 	/*SUBSCRIBE_METHOD(AFGBuildablePowerStorage::IndicatorLevelChanged, [](auto& scope, AFGBuildablePowerStorage* self, uint8 indicatorLevel) {
-		UE_LOG(ApSubsystem, Display, TEXT("AFGBuildablePowerStorage::IndicatorLevelChanged(indicatorLevel: %d)"), indicatorLevel);
+		UE_LOG(LogApSubsystem, Display, TEXT("AFGBuildablePowerStorage::IndicatorLevelChanged(indicatorLevel: %d)"), indicatorLevel);
 	});*/
 
 	//Called when status of individual power storage changes, idle / charging / draining etc
 	/*SUBSCRIBE_METHOD(AFGBuildablePowerStorage::StatusChanged, [](auto& scope, AFGBuildablePowerStorage* self, EBatteryStatus newStatus) {
-		UE_LOG(ApSubsystem, Display, TEXT("AFGBuildablePowerStorage::StatusChanged(newStatus: %d)"), newStatus);
+		UE_LOG(LogApSubsystem, Display, TEXT("AFGBuildablePowerStorage::StatusChanged(newStatus: %d)"), newStatus);
 	});*/
 
 	/*SUBSCRIBE_METHOD(AFGBuildablePowerStorage::GetPowerStoreCapacity, [](auto& scope, const AFGBuildablePowerStorage* self) {
 		float f = scope(self);
-		UE_LOG(ApSubsystem, Display, TEXT("AFGBuildablePowerStorage::GetPowerStoreCapacity(): %f"), f);
+		UE_LOG(LogApSubsystem, Display, TEXT("AFGBuildablePowerStorage::GetPowerStoreCapacity(): %f"), f);
 	});*/
 
 	/*SUBSCRIBE_METHOD(AFGBuildablePowerStorage::GetPowerStorePercent, [](auto& scope, const AFGBuildablePowerStorage* self) {
 		//float f = scope(self);
-		//UE_LOG(ApSubsystem, Display, TEXT("AFGBuildablePowerStorage::GetPowerStorePercent(): %f"), f);
+		//UE_LOG(LogApSubsystem, Display, TEXT("AFGBuildablePowerStorage::GetPowerStorePercent(): %f"), f);
 	});*/
 
 	//Called for UI, current charge added or drained from the grid for specific power storage
 	/*SUBSCRIBE_METHOD(AFGBuildablePowerStorage::GetNetPowerInput, [](auto& scope, const AFGBuildablePowerStorage* self) {
 		//float f = scope(self);
-		//UE_LOG(ApSubsystem, Display, TEXT("AFGBuildablePowerStorage::GetNetPowerInput(): %f"), f);
+		//UE_LOG(LogApSubsystem, Display, TEXT("AFGBuildablePowerStorage::GetNetPowerInput(): %f"), f);
 	});*/
 
 	//Called repeatingly for indicator at the outside
 	/*SUBSCRIBE_METHOD(AFGBuildablePowerStorage::CalculateIndicatorLevel, [](auto& scope, const AFGBuildablePowerStorage* self) {
 		//float f = scope(self);
-		//UE_LOG(ApSubsystem, Display, TEXT("AFGBuildablePowerStorage::CalculateIndicatorLevel(): %f"), f);
+		//UE_LOG(LogApSubsystem, Display, TEXT("AFGBuildablePowerStorage::CalculateIndicatorLevel(): %f"), f);
 		scope.Override(5.0f);
 	});*/

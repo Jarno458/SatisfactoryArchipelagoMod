@@ -1,6 +1,6 @@
 #include "ApSubsystem.h"
 
-DEFINE_LOG_CATEGORY(ApSubsystem);
+DEFINE_LOG_CATEGORY(LogApSubsystem);
 
 //TODO REMOVE
 #pragma optimize("", off)
@@ -411,14 +411,14 @@ void AApSubsystem::ConnectToArchipelago(FApConfigurationStruct config) {
 }
 
 void AApSubsystem::OnMamResearchCompleted(TSubclassOf<class UFGSchematic> schematic) {
-	UE_LOG(ApSubsystem, Display, TEXT("AApSubSystem::OnResearchCompleted(schematic), Mam Research Completed"));
+	UE_LOG(LogApSubsystem, Display, TEXT("AApSubSystem::OnResearchCompleted(schematic), Mam Research Completed"));
 
 	//if (schematic.) //if name is Archipelago #xxxx send check to server
 }
 
 
 void AApSubsystem::OnSchematicCompleted(TSubclassOf<class UFGSchematic> schematic) {
-	UE_LOG(ApSubsystem, Display, TEXT("AApSubSystem::OnSchematicCompleted(schematic)"));
+	UE_LOG(LogApSubsystem, Display, TEXT("AApSubSystem::OnSchematicCompleted(schematic)"));
 
 	ESchematicType type = UFGSchematic::GetType(schematic);
 
@@ -430,32 +430,32 @@ void AApSubsystem::OnSchematicCompleted(TSubclassOf<class UFGSchematic> schemati
 }
 
 void AApSubsystem::ItemClearCallback() {
-	UE_LOG(ApSubsystem, Display, TEXT("AApSubsystem::ItemClearCallback()"));
+	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::ItemClearCallback()"));
 
 }
 
 void AApSubsystem::ItemReceivedCallback(int64_t item, bool notify) {
-	UE_LOG(ApSubsystem, Display, TEXT("AApSubsystem::ItemReceivedCallback(%i, %s)"), item, (notify ? TEXT("true") : TEXT("false")));
+	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::ItemReceivedCallback(%i, %s)"), item, (notify ? TEXT("true") : TEXT("false")));
 
 	AApSubsystem* self = AApSubsystem::Get();
 	self->ReceivedItems.Enqueue(item);
 }
 
 void AApSubsystem::LocationCheckedCallback(int64_t id) {
-	UE_LOG(ApSubsystem, Display, TEXT("AApSubsystem::LocationCheckedCallback(%i)"), id);
+	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::LocationCheckedCallback(%i)"), id);
 
 }
 
 void AApSubsystem::SetReplyCallback(AP_SetReply setReply) {
 	FString fstringKey(setReply.key.c_str());
-	UE_LOG(ApSubsystem, Display, TEXT("AApSubsystem::SetReplyCallback(%s)"), *fstringKey);
+	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::SetReplyCallback(%s)"), *fstringKey);
 
 	if (callbacks.count(setReply.key))
 		callbacks[setReply.key](setReply);
 }
 
 void AApSubsystem::LocationScoutedCallback(std::vector<AP_NetworkItem> scoutedLocations) {
-	UE_LOG(ApSubsystem, Display, TEXT("AApSubsystem::HintUnlockedHubRecipies(vector[%i])"), scoutedLocations.size());
+	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::HintUnlockedHubRecipies(vector[%i])"), scoutedLocations.size());
 
 	AApSubsystem* self = AApSubsystem::Get();
 
@@ -532,7 +532,7 @@ void AApSubsystem::CheckConnectionState(FApConfigurationStruct config) {
 		if (status == AP_ConnectionStatus::Authenticated) {
 			ConnectionState = EApConnectionState::Connected;
 
-			UE_LOG(ApSubsystem, Display, TEXT("AApSubsystem::Tick(), Successfully Authenticated"));
+			UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::Tick(), Successfully Authenticated"));
 		}
 		else if (status == AP_ConnectionStatus::ConnectionRefused) {
 			ConnectionState = EApConnectionState::ConnectionFailed;
@@ -545,7 +545,7 @@ void AApSubsystem::CheckConnectionState(FApConfigurationStruct config) {
 }
 
 void AApSubsystem::ParseScoutedItems() {
-	UE_LOG(ApSubsystem, Display, TEXT("AApSubsystem::ParseScoutedItems(vector[%i])"), scoutedLocations.Num());
+	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::ParseScoutedItems(vector[%i])"), scoutedLocations.Num());
 
 	TMap<FString, TSubclassOf<UFGSchematic>> schematicsPerMilestone = TMap<FString, TSubclassOf<UFGSchematic>>();
 
@@ -738,7 +738,7 @@ void AApSubsystem::SendChatMessage(const FString& Message, const FLinearColor& C
 }
 
 void AApSubsystem::HintUnlockedHubRecipies() {
-	UE_LOG(ApSubsystem, Display, TEXT("AApSubsystem::HintUnlockedHubRecipies()"));
+	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::HintUnlockedHubRecipies()"));
 
 	std::vector<int64_t> locations;
 
@@ -752,7 +752,7 @@ void AApSubsystem::TimeoutConnectionIfNotConnected() {
 	if (ConnectionState != EApConnectionState::Connecting)
 		return;
 	
-	UE_LOG(ApSubsystem, Display, TEXT("AApSubsystem::TimeoutConnectionIfNotConnected(), Authenticated Failed"));
+	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::TimeoutConnectionIfNotConnected(), Authenticated Failed"));
 
 	SetActorTickEnabled(false);
 
