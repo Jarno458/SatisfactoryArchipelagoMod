@@ -170,7 +170,8 @@ TMap<int64_t, FString> AApSubsystem::ItemIdToGameName = {
 	{1337682, TEXT("Desc_CartridgeChaos_C")},
 	{1337683, TEXT("BP_EquipmentDescriptorStunSpear_C")},
 	{1337684, TEXT("BP_EquipmentDescriptorShockShank_C")},
-	{1337685, TEXT("BP_EqDescZipLine_C")}
+	{1337685, TEXT("BP_EqDescZipLine_C")},
+	{1337686, TEXT("BP_ItemDescriptorPortableMiner_C")}
 };
 
 
@@ -283,6 +284,7 @@ TMap<int64_t, FString> AApSubsystem::ItemIdToGameSchematic = {
 	{1337805, TEXT("Recipe_SpaceElevatorPart_5")},
 	{1337806, TEXT("Recipe_Alternate_DilutedFuel")},
 	{1337807, TEXT("Recipe_AluminaSolution")},
+	{1337808, TEXT("Recipe_Alternate_AutomatedMiner")},
 
 	//Buildings
 	{1337900, TEXT("Recipe_ConstructorMk1")},
