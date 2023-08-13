@@ -354,14 +354,15 @@ void AApSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase) {
 		contentRegistry = AModContentRegistry::Get(GetWorld());
 		check(contentRegistry)
 
+		UE_LOG(LogApSubsystem, Display, TEXT("Initiating Archipelago server connection in background..."));
 		ConnectToArchipelago(config);
 
+		UE_LOG(LogApSubsystem, Display, TEXT("Generating schematics from AP Item IDs..."));
 		for (auto item : ItemIdToGameSchematic) {
 			CreateSchematicBoundToItemId(item.Key);
 		}
 	
 		FDateTime connectingStartedTime = FDateTime::Now();
-
 		FGenericPlatformProcess::ConditionalSleep([this, config, connectingStartedTime]() { return InitializeTick(config, connectingStartedTime); }, 1);
 	}
 	else if (phase == ELifecyclePhase::INITIALIZATION) {
@@ -733,7 +734,6 @@ void AApSubsystem::HandleAPMessages() {
 		FString fStringMessage(message->text.c_str());
 
 		SendChatMessage(fStringMessage, FLinearColor::White);
-		UE_LOG(LogApChat, Display, TEXT("%s"), *fStringMessage);
 
 		AP_ClearLatestMessage();
 	}
@@ -747,6 +747,7 @@ void AApSubsystem::SendChatMessage(const FString& Message, const FLinearColor& C
 	MessageStruct.ServerTimeStamp = GetWorld()->TimeSeconds;
 	MessageStruct.CachedColor = Color;
 	ChatManager->AddChatMessageToReceived(MessageStruct);
+	UE_LOG(LogApChat, Display, TEXT("Archipelago Chat Message: %s"), *Message);
 }
 
 void AApSubsystem::HintUnlockedHubRecipies() {
