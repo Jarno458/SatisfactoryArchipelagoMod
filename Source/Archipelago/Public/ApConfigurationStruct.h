@@ -24,6 +24,9 @@ public:
     UPROPERTY(BlueprintReadWrite)
     bool Enabled;
 
+    UPROPERTY(BlueprintReadWrite)
+    bool Debugging;
+
     /* Retrieves active configuration value and returns object of this struct containing it */
     static FApConfigurationStruct GetActiveConfig() {
         FApConfigurationStruct ConfigStruct{};

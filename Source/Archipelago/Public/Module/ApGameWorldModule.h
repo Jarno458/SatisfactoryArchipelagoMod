@@ -6,8 +6,10 @@
 #include "Module/GameWorldModule.h"
 #include "Subsystem/ModSubsystem.h"
 #include "Subsystem/SubsystemActorManager.h"
-#include "ApSubsystem.h"
-#include "EnergyLinkSubsystem.h"
+
+#include "Subsystem/ApSubsystem.h"
+#include "Subsystem/ApEnergyLinkSubsystem.h"
+#include "Subsystem/ApPortalSubsystem.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(LogApGameWorldModule, Log, All);
 
