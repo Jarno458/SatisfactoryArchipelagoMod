@@ -1,4 +1,5 @@
 #include "Subsystem/ApSubsystem.h"
+#include "ApUtils.h"
 
 DEFINE_LOG_CATEGORY(LogApSubsystem);
 
@@ -693,21 +694,21 @@ void AApSubsystem::CreateHubSchematic(FString name, TSubclassOf<UFGSchematic> fa
 	})"), *name, *tier);
 
 	FContentLib_Schematic schematic = UCLSchematicBPFLib::GenerateCLSchematicFromString(json);
-	UCLSchematicBPFLib::InitSchematicFromStruct(schematic, factorySchematic, contentLibSubsystem);
-
-	for (auto& item : items)
-	{
-		// TODO Info Only Unlocks
-		// use something like item.playerName + "'s, " + item.itemName
-		/*
+	for (auto& item : items) {
 		FContentLib_UnlockInfoOnly infoCard;
-		infoCard.mUnlockName = LOCTEXT("Debug1", "HelloWorld");
-		infoCard.mUnlockDescription = LOCTEXT("Debug2", "HelloWorld Description");
-		infoCard.BigIcon = FString(TEXT("/Game/FactoryGame/Resource/RawResources/Water/UI/LiquidWater_Pipe_512.LiquidWater_Pipe_512"));
-		schematic.InfoCards.Add(infoCard);
-		*/
-	}
+		FFormatNamedArguments Args;
+		Args.Add(TEXT("ApPlayerName"), UApUtils::ApText(item.playerName));
+		Args.Add(TEXT("ApItemName"), UApUtils::ApText(item.itemName));
+		Args.Add(TEXT("ProgressionType"), LOCTEXT("NetworkItemProgressionType", "SOMETHING"));
+		infoCard.mUnlockName = FText::Format(LOCTEXT("NetworkItemUnlockDisplayName", "{ApPlayerName}'s {ApItemName}"), Args);
+		infoCard.mUnlockDescription = FText::Format(LOCTEXT("NetworkItemUnlockDescription", "This will unlock {ApPlayerName}'s {ApItemName} which is considered a {ProgressionType} advancement."), Args);
 
+		const auto icon = FString(TEXT("/Archipelago/Assets/ArchipelagoIcon128.ArchipelagoIcon128"));
+		infoCard.BigIcon = infoCard.SmallIcon = icon;
+		infoCard.CategoryIcon = FString(TEXT("/Archipelago/Assets/ArchipelagoIconWhite128.ArchipelagoIconWhite128"));
+		schematic.InfoCards.Add(infoCard);
+	}
+	UCLSchematicBPFLib::InitSchematicFromStruct(schematic, factorySchematic, contentLibSubsystem);
 	contentRegistry->RegisterSchematic(FName(TEXT("Archipelago")), factorySchematic);
 }
 
