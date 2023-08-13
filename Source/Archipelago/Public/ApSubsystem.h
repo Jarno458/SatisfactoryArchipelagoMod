@@ -113,12 +113,10 @@ private:
 	UContentLibSubsystem* contentLibSubsystem;
 	AModContentRegistry* contentRegistry;
 
-	FTimerHandle connectionTimeoutHandler;
-
 	TMap<TSubclassOf<class UFGSchematic>, TArray<AP_NetworkItem>> locationsPerMileStone;
 	TMap<int64_t, TSubclassOf<class UFGSchematic>> ItemSchematics;
 	TQueue<int64_t> ReceivedItems;
-	TQueue<TPair<FString, FLinearColor>> MessageQueue;
+	TQueue<TPair<FString, FLinearColor>> ChatMessageQueue;
 
 	TArray<AP_NetworkItem> scoutedLocations;
 	bool shouldParseItemsToScout;

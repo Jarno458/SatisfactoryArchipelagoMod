@@ -371,7 +371,7 @@ void AApSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase) {
 
 			FString message = FString::Printf(TEXT("Failed to connect to Archipelago server: \"%s\", for user \"%s\""), *config.Url, *config.Login);
 
-			MessageQueue.Enqueue(TPair<FString, FLinearColor>(message, FLinearColor::Red));
+			ChatMessageQueue.Enqueue(TPair<FString, FLinearColor>(message, FLinearColor::Red));
 		}
 	}
 }
@@ -550,7 +550,7 @@ void AApSubsystem::CheckConnectionState(FApConfigurationStruct config) {
 
 			FString message = FString::Printf(TEXT("Failed to connect to Archipelago server: \"%s\", for user \"%s\""), *config.Url, *config.Login);
 
-			MessageQueue.Enqueue(TPair<FString, FLinearColor>(message, FLinearColor::Red));
+			ChatMessageQueue.Enqueue(TPair<FString, FLinearColor>(message, FLinearColor::Red));
 		}
 	}
 }
@@ -713,7 +713,7 @@ void AApSubsystem::HandleAPMessages() {
 	for (int i = 0; i < 10; i++)
 	{
 		TPair<FString, FLinearColor> queuedMessage;
-		if (MessageQueue.Dequeue(queuedMessage)) {
+		if (ChatMessageQueue.Dequeue(queuedMessage)) {
 			SendChatMessage(queuedMessage.Key, queuedMessage.Value);
 		}
 		else {
