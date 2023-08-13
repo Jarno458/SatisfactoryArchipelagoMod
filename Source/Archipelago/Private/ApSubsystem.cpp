@@ -606,7 +606,7 @@ void AApSubsystem::CreateSchematicBoundToItemId(int64_t item) {
 	if (!ItemIdToGameSchematic.Contains(item))
 		return;
 	
-	FString name(("AP_ITEM_" + std::to_string(item)).c_str());
+	FString name(("AP_ITEM_SCHEMATIC_" + std::to_string(item)).c_str());
 	// https://raw.githubusercontent.com/budak7273/ContentLib_Documentation/main/JsonSchemas/CL_Schematic.json
 	FString json = FString::Printf(TEXT(R"({
 		"Name": "%s",
@@ -624,7 +624,7 @@ void AApSubsystem::CreateSchematicBoundToItemId(int64_t item) {
 }
 
 void AApSubsystem::CreateRecipe(AP_NetworkItem item) {
-	FString name((item.playerName + " - " + item.itemName).c_str());
+	FString name(("AP_ITEM_RECIPE_" + item.playerName + " - " + item.itemName).c_str());
 	FString uniqueId(std::to_string(item.location).c_str());
 	// https://raw.githubusercontent.com/budak7273/ContentLib_Documentation/main/JsonSchemas/CL_Recipe.json
 	FString json = FString::Printf(TEXT(R"({
@@ -649,8 +649,8 @@ void AApSubsystem::CreateRecipe(AP_NetworkItem item) {
 	contentRegistry->RegisterRecipe(FName(TEXT("Archipelago")), factoryRecipy);
 }
 
-	FString name((item.playerName + " " + item.itemName).c_str());
 void AApSubsystem::CreateDescriptor(AP_NetworkItem item) {
+	FString name(("AP_ITEM_DESC_" + item.playerName + " " + item.itemName).c_str());
 	FString uniqueId(std::to_string(item.location).c_str());
 	// https://raw.githubusercontent.com/budak7273/ContentLib_Documentation/main/JsonSchemas/CL_Item.json
 	FString json = FString::Printf(TEXT(R"({
