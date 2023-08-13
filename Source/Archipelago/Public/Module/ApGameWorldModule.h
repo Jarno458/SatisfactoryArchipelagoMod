@@ -22,5 +22,5 @@ public:
 	// Sets default values for this actor's properties
 	UApGameWorldModule();
 
-	void DispatchLifecycleEvent(ELifecyclePhase Phase) override;
+	virtual void DispatchLifecycleEvent(ELifecyclePhase Phase) override;
 };
