@@ -13,8 +13,10 @@ class ARCHIPELAGO_API UApUtils : public UObject
 	GENERATED_BODY()
 
 public:
-	static FText ApText(std::string inString);
+	static FText FText(std::string inString);
 
-	static FString ApString(std::string inString);
+	static FString FStr(std::string inString);
+
+	static FString FStr(int64_t inInt);
 	
 };

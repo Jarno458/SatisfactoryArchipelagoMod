@@ -457,8 +457,7 @@ void AApSubsystem::LocationCheckedCallback(int64_t id) {
 }
 
 void AApSubsystem::SetReplyCallback(AP_SetReply setReply) {
-	FString fstringKey(setReply.key.c_str());
-	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::SetReplyCallback(%s)"), *fstringKey);
+	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::SetReplyCallback(%s)"), *UApUtils::FStr(setReply.key));
 
 	if (callbacks.count(setReply.key))
 		callbacks[setReply.key](setReply);
@@ -567,7 +566,7 @@ void AApSubsystem::ParseScoutedItems() {
 		if (location.locationName.starts_with("Hub"))
 		{
 			std::string milestoneString = location.locationName.substr(0, location.locationName.find(","));
-			FString milestone = FString(milestoneString.c_str());
+			FString milestone = UApUtils::FStr(milestoneString);
 
 			if (!schematicsPerMilestone.Contains(milestone)) {
 				TSubclassOf<UFGSchematic> schematic = FClassGenerator::GenerateSimpleClass(TEXT("/Archipelago/"), *milestone, UFGSchematic::StaticClass());
@@ -605,7 +604,7 @@ void AApSubsystem::CreateSchematicBoundToItemId(int64_t item) {
 	if (!ItemIdToGameSchematic.Contains(item))
 		return;
 	
-	FString name(("AP_ITEM_SCHEMATIC_" + std::to_string(item)).c_str());
+	FString name = UApUtils::FStr("AP_ITEM_SCHEMATIC_" + std::to_string(item));
 	// https://raw.githubusercontent.com/budak7273/ContentLib_Documentation/main/JsonSchemas/CL_Schematic.json
 	FString json = FString::Printf(TEXT(R"({
 		"Name": "%s",
@@ -624,7 +623,7 @@ void AApSubsystem::CreateSchematicBoundToItemId(int64_t item) {
 
 void AApSubsystem::CreateRecipe(AP_NetworkItem item) {
 	FString name(("AP_ITEM_RECIPE_" + item.playerName + " - " + item.itemName).c_str());
-	FString uniqueId(std::to_string(item.location).c_str());
+	FString uniqueId = UApUtils::FStr(item.location);
 	// https://raw.githubusercontent.com/budak7273/ContentLib_Documentation/main/JsonSchemas/CL_Recipe.json
 	FString json = FString::Printf(TEXT(R"({
 		 "Name": "%s",
@@ -650,7 +649,7 @@ void AApSubsystem::CreateRecipe(AP_NetworkItem item) {
 
 void AApSubsystem::CreateDescriptor(AP_NetworkItem item) {
 	FString name(("AP_ITEM_DESC_" + item.playerName + " " + item.itemName).c_str());
-	FString uniqueId(std::to_string(item.location).c_str());
+	FString uniqueId = UApUtils::FStr(item.location);
 	// https://raw.githubusercontent.com/budak7273/ContentLib_Documentation/main/JsonSchemas/CL_Item.json
 	FString json = FString::Printf(TEXT(R"({
 		 "Name": "%s",
@@ -697,8 +696,8 @@ void AApSubsystem::CreateHubSchematic(FString name, TSubclassOf<UFGSchematic> fa
 	for (auto& item : items) {
 		FContentLib_UnlockInfoOnly infoCard;
 		FFormatNamedArguments Args;
-		Args.Add(TEXT("ApPlayerName"), UApUtils::ApText(item.playerName));
-		Args.Add(TEXT("ApItemName"), UApUtils::ApText(item.itemName));
+		Args.Add(TEXT("ApPlayerName"), UApUtils::FText(item.playerName));
+		Args.Add(TEXT("ApItemName"), UApUtils::FText(item.itemName));
 		Args.Add(TEXT("ProgressionType"), LOCTEXT("NetworkItemProgressionType", "SOMETHING"));
 		infoCard.mUnlockName = FText::Format(LOCTEXT("NetworkItemUnlockDisplayName", "{ApPlayerName}'s {ApItemName}"), Args);
 		infoCard.mUnlockDescription = FText::Format(LOCTEXT("NetworkItemUnlockDescription", "This will unlock {ApPlayerName}'s {ApItemName} which is considered a {ProgressionType} advancement."), Args);
@@ -724,9 +723,7 @@ void AApSubsystem::HandleAPMessages() {
 				return;
 
 			AP_Message* message = AP_GetLatestMessage();
-			FString fStringMessage(message->text.c_str());
-
-			SendChatMessage(fStringMessage, FLinearColor::White);
+			SendChatMessage(UApUtils::FStr(message->text), FLinearColor::White);
 
 			AP_ClearLatestMessage();
 		}
