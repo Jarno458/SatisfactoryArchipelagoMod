@@ -9,6 +9,8 @@
 
 #include "ApPortalSubsystem.generated.h"
 
+DECLARE_LOG_CATEGORY_EXTERN(LogApPortalSubsystem, Log, All);
+
 /**
  * 
  */
