@@ -616,6 +616,15 @@ void AApSubsystem::CreateSchematicBoundToItemId(int64_t item) {
 
 	FContentLib_Schematic schematic = UCLSchematicBPFLib::GenerateCLSchematicFromString(json);
 	TSubclassOf<UFGSchematic> factorySchematic = FClassGenerator::GenerateSimpleClass(TEXT("/Archipelago/"), *name, UFGSchematic::StaticClass());
+
+	// TODO Info Only Unlocks
+	/*
+	FContentLib_UnlockInfoOnly infoCard;
+	infoCard.mUnlockName = LOCTEXT("Debug1", "HelloWorld");
+	infoCard.mUnlockDescription = LOCTEXT("Debug2", "HelloWorld Description");
+	infoCard.BigIcon = FString(TEXT("/Game/FactoryGame/Resource/RawResources/Water/UI/LiquidWater_Pipe_512.LiquidWater_Pipe_512"));
+	schematic.InfoCards.Add(infoCard);
+	*/
 	UCLSchematicBPFLib::InitSchematicFromStruct(schematic, factorySchematic, contentLibSubsystem);
 
 	contentRegistry->RegisterSchematic(FName(TEXT("Archipelago")), factorySchematic);
