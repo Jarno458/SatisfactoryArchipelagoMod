@@ -36,6 +36,7 @@
 #include "CLSchematicBPFLib.h"
 #include "CLItemBPFLib.h"
 #include "CLRecipeBPFLib.h"
+#include "BPFContentLib.h"
 
 #include "Archipelago.h"
 
@@ -136,7 +137,7 @@ private:
 
 	void CreateSchematicBoundToItemId(int64_t item);
 	void CreateRecipe(AP_NetworkItem item);
-	void CreateItem(AP_NetworkItem item);
+	void CreateDescriptor(AP_NetworkItem item);
 	void CreateHubSchematic(FString name, TSubclassOf<UFGSchematic> factorySchematic, TArray<AP_NetworkItem> items);
 	
 	UFUNCTION() //required for event

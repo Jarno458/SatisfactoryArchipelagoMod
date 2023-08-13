@@ -648,8 +648,8 @@ void AApSubsystem::CreateRecipe(AP_NetworkItem item) {
 	contentRegistry->RegisterRecipe(FName(TEXT("Archipelago")), factoryRecipy);
 }
 
-void AApSubsystem::CreateItem(AP_NetworkItem item) {
 	FString name((item.playerName + " " + item.itemName).c_str());
+void AApSubsystem::CreateDescriptor(AP_NetworkItem item) {
 	FString uniqueId(std::to_string(item.location).c_str());
 	// https://raw.githubusercontent.com/budak7273/ContentLib_Documentation/main/JsonSchemas/CL_Item.json
 	FString json = FString::Printf(TEXT(R"({
