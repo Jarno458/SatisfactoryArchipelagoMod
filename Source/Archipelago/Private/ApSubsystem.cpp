@@ -674,7 +674,7 @@ void AApSubsystem::CreateHubSchematic(FString name, TSubclassOf<UFGSchematic> fa
 	int delimeterPos;
 	name.FindChar('-', delimeterPos);
 	
-	FString tier = name.RightChop(delimeterPos + 1);
+	FString tier = name.Mid(delimeterPos - 1, 1);
 	// https://raw.githubusercontent.com/budak7273/ContentLib_Documentation/main/JsonSchemas/CL_Schematic.json
 	FString json = FString::Printf(TEXT(R"({
 		"Name": "%s",
