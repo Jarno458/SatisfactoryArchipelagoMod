@@ -1,6 +1,5 @@
 {
     "$schema": "https://raw.githubusercontent.com/budak7273/ContentLib_Documentation/main/JsonSchemas/CL_Schematic.json",
     "Name": "Archipelago Lock",
-    "Type": "Milestone",
-    "Tier": 1
+    "Type": "Custom"
 }

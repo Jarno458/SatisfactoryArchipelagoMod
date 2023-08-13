@@ -371,7 +371,7 @@ void AApSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase) {
 
 			FString message = FString::Printf(TEXT("Failed to connect to Archipelago server: \"%s\", for user \"%s\""), *config.Url, *config.Login);
 
-			SendChatMessage(message, FLinearColor::Red);
+			MessageQueue.Enqueue(TPair<FString, FLinearColor>(message, FLinearColor::Red));
 		}
 	}
 }
@@ -398,11 +398,10 @@ bool AApSubsystem::InitializeTick(FApConfigurationStruct config, FDateTime conne
 
 void AApSubsystem::ConnectToArchipelago(FApConfigurationStruct config) {
 	std::string const uri = TCHAR_TO_UTF8(*config.Url);
-	std::string const game = TCHAR_TO_UTF8(*config.Game);
 	std::string const user = TCHAR_TO_UTF8(*config.Login);
 	std::string const password = TCHAR_TO_UTF8(*config.Password);
 
-	AP_Init(uri.c_str(), game.c_str(), user.c_str(), password.c_str());
+	AP_Init(uri.c_str(), "Satisfactory", user.c_str(), password.c_str());
 
 	AP_SetItemClearCallback(AApSubsystem::ItemClearCallback);
 	AP_SetItemRecvCallback(AApSubsystem::ItemReceivedCallback);
@@ -551,7 +550,7 @@ void AApSubsystem::CheckConnectionState(FApConfigurationStruct config) {
 
 			FString message = FString::Printf(TEXT("Failed to connect to Archipelago server: \"%s\", for user \"%s\""), *config.Url, *config.Login);
 
-			SendChatMessage(message, FLinearColor::Red);
+			MessageQueue.Enqueue(TPair<FString, FLinearColor>(message, FLinearColor::Red));
 		}
 	}
 }
@@ -582,9 +581,6 @@ void AApSubsystem::ParseScoutedItems() {
 	}
 
 	for (auto& itemPerMilestone : locationsPerMileStone) {
-		for (auto& item : itemPerMilestone.Value)
-			CreateRecipe(item);
-
 		FString schematicName;
 		for (auto schematicAndName : schematicsPerMilestone)
 		{
@@ -616,15 +612,6 @@ void AApSubsystem::CreateSchematicBoundToItemId(int64_t item) {
 
 	FContentLib_Schematic schematic = UCLSchematicBPFLib::GenerateCLSchematicFromString(json);
 	TSubclassOf<UFGSchematic> factorySchematic = FClassGenerator::GenerateSimpleClass(TEXT("/Archipelago/"), *name, UFGSchematic::StaticClass());
-
-	// TODO Info Only Unlocks
-	/*
-	FContentLib_UnlockInfoOnly infoCard;
-	infoCard.mUnlockName = LOCTEXT("Debug1", "HelloWorld");
-	infoCard.mUnlockDescription = LOCTEXT("Debug2", "HelloWorld Description");
-	infoCard.BigIcon = FString(TEXT("/Game/FactoryGame/Resource/RawResources/Water/UI/LiquidWater_Pipe_512.LiquidWater_Pipe_512"));
-	schematic.InfoCards.Add(infoCard);
-	*/
 	UCLSchematicBPFLib::InitSchematicFromStruct(schematic, factorySchematic, contentLibSubsystem);
 
 	contentRegistry->RegisterSchematic(FName(TEXT("Archipelago")), factorySchematic);
@@ -684,38 +671,15 @@ void AApSubsystem::CreateDescriptor(AP_NetworkItem item) {
 }
 
 void AApSubsystem::CreateHubSchematic(FString name, TSubclassOf<UFGSchematic> factorySchematic, TArray<AP_NetworkItem> items) {
-	std::string buildRecipies = "";
-	/*for (auto& item : items) {
-		if (buildRecipies.length() > 0)
-			buildRecipies = +"\", \"" + item.itemName;
-		else
-			buildRecipies = item.itemName;
-	}*/
-
-	/*for (auto& item : items) {
-		if (buildRecipies.length() > 0)
-			buildRecipies += "\", \"/Archipelago/" + std::to_string(item.location);
-		else
-			buildRecipies = "/Archipelago/" + std::to_string(item.location);
-	}*/
-
-	for (auto& item : items) {
-		if (buildRecipies.length() > 0)
-			buildRecipies += "\", \"" + std::to_string(item.location);
-		else
-			buildRecipies = std::to_string(item.location);
-	}
-
 	int delimeterPos;
 	name.FindChar('-', delimeterPos);
-
+	
 	FString tier = name.RightChop(delimeterPos + 1);
-	FString recipies(buildRecipies.c_str());
 	// https://raw.githubusercontent.com/budak7273/ContentLib_Documentation/main/JsonSchemas/CL_Schematic.json
 	FString json = FString::Printf(TEXT(R"({
 		"Name": "%s",
 		"Type": "Milestone",
-		"Time": 100,
+		"Time": 1,
 		"Tier": %s,
 		"VisualKit": "Kit_AP_Logo",
 		"Cost": [
@@ -723,12 +687,24 @@ void AApSubsystem::CreateHubSchematic(FString name, TSubclassOf<UFGSchematic> fa
 				"Item": "Desc_CopperSheet",
 				"Amount": 1
 			},
-		],
-		"Recipes": [ "%s" ]
-	})"), *name, *tier, *recipies);
+		]
+	})"), *name, *tier);
 
 	FContentLib_Schematic schematic = UCLSchematicBPFLib::GenerateCLSchematicFromString(json);
 	UCLSchematicBPFLib::InitSchematicFromStruct(schematic, factorySchematic, contentLibSubsystem);
+
+	for (auto& item : items)
+	{
+		// TODO Info Only Unlocks
+		// use something like item.playerName + "'s, " + item.itemName
+		/*
+		FContentLib_UnlockInfoOnly infoCard;
+		infoCard.mUnlockName = LOCTEXT("Debug1", "HelloWorld");
+		infoCard.mUnlockDescription = LOCTEXT("Debug2", "HelloWorld Description");
+		infoCard.BigIcon = FString(TEXT("/Game/FactoryGame/Resource/RawResources/Water/UI/LiquidWater_Pipe_512.LiquidWater_Pipe_512"));
+		schematic.InfoCards.Add(infoCard);
+		*/
+	}
 
 	contentRegistry->RegisterSchematic(FName(TEXT("Archipelago")), factorySchematic);
 }
@@ -736,15 +712,21 @@ void AApSubsystem::CreateHubSchematic(FString name, TSubclassOf<UFGSchematic> fa
 void AApSubsystem::HandleAPMessages() {
 	for (int i = 0; i < 10; i++)
 	{
-		if (!AP_IsMessagePending())
-			return;
+		TPair<FString, FLinearColor> queuedMessage;
+		if (MessageQueue.Dequeue(queuedMessage)) {
+			SendChatMessage(queuedMessage.Key, queuedMessage.Value);
+		}
+		else {
+			if (!AP_IsMessagePending())
+				return;
 
-		AP_Message* message = AP_GetLatestMessage();
-		FString fStringMessage(message->text.c_str());
+			AP_Message* message = AP_GetLatestMessage();
+			FString fStringMessage(message->text.c_str());
 
-		SendChatMessage(fStringMessage, FLinearColor::White);
+			SendChatMessage(fStringMessage, FLinearColor::White);
 
-		AP_ClearLatestMessage();
+			AP_ClearLatestMessage();
+		}
 	}
 }
 
@@ -756,6 +738,7 @@ void AApSubsystem::SendChatMessage(const FString& Message, const FLinearColor& C
 	MessageStruct.ServerTimeStamp = GetWorld()->TimeSeconds;
 	MessageStruct.CachedColor = Color;
 	ChatManager->AddChatMessageToReceived(MessageStruct);
+
 	UE_LOG(LogApChat, Display, TEXT("Archipelago Chat Message: %s"), *Message);
 }
 
