@@ -5,6 +5,9 @@
 
 DEFINE_LOG_CATEGORY(LogGame); // A base-game header is using this category so we must do this to avoid unresolved external symbol
 
+//TODO REMOVE
+#pragma optimize("", off)
+
 AApPortal::AApPortal() : Super() {
 	this->mPowerInfoClass = UFGPowerInfoComponent::StaticClass();
 	this->mInventorySizeX = 1;
@@ -105,3 +108,5 @@ void AApPortal::Factory_Tick(float dt) {
 		}
 	}
 }
+
+#pragma optimize("", on)
