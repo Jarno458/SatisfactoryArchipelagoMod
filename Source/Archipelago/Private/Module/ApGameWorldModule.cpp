@@ -9,6 +9,7 @@ UApGameWorldModule::UApGameWorldModule() {
 
 void UApGameWorldModule::DispatchLifecycleEvent(ELifecyclePhase phase) {
 	Super::DispatchLifecycleEvent(phase);
+	UE_LOG(LogApGameWorldModule, Display, TEXT("UApGameWorldModule::DispatchLifecycleEvent"));
 
 	USubsystemActorManager* SubsystemActorManager = GetWorld()->GetSubsystem<USubsystemActorManager>();
 	check(SubsystemActorManager);
