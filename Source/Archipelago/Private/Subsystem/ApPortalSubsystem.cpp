@@ -8,6 +8,7 @@ AApPortalSubsystem::AApPortalSubsystem() : Super() {
 
 void AApPortalSubsystem::BeginPlay() {
 	Super::BeginPlay();
+
 	UE_LOG(LogApPortalSubsystem, Display, TEXT("AApPortalSubsystem::BeginPlay()"));
 }
 

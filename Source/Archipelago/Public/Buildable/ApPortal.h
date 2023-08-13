@@ -25,13 +25,6 @@ public:
 
 	virtual void Factory_Tick(float dt) override;
 
-
-	UFUNCTION(BlueprintImplementableEvent)
-		void ProductionStateChanged();
-
 	UPROPERTY(BlueprintReadWrite)
 		bool Registered;
-
-	UPROPERTY(BlueprintReadOnly)
-		UFGPipeConnectionComponent* Pipe;
 };
