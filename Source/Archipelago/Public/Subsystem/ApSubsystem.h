@@ -98,17 +98,16 @@ public:
 
 private:
 	static std::map<std::string, std::function<void(AP_SetReply)>> callbacks;
-	static TMap<int64_t, FString> ItemIdToGameName;
+	static TMap<int64_t, FString> ItemIdToGameItemDescriptor;
 	static TMap<int64_t, FString> ItemIdToGameName2;
-	static TMap<int64_t, FString> ItemIdToGameSchematic;
+	static TMap<int64_t, FString> ItemIdToGameRecipe;
 
 	static void SetReplyCallback(AP_SetReply setReply);
 	static void ItemClearCallback();
 	static void ItemReceivedCallback(int64_t id, bool notify);
 	static void LocationCheckedCallback(int64_t id);
 	static void LocationScoutedCallback(std::vector<AP_NetworkItem>);
-	static void SlotDataFirstHubLocation(int locationId);
-	static void SlotDataLastHubLocation(int locationId);
+	static void ParseSlotData(std::string json);
 
 	UContentLibSubsystem* contentLibSubsystem;
 	AModContentRegistry* contentRegistry;
@@ -122,6 +121,8 @@ private:
 	bool shouldParseItemsToScout;
 	int firstHubLocation;
 	int lastHubLocation;
+	int currentPlayerSlot = -1;
+	bool hasLoadedSlotData;
 
 	void ConnectToArchipelago(FApConfigurationStruct config);
 	UFUNCTION() //required for event
@@ -135,6 +136,7 @@ private:
 	void SendChatMessage(const FString& Message, const FLinearColor& Color);
 
 	void CreateSchematicBoundToItemId(int64_t item);
+	FContentLib_UnlockInfoOnly CreateUnlockInfoOnly(AP_NetworkItem item);
 	void CreateRecipe(AP_NetworkItem item);
 	void CreateDescriptor(AP_NetworkItem item);
 	void CreateHubSchematic(FString name, TSubclassOf<UFGSchematic> factorySchematic, TArray<AP_NetworkItem> items);

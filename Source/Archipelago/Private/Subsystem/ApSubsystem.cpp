@@ -12,7 +12,7 @@ DEFINE_LOG_CATEGORY(LogApChat);
 
 std::map<std::string, std::function<void(AP_SetReply)>> AApSubsystem::callbacks;
 
-TMap<int64_t, FString> AApSubsystem::ItemIdToGameName = {
+TMap<int64_t, FString> AApSubsystem::ItemIdToGameItemDescriptor = {
 	//Parts
 	{1337500, TEXT("Desc_SpaceElevatorPart_5_C")}, //Adaptive Control Unit
 	{1337501, TEXT("Desc_CircuitBoardHighSpeed_C")}, //AI Limiter
@@ -176,7 +176,7 @@ TMap<int64_t, FString> AApSubsystem::ItemIdToGameName = {
 };
 
 
-TMap<int64_t, FString> AApSubsystem::ItemIdToGameSchematic = {
+TMap<int64_t, FString> AApSubsystem::ItemIdToGameRecipe = {
 	{1337700, TEXT("Recipe_IronPlateReinforced")},
 	{1337701, TEXT("Recipe_Alternate_AdheredIronPlate")},
 	{1337702, TEXT("Recipe_Alternate_ReinforcedIronPlate_1")},
@@ -361,7 +361,7 @@ void AApSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase) {
 		ConnectToArchipelago(config);
 
 		UE_LOG(LogApSubsystem, Display, TEXT("Generating schematics from AP Item IDs..."));
-		for (auto item : ItemIdToGameSchematic) {
+		for (auto item : ItemIdToGameRecipe) {
 			CreateSchematicBoundToItemId(item.Key);
 		}
 	
@@ -381,16 +381,16 @@ void AApSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase) {
 
 bool AApSubsystem::InitializeTick(FApConfigurationStruct config, FDateTime connectingStartedTime) {
 	if (ConnectionState == EApConnectionState::Connecting) {
-		if ((FDateTime::Now() - connectingStartedTime).GetSeconds() > 5)
+		if ((FDateTime::Now() - connectingStartedTime).GetSeconds() > 10)
 			TimeoutConnectionIfNotConnected();
 		else
 			CheckConnectionState(config);
 	} else if (ConnectionState == EApConnectionState::Connected) {
 		if (!shouldParseItemsToScout) {
-			if (firstHubLocation != 0 && lastHubLocation != 0) {
+			if (hasLoadedSlotData) {
 				HintUnlockedHubRecipies();
 			} else {
-				// TODO this is where it gets hung up after reloading a save
+				// awaiting slot data callback
 			}
 		} else {
 			ParseScoutedItems();
@@ -413,8 +413,7 @@ void AApSubsystem::ConnectToArchipelago(FApConfigurationStruct config) {
 	AP_SetLocationCheckedCallback(AApSubsystem::LocationCheckedCallback);
 	AP_RegisterSetReplyCallback(AApSubsystem::SetReplyCallback);
 	AP_SetLocationInfoCallback(AApSubsystem::LocationScoutedCallback);
-	AP_RegisterSlotDataIntCallback("FirstHubLocation", AApSubsystem::SlotDataFirstHubLocation);
-	AP_RegisterSlotDataIntCallback("LastHubLocation", AApSubsystem::SlotDataLastHubLocation);
+	AP_RegisterSlotDataRawCallback("Data", AApSubsystem::ParseSlotData);
 
 	ConnectionState = EApConnectionState::Connecting;
 	ConnectionStateDescription = LOCTEXT("Connecting", "Connecting...");
@@ -478,16 +477,28 @@ void AApSubsystem::LocationScoutedCallback(std::vector<AP_NetworkItem> scoutedLo
 	self->shouldParseItemsToScout = true;
 }
 
-void AApSubsystem::SlotDataFirstHubLocation(int locationId) {
+void AApSubsystem::ParseSlotData(std::string json) {
+	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::ParseSlotData(%s)"), *UApUtils::FStr(json));
+
+	FString jsonString(json.c_str());
+
+	const TSharedRef<TJsonReader<>> reader = TJsonReaderFactory<>::Create(*jsonString);
+
+	FJsonSerializer serializer;
+	TSharedPtr<FJsonObject> parsedJson;
+
+	serializer.Deserialize(reader, parsedJson);
+	if (!parsedJson.IsValid()) {
+		UE_LOG(LogApSubsystem, Error, TEXT("SlotData Invallid! %s"), *jsonString);
+		return;
+	}
+	
 	AApSubsystem* self = AApSubsystem::Get();
 
-	self->firstHubLocation = locationId;
-}
-
-void AApSubsystem::SlotDataLastHubLocation(int locationId) {
-	AApSubsystem* self = AApSubsystem::Get();
-
-	self->lastHubLocation = locationId;
+	self->firstHubLocation = parsedJson->TryGetField("FirstHubLocation")->AsNumber();
+	self->lastHubLocation = parsedJson->TryGetField("LastHubLocation")->AsNumber();
+	self->currentPlayerSlot = parsedJson->TryGetField("Slot")->AsNumber();
+	self->hasLoadedSlotData = true;
 }
 
 void AApSubsystem::MonitorDataStoreValue(std::string key, AP_DataType dataType, std::string defaultValue, std::function<void(AP_SetReply)> callback) {
@@ -603,7 +614,7 @@ void AApSubsystem::ParseScoutedItems() {
 }
 
 void AApSubsystem::CreateSchematicBoundToItemId(int64_t item) {
-	if (!ItemIdToGameSchematic.Contains(item))
+	if (!ItemIdToGameRecipe.Contains(item))
 		return;
 	
 	FString name = UApUtils::FStr("AP_ITEM_SCHEMATIC_" + std::to_string(item));
@@ -612,7 +623,7 @@ void AApSubsystem::CreateSchematicBoundToItemId(int64_t item) {
 		"Name": "%s",
 		"Type": "Custom",
 		"Recipes": [ "%s" ]
-	})"), *name, *ItemIdToGameSchematic[item]);
+	})"), *name, *ItemIdToGameRecipe[item]);
 
 	FContentLib_Schematic schematic = UCLSchematicBPFLib::GenerateCLSchematicFromString(json);
 	TSubclassOf<UFGSchematic> factorySchematic = UApUtils::FindOrCreateClass(TEXT("/Archipelago/"), *name, UFGSchematic::StaticClass());
@@ -675,10 +686,34 @@ void AApSubsystem::CreateDescriptor(AP_NetworkItem item) {
 }
 
 void AApSubsystem::CreateHubSchematic(FString name, TSubclassOf<UFGSchematic> factorySchematic, TArray<AP_NetworkItem> items) {
+	TArray<FString> recipies;
+	TArray<FString> itemDescriptors;
+	TArray<FContentLib_UnlockInfoOnly> infoOnly;
+
+	for (auto& item : items) {
+		if (item.player == currentPlayerSlot && ItemIdToGameRecipe.Contains(item.item))
+			recipies.Add(ItemIdToGameRecipe[item.item]);
+		else if (item.player == currentPlayerSlot && ItemIdToGameItemDescriptor.Contains(item.item))
+				itemDescriptors.Add(ItemIdToGameItemDescriptor[item.item]);
+		else
+			infoOnly.Add(CreateUnlockInfoOnly(item));
+	}
+	
 	int delimeterPos;
 	name.FindChar('-', delimeterPos);
 	
 	FString tier = name.Mid(delimeterPos - 1, 1);
+	FString recipiesCombined = FString(TEXT(""));
+	for (auto recipe : recipies) {
+		recipiesCombined += FString::Printf(TEXT("\"%s\","), *recipe);
+	}
+	FString itemsCombined = FString(TEXT(""));
+	for (auto itemDesc : itemDescriptors) {
+		itemsCombined += FString::Printf(TEXT(R"({
+			"Item": "%s",
+			"Amount": 1
+		},)"), *itemDesc);
+	}
 	// https://raw.githubusercontent.com/budak7273/ContentLib_Documentation/main/JsonSchemas/CL_Schematic.json
 	FString json = FString::Printf(TEXT(R"({
 		"Name": "%s",
@@ -691,27 +726,52 @@ void AApSubsystem::CreateHubSchematic(FString name, TSubclassOf<UFGSchematic> fa
 				"Item": "Desc_CopperSheet",
 				"Amount": 1
 			},
-		]
-	})"), *name, *tier);
+		],
+		"Recipes": [ %s ],
+		"ItemsToGive": [ %s ],
+		"ClearRecipes": true,
+		"ClearItemsToGive": true
+	})"), *name, *tier, *recipiesCombined, *itemsCombined);
 
 	FContentLib_Schematic schematic = UCLSchematicBPFLib::GenerateCLSchematicFromString(json);
-	for (auto& item : items) {
-		FContentLib_UnlockInfoOnly infoCard;
-		FFormatNamedArguments Args;
-		Args.Add(TEXT("ApPlayerName"), UApUtils::FText(item.playerName));
-		Args.Add(TEXT("ApItemName"), UApUtils::FText(item.itemName));
-		Args.Add(TEXT("ProgressionType"), LOCTEXT("NetworkItemProgressionType", "SOMETHING"));
-		infoCard.mUnlockName = FText::Format(LOCTEXT("NetworkItemUnlockDisplayName", "{ApPlayerName}'s {ApItemName}"), Args);
-		infoCard.mUnlockDescription = FText::Format(LOCTEXT("NetworkItemUnlockDescription", "This will unlock {ApPlayerName}'s {ApItemName} which is considered a {ProgressionType} advancement."), Args);
 
-		const auto icon = FString(TEXT("/Archipelago/Assets/ArchipelagoIcon128.ArchipelagoIcon128"));
-		infoCard.BigIcon = infoCard.SmallIcon = icon;
-		infoCard.CategoryIcon = FString(TEXT("/Archipelago/Assets/ArchipelagoIconWhite128.ArchipelagoIconWhite128"));
-		schematic.InfoCards.Add(infoCard);
-	}
+	for (auto& info : infoOnly)
+		schematic.InfoCards.Add(info);
+
 	UCLSchematicBPFLib::InitSchematicFromStruct(schematic, factorySchematic, contentLibSubsystem);
 	contentRegistry->RegisterSchematic(FName(TEXT("Archipelago")), factorySchematic);
 }
+
+FContentLib_UnlockInfoOnly AApSubsystem::CreateUnlockInfoOnly(AP_NetworkItem item) {
+	FContentLib_UnlockInfoOnly infoCard;
+	FString icon;
+	FFormatNamedArguments Args;
+
+	if (item.flags == 0b001) {
+		Args.Add(TEXT("ProgressionType"), LOCTEXT("NetworkItemProgressionTypeAdvancement", "progression item"));
+		icon = FString(TEXT("/Archipelago/Assets/AP-Purple.AP-Purple"));
+	} else if (item.flags == 0b010) {
+		Args.Add(TEXT("ProgressionType"), LOCTEXT("NetworkItemProgressionTypeUsefull", "useful item"));
+		icon = FString(TEXT("/Archipelago/Assets/AP-Blue.AP-Blue"));
+	} else if (item.flags == 0b100) {
+		Args.Add(TEXT("ProgressionType"), LOCTEXT("NetworkItemProgressionTypeTrap", "trap"));
+		icon = FString(TEXT("/Archipelago/Assets/AP-Red.AP-Red"));
+	} else {
+		Args.Add(TEXT("ProgressionType"), LOCTEXT("NetworkItemProgressionTypeJunk", "normal item"));
+		icon = FString(TEXT("/Archipelago/Assets/AP-Cyan.AP-Cyan"));
+	}
+
+	Args.Add(TEXT("ApPlayerName"), UApUtils::FText(item.playerName));
+	Args.Add(TEXT("ApItemName"), UApUtils::FText(item.itemName));
+
+	infoCard.mUnlockName = FText::Format(LOCTEXT("NetworkItemUnlockDisplayName", "{ApPlayerName}'s {ApItemName}"), Args);
+	infoCard.mUnlockDescription = FText::Format(LOCTEXT("NetworkItemUnlockDescription", "This will unlock {ApPlayerName}'s {ApItemName} which is considered a {ProgressionType}."), Args);
+	infoCard.BigIcon = infoCard.SmallIcon = icon;
+	infoCard.CategoryIcon = FString(TEXT("/Archipelago/Assets/ArchipelagoIconWhite128.ArchipelagoIconWhite128"));
+
+	return infoCard;
+}
+
 
 void AApSubsystem::HandleAPMessages() {
 	for (int i = 0; i < 10; i++)

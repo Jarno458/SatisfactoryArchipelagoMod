@@ -38,6 +38,7 @@ public class Archipelago : ModuleRules
             //"TemplateSequence",
             "NetCore",
             "GameplayTags",
+            "Json"
 		});
 
         // FactoryGame plugins
