@@ -389,6 +389,8 @@ bool AApSubsystem::InitializeTick(FApConfigurationStruct config, FDateTime conne
 		if (!shouldParseItemsToScout) {
 			if (firstHubLocation != 0 && lastHubLocation != 0) {
 				HintUnlockedHubRecipies();
+			} else {
+				// TODO this is where it gets hung up after reloading a save
 			}
 		} else {
 			ParseScoutedItems();
@@ -569,7 +571,7 @@ void AApSubsystem::ParseScoutedItems() {
 			FString milestone = UApUtils::FStr(milestoneString);
 
 			if (!schematicsPerMilestone.Contains(milestone)) {
-				TSubclassOf<UFGSchematic> schematic = FClassGenerator::GenerateSimpleClass(TEXT("/Archipelago/"), *milestone, UFGSchematic::StaticClass());
+				TSubclassOf<UFGSchematic> schematic = UApUtils::FindOrCreateClass(TEXT("/Archipelago/"), *milestone, UFGSchematic::StaticClass());
 
 				schematicsPerMilestone.Add(milestone, schematic);
 			}
@@ -613,7 +615,7 @@ void AApSubsystem::CreateSchematicBoundToItemId(int64_t item) {
 	})"), *name, *ItemIdToGameSchematic[item]);
 
 	FContentLib_Schematic schematic = UCLSchematicBPFLib::GenerateCLSchematicFromString(json);
-	TSubclassOf<UFGSchematic> factorySchematic = FClassGenerator::GenerateSimpleClass(TEXT("/Archipelago/"), *name, UFGSchematic::StaticClass());
+	TSubclassOf<UFGSchematic> factorySchematic = UApUtils::FindOrCreateClass(TEXT("/Archipelago/"), *name, UFGSchematic::StaticClass());
 	UCLSchematicBPFLib::InitSchematicFromStruct(schematic, factorySchematic, contentLibSubsystem);
 
 	contentRegistry->RegisterSchematic(FName(TEXT("Archipelago")), factorySchematic);
@@ -641,7 +643,7 @@ void AApSubsystem::CreateRecipe(AP_NetworkItem item) {
 	})"), *name);
 
 	FContentLib_Recipe clRecipy = UCLRecipeBPFLib::GenerateCLRecipeFromString(json);
-	TSubclassOf<UFGRecipe> factoryRecipy = FClassGenerator::GenerateSimpleClass(TEXT("/Archipelago/"), *uniqueId, UFGRecipe::StaticClass());
+	TSubclassOf<UFGRecipe> factoryRecipy = UApUtils::FindOrCreateClass(TEXT("/Archipelago/"), *uniqueId, UFGRecipe::StaticClass());
 	UCLRecipeBPFLib::InitRecipeFromStruct(contentLibSubsystem, clRecipy, factoryRecipy);
 
 	contentRegistry->RegisterRecipe(FName(TEXT("Archipelago")), factoryRecipy);
@@ -666,7 +668,7 @@ void AApSubsystem::CreateDescriptor(AP_NetworkItem item) {
 	})"), *name);
 
 	FContentLib_Item clItem = UCLItemBPFLib::GenerateCLItemFromString(json);
-	TSubclassOf<UFGItemDescriptor> factoryItem = FClassGenerator::GenerateSimpleClass(TEXT("/Archipelago/"), *uniqueId, UFGItemDescriptor::StaticClass());
+	TSubclassOf<UFGItemDescriptor> factoryItem = UApUtils::FindOrCreateClass(TEXT("/Archipelago/"), *uniqueId, UFGItemDescriptor::StaticClass());
 	UCLItemBPFLib::InitItemFromStruct(factoryItem, clItem, contentLibSubsystem);
 
 	//contentRegistry->RegisterItem(FName(TEXT("Archipelago")), factoryItem); //no idea how/where to register items
