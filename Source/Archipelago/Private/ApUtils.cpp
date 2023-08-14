@@ -18,15 +18,11 @@ FString UApUtils::FStr(int64_t inInt) {
 }
 
 UClass* UApUtils::FindOrCreateClass(const TCHAR* PackageName, const TCHAR* ClassName, UClass* ParentClass) {
-	// TODO ANY_PACKAGE deprecation, find a different object finder that works
-	// the excessive variables are to allow for debugger inspection as it works, clean up later
-	auto found = FindObject<UClass>(ANY_PACKAGE, ClassName, false);
-	if (found) {
-		UE_LOG(LogApUtils, Display, TEXT("Class %s already exists, returning that instead"), ClassName);
-		const auto test = found;
-		return test;
+	if (auto found = FindObject<UClass>(FindPackage(nullptr, PackageName), ClassName, false)) {
+		UE_LOG(LogApUtils, Verbose, TEXT("Class %s already exists, returning that instead"), ClassName);
+		return found;
 	} else {
-		UE_LOG(LogApUtils, Display, TEXT("Creating class %s in package %s"), ClassName, PackageName);
+		UE_LOG(LogApUtils, Verbose, TEXT("Creating class %s in package %s"), ClassName, PackageName);
 		return FClassGenerator::GenerateSimpleClass(PackageName, ClassName, ParentClass);
 	}
 }
