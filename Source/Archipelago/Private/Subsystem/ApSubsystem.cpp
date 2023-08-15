@@ -306,7 +306,7 @@ TMap<int64_t, FString> AApSubsystem::ItemIdToGameRecipe = {
 	{1337915, TEXT("Recipe_WaterPump")},
 	{1337916, TEXT("Recipe_SmelterBasicMk1")},
 	{1337917, TEXT("Recipe_SmelterMk1")},
-	{1337918, TEXT("Recipe_SpaceElevator")},
+	{1337999, TEXT("Recipe_SpaceElevator")},
 };
 
 
@@ -690,11 +690,14 @@ void AApSubsystem::CreateHubSchematic(FString name, TSubclassOf<UFGSchematic> fa
 	TArray<FString> itemDescriptors;
 	TArray<FContentLib_UnlockInfoOnly> infoOnly;
 
+	itemDescriptors.Add("Desc_Medkit_C");
+	itemDescriptors.Add("Desc_AluminumPlateReinforced_C");
+
 	for (auto& item : items) {
 		if (item.player == currentPlayerSlot && ItemIdToGameRecipe.Contains(item.item))
 			recipies.Add(ItemIdToGameRecipe[item.item]);
-		else if (item.player == currentPlayerSlot && ItemIdToGameItemDescriptor.Contains(item.item))
-				itemDescriptors.Add(ItemIdToGameItemDescriptor[item.item]);
+		//else if (item.player == currentPlayerSlot && ItemIdToGameItemDescriptor.Contains(item.item)) //TODO: itemsToGive dont show up in hub
+		//		itemDescriptors.Add(ItemIdToGameItemDescriptor[item.item]);
 		else
 			infoOnly.Add(CreateUnlockInfoOnly(item));
 	}
