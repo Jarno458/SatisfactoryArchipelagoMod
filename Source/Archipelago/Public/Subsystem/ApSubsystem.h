@@ -29,6 +29,7 @@
 #include "FGChatManager.h"
 #include "Module/ModModule.h"
 #include "Reflection/ClassGenerator.h"
+#include "AssetRegistry/AssetRegistryModule.h"
 
 #include "ApConfigurationStruct.h"
 
@@ -136,11 +137,14 @@ private:
 	void SendChatMessage(const FString& Message, const FLinearColor& Color);
 
 	void CreateSchematicBoundToItemId(int64_t item);
-	FContentLib_UnlockInfoOnly CreateUnlockInfoOnly(AP_NetworkItem item);
+	FContentLib_UnlockInfoOnly CreateUnlockInfoOnly(AP_NetworkItem item, FString customIcon = FString());
 	void CreateRecipe(AP_NetworkItem item);
 	void CreateDescriptor(AP_NetworkItem item);
-	void CreateHubSchematic(FString name, TSubclassOf<UFGSchematic> factorySchematic, TArray<AP_NetworkItem> items);
+	void CreateHubSchematic(TArray<FAssetData> recipeAssets, TArray<FAssetData> itemDescriptorAssets, FString name, TSubclassOf<UFGSchematic> factorySchematic, TArray<AP_NetworkItem> items);
 	
+	UFGRecipe* GetRecipeByName(TArray<FAssetData> recipeAssets, FString name);
+	UFGItemDescriptor* GetItemDescriptorByName(TArray<FAssetData> itemDescriptorAssets, FString name);
+
 	UFUNCTION() //required for event
 	void OnMamResearchCompleted(TSubclassOf<class UFGSchematic> schematic);
 	UFUNCTION() //required for event

@@ -38,8 +38,9 @@ public class Archipelago : ModuleRules
             //"TemplateSequence",
             "NetCore",
             "GameplayTags",
-            "Json"
-		});
+            "Json",
+            "AssetRegistry"
+        });
 
         // FactoryGame plugins
         PublicDependencyModuleNames.AddRange(new string[] {

@@ -597,6 +597,23 @@ void AApSubsystem::ParseScoutedItems() {
 		}
 	}
 
+	FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+	IAssetRegistry& registery = AssetRegistryModule.Get();
+
+	TArray<FAssetData> recipeAssets;
+	FARFilter recipeFilter;
+	recipeFilter.ClassPaths.Add(FTopLevelAssetPath("/Script/Engine", "BlueprintGeneratedClass"));
+	recipeFilter.PackagePaths.Add("/Game/FactoryGame/Recipes");
+	recipeFilter.bRecursivePaths = true;
+	registery.GetAssets(recipeFilter, recipeAssets);
+
+	TArray<FAssetData> itemDescriptorAssets;
+	FARFilter itemFilter;
+	itemFilter.ClassPaths.Add(FTopLevelAssetPath("/Script/Engine", "BlueprintGeneratedClass"));
+	itemFilter.PackagePaths.Add("/Game/FactoryGame/Resource");
+	itemFilter.bRecursivePaths = true;
+	registery.GetAssets(itemFilter, itemDescriptorAssets);
+
 	for (auto& itemPerMilestone : locationsPerMileStone) {
 		FString schematicName;
 		for (auto schematicAndName : schematicsPerMilestone)
@@ -608,7 +625,7 @@ void AApSubsystem::ParseScoutedItems() {
 			}
 		}
 
-		CreateHubSchematic(schematicName, itemPerMilestone.Key, itemPerMilestone.Value);
+		CreateHubSchematic(recipeAssets, itemDescriptorAssets, schematicName, itemPerMilestone.Key, itemPerMilestone.Value);
 	}
 
 	scoutedLocations.Empty();
@@ -687,38 +704,30 @@ void AApSubsystem::CreateDescriptor(AP_NetworkItem item) {
 	//contentRegistry->RegisterItem(FName(TEXT("Archipelago")), factoryItem); //no idea how/where to register items
 }
 
-void AApSubsystem::CreateHubSchematic(FString name, TSubclassOf<UFGSchematic> factorySchematic, TArray<AP_NetworkItem> items) {
-	TArray<FString> recipies;
-	TArray<FString> itemDescriptors;
+void AApSubsystem::CreateHubSchematic(TArray<FAssetData> recipeAssets, TArray<FAssetData> itemDescriptorAssets, FString name, TSubclassOf<UFGSchematic> factorySchematic, TArray<AP_NetworkItem> items) {
 	TArray<FContentLib_UnlockInfoOnly> infoOnly;
-
-	itemDescriptors.Add("Desc_Medkit_C");
-	itemDescriptors.Add("Desc_AluminumPlateReinforced_C");
 
 	for (auto& item : items) {
 		if (item.player == currentPlayerSlot && ItemIdToGameRecipe.Contains(item.item))
-			recipies.Add(ItemIdToGameRecipe[item.item]);
-		//else if (item.player == currentPlayerSlot && ItemIdToGameItemDescriptor.Contains(item.item)) //TODO: itemsToGive dont show up in hub
-		//		itemDescriptors.Add(ItemIdToGameItemDescriptor[item.item]);
-		else
+		{
+			UFGRecipe* recipe = GetRecipeByName(recipeAssets, ItemIdToGameRecipe[item.item]);
+			UFGItemDescriptor* itemDescriptor = recipe->GetProducts()[0].ItemClass.GetDefaultObject();
+
+			infoOnly.Add(CreateUnlockInfoOnly(item, UApUtils::GetImagePathForItem(itemDescriptor)));
+		}
+		else if (item.player == currentPlayerSlot && ItemIdToGameItemDescriptor.Contains(item.item)) { 
+			UFGItemDescriptor* itemDescriptor = GetItemDescriptorByName(itemDescriptorAssets, ItemIdToGameItemDescriptor[item.item]);
+
+			infoOnly.Add(CreateUnlockInfoOnly(item, UApUtils::GetImagePathForItem(itemDescriptor)));
+		} else {
 			infoOnly.Add(CreateUnlockInfoOnly(item));
+		}
 	}
-	
+
 	int delimeterPos;
 	name.FindChar('-', delimeterPos);
 	
 	FString tier = name.Mid(delimeterPos - 1, 1);
-	FString recipiesCombined = FString(TEXT(""));
-	for (auto recipe : recipies) {
-		recipiesCombined += FString::Printf(TEXT("\"%s\","), *recipe);
-	}
-	FString itemsCombined = FString(TEXT(""));
-	for (auto itemDesc : itemDescriptors) {
-		itemsCombined += FString::Printf(TEXT(R"({
-			"Item": "%s",
-			"Amount": 1
-		},)"), *itemDesc);
-	}
 	// https://raw.githubusercontent.com/budak7273/ContentLib_Documentation/main/JsonSchemas/CL_Schematic.json
 	FString json = FString::Printf(TEXT(R"({
 		"Name": "%s",
@@ -731,12 +740,8 @@ void AApSubsystem::CreateHubSchematic(FString name, TSubclassOf<UFGSchematic> fa
 				"Item": "Desc_CopperSheet",
 				"Amount": 1
 			},
-		],
-		"Recipes": [ %s ],
-		"ItemsToGive": [ %s ],
-		"ClearRecipes": true,
-		"ClearItemsToGive": true
-	})"), *name, *tier, *recipiesCombined, *itemsCombined);
+		]
+	})"), *name, *tier);
 
 	FContentLib_Schematic schematic = UCLSchematicBPFLib::GenerateCLSchematicFromString(json);
 
@@ -747,8 +752,7 @@ void AApSubsystem::CreateHubSchematic(FString name, TSubclassOf<UFGSchematic> fa
 	contentRegistry->RegisterSchematic(FName(TEXT("Archipelago")), factorySchematic);
 }
 
-FContentLib_UnlockInfoOnly AApSubsystem::CreateUnlockInfoOnly(AP_NetworkItem item) {
-	FContentLib_UnlockInfoOnly infoCard;
+FContentLib_UnlockInfoOnly AApSubsystem::CreateUnlockInfoOnly(AP_NetworkItem item, FString customIcon) {
 	FString icon;
 	FFormatNamedArguments Args;
 
@@ -766,8 +770,14 @@ FContentLib_UnlockInfoOnly AApSubsystem::CreateUnlockInfoOnly(AP_NetworkItem ite
 		icon = FString(TEXT("/Archipelago/Assets/AP-Cyan.AP-Cyan"));
 	}
 
+	if (!customIcon.IsEmpty()) {
+		icon = customIcon;
+	}
+
 	Args.Add(TEXT("ApPlayerName"), UApUtils::FText(item.playerName));
 	Args.Add(TEXT("ApItemName"), UApUtils::FText(item.itemName));
+
+	FContentLib_UnlockInfoOnly infoCard;
 
 	infoCard.mUnlockName = FText::Format(LOCTEXT("NetworkItemUnlockDisplayName", "{ApPlayerName}'s {ApItemName}"), Args);
 	infoCard.mUnlockDescription = FText::Format(LOCTEXT("NetworkItemUnlockDescription", "This will unlock {ApPlayerName}'s {ApItemName} which is considered a {ProgressionType}."), Args);
@@ -818,6 +828,27 @@ void AApSubsystem::HintUnlockedHubRecipies() {
 		locations.push_back(i);
 
 	AP_SendLocationScouts(locations, 0);
+}
+
+UFGRecipe* AApSubsystem::GetRecipeByName(TArray<FAssetData> recipeAssets, FString name) {
+	FString assetName = name.Append("_C");
+	for (auto asset : recipeAssets) {
+		if (asset.AssetName == FName(*assetName)) {
+			return Cast<UFGRecipe>(Cast<UBlueprintGeneratedClass>(asset.GetAsset())->GetDefaultObject());
+		}
+	}
+
+	return nullptr;
+}
+
+UFGItemDescriptor* AApSubsystem::GetItemDescriptorByName(TArray<FAssetData> itemDescriptorAssets, FString name) {
+	for (auto asset : itemDescriptorAssets) {
+		if (asset.AssetName == FName(*name)) {
+			return Cast<UFGItemDescriptor>(Cast<UBlueprintGeneratedClass>(asset.GetAsset())->GetDefaultObject());
+		}
+	}
+
+	return nullptr;
 }
 
 void AApSubsystem::TimeoutConnectionIfNotConnected() {

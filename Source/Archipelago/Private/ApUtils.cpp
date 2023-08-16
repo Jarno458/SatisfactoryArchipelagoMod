@@ -26,3 +26,7 @@ UClass* UApUtils::FindOrCreateClass(const TCHAR* PackageName, const TCHAR* Class
 		return FClassGenerator::GenerateSimpleClass(PackageName, ClassName, ParentClass);
 	}
 }
+
+FString UApUtils::GetImagePathForItem(UFGItemDescriptor* item) {
+	return item->GetBigIconFromInstance()->GetPathName();
+}
