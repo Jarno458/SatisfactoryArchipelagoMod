@@ -489,7 +489,9 @@ void AApSubsystem::ParseSlotData(std::string json) {
 
 	serializer.Deserialize(reader, parsedJson);
 	if (!parsedJson.IsValid()) {
-		UE_LOG(LogApSubsystem, Error, TEXT("SlotData Invallid! %s"), *jsonString);
+		UE_LOG(LogApSubsystem, Fatal, TEXT("Archipelago SlotData Invalid! %s"), *jsonString);
+		// TODO kick people out to the main menu screen or something, this keeps them hanging forever on the loading screen with no clear indication
+		// Switched to Fatal for now so it closes the game, but there must be a better way
 		return;
 	}
 	
