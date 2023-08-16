@@ -9,6 +9,9 @@ DECLARE_LOG_CATEGORY_EXTERN(LogApMainMenuModule, Log, All);
 
 #include "ApMainMenuModule.generated.h"
 
+/**
+ * Blueprint implemented Mod Module
+*/
 UCLASS(Abstract, Blueprintable)
 class ARCHIPELAGO_API UApMainMenuModule : public UMenuWorldModule
 {
