@@ -6,6 +6,7 @@ UApGameWorldModule::UApGameWorldModule() {
 	ModSubsystems.Add(AApSubsystem::StaticClass());
 	ModSubsystems.Add(AApEnergyLinkSubsystem::StaticClass());
 	ModSubsystems.Add(AApPortalSubsystem::StaticClass());
+	// Trap Subsystem is implemented in Blueprint so it is added to the subsystems array in the BP implementation of the module
 }
 
 void UApGameWorldModule::DispatchLifecycleEvent(ELifecyclePhase phase) {
