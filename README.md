@@ -48,8 +48,8 @@ add_library(APCpp-static STATIC Archipelago.cpp Archipelago.h)
 
 To update the used APCpp version, build a STATIC library version then:
 
-1. Copy all *.lib over from `APCpp\build\lib\Release` to `Archipelago\Source\APCpp\lib`
-2. Copy `Archipelago.h` over to `APCpp` to `Archipelago\Source\APCpp\public`
+1. Copy all *.lib over from `APCpp\build\lib\Release` to `Archipelago\Source\APCpp\lib\Win64`
+2. Copy `Archipelago.h` over to `APCpp` to `Archipelago\Source\APCpp\inc`
 
 ### Archipelago Server
 
