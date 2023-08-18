@@ -121,14 +121,15 @@ private:
 
 	TArray<AP_NetworkItem> scoutedLocations;
 	bool shouldParseItemsToScout;
-	int firstHubLocation;
-	int lastHubLocation;
-	int currentPlayerSlot = -1;
+
+	//slot data
+	int currentPlayerSlot;
+	int numberOfChecksPerMilestone;
+	TArray<TSharedPtr<FJsonValue>> hubLayout;
 	bool hasLoadedSlotData;
 
 	void ConnectToArchipelago(FApConfigurationStruct config);
-	UFUNCTION() //required for event
-	void TimeoutConnectionIfNotConnected();
+	void TimeoutConnection();
 
 	void CheckConnectionState(FApConfigurationStruct config);
 	void ParseScoutedItems();

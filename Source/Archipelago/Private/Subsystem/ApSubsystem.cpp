@@ -389,7 +389,7 @@ void AApSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase) {
 bool AApSubsystem::InitializeTick(FApConfigurationStruct config, FDateTime connectingStartedTime) {
 	if (ConnectionState == EApConnectionState::Connecting) {
 		if ((FDateTime::Now() - connectingStartedTime).GetSeconds() > 10)
-			TimeoutConnectionIfNotConnected();
+			TimeoutConnection();
 		else
 			CheckConnectionState(config);
 	} else if (ConnectionState == EApConnectionState::Connected) {
@@ -504,9 +504,9 @@ void AApSubsystem::ParseSlotData(std::string json) {
 	
 	AApSubsystem* self = AApSubsystem::Get();
 
-	self->firstHubLocation = parsedJson->TryGetField("FirstHubLocation")->AsNumber();
-	self->lastHubLocation = parsedJson->TryGetField("LastHubLocation")->AsNumber();
-	self->currentPlayerSlot = parsedJson->TryGetField("Slot")->AsNumber();
+	self->currentPlayerSlot = parsedJson->GetIntegerField("Slot");
+	self->numberOfChecksPerMilestone = parsedJson->GetIntegerField("SlotsPerMilestone");
+	self->hubLayout = parsedJson->GetArrayField("HubLayout");
 	self->hasLoadedSlotData = true;
 }
 
@@ -818,8 +818,24 @@ void AApSubsystem::HintUnlockedHubRecipies() {
 
 	std::vector<int64_t> locations;
 
-	for (int64_t i = firstHubLocation; i <= lastHubLocation; i++)
-		locations.push_back(i);
+	int maxMilestones = 5;
+	int maxSlots = 10;
+
+	int64_t hubBaseId = 1338000;
+
+	for (int tier = 1; tier <= hubLayout.Num(); tier++)
+	{
+		for (int milestone = 1; milestone <= maxMilestones; milestone++)
+		{
+			for (int slot = 1; slot <= maxSlots; slot++)
+			{
+				if (milestone <= hubLayout[tier - 1]->AsArray().Num() && slot <= numberOfChecksPerMilestone)
+					locations.push_back(hubBaseId);
+
+				hubBaseId++;
+			}
+		}
+	}
 
 	AP_SendLocationScouts(locations, 0);
 }
@@ -839,10 +855,7 @@ UFGItemDescriptor* AApSubsystem::GetItemDescriptorByName(TArray<FAssetData> item
 	return Cast<UFGItemDescriptor>(UApUtils::FindAssetByName(itemDescriptorAssets, name));
 }
 
-void AApSubsystem::TimeoutConnectionIfNotConnected() {
-	if (ConnectionState != EApConnectionState::Connecting)
-		return;
-
+void AApSubsystem::TimeoutConnection() {
 	ConnectionState = EApConnectionState::ConnectionFailed;
 	ConnectionStateDescription = LOCTEXT("AuthFailed", "Authentication failed. Check your connection details and load the save again.");
 	UE_LOG(LogApSubsystem, Error, TEXT("AApSubsystem::TimeoutConnectionIfNotConnected(), Authenticated Failed"));
