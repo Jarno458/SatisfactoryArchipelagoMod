@@ -29,7 +29,6 @@
 #include "FGChatManager.h"
 #include "Module/ModModule.h"
 #include "Reflection/ClassGenerator.h"
-#include "AssetRegistry/AssetRegistryModule.h"
 
 #include "ApConfigurationStruct.h"
 

@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "UObject/NoExportTypes.h"
 #include "Resources/FGItemDescriptor.h"
+#include "AssetRegistry/AssetRegistryModule.h"
 
 #include "ApUtils.generated.h"
 
@@ -31,7 +32,11 @@ public:
 	static FString FStr(int64_t inInt);
 
 	// Wrapper for FClassGenerator::GenerateSimpleClass that returns existing classes instead of crashing by creating new ones
-	static UClass* FindOrCreateClass(const TCHAR* PackageName, const TCHAR* ClassName, UClass* ParentClass);
+	static UClass* FindOrCreateClass(const TCHAR* packageName, const TCHAR* className, UClass* parentClass);
 
 	static FString GetImagePathForItem(UFGItemDescriptor* item);
+
+	static TArray<FAssetData> GetBlueprintAssetsIn(FName&& packagePath);
+
+	static UObject* FindAssetByName(TArray<FAssetData> assets, FString assetName);
 };

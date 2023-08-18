@@ -422,7 +422,7 @@ void AApSubsystem::ConnectToArchipelago(FApConfigurationStruct config) {
 }
 
 void AApSubsystem::OnMamResearchCompleted(TSubclassOf<class UFGSchematic> schematic) {
-	UE_LOG(LogApSubsystem, Display, TEXT("AApSubSystem::OnResearchCompleted(schematic), Mam Research Completed"));
+	UE_LOG(LogApSubsystem, Display, TEXT("AApSubSystem::OnResearchCompleted(schematic), MAM Research Completed"));
 
 	//if (schematic.) //if name is Archipelago #xxxx send check to server
 }
@@ -564,7 +564,7 @@ void AApSubsystem::CheckConnectionState(FApConfigurationStruct config) {
 		else if (status == AP_ConnectionStatus::ConnectionRefused) {
 			ConnectionState = EApConnectionState::ConnectionFailed;
 			ConnectionStateDescription = LOCTEXT("ConnectionRefused", "Connection refused by server. Check your connection details and load the save again.");
-
+			UE_LOG(LogApSubsystem, Error, TEXT("AApSubsystem::CheckConnectionState(), ConnectionRefused"));
 			FString message = FString::Printf(TEXT("Failed to connect to Archipelago server: \"%s\", for user \"%s\""), *config.Url, *config.Login);
 
 			ChatMessageQueue.Enqueue(TPair<FString, FLinearColor>(message, FLinearColor::Red));
@@ -597,22 +597,8 @@ void AApSubsystem::ParseScoutedItems() {
 		}
 	}
 
-	FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
-	IAssetRegistry& registery = AssetRegistryModule.Get();
-
-	TArray<FAssetData> recipeAssets;
-	FARFilter recipeFilter;
-	recipeFilter.ClassPaths.Add(FTopLevelAssetPath("/Script/Engine", "BlueprintGeneratedClass"));
-	recipeFilter.PackagePaths.Add("/Game/FactoryGame/Recipes");
-	recipeFilter.bRecursivePaths = true;
-	registery.GetAssets(recipeFilter, recipeAssets);
-
-	TArray<FAssetData> itemDescriptorAssets;
-	FARFilter itemFilter;
-	itemFilter.ClassPaths.Add(FTopLevelAssetPath("/Script/Engine", "BlueprintGeneratedClass"));
-	itemFilter.PackagePaths.Add("/Game/FactoryGame/Resource");
-	itemFilter.bRecursivePaths = true;
-	registery.GetAssets(itemFilter, itemDescriptorAssets);
+	const auto recipeAssets = UApUtils::GetBlueprintAssetsIn("/Game/FactoryGame/Recipes");
+	const auto itemDescriptorAssets = UApUtils::GetBlueprintAssetsIn("/Game/FactoryGame/Resource");
 
 	for (auto& itemPerMilestone : locationsPerMileStone) {
 		FString schematicName;
@@ -808,6 +794,7 @@ void AApSubsystem::HandleAPMessages() {
 }
 
 void AApSubsystem::SendChatMessage(const FString& Message, const FLinearColor& Color) {
+	// TODO this does not replicate to multiplayer clients
 	AFGChatManager* ChatManager = AFGChatManager::Get(GetWorld());
 	FChatMessageStruct MessageStruct;
 	MessageStruct.MessageString = Message;
@@ -842,13 +829,7 @@ UFGRecipe* AApSubsystem::GetRecipeByName(TArray<FAssetData> recipeAssets, FStrin
 }
 
 UFGItemDescriptor* AApSubsystem::GetItemDescriptorByName(TArray<FAssetData> itemDescriptorAssets, FString name) {
-	for (auto asset : itemDescriptorAssets) {
-		if (asset.AssetName == FName(*name)) {
-			return Cast<UFGItemDescriptor>(Cast<UBlueprintGeneratedClass>(asset.GetAsset())->GetDefaultObject());
-		}
-	}
-
-	return nullptr;
+	return Cast<UFGItemDescriptor>(UApUtils::FindAssetByName(itemDescriptorAssets, name));
 }
 
 void AApSubsystem::TimeoutConnectionIfNotConnected() {
@@ -857,7 +838,7 @@ void AApSubsystem::TimeoutConnectionIfNotConnected() {
 
 	ConnectionState = EApConnectionState::ConnectionFailed;
 	ConnectionStateDescription = LOCTEXT("AuthFailed", "Authentication failed. Check your connection details and load the save again.");
-	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::TimeoutConnectionIfNotConnected(), Authenticated Failed"));
+	UE_LOG(LogApSubsystem, Error, TEXT("AApSubsystem::TimeoutConnectionIfNotConnected(), Authenticated Failed"));
 
 	SetActorTickEnabled(false);
 }
