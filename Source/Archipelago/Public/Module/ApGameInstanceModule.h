@@ -9,6 +9,9 @@ DECLARE_LOG_CATEGORY_EXTERN(LogApGameInstanceModule, Log, All);
 
 #include "ApGameInstanceModule.generated.h"
 
+/**
+ * Blueprint implemented Mod Module
+*/
 UCLASS(Abstract, Blueprintable)
 class ARCHIPELAGO_API UApGameInstanceModule : public UGameInstanceModule
 {

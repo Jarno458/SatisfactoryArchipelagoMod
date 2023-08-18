@@ -5,6 +5,8 @@
 
 DEFINE_LOG_CATEGORY(LogApUtils);
 
+DEFINE_LOG_CATEGORY(LogArchipelagoCpp);
+
 FText UApUtils::FText(std::string inString) {
 	return FText::FromString(FString(inString.c_str()));
 }
