@@ -543,10 +543,14 @@ void AApSubsystem::Tick(float DeltaTime)
 	if (ConnectionState != EApConnectionState::Connected)
 		return;
 
+	// Consider processing only one queue item per tick for performance reasons
 	int64_t item;
 	while (ReceivedItems.Dequeue(item)) {
 		if (ItemSchematics.Contains(item))
 			SManager->GiveAccessToSchematic(ItemSchematics[item], nullptr);
+		else if (auto trapName = ItemTraps.Find(item))
+			// TODO no AP server defined traps yet to test this on yet, but can use chat command
+			AApTrapSubsystem::Get()->SpawnTrap(*trapName, nullptr);
 	}
 
 	HandleAPMessages();
@@ -746,7 +750,7 @@ FContentLib_UnlockInfoOnly AApSubsystem::CreateUnlockInfoOnly(AP_NetworkItem ite
 		Args.Add(TEXT("ProgressionType"), LOCTEXT("NetworkItemProgressionTypeAdvancement", "progression item"));
 		icon = FString(TEXT("/Archipelago/Assets/AP-Purple.AP-Purple"));
 	} else if (item.flags == 0b010) {
-		Args.Add(TEXT("ProgressionType"), LOCTEXT("NetworkItemProgressionTypeUsefull", "useful item"));
+		Args.Add(TEXT("ProgressionType"), LOCTEXT("NetworkItemProgressionTypeUseful", "useful item"));
 		icon = FString(TEXT("/Archipelago/Assets/AP-Blue.AP-Blue"));
 	} else if (item.flags == 0b100) {
 		Args.Add(TEXT("ProgressionType"), LOCTEXT("NetworkItemProgressionTypeTrap", "trap"));

@@ -33,4 +33,16 @@ public:
 	// Returns true on success, false if the spawning failed somehow on at least one target player
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
 		bool SpawnItemTrap(TSubclassOf<UFGItemDescriptor> item, int quantity = 1, APlayerState* targetPlayer = nullptr);
+
+	// C++ getter for the subsystem - the real one is implemented in Blueprint,
+	// so calling this function gets you the "real one" that inherits from the
+	// C++ class and not the C++ abstract class.
+	UFUNCTION(BlueprintPure, Category = "Archipelago", DisplayName = "GetArchipelagoTrapSubsystem", Meta = (DefaultToSelf = "WorldContext"))
+		static AApTrapSubsystem* Get(UObject* WorldContext);
+
+	// Auto world context version
+		static AApTrapSubsystem* Get();
+
 };
+
+

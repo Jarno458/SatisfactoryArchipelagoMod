@@ -18,6 +18,7 @@
 #include "Kismet/BlueprintLoggingLibrary.h"
 #include "Subsystem/ModSubsystem.h"
 #include "Subsystem/SubsystemActorManager.h"
+#include "Subsystem/ApTrapSubsystem.h"
 #include "Configuration/ModConfiguration.h"
 #include "Configuration/ConfigProperty.h"
 #include "Configuration/ConfigManager.h"
@@ -114,6 +115,7 @@ private:
 
 	TMap<TSubclassOf<class UFGSchematic>, TArray<AP_NetworkItem>> locationsPerMileStone;
 	TMap<int64_t, TSubclassOf<class UFGSchematic>> ItemSchematics;
+	TMap<int64_t, FName> ItemTraps; // TODO populate
 	TQueue<int64_t> ReceivedItems;
 	TQueue<TPair<FString, FLinearColor>> ChatMessageQueue;
 
