@@ -377,7 +377,7 @@ void AApSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase) {
 		FDateTime connectingStartedTime = FDateTime::Now();
 		FGenericPlatformProcess::ConditionalSleep([this, config, connectingStartedTime]() { return InitializeTick(config, connectingStartedTime); }, 1);
 	}
-	else if (phase == ELifecyclePhase::INITIALIZATION) {
+	else if (phase == ELifecyclePhase::POST_INITIALIZATION) {
 		if (ConnectionState != EApConnectionState::Connected) {
 			FString message = FString::Printf(TEXT("Failed to connect to Archipelago server: \"%s\", for user \"%s\""), *config.Url, *config.Login);
 
