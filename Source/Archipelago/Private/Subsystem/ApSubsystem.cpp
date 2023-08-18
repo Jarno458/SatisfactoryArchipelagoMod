@@ -316,7 +316,10 @@ TMap<int64_t, FString> AApSubsystem::ItemIdToGameName2 = {
 AApSubsystem::AApSubsystem()
 {
 	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bStartWithTickEnabled = false;
 	PrimaryActorTick.TickInterval = 0.5f;
+	ReplicationPolicy = ESubsystemReplicationPolicy::SpawnOnServer; // TODO_MULTIPLAYER is this what we want long term?
+
 	ConnectionState = NotYetAttempted;
 	ConnectionStateDescription = LOCTEXT("NotYetAttempted", "A connection has not yet been attempted. Load a save file to attempt to connect.");
 }
@@ -344,12 +347,18 @@ void AApSubsystem::BeginPlay()
 }
 
 void AApSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase) {
+	FApConfigurationStruct config = GetActiveConfig();
+	if (!config.Enabled) {
+		return;
+	}
 	if (phase == ELifecyclePhase::INITIALIZATION) {
-		FApConfigurationStruct config = GetActiveConfig();
-
-		if (!config.Enabled) {
-			SetActorTickEnabled(false);
-			return;
+		// TODO_MULTIPLAYER calling HasAuthority crashes multiplayer client? too early?
+		// but we're using SpawnOnServer so why/how is client running this anyways
+		if (HasAuthority()) {
+			// Calling SetActorTickEnabled on client crashes regardless of true or false? related to above issue?
+			SetActorTickEnabled(true);
+		} else {
+			UE_LOG(LogApSubsystem, Warning, TEXT("Archipelago Subsystem spawned/replicated on client, this is untested behavior. Keeping tick disabled."));
 		}
 
 		contentLibSubsystem = GetWorld()->GetGameInstance()->GetSubsystem<UContentLibSubsystem>();
@@ -370,8 +379,6 @@ void AApSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase) {
 	}
 	else if (phase == ELifecyclePhase::INITIALIZATION) {
 		if (ConnectionState != EApConnectionState::Connected) {
-			FApConfigurationStruct config = GetActiveConfig();
-
 			FString message = FString::Printf(TEXT("Failed to connect to Archipelago server: \"%s\", for user \"%s\""), *config.Url, *config.Login);
 
 			ChatMessageQueue.Enqueue(TPair<FString, FLinearColor>(message, FLinearColor::Red));
