@@ -822,10 +822,13 @@ void AApSubsystem::UpdateInfoOnlyUnlockWithRecipeInfo(FContentLib_UnlockInfoOnly
 	recipe->GetProducedIn(buildings);
 	for (TSubclassOf<UObject> buildingObject : buildings) {
 		if (buildingObject->IsChildOf(AFGBuildable::StaticClass())) {
-			AFGBuildable* building = Cast<AFGBuildable>(buildingObject);
-			//TODO Fix this, current building is null after cast
-			if (building != nullptr)
-				BuildingArray.Add(building->mDisplayName.ToString());
+			AFGBuildable* building = Cast<AFGBuildable>(buildingObject.GetDefaultObject());
+			if (building != nullptr) {
+				if (building->IsA(AFGBuildableAutomatedWorkBench::StaticClass()))
+					BuildingArray.Add("Workbench");
+				else
+					BuildingArray.Add(building->mDisplayName.ToString());
+			}
 		}
 	}
 

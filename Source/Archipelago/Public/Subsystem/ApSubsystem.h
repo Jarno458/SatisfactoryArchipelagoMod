@@ -32,6 +32,7 @@
 #include "Module/ModModule.h"
 #include "Reflection/ClassGenerator.h"
 #include "Buildables/FGBuildable.h"
+#include "Buildables/FGBuildableAutomatedWorkBench.h"
 
 #include "ApConfigurationStruct.h"
 
