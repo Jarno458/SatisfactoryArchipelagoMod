@@ -116,24 +116,24 @@ TMap<int64_t, FString> AApSubsystem::ItemIdToGameItemDescriptor = {
 	{1338099, TEXT("Desc_WAT1_C")}, //Somersloop
 	{1338100, TEXT("Desc_Stator_C")},
 	{1338101, TEXT("Desc_Hog_Statue_C")},
-	{1338002, TEXT("Desc_SteelPlate_C")},
-	{1338003, TEXT("Desc_SteelIngot_C")},
-	{1338004, TEXT("Desc_SteelPipe_C")},
-	{1338005, TEXT("Desc_Sulfur_C")},
-	{1338006, TEXT("Desc_ComputerSuper_C")},
-	{1338007, TEXT("Desc_QuantumOscillator_C")},
-	{1338008, TEXT("Desc_SpaceElevatorPart_8_C")}, //Thermal Propulsion Rocket
-	{1338009, TEXT("Desc_MotorLightweight_C")},
-	{1338010, TEXT("Desc_HogParts_C'")},
-	{1338011, TEXT("Desc_OreUranium_C")},
-	{1338012, TEXT("Desc_NuclearFuelRod_C")},
-	{1338013, TEXT("Desc_NuclearWaste_C")},
-	{1338014, TEXT("Desc_SpaceElevatorPart_2_C")}, //Versatile Framework
-	{1338015, TEXT("Desc_Wire_C")},
-	{1338016, TEXT("Desc_Wood_C")},
-	{1338017, TEXT("Desc_SpitterParts_C")},
-	{1338018, TEXT("Desc_StingerParts_C")},
-	{1338019, TEXT("Desc_HatcherParts_C")},
+	{1338102, TEXT("Desc_SteelPlate_C")},
+	{1338103, TEXT("Desc_SteelIngot_C")},
+	{1338104, TEXT("Desc_SteelPipe_C")},
+	{1338105, TEXT("Desc_Sulfur_C")},
+	{1338106, TEXT("Desc_ComputerSuper_C")},
+	{1338107, TEXT("Desc_QuantumOscillator_C")},
+	{1338108, TEXT("Desc_SpaceElevatorPart_8_C")}, //Thermal Propulsion Rocket
+	{1338109, TEXT("Desc_MotorLightweight_C")},
+	{1338110, TEXT("Desc_HogParts_C'")},
+	{1338111, TEXT("Desc_OreUranium_C")},
+	{1338112, TEXT("Desc_NuclearFuelRod_C")},
+	{1338113, TEXT("Desc_NuclearWaste_C")},
+	{1338114, TEXT("Desc_SpaceElevatorPart_2_C")}, //Versatile Framework
+	{1338115, TEXT("Desc_Wire_C")},
+	{1338116, TEXT("Desc_Wood_C")},
+	{1338117, TEXT("Desc_SpitterParts_C")},
+	{1338118, TEXT("Desc_StingerParts_C")},
+	{1338119, TEXT("Desc_HatcherParts_C")},
 
 	//Enquipment/Ammo
 	{1338150, TEXT("Desc_Shroom_C")},
@@ -286,8 +286,9 @@ TMap<int64_t, FString> AApSubsystem::ItemIdToGameRecipe = {
 	{1338306, TEXT("Recipe_Alternate_DilutedFuel")},
 	{1338307, TEXT("Recipe_AluminaSolution")},
 	{1338308, TEXT("Recipe_Alternate_AutomatedMiner")},
+};
 
-	//Buildings
+TMap<int64_t, FString> AApSubsystem::ItemIdToGameBuilding = {
 	{1338400, TEXT("Recipe_ConstructorMk1")},
 	{1338401, TEXT("Recipe_AssemblerMk1")},
 	{1338402, TEXT("Recipe_ManufacturerMk1")},
@@ -308,7 +309,6 @@ TMap<int64_t, FString> AApSubsystem::ItemIdToGameRecipe = {
 	{1338417, TEXT("Recipe_SmelterMk1")},
 	{1338499, TEXT("Recipe_SpaceElevator")},
 };
-
 
 TMap<int64_t, FString> AApSubsystem::ItemIdToGameName2 = {
 };
@@ -339,8 +339,10 @@ void AApSubsystem::BeginPlay()
 {
 	Super::BeginPlay();
 
-	RManager = AFGResearchManager::Get(GetWorld());
-	SManager = AFGSchematicManager::Get(GetWorld());
+	UWorld* world = GetWorld();
+	RManager = AFGResearchManager::Get(world);
+	SManager = AFGSchematicManager::Get(world);
+	PManager  = AFGGamePhaseManager::Get(world);
 
 	RManager->ResearchCompletedDelegate.AddDynamic(this, &AApSubsystem::OnMamResearchCompleted);
 	SManager->PurchasedSchematicDelegate.AddDynamic(this, &AApSubsystem::OnSchematicCompleted);
@@ -371,6 +373,9 @@ void AApSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase) {
 
 		UE_LOG(LogApSubsystem, Display, TEXT("Generating schematics from AP Item IDs..."));
 		for (auto item : ItemIdToGameRecipe) {
+			CreateSchematicBoundToItemId(item.Key);
+		}
+		for (auto item : ItemIdToGameBuilding) {
 			CreateSchematicBoundToItemId(item.Key);
 		}
 	
@@ -501,12 +506,34 @@ void AApSubsystem::ParseSlotData(std::string json) {
 		// Switched to Fatal for now so it closes the game, but there must be a better way
 		return;
 	}
-	
+
 	AApSubsystem* self = AApSubsystem::Get();
 
+	for (TSharedPtr<FJsonValue> tier : parsedJson->GetArrayField("HubLayout")) {
+		TArray<TMap<FString, int>> milestones;
+
+		for (TSharedPtr<FJsonValue> milestone : tier->AsArray()) {
+			TMap<FString, int> costs;
+
+			for (TPair<FString, TSharedPtr<FJsonValue>> cost : milestone->AsObject()->Values) {
+				int itemId = FCString::Atoi(*cost.Key);
+
+				verify(ItemIdToGameItemDescriptor.Contains(itemId));
+
+				costs.Add(ItemIdToGameItemDescriptor[itemId], cost.Value->AsNumber());
+			}
+
+			milestones.Add(costs);
+		}
+
+		self->hubLayout.Add(milestones);
+	}
+
+	TSharedPtr<FJsonObject> options = parsedJson->GetObjectField("Options");
+	
 	self->currentPlayerSlot = parsedJson->GetIntegerField("Slot");
 	self->numberOfChecksPerMilestone = parsedJson->GetIntegerField("SlotsPerMilestone");
-	self->hubLayout = parsedJson->GetArrayField("HubLayout");
+	self->finalSpaceElevatorTier = options->GetIntegerField("elevator_tier");
 	self->hasLoadedSlotData = true;
 }
 
@@ -561,6 +588,12 @@ void AApSubsystem::Tick(float DeltaTime)
 	}
 
 	HandleAPMessages();
+
+	if (!hasSendGoal && PManager->GetGamePhase() >= finalSpaceElevatorTier)
+	{
+		AP_StoryComplete();
+		hasSendGoal = true;
+	}
 }
 
 void AApSubsystem::CheckConnectionState(FApConfigurationStruct config) {
@@ -626,16 +659,14 @@ void AApSubsystem::ParseScoutedItems() {
 }
 
 void AApSubsystem::CreateSchematicBoundToItemId(int64_t item) {
-	if (!ItemIdToGameRecipe.Contains(item))
-		return;
-	
-	FString name = UApUtils::FStr("AP_ITEM_SCHEMATIC_" + std::to_string(item));
+	FString recipy = ItemIdToGameBuilding.Contains(item) ? ItemIdToGameBuilding[item] : ItemIdToGameRecipe[item];
+	FString name = UApUtils::FStr("AP_ItemId_" + std::to_string(item));
 	// https://raw.githubusercontent.com/budak7273/ContentLib_Documentation/main/JsonSchemas/CL_Schematic.json
 	FString json = FString::Printf(TEXT(R"({
 		"Name": "%s",
 		"Type": "Custom",
 		"Recipes": [ "%s" ]
-	})"), *name, *ItemIdToGameRecipe[item]);
+	})"), *name, *recipy);
 
 	FContentLib_Schematic schematic = UCLSchematicBPFLib::GenerateCLSchematicFromString(json);
 	TSubclassOf<UFGSchematic> factorySchematic = UApUtils::FindOrCreateClass(TEXT("/Archipelago/"), *name, UFGSchematic::StaticClass());
@@ -698,88 +729,149 @@ void AApSubsystem::CreateDescriptor(AP_NetworkItem item) {
 }
 
 void AApSubsystem::CreateHubSchematic(TArray<FAssetData> recipeAssets, TArray<FAssetData> itemDescriptorAssets, FString name, TSubclassOf<UFGSchematic> factorySchematic, TArray<AP_NetworkItem> items) {
-	TArray<FContentLib_UnlockInfoOnly> infoOnly;
-
-	for (auto& item : items) {
-		if (item.player == currentPlayerSlot && ItemIdToGameRecipe.Contains(item.item))
-		{
-			UFGRecipe* recipe = GetRecipeByName(recipeAssets, ItemIdToGameRecipe[item.item]);
-			UFGItemDescriptor* itemDescriptor = recipe->GetProducts()[0].ItemClass.GetDefaultObject();
-
-			infoOnly.Add(CreateUnlockInfoOnly(item, UApUtils::GetImagePathForItem(itemDescriptor)));
-		}
-		else if (item.player == currentPlayerSlot && ItemIdToGameItemDescriptor.Contains(item.item)) { 
-			UFGItemDescriptor* itemDescriptor = GetItemDescriptorByName(itemDescriptorAssets, ItemIdToGameItemDescriptor[item.item]);
-
-			infoOnly.Add(CreateUnlockInfoOnly(item, UApUtils::GetImagePathForItem(itemDescriptor)));
-		} else {
-			infoOnly.Add(CreateUnlockInfoOnly(item));
-		}
-	}
-
 	int delimeterPos;
 	name.FindChar('-', delimeterPos);
-	
-	FString tier = name.Mid(delimeterPos - 1, 1);
+	int32 tier = FCString::Atoi(*name.Mid(delimeterPos - 1, 1));
+	int32 milestone = FCString::Atoi(*name.Mid(delimeterPos + 1, 1));
+
+	FString costs = "";
+	for (auto& cost : hubLayout[tier - 1][milestone - 1]) {
+		FString costJson = FString::Printf(TEXT(R"({
+			"Item": "%s",
+			"Amount": %i
+		},)"), *cost.Key, cost.Value);
+
+		costs += costJson;
+	}
+
 	// https://raw.githubusercontent.com/budak7273/ContentLib_Documentation/main/JsonSchemas/CL_Schematic.json
 	FString json = FString::Printf(TEXT(R"({
 		"Name": "%s",
 		"Type": "Milestone",
-		"Time": 1,
-		"Tier": %s,
+		"Time": 200,
+		"Tier": %i,
 		"VisualKit": "Kit_AP_Logo",
-		"Cost": [
-			{
-				"Item": "Desc_CopperSheet",
-				"Amount": 1
-			},
-		]
-	})"), *name, *tier);
+		"Cost": [ %s ]
+	})"), *name, tier, *costs);
 
 	FContentLib_Schematic schematic = UCLSchematicBPFLib::GenerateCLSchematicFromString(json);
 
-	for (auto& info : infoOnly)
-		schematic.InfoCards.Add(info);
+	for (auto& item : items)
+		schematic.InfoCards.Add(CreateUnlockInfoOnly(recipeAssets, itemDescriptorAssets, item));
 
 	UCLSchematicBPFLib::InitSchematicFromStruct(schematic, factorySchematic, contentLibSubsystem);
 	contentRegistry->RegisterSchematic(FName(TEXT("Archipelago")), factorySchematic);
 }
 
-FContentLib_UnlockInfoOnly AApSubsystem::CreateUnlockInfoOnly(AP_NetworkItem item, FString customIcon) {
-	FString icon;
+FContentLib_UnlockInfoOnly AApSubsystem::CreateUnlockInfoOnly(TArray<FAssetData> recipeAssets, TArray<FAssetData> itemDescriptorAssets, AP_NetworkItem item) {
 	FFormatNamedArguments Args;
-
 	if (item.flags == 0b001) {
 		Args.Add(TEXT("ProgressionType"), LOCTEXT("NetworkItemProgressionTypeAdvancement", "progression item"));
-		icon = FString(TEXT("/Archipelago/Assets/AP-Purple.AP-Purple"));
 	} else if (item.flags == 0b010) {
 		Args.Add(TEXT("ProgressionType"), LOCTEXT("NetworkItemProgressionTypeUseful", "useful item"));
-		icon = FString(TEXT("/Archipelago/Assets/AP-Blue.AP-Blue"));
 	} else if (item.flags == 0b100) {
 		Args.Add(TEXT("ProgressionType"), LOCTEXT("NetworkItemProgressionTypeTrap", "trap"));
-		icon = FString(TEXT("/Archipelago/Assets/AP-Red.AP-Red"));
 	} else {
 		Args.Add(TEXT("ProgressionType"), LOCTEXT("NetworkItemProgressionTypeJunk", "normal item"));
-		icon = FString(TEXT("/Archipelago/Assets/AP-Cyan.AP-Cyan"));
 	}
 
-	if (!customIcon.IsEmpty()) {
-		icon = customIcon;
-	}
-
-	Args.Add(TEXT("ApPlayerName"), UApUtils::FText(item.playerName));
 	Args.Add(TEXT("ApItemName"), UApUtils::FText(item.itemName));
 
 	FContentLib_UnlockInfoOnly infoCard;
 
-	infoCard.mUnlockName = FText::Format(LOCTEXT("NetworkItemUnlockDisplayName", "{ApPlayerName}'s {ApItemName}"), Args);
-	infoCard.mUnlockDescription = FText::Format(LOCTEXT("NetworkItemUnlockDescription", "This will unlock {ApPlayerName}'s {ApItemName} which is considered a {ProgressionType}."), Args);
-	infoCard.BigIcon = infoCard.SmallIcon = icon;
-	infoCard.CategoryIcon = FString(TEXT("/Archipelago/Assets/ArchipelagoIconWhite128.ArchipelagoIconWhite128"));
+	if (item.player == currentPlayerSlot) {
+		Args.Add(TEXT("ApPlayerName"), FText::FromString(TEXT("your")));
+
+		infoCard.mUnlockName = UApUtils::FText(item.itemName);
+
+		if (ItemIdToGameBuilding.Contains(item.item)) {
+			UpdateInfoOnlyUnlockWithBuildingInfo(&infoCard, Args, recipeAssets, &item);
+		} else if (ItemIdToGameRecipe.Contains(item.item)) {
+			UpdateInfoOnlyUnlockWithRecipeInfo(&infoCard, Args, recipeAssets, &item);
+		} else if (ItemIdToGameItemDescriptor.Contains(item.item)) {
+			UpdateInfoOnlyUnlockWithItemInfo(&infoCard, Args, itemDescriptorAssets, &item);
+		} else {
+			UpdateInfoOnlyUnlockWithGenericApInfo(&infoCard, Args, &item);
+		}
+	} else {
+		Args.Add(TEXT("ApPlayerName"), UApUtils::FText(item.playerName + "'s"));
+
+		infoCard.mUnlockName = FText::Format(LOCTEXT("NetworkItemUnlockDisplayName", "{ApPlayerName} {ApItemName}"), Args);
+
+		UpdateInfoOnlyUnlockWithGenericApInfo(&infoCard, Args, &item);
+	}
 
 	return infoCard;
 }
 
+void AApSubsystem::UpdateInfoOnlyUnlockWithBuildingInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, TArray<FAssetData> buildingRecipyAssets, AP_NetworkItem* item) {
+	UFGRecipe* recipe = GetRecipeByName(buildingRecipyAssets, ItemIdToGameBuilding[item->item]);
+	UFGItemDescriptor* itemDescriptor = recipe->GetProducts()[0].ItemClass.GetDefaultObject();
+
+	infoCard->BigIcon = infoCard->SmallIcon = UApUtils::GetImagePathForItem(itemDescriptor);
+	infoCard->CategoryIcon = TEXT("/Game/FactoryGame/Buildable/Factory/TradingPost/UI/RecipeIcons/Recipe_Icon_Building.Recipe_Icon_Building");
+	infoCard->mUnlockDescription = FText::Format(LOCTEXT("NetworkItemUnlockPersonalBuildingDescription", "This will unlock your {ApItemName}"), Args);
+}
+
+void AApSubsystem::UpdateInfoOnlyUnlockWithRecipeInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, TArray<FAssetData> recipeAssets, AP_NetworkItem* item) {
+	UFGRecipe* recipe = GetRecipeByName(recipeAssets, ItemIdToGameRecipe[item->item]);
+	UFGItemDescriptor* itemDescriptor = recipe->GetProducts()[0].ItemClass.GetDefaultObject();
+
+	TArray<FString> BuildingArray;
+	TArray<TSubclassOf<UObject>> buildings;
+	recipe->GetProducedIn(buildings);
+	for (TSubclassOf<UObject> buildingObject : buildings) {
+		if (buildingObject->IsChildOf(AFGBuildable::StaticClass())) {
+			AFGBuildable* building = Cast<AFGBuildable>(buildingObject);
+			//TODO Fix this, current building is null after cast
+			if (building != nullptr)
+				BuildingArray.Add(building->mDisplayName.ToString());
+		}
+	}
+
+	TArray<FString> CostsArray;
+	for (FItemAmount cost : recipe->GetIngredients()) {
+		UFGItemDescriptor* costItemDescriptor = cost.ItemClass.GetDefaultObject();
+		CostsArray.Add(costItemDescriptor->GetItemNameFromInstanceAsString());
+	}
+
+	TArray<FString> OutputArray;
+	for (FItemAmount product : recipe->GetProducts()) {
+		UFGItemDescriptor* productItemDescriptor = product.ItemClass.GetDefaultObject();
+		OutputArray.Add(productItemDescriptor->GetItemNameFromInstanceAsString());
+	}
+
+	Args.Add(TEXT("Building"), FText::FromString(FString::Join(BuildingArray, TEXT(", "))));
+	Args.Add(TEXT("Costs"), FText::FromString(FString::Join(CostsArray, TEXT(", "))));
+	Args.Add(TEXT("Output"), FText::FromString(FString::Join(OutputArray, TEXT(", "))));
+
+	infoCard->BigIcon = infoCard->SmallIcon = UApUtils::GetImagePathForItem(itemDescriptor);
+	infoCard->CategoryIcon = TEXT("/Game/FactoryGame/Buildable/Factory/TradingPost/UI/RecipeIcons/Recipe_Icon_Decor.Recipe_Icon_Decor");
+	infoCard->mUnlockDescription = FText::Format(LOCTEXT("NetworkItemUnlockPersonalRecipeDescription", "This will unlock {ApPlayerName} {ApItemName} which is considered a {ProgressionType}.\nProduced in: {Building}.\nCosts: {Costs}.\nProduces: {Output}."), Args);
+}
+
+void AApSubsystem::UpdateInfoOnlyUnlockWithItemInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, TArray<FAssetData> itemDescriptorAssets, AP_NetworkItem* item) {
+	UFGItemDescriptor* itemDescriptor = GetItemDescriptorByName(itemDescriptorAssets, ItemIdToGameItemDescriptor[item->item]);
+
+	infoCard->BigIcon = infoCard->SmallIcon = UApUtils::GetImagePathForItem(itemDescriptor);
+	infoCard->CategoryIcon = TEXT("/Game/FactoryGame/Buildable/Factory/TradingPost/UI/RecipeIcons/Recipe_Icon_Item.Recipe_Icon_Item");
+	infoCard->mUnlockDescription = FText::Format(LOCTEXT("NetworkItemUnlockPersonalItemDescription", "This will give {ApPlayerName} {ApItemName}"), Args);
+}
+
+void AApSubsystem::UpdateInfoOnlyUnlockWithGenericApInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, AP_NetworkItem* item) {
+	infoCard->CategoryIcon = TEXT("/Archipelago/Assets/ArchipelagoIconWhite128.ArchipelagoIconWhite128");
+	infoCard->mUnlockDescription = FText::Format(LOCTEXT("NetworkItemUnlockDescription", "This will unlock {ApPlayerName} {ApItemName} which is considered a {ProgressionType}."), Args);
+
+	if (item->flags == 0b001) {
+		infoCard->BigIcon = infoCard->SmallIcon = TEXT("/Archipelago/Assets/AP-Purple.AP-Purple");
+	}	else if (item->flags == 0b010) {
+		infoCard->BigIcon = infoCard->SmallIcon = TEXT("/Archipelago/Assets/AP-Blue.AP-Blue");
+	} else if (item->flags == 0b100) {
+		infoCard->BigIcon = infoCard->SmallIcon = TEXT("/Archipelago/Assets/AP-Red.AP-Red");
+	} else {
+		infoCard->BigIcon = infoCard->SmallIcon = TEXT("/Archipelago/Assets/AP-Cyan.AP-Cyan");
+	}
+}
 
 void AApSubsystem::HandleAPMessages() {
 	for (int i = 0; i < 10; i++)
@@ -829,7 +921,7 @@ void AApSubsystem::HintUnlockedHubRecipies() {
 		{
 			for (int slot = 1; slot <= maxSlots; slot++)
 			{
-				if (milestone <= hubLayout[tier - 1]->AsArray().Num() && slot <= numberOfChecksPerMilestone)
+				if (milestone <= hubLayout[tier - 1].Num() && slot <= numberOfChecksPerMilestone)
 					locations.push_back(hubBaseId);
 
 				hubBaseId++;
@@ -841,14 +933,7 @@ void AApSubsystem::HintUnlockedHubRecipies() {
 }
 
 UFGRecipe* AApSubsystem::GetRecipeByName(TArray<FAssetData> recipeAssets, FString name) {
-	FString assetName = name.Append("_C");
-	for (auto asset : recipeAssets) {
-		if (asset.AssetName == FName(*assetName)) {
-			return Cast<UFGRecipe>(Cast<UBlueprintGeneratedClass>(asset.GetAsset())->GetDefaultObject());
-		}
-	}
-
-	return nullptr;
+	return Cast<UFGRecipe>(UApUtils::FindAssetByName(recipeAssets, name.Append("_C")));
 }
 
 UFGItemDescriptor* AApSubsystem::GetItemDescriptorByName(TArray<FAssetData> itemDescriptorAssets, FString name) {
