@@ -145,17 +145,17 @@ private:
 	void SendChatMessage(const FString& Message, const FLinearColor& Color);
 
 	void CreateSchematicBoundToItemId(int64_t item);
-	FContentLib_UnlockInfoOnly CreateUnlockInfoOnly(TArray<FAssetData> recipeAssets, TArray<FAssetData> itemDescriptorAssets, AP_NetworkItem item);
-	void UpdateInfoOnlyUnlockWithBuildingInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, TArray<FAssetData> buildingRecipyAssets, AP_NetworkItem* item);
-	void UpdateInfoOnlyUnlockWithRecipeInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, TArray<FAssetData> recipeAssets, AP_NetworkItem* item);
-	void UpdateInfoOnlyUnlockWithItemInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, TArray<FAssetData> itemDescriptorAssets, AP_NetworkItem* item);
+	FContentLib_UnlockInfoOnly CreateUnlockInfoOnly(TMap<FName, FAssetData> recipeAssets, TMap<FName, FAssetData> itemDescriptorAssets, AP_NetworkItem item);
+	void UpdateInfoOnlyUnlockWithBuildingInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, TMap<FName, FAssetData> buildingRecipyAssets, AP_NetworkItem* item);
+	void UpdateInfoOnlyUnlockWithRecipeInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, TMap<FName, FAssetData> recipeAssets, AP_NetworkItem* item);
+	void UpdateInfoOnlyUnlockWithItemInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, TMap<FName, FAssetData> itemDescriptorAssets, AP_NetworkItem* item);
 	void UpdateInfoOnlyUnlockWithGenericApInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, AP_NetworkItem* item);
 	void CreateRecipe(AP_NetworkItem item);
 	void CreateDescriptor(AP_NetworkItem item);
-	void CreateHubSchematic(TArray<FAssetData> recipeAssets, TArray<FAssetData> itemDescriptorAssets, FString name, TSubclassOf<UFGSchematic> factorySchematic, TArray<AP_NetworkItem> items);
+	void CreateHubSchematic(TMap<FName, FAssetData> recipeAssets, TMap<FName, FAssetData> itemDescriptorAssets, FString name, TSubclassOf<UFGSchematic> factorySchematic, TArray<AP_NetworkItem> items);
 	
-	UFGRecipe* GetRecipeByName(TArray<FAssetData> recipeAssets, FString name);
-	UFGItemDescriptor* GetItemDescriptorByName(TArray<FAssetData> itemDescriptorAssets, FString name);
+	UFGRecipe* GetRecipeByName(TMap<FName, FAssetData> recipeAssets, FString name);
+	UFGItemDescriptor* GetItemDescriptorByName(TMap<FName, FAssetData> itemDescriptorAssets, FString name);
 
 	UFUNCTION() //required for event
 	void OnMamResearchCompleted(TSubclassOf<class UFGSchematic> schematic);

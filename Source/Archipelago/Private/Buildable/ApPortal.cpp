@@ -9,7 +9,7 @@ DEFINE_LOG_CATEGORY(LogGame); // A base-game header is using this category so we
 #pragma optimize("", off)
 
 AApPortal::AApPortal() : Super() {
-	this->mPowerInfoClass = UFGPowerInfoComponent::StaticClass();
+	//this->mPowerInfoClass = UFGPowerInfoComponent::StaticClass();
 	this->mInventorySizeX = 20;
 	this->mInventorySizeY = 20;
 	this->mSignificanceRange = 18000;

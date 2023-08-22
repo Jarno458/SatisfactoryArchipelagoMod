@@ -313,8 +313,7 @@ TMap<int64_t, FString> AApSubsystem::ItemIdToGameBuilding = {
 TMap<int64_t, FString> AApSubsystem::ItemIdToGameName2 = {
 };
 
-AApSubsystem::AApSubsystem()
-{
+AApSubsystem::AApSubsystem() {
 	PrimaryActorTick.bCanEverTick = true;
 	PrimaryActorTick.bStartWithTickEnabled = false;
 	PrimaryActorTick.TickInterval = 0.5f;
@@ -335,8 +334,7 @@ AApSubsystem* AApSubsystem::Get(class UWorld* world) {
 	return SubsystemActorManager->GetSubsystemActor<AApSubsystem>();
 }
 
-void AApSubsystem::BeginPlay()
-{
+void AApSubsystem::BeginPlay() {
 	Super::BeginPlay();
 
 	UWorld* world = GetWorld();
@@ -372,17 +370,14 @@ void AApSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase) {
 		ConnectToArchipelago(config);
 
 		UE_LOG(LogApSubsystem, Display, TEXT("Generating schematics from AP Item IDs..."));
-		for (auto item : ItemIdToGameRecipe) {
+		for (auto item : ItemIdToGameRecipe)
 			CreateSchematicBoundToItemId(item.Key);
-		}
-		for (auto item : ItemIdToGameBuilding) {
+		for (auto item : ItemIdToGameBuilding) 
 			CreateSchematicBoundToItemId(item.Key);
-		}
-	
+			
 		FDateTime connectingStartedTime = FDateTime::Now();
 		FGenericPlatformProcess::ConditionalSleep([this, config, connectingStartedTime]() { return InitializeTick(config, connectingStartedTime); }, 0.5);
-	}
-	else if (phase == ELifecyclePhase::POST_INITIALIZATION) {
+	} else if (phase == ELifecyclePhase::POST_INITIALIZATION) {
 		if (ConnectionState != EApConnectionState::Connected) {
 			FString message = FString::Printf(TEXT("Failed to connect to Archipelago server: \"%s\", for user \"%s\""), *config.Url, *config.Login);
 
@@ -570,8 +565,7 @@ TEnumAsByte<EApConnectionState> AApSubsystem::GetConnectionState() {
 }
 
 // Called every frame
-void AApSubsystem::Tick(float DeltaTime)
-{
+void AApSubsystem::Tick(float DeltaTime) {
 	Super::Tick(DeltaTime);
 
 	if (ConnectionState != EApConnectionState::Connected)
@@ -589,8 +583,7 @@ void AApSubsystem::Tick(float DeltaTime)
 
 	HandleAPMessages();
 
-	if (!hasSendGoal && PManager->GetGamePhase() >= finalSpaceElevatorTier)
-	{
+	if (!hasSendGoal && PManager->GetGamePhase() >= finalSpaceElevatorTier)	{
 		AP_StoryComplete();
 		hasSendGoal = true;
 	}
@@ -604,8 +597,7 @@ void AApSubsystem::CheckConnectionState(FApConfigurationStruct config) {
 			ConnectionState = EApConnectionState::Connected;
 			ConnectionStateDescription = LOCTEXT("AuthSuccess", "Authentication succeeded.");
 			UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::Tick(), Successfully Authenticated"));
-		}
-		else if (status == AP_ConnectionStatus::ConnectionRefused) {
+		} else if (status == AP_ConnectionStatus::ConnectionRefused) {
 			ConnectionState = EApConnectionState::ConnectionFailed;
 			ConnectionStateDescription = LOCTEXT("ConnectionRefused", "Connection refused by server. Check your connection details and load the save again.");
 			UE_LOG(LogApSubsystem, Error, TEXT("AApSubsystem::CheckConnectionState(), ConnectionRefused"));
@@ -638,21 +630,49 @@ void AApSubsystem::ParseScoutedItems() {
 			}
 		}
 	}
+	//TArray<FAssetData>
+	//[2023.08.22-19.52.06:666][774]LogApSubsystem: Display: AApSubsystem::ParseScoutedItems(performance[3.293])
+	//[2023.08.22-19.54.44:843][692]LogApSubsystem: Display: AApSubsystem::ParseScoutedItems(performance[3.566])
+	//[2023.08.22-19.56.00:768][456]LogApSubsystem: Display: AApSubsystem::ParseScoutedItems(performance[3.506])
+	//[2023.08.22-20.01.33:454][749]LogApSubsystem: Display: AApSubsystem::ParseScoutedItems(performance[3.547])
 
-	const auto recipeAssets = UApUtils::GetBlueprintAssetsIn("/Game/FactoryGame/Recipes");
-	const auto itemDescriptorAssets = UApUtils::GetBlueprintAssetsIn("/Game/FactoryGame/Resource");
+	//TMap<FName, FAssetData>
+	//[2023.08.22-20.17.26:658][538]LogApSubsystem: Display: AApSubsystem::ParseScoutedItems(performance[3.530])
+	//[2023.08.22-20.26.57:972][ 95]LogApSubsystem: Display: AApSubsystem::ParseScoutedItems(performance[3.867])
+	//[2023.08.22-20.32.57:384][862]LogApSubsystem: Display: AApSubsystem::ParseScoutedItems(performance[3.394])
+	//[2023.08.22-20.34.09:272][685]LogApSubsystem: Display: AApSubsystem::ParseScoutedItems(performance[3.510])
+	//[2023.08.22-20.35.42:270][615]LogApSubsystem: Display: AApSubsystem::ParseScoutedItems(performance[3.449])
+	//[2023.08.22-21.14.55:061][190]LogApSubsystem: Display: AApSubsystem::ParseScoutedItems(performance[3.411])
 
-	for (auto& itemPerMilestone : locationsPerMileStone) {
-		FString schematicName;
-		for (auto schematicAndName : schematicsPerMilestone) {
-			if (itemPerMilestone.Key == schematicAndName.Value) {
-				schematicName = schematicAndName.Key;
-				break;
+	//TMap<FName, FAssetData> using hash lookup
+	//[2023.08.22-21.31.13:042][547]LogApSubsystem: Display: AApSubsystem::ParseScoutedItems(performance[3.383])
+	//[2023.08.22-21.32.43:513][481]LogApSubsystem: Display: AApSubsystem::ParseScoutedItems(performance[3.504])
+	//[2023.08.22-21.34.09:065][551]LogApSubsystem: Display: AApSubsystem::ParseScoutedItems(performance[3.886])
+
+	auto startTime = FDateTime::Now();
+
+	for (size_t i = 0; i < 100; i++) {
+		const auto recipeAssets = UApUtils::GetBlueprintAssetsIn("/Game/FactoryGame/Recipes");
+		const auto itemDescriptorAssets = UApUtils::GetBlueprintAssetsIn("/Game/FactoryGame/Resource");
+
+		for (auto& itemPerMilestone : locationsPerMileStone) {
+			FString schematicName;
+			for (auto schematicAndName : schematicsPerMilestone) {
+				if (itemPerMilestone.Key == schematicAndName.Value) {
+					schematicName = schematicAndName.Key;
+					break;
+				}
 			}
-		}
 
-		CreateHubSchematic(recipeAssets, itemDescriptorAssets, schematicName, itemPerMilestone.Key, itemPerMilestone.Value);
+			CreateHubSchematic(recipeAssets, itemDescriptorAssets, schematicName, itemPerMilestone.Key, itemPerMilestone.Value);
+		}
 	}
+
+	auto endTime = FDateTime::Now();
+
+	auto diff = (endTime - startTime).GetTotalSeconds();
+
+	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::ParseScoutedItems(performance[%f])"), diff);
 
 	scoutedLocations.Empty();
 	shouldParseItemsToScout = false;
@@ -728,7 +748,7 @@ void AApSubsystem::CreateDescriptor(AP_NetworkItem item) {
 	//contentRegistry->RegisterItem(FName(TEXT("Archipelago")), factoryItem); //no idea how/where to register items
 }
 
-void AApSubsystem::CreateHubSchematic(TArray<FAssetData> recipeAssets, TArray<FAssetData> itemDescriptorAssets, FString name, TSubclassOf<UFGSchematic> factorySchematic, TArray<AP_NetworkItem> items) {
+void AApSubsystem::CreateHubSchematic(TMap<FName, FAssetData> recipeAssets, TMap<FName, FAssetData> itemDescriptorAssets, FString name, TSubclassOf<UFGSchematic> factorySchematic, TArray<AP_NetworkItem> items) {
 	int delimeterPos;
 	name.FindChar('-', delimeterPos);
 	int32 tier = FCString::Atoi(*name.Mid(delimeterPos - 1, 1));
@@ -760,10 +780,10 @@ void AApSubsystem::CreateHubSchematic(TArray<FAssetData> recipeAssets, TArray<FA
 		schematic.InfoCards.Add(CreateUnlockInfoOnly(recipeAssets, itemDescriptorAssets, item));
 
 	UCLSchematicBPFLib::InitSchematicFromStruct(schematic, factorySchematic, contentLibSubsystem);
-	contentRegistry->RegisterSchematic(FName(TEXT("Archipelago")), factorySchematic);
+	//contentRegistry->RegisterSchematic(FName(TEXT("Archipelago")), factorySchematic);
 }
 
-FContentLib_UnlockInfoOnly AApSubsystem::CreateUnlockInfoOnly(TArray<FAssetData> recipeAssets, TArray<FAssetData> itemDescriptorAssets, AP_NetworkItem item) {
+FContentLib_UnlockInfoOnly AApSubsystem::CreateUnlockInfoOnly(TMap<FName, FAssetData> recipeAssets, TMap<FName, FAssetData> itemDescriptorAssets, AP_NetworkItem item) {
 	FFormatNamedArguments Args;
 	if (item.flags == 0b001) {
 		Args.Add(TEXT("ProgressionType"), LOCTEXT("NetworkItemProgressionTypeAdvancement", "progression item"));
@@ -804,7 +824,7 @@ FContentLib_UnlockInfoOnly AApSubsystem::CreateUnlockInfoOnly(TArray<FAssetData>
 	return infoCard;
 }
 
-void AApSubsystem::UpdateInfoOnlyUnlockWithBuildingInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, TArray<FAssetData> buildingRecipyAssets, AP_NetworkItem* item) {
+void AApSubsystem::UpdateInfoOnlyUnlockWithBuildingInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, TMap<FName, FAssetData> buildingRecipyAssets, AP_NetworkItem* item) {
 	UFGRecipe* recipe = GetRecipeByName(buildingRecipyAssets, ItemIdToGameBuilding[item->item]);
 	UFGItemDescriptor* itemDescriptor = recipe->GetProducts()[0].ItemClass.GetDefaultObject();
 
@@ -813,7 +833,7 @@ void AApSubsystem::UpdateInfoOnlyUnlockWithBuildingInfo(FContentLib_UnlockInfoOn
 	infoCard->mUnlockDescription = FText::Format(LOCTEXT("NetworkItemUnlockPersonalBuildingDescription", "This will unlock your {ApItemName}"), Args);
 }
 
-void AApSubsystem::UpdateInfoOnlyUnlockWithRecipeInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, TArray<FAssetData> recipeAssets, AP_NetworkItem* item) {
+void AApSubsystem::UpdateInfoOnlyUnlockWithRecipeInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, TMap<FName, FAssetData> recipeAssets, AP_NetworkItem* item) {
 	UFGRecipe* recipe = GetRecipeByName(recipeAssets, ItemIdToGameRecipe[item->item]);
 	UFGItemDescriptor* itemDescriptor = recipe->GetProducts()[0].ItemClass.GetDefaultObject();
 
@@ -853,7 +873,7 @@ void AApSubsystem::UpdateInfoOnlyUnlockWithRecipeInfo(FContentLib_UnlockInfoOnly
 	infoCard->mUnlockDescription = FText::Format(LOCTEXT("NetworkItemUnlockPersonalRecipeDescription", "This will unlock {ApPlayerName} {ApItemName} which is considered a {ProgressionType}.\nProduced in: {Building}.\nCosts: {Costs}.\nProduces: {Output}."), Args);
 }
 
-void AApSubsystem::UpdateInfoOnlyUnlockWithItemInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, TArray<FAssetData> itemDescriptorAssets, AP_NetworkItem* item) {
+void AApSubsystem::UpdateInfoOnlyUnlockWithItemInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, TMap<FName, FAssetData> itemDescriptorAssets, AP_NetworkItem* item) {
 	UFGItemDescriptor* itemDescriptor = GetItemDescriptorByName(itemDescriptorAssets, ItemIdToGameItemDescriptor[item->item]);
 
 	infoCard->BigIcon = infoCard->SmallIcon = UApUtils::GetImagePathForItem(itemDescriptor);
@@ -877,13 +897,11 @@ void AApSubsystem::UpdateInfoOnlyUnlockWithGenericApInfo(FContentLib_UnlockInfoO
 }
 
 void AApSubsystem::HandleAPMessages() {
-	for (int i = 0; i < 10; i++)
-	{
+	for (int i = 0; i < 10; i++) {
 		TPair<FString, FLinearColor> queuedMessage;
 		if (ChatMessageQueue.Dequeue(queuedMessage)) {
 			SendChatMessage(queuedMessage.Key, queuedMessage.Value);
-		}
-		else {
+		} else {
 			if (!AP_IsMessagePending())
 				return;
 
@@ -935,11 +953,11 @@ void AApSubsystem::HintUnlockedHubRecipies() {
 	AP_SendLocationScouts(locations, 0);
 }
 
-UFGRecipe* AApSubsystem::GetRecipeByName(TArray<FAssetData> recipeAssets, FString name) {
+UFGRecipe* AApSubsystem::GetRecipeByName(TMap<FName, FAssetData> recipeAssets, FString name) {
 	return Cast<UFGRecipe>(UApUtils::FindAssetByName(recipeAssets, name.Append("_C")));
 }
 
-UFGItemDescriptor* AApSubsystem::GetItemDescriptorByName(TArray<FAssetData> itemDescriptorAssets, FString name) {
+UFGItemDescriptor* AApSubsystem::GetItemDescriptorByName(TMap<FName, FAssetData> itemDescriptorAssets, FString name) {
 	return Cast<UFGItemDescriptor>(UApUtils::FindAssetByName(itemDescriptorAssets, name));
 }
 
