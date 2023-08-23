@@ -780,7 +780,7 @@ void AApSubsystem::CreateHubSchematic(TMap<FName, FAssetData> recipeAssets, TMap
 		schematic.InfoCards.Add(CreateUnlockInfoOnly(recipeAssets, itemDescriptorAssets, item));
 
 	UCLSchematicBPFLib::InitSchematicFromStruct(schematic, factorySchematic, contentLibSubsystem);
-	//contentRegistry->RegisterSchematic(FName(TEXT("Archipelago")), factorySchematic);
+	contentRegistry->RegisterSchematic(FName(TEXT("Archipelago")), factorySchematic);
 }
 
 FContentLib_UnlockInfoOnly AApSubsystem::CreateUnlockInfoOnly(TMap<FName, FAssetData> recipeAssets, TMap<FName, FAssetData> itemDescriptorAssets, AP_NetworkItem item) {
