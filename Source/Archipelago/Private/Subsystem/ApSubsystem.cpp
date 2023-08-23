@@ -643,7 +643,6 @@ void AApSubsystem::ParseScoutedItems() {
 	const auto recipeAssets = UApUtils::GetBlueprintAssetsIn("/Game/FactoryGame/Recipes");
 	const auto itemDescriptorAssets = UApUtils::GetBlueprintAssetsIn("/Game/FactoryGame/Resource");
 
-
 	for (auto& itemPerMilestone : locationsPerMileStone) {
 		FString schematicName;
 		for (auto schematicAndName : schematicsPerMilestone) {
@@ -653,10 +652,8 @@ void AApSubsystem::ParseScoutedItems() {
 			}
 		}
 
-
 		CreateHubSchematic(recipeAssets, itemDescriptorAssets, schematicName, itemPerMilestone.Key, itemPerMilestone.Value);
 	}
-
 
 	scoutedLocations.Empty();
 	shouldParseItemsToScout = false;
