@@ -630,49 +630,21 @@ void AApSubsystem::ParseScoutedItems() {
 			}
 		}
 	}
-	//TArray<FAssetData>
-	//[2023.08.22-19.52.06:666][774]LogApSubsystem: Display: AApSubsystem::ParseScoutedItems(performance[3.293])
-	//[2023.08.22-19.54.44:843][692]LogApSubsystem: Display: AApSubsystem::ParseScoutedItems(performance[3.566])
-	//[2023.08.22-19.56.00:768][456]LogApSubsystem: Display: AApSubsystem::ParseScoutedItems(performance[3.506])
-	//[2023.08.22-20.01.33:454][749]LogApSubsystem: Display: AApSubsystem::ParseScoutedItems(performance[3.547])
 
-	//TMap<FName, FAssetData>
-	//[2023.08.22-20.17.26:658][538]LogApSubsystem: Display: AApSubsystem::ParseScoutedItems(performance[3.530])
-	//[2023.08.22-20.26.57:972][ 95]LogApSubsystem: Display: AApSubsystem::ParseScoutedItems(performance[3.867])
-	//[2023.08.22-20.32.57:384][862]LogApSubsystem: Display: AApSubsystem::ParseScoutedItems(performance[3.394])
-	//[2023.08.22-20.34.09:272][685]LogApSubsystem: Display: AApSubsystem::ParseScoutedItems(performance[3.510])
-	//[2023.08.22-20.35.42:270][615]LogApSubsystem: Display: AApSubsystem::ParseScoutedItems(performance[3.449])
-	//[2023.08.22-21.14.55:061][190]LogApSubsystem: Display: AApSubsystem::ParseScoutedItems(performance[3.411])
+	const auto recipeAssets = UApUtils::GetBlueprintAssetsIn("/Game/FactoryGame/Recipes");
+	const auto itemDescriptorAssets = UApUtils::GetBlueprintAssetsIn("/Game/FactoryGame/Resource");
 
-	//TMap<FName, FAssetData> using hash lookup
-	//[2023.08.22-21.31.13:042][547]LogApSubsystem: Display: AApSubsystem::ParseScoutedItems(performance[3.383])
-	//[2023.08.22-21.32.43:513][481]LogApSubsystem: Display: AApSubsystem::ParseScoutedItems(performance[3.504])
-	//[2023.08.22-21.34.09:065][551]LogApSubsystem: Display: AApSubsystem::ParseScoutedItems(performance[3.886])
-
-	auto startTime = FDateTime::Now();
-
-	for (size_t i = 0; i < 100; i++) {
-		const auto recipeAssets = UApUtils::GetBlueprintAssetsIn("/Game/FactoryGame/Recipes");
-		const auto itemDescriptorAssets = UApUtils::GetBlueprintAssetsIn("/Game/FactoryGame/Resource");
-
-		for (auto& itemPerMilestone : locationsPerMileStone) {
-			FString schematicName;
-			for (auto schematicAndName : schematicsPerMilestone) {
-				if (itemPerMilestone.Key == schematicAndName.Value) {
-					schematicName = schematicAndName.Key;
-					break;
-				}
+	for (auto& itemPerMilestone : locationsPerMileStone) {
+		FString schematicName;
+		for (auto schematicAndName : schematicsPerMilestone) {
+			if (itemPerMilestone.Key == schematicAndName.Value) {
+				schematicName = schematicAndName.Key;
+				break;
 			}
-
-			CreateHubSchematic(recipeAssets, itemDescriptorAssets, schematicName, itemPerMilestone.Key, itemPerMilestone.Value);
 		}
+
+		CreateHubSchematic(recipeAssets, itemDescriptorAssets, schematicName, itemPerMilestone.Key, itemPerMilestone.Value);
 	}
-
-	auto endTime = FDateTime::Now();
-
-	auto diff = (endTime - startTime).GetTotalSeconds();
-
-	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::ParseScoutedItems(performance[%f])"), diff);
 
 	scoutedLocations.Empty();
 	shouldParseItemsToScout = false;
