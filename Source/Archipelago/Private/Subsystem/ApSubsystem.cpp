@@ -341,7 +341,8 @@ void AApSubsystem::BeginPlay() {
 	RManager = AFGResearchManager::Get(world);
 	SManager = AFGSchematicManager::Get(world);
 	PManager  = AFGGamePhaseManager::Get(world);
-
+	resourceSinkSubsystem = AFGResourceSinkSubsystem::Get(world);
+	
 	RManager->ResearchCompletedDelegate.AddDynamic(this, &AApSubsystem::OnMamResearchCompleted);
 	SManager->PurchasedSchematicDelegate.AddDynamic(this, &AApSubsystem::OnSchematicCompleted);
 }
@@ -528,7 +529,8 @@ void AApSubsystem::ParseSlotData(std::string json) {
 	
 	self->currentPlayerSlot = parsedJson->GetIntegerField("Slot");
 	self->numberOfChecksPerMilestone = parsedJson->GetIntegerField("SlotsPerMilestone");
-	self->finalSpaceElevatorTier = options->GetIntegerField("elevator_tier");
+	self->finalSpaceElevatorTier = options->GetIntegerField("FinalElevatorTier");
+	self->finalResourceSinkPoints = options->GetIntegerField("FinalResourceSinkPoints");
 	self->hasLoadedSlotData = true;
 }
 
@@ -583,9 +585,16 @@ void AApSubsystem::Tick(float DeltaTime) {
 
 	HandleAPMessages();
 
-	if (!hasSendGoal && PManager->GetGamePhase() >= finalSpaceElevatorTier)	{
-		AP_StoryComplete();
-		hasSendGoal = true;
+	if (!hasSendGoal) {
+		if (
+				(finalSpaceElevatorTier > 0 && 
+				 PManager->GetGamePhase() >= finalSpaceElevatorTier)
+			 || (finalResourceSinkPoints > 0 && 
+				  resourceSinkSubsystem->GetNumTotalPoints(EResourceSinkTrack::RST_Default) >= finalResourceSinkPoints)
+		) {
+			AP_StoryComplete();
+			hasSendGoal = true;
+		}
 	}
 }
 
@@ -634,6 +643,7 @@ void AApSubsystem::ParseScoutedItems() {
 	const auto recipeAssets = UApUtils::GetBlueprintAssetsIn("/Game/FactoryGame/Recipes");
 	const auto itemDescriptorAssets = UApUtils::GetBlueprintAssetsIn("/Game/FactoryGame/Resource");
 
+
 	for (auto& itemPerMilestone : locationsPerMileStone) {
 		FString schematicName;
 		for (auto schematicAndName : schematicsPerMilestone) {
@@ -643,8 +653,10 @@ void AApSubsystem::ParseScoutedItems() {
 			}
 		}
 
+
 		CreateHubSchematic(recipeAssets, itemDescriptorAssets, schematicName, itemPerMilestone.Key, itemPerMilestone.Value);
 	}
+
 
 	scoutedLocations.Empty();
 	shouldParseItemsToScout = false;
@@ -752,6 +764,7 @@ void AApSubsystem::CreateHubSchematic(TMap<FName, FAssetData> recipeAssets, TMap
 		schematic.InfoCards.Add(CreateUnlockInfoOnly(recipeAssets, itemDescriptorAssets, item));
 
 	UCLSchematicBPFLib::InitSchematicFromStruct(schematic, factorySchematic, contentLibSubsystem);
+
 	contentRegistry->RegisterSchematic(FName(TEXT("Archipelago")), factorySchematic);
 }
 

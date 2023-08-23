@@ -11,6 +11,7 @@
 #include "FGSchematicManager.h"
 #include "FGResearchManager.h"
 #include "FGGamePhaseManager.h"
+#include "FGResourceSinkSubsystem.h"
 
 #include "GenericPlatform/GenericPlatformProcess.h"
 #include "Patching/BlueprintHookHelper.h"
@@ -115,6 +116,7 @@ private:
 
 	UContentLibSubsystem* contentLibSubsystem;
 	AModContentRegistry* contentRegistry;
+	AFGResourceSinkSubsystem* resourceSinkSubsystem;
 
 	TMap<TSubclassOf<class UFGSchematic>, TArray<AP_NetworkItem>> locationsPerMileStone;
 	TMap<int64_t, TSubclassOf<class UFGSchematic>> ItemSchematics;
@@ -130,6 +132,7 @@ private:
 	int numberOfChecksPerMilestone;
 	TArray<TArray<TMap<FString, int>>> hubLayout;
 	int finalSpaceElevatorTier;
+	int64 finalResourceSinkPoints;
 	bool hasLoadedSlotData;
 
 	bool hasSendGoal;
