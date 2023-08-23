@@ -56,6 +56,4 @@ TMap<FName, FAssetData> UApUtils::GetBlueprintAssetsIn(FName&& packagePath) {
 UObject* UApUtils::FindAssetByName(TMap<FName, FAssetData> assets, FString assetName) {
 	FName key = FName(*assetName);
 	return Cast<UBlueprintGeneratedClass>(assets[key].GetAsset())->GetDefaultObject();
-	//uint32 Hash = TDefaultMapHashableKeyFuncs<FName, FAssetData, false>::GetKeyHash(key);
-	//return Cast<UBlueprintGeneratedClass>(assets.FindByHash(Hash, key)->GetAsset())->GetDefaultObject();
 }
