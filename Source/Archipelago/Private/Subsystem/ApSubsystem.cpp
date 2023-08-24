@@ -175,7 +175,6 @@ TMap<int64_t, FString> AApSubsystem::ItemIdToGameItemDescriptor = {
 	{1338186, TEXT("BP_ItemDescriptorPortableMiner_C")}
 };
 
-
 TMap<int64_t, FString> AApSubsystem::ItemIdToGameRecipe = {
 	{1338200, TEXT("Recipe_IronPlateReinforced")},
 	{1338201, TEXT("Recipe_Alternate_AdheredIronPlate")},
@@ -310,6 +309,30 @@ TMap<int64_t, FString> AApSubsystem::ItemIdToGameBuilding = {
 	{1338499, TEXT("Recipe_SpaceElevator")},
 };
 
+TMap<int64_t, FName> AApSubsystem::ItemIdToTrap = {
+	// Regenerate via /Script/Blutility.EditorUtilityWidgetBlueprint'/Archipelago/Debug/EU_GenerateTrapIds.EU_GenerateTrapIds'
+	{1338900, FName(TEXT("HogBasic"))},
+	{1338901, FName(TEXT("HogAlpha"))},
+	{1338902, FName(TEXT("HogJohnny"))},
+	{1338903, FName(TEXT("HogCliff"))},
+	{1338904, FName(TEXT("HogCliffNuclear"))},
+	{1338905, FName(TEXT("TheBees"))},
+	{1338906, FName(TEXT("Hatcher"))},
+	{1338907, FName(TEXT("DoggoGiftPulseNobelisk"))},
+	{1338908, FName(TEXT("DoggoGiftNukeNobelisk"))},
+	{1338909, FName(TEXT("DoggoGiftSlug_Nice"))},
+	{1338910, FName(TEXT("DoggoGiftGasNobelisk"))},
+	{1338911, FName(TEXT("SporeFlower"))},
+	{1338912, FName(TEXT("StingerGas"))},
+	{1338913, FName(TEXT("StingerElite"))},
+	{1338914, FName(TEXT("StingerSmall"))},
+	{1338915, FName(TEXT("SpitterForest"))},
+	{1338916, FName(TEXT("SpitterForestAlpha"))},
+	{1338917, FName(TEXT("NuclearWaste"))},
+	{1338918, FName(TEXT("PlutoniumWaste"))},
+};
+
+
 TMap<int64_t, FString> AApSubsystem::ItemIdToGameName2 = {
 };
 
@@ -349,6 +372,7 @@ void AApSubsystem::BeginPlay() {
 
 void AApSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase) {
 	FApConfigurationStruct config = GetActiveConfig();
+	UE_LOG(LogApSubsystem, Warning, TEXT("Archipelago manually disabled by user config"));
 	if (!config.Enabled) {
 		return;
 	}
@@ -375,6 +399,9 @@ void AApSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase) {
 			CreateSchematicBoundToItemId(item.Key);
 		for (auto& item : ItemIdToGameBuilding) 
 			CreateSchematicBoundToItemId(item.Key);
+
+		auto trapSystem = AApTrapSubsystem::Get();
+
 			
 		FDateTime connectingStartedTime = FDateTime::Now();
 		FGenericPlatformProcess::ConditionalSleep([this, config, connectingStartedTime]() { return InitializeTick(config, connectingStartedTime); }, 0.5);
@@ -542,8 +569,7 @@ void AApSubsystem::Tick(float DeltaTime) {
 	while (ReceivedItems.Dequeue(item)) {
 		if (ItemSchematics.Contains(item))
 			SManager->GiveAccessToSchematic(ItemSchematics[item], nullptr);
-		else if (auto trapName = ItemTraps.Find(item))
-			// TODO no AP server defined traps yet to test this on yet, but can use chat command
+		else if (auto trapName = ItemIdToTrap.Find(item))
 			AApTrapSubsystem::Get()->SpawnTrap(*trapName, nullptr);
 	}
 

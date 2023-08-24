@@ -1,6 +1,10 @@
 #include "Subsystem/ApTrapSubsystem.h"
 #include "ApUtils.h"
 
+bool AApTrapSubsystem::IsValidTrapType(FName trapName) {
+	return TrapTypes.Contains(trapName);
+}
+
 bool AApTrapSubsystem::SpawnTrap_Implementation(FName trapName, APlayerState* targetPlayer) {
 	UE_LOG(LogArchipelagoCpp, Error, TEXT("SpawnTrap_Implementation should be implemented in Blueprint"));
 	return false;

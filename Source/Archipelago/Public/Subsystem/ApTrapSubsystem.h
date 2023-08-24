@@ -23,6 +23,9 @@ public:
 		TMap<FName, TSubclassOf<AActor>> TrapTypes;
 
 public:
+	UFUNCTION(BlueprintCallable)
+		bool IsValidTrapType(FName trapName);
+
 	// Spawn a trap on a player, or all players if targetPlayer is nullptr
 	// The trap name should be an item in TrapTypes
 	// Returns true on success, false if the spawning failed somehow on at least one target player or if the trapName didn't exist

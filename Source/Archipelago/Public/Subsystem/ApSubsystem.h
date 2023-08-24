@@ -116,6 +116,7 @@ private:
 	static TMap<int64_t, FString> ItemIdToGameName2;
 	static TMap<int64_t, FString> ItemIdToGameRecipe;
 	static TMap<int64_t, FString> ItemIdToGameBuilding;
+	static TMap<int64_t, FName> ItemIdToTrap;
 
 	static void SetReplyCallback(AP_SetReply setReply);
 	static void ItemClearCallback();
@@ -134,7 +135,6 @@ private:
 
 	TMap<TSubclassOf<class UFGSchematic>, TArray<AP_NetworkItem>> locationsPerMileStone;
 	TMap<int64_t, TSubclassOf<class UFGSchematic>> ItemSchematics;
-	TMap<int64_t, FName> ItemTraps; // TODO populate
 	TQueue<int64_t> ReceivedItems;
 	TQueue<TPair<FString, FLinearColor>> ChatMessageQueue;
 
