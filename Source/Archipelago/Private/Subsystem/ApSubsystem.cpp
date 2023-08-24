@@ -395,7 +395,7 @@ bool AApSubsystem::InitializeTick(FApConfigurationStruct config, FDateTime conne
 			CheckConnectionState(config);
 	} else if (ConnectionState == EApConnectionState::Connected) {
 		if (!shouldParseItemsToScout) {
-			if (hasLoadedSlotData) {
+			if (slotData.hasLoadedSlotData) {
 				HintUnlockedHubRecipies();
 			} else {
 				// awaiting slot data callback
@@ -488,50 +488,14 @@ void AApSubsystem::LocationScoutedCallback(std::vector<AP_NetworkItem> scoutedLo
 void AApSubsystem::ParseSlotData(std::string json) {
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::ParseSlotData(%s)"), *UApUtils::FStr(json));
 
-	FString jsonString(json.c_str());
-
-	const TSharedRef<TJsonReader<>> reader = TJsonReaderFactory<>::Create(*jsonString);
-
-	FJsonSerializer serializer;
-	TSharedPtr<FJsonObject> parsedJson;
-
-	serializer.Deserialize(reader, parsedJson);
-	if (!parsedJson.IsValid()) {
+	AApSubsystem* self = AApSubsystem::Get();
+	bool success = FApSlotData::ParseSlotData(json, &self->slotData);
+	if (!success) {
+		FString jsonString(json.c_str());
 		UE_LOG(LogApSubsystem, Fatal, TEXT("Archipelago SlotData Invalid! %s"), *jsonString);
 		// TODO kick people out to the main menu screen or something, this keeps them hanging forever on the loading screen with no clear indication
 		// Switched to Fatal for now so it closes the game, but there must be a better way
-		return;
 	}
-
-	AApSubsystem* self = AApSubsystem::Get();
-
-	for (TSharedPtr<FJsonValue> tier : parsedJson->GetArrayField("HubLayout")) {
-		TArray<TMap<FString, int>> milestones;
-
-		for (TSharedPtr<FJsonValue> milestone : tier->AsArray()) {
-			TMap<FString, int> costs;
-
-			for (TPair<FString, TSharedPtr<FJsonValue>> cost : milestone->AsObject()->Values) {
-				int itemId = FCString::Atoi(*cost.Key);
-
-				verify(ItemIdToGameItemDescriptor.Contains(itemId));
-
-				costs.Add(ItemIdToGameItemDescriptor[itemId], cost.Value->AsNumber());
-			}
-
-			milestones.Add(costs);
-		}
-
-		self->hubLayout.Add(milestones);
-	}
-
-	TSharedPtr<FJsonObject> options = parsedJson->GetObjectField("Options");
-	
-	self->currentPlayerSlot = parsedJson->GetIntegerField("Slot");
-	self->numberOfChecksPerMilestone = parsedJson->GetIntegerField("SlotsPerMilestone");
-	self->finalSpaceElevatorTier = options->GetIntegerField("FinalElevatorTier");
-	self->finalResourceSinkPoints = options->GetIntegerField("FinalResourceSinkPoints");
-	self->hasLoadedSlotData = true;
 }
 
 void AApSubsystem::MonitorDataStoreValue(std::string key, AP_DataType dataType, std::string defaultValue, std::function<void(AP_SetReply)> callback) {
@@ -585,15 +549,16 @@ void AApSubsystem::Tick(float DeltaTime) {
 
 	HandleAPMessages();
 
-	if (!hasSendGoal) {
+	if (!hasSentGoal) {
 		if (
-				(finalSpaceElevatorTier > 0 && 
-				 PManager->GetGamePhase() >= finalSpaceElevatorTier)
-			 || (finalResourceSinkPoints > 0 && 
-				  resourceSinkSubsystem->GetNumTotalPoints(EResourceSinkTrack::RST_Default) >= finalResourceSinkPoints)
+				(slotData.finalSpaceElevatorTier > 0 &&
+				 PManager->GetGamePhase() >= slotData.finalSpaceElevatorTier)
+			 || (slotData.finalResourceSinkPoints > 0 &&
+				  resourceSinkSubsystem->GetNumTotalPoints(EResourceSinkTrack::RST_Default) >= slotData.finalResourceSinkPoints)
 		) {
+			UE_LOG(LogApSubsystem, Display, TEXT("Sending goal completion to server"));
 			AP_StoryComplete();
-			hasSendGoal = true;
+			hasSentGoal = true;
 		}
 	}
 }
@@ -736,7 +701,7 @@ void AApSubsystem::CreateHubSchematic(TMap<FName, FAssetData> recipeAssets, TMap
 	int32 milestone = FCString::Atoi(*name.Mid(delimeterPos + 1, 1));
 
 	FString costs = "";
-	for (auto& cost : hubLayout[tier - 1][milestone - 1]) {
+	for (auto& cost : slotData.hubLayout[tier - 1][milestone - 1]) {
 		FString costJson = FString::Printf(TEXT(R"({
 			"Item": "%s",
 			"Amount": %i
@@ -781,7 +746,7 @@ FContentLib_UnlockInfoOnly AApSubsystem::CreateUnlockInfoOnly(TMap<FName, FAsset
 
 	FContentLib_UnlockInfoOnly infoCard;
 
-	if (item.player == currentPlayerSlot) {
+	if (item.player == slotData.currentPlayerSlot) {
 		Args.Add(TEXT("ApPlayerName"), FText::FromString(TEXT("your")));
 
 		infoCard.mUnlockName = UApUtils::FText(item.itemName);
@@ -918,13 +883,13 @@ void AApSubsystem::HintUnlockedHubRecipies() {
 
 	int64_t hubBaseId = 1338000;
 
-	for (int tier = 1; tier <= hubLayout.Num(); tier++)
+	for (int tier = 1; tier <= slotData.hubLayout.Num(); tier++)
 	{
 		for (int milestone = 1; milestone <= maxMilestones; milestone++)
 		{
 			for (int slot = 1; slot <= maxSlots; slot++)
 			{
-				if (milestone <= hubLayout[tier - 1].Num() && slot <= numberOfChecksPerMilestone)
+				if (milestone <= slotData.hubLayout[tier - 1].Num() && slot <= slotData.numberOfChecksPerMilestone)
 					locations.push_back(hubBaseId);
 
 				hubBaseId++;

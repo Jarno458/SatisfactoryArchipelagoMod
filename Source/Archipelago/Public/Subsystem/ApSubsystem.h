@@ -36,6 +36,7 @@
 #include "Buildables/FGBuildableAutomatedWorkBench.h"
 
 #include "ApConfigurationStruct.h"
+#include "Data/ApSlotData.h"
 
 #include "ContentLibSubsystem.h"
 #include "CLSchematicBPFLib.h"
@@ -60,8 +61,9 @@ enum EApConnectionState {
 };
 
 UCLASS()
-class ARCHIPELAGO_API AApSubsystem : public AModSubsystem
+class ARCHIPELAGO_API AApSubsystem : public AModSubsystem, public IFGSaveInterface
 {
+	friend struct FApSlotData;
 	GENERATED_BODY()
 
 public:
@@ -72,6 +74,16 @@ protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;
+
+	// Begin IFGSaveInterface
+	virtual void PreSaveGame_Implementation(int32 saveVersion, int32 gameVersion) override {};
+	virtual void PostSaveGame_Implementation(int32 saveVersion, int32 gameVersion) override {};
+	virtual void PreLoadGame_Implementation(int32 saveVersion, int32 gameVersion) override {};
+	virtual void PostLoadGame_Implementation(int32 saveVersion, int32 gameVersion) override {};
+	virtual void GatherDependencies_Implementation(TArray< UObject* >& out_dependentObjects) override {};
+	virtual bool NeedTransform_Implementation() override { return false; };
+	virtual bool ShouldSave_Implementation() const override { return true; };
+	// End IFSaveInterface
 
 public:
 	EApConnectionState ConnectionState;
@@ -98,6 +110,8 @@ public:
 
 private:
 	static std::map<std::string, std::function<void(AP_SetReply)>> callbacks;
+
+	// TODO move out to another component
 	static TMap<int64_t, FString> ItemIdToGameItemDescriptor;
 	static TMap<int64_t, FString> ItemIdToGameName2;
 	static TMap<int64_t, FString> ItemIdToGameRecipe;
@@ -127,15 +141,14 @@ private:
 	TArray<AP_NetworkItem> scoutedLocations;
 	bool shouldParseItemsToScout;
 
-	//slot data
-	int currentPlayerSlot;
-	int numberOfChecksPerMilestone;
-	TArray<TArray<TMap<FString, int>>> hubLayout;
-	int finalSpaceElevatorTier;
-	int64 finalResourceSinkPoints;
-	bool hasLoadedSlotData;
+	FApSlotData slotData;
 
-	bool hasSendGoal;
+	UPROPERTY(SaveGame)
+	bool hasSentGoal;
+
+	// TODO
+	// UPROPERTY(SaveGame)
+	// int64_t lastReceivedApNetworkItem
 
 	void ConnectToArchipelago(FApConfigurationStruct config);
 	void TimeoutConnection();
@@ -160,8 +173,8 @@ private:
 	UFGRecipe* GetRecipeByName(TMap<FName, FAssetData> recipeAssets, FString name);
 	UFGItemDescriptor* GetItemDescriptorByName(TMap<FName, FAssetData> itemDescriptorAssets, FString name);
 
-	UFUNCTION() //required for event
+	UFUNCTION() //required for event binding
 	void OnMamResearchCompleted(TSubclassOf<class UFGSchematic> schematic);
-	UFUNCTION() //required for event
+	UFUNCTION() //required for event binding
 	void OnSchematicCompleted(TSubclassOf<class UFGSchematic> schematic);
 };
