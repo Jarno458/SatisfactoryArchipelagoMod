@@ -371,9 +371,9 @@ void AApSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase) {
 		ConnectToArchipelago(config);
 
 		UE_LOG(LogApSubsystem, Display, TEXT("Generating schematics from AP Item IDs..."));
-		for (auto item : ItemIdToGameRecipe)
+		for (auto& item : ItemIdToGameRecipe)
 			CreateSchematicBoundToItemId(item.Key);
-		for (auto item : ItemIdToGameBuilding) 
+		for (auto& item : ItemIdToGameBuilding) 
 			CreateSchematicBoundToItemId(item.Key);
 			
 		FDateTime connectingStartedTime = FDateTime::Now();
@@ -444,7 +444,7 @@ void AApSubsystem::OnSchematicCompleted(TSubclassOf<class UFGSchematic> schemati
 	if (type != ESchematicType::EST_Milestone || !locationsPerMileStone.Contains(schematic))
 		return;
 
-	for (auto location : locationsPerMileStone[schematic])
+	for (auto& location : locationsPerMileStone[schematic])
 		AP_SendItem(location.location);
 }
 
