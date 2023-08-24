@@ -36,7 +36,7 @@ public:
 
 	static FString GetImagePathForItem(UFGItemDescriptor* item);
 
-	static TArray<FAssetData> GetBlueprintAssetsIn(FName&& packagePath);
+	static TMap<FName, FAssetData> GetBlueprintAssetsIn(FName&& packagePath);
 
-	static UObject* FindAssetByName(TArray<FAssetData> assets, FString assetName);
+	static UObject* FindAssetByName(TMap<FName, FAssetData> assets, FString assetName);
 };

@@ -10,6 +10,8 @@
 
 #include "FGSchematicManager.h"
 #include "FGResearchManager.h"
+#include "FGGamePhaseManager.h"
+#include "FGResourceSinkSubsystem.h"
 
 #include "GenericPlatform/GenericPlatformProcess.h"
 #include "Patching/BlueprintHookHelper.h"
@@ -30,6 +32,8 @@
 #include "FGChatManager.h"
 #include "Module/ModModule.h"
 #include "Reflection/ClassGenerator.h"
+#include "Buildables/FGBuildable.h"
+#include "Buildables/FGBuildableAutomatedWorkBench.h"
 
 #include "ApConfigurationStruct.h"
 
@@ -64,11 +68,6 @@ public:
 	// Sets default values for this actor's properties
 	AApSubsystem();
 
-	UPROPERTY()
-	AFGSchematicManager* SManager;
-	UPROPERTY()
-	AFGResearchManager* RManager;
-
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -102,6 +101,7 @@ private:
 	static TMap<int64_t, FString> ItemIdToGameItemDescriptor;
 	static TMap<int64_t, FString> ItemIdToGameName2;
 	static TMap<int64_t, FString> ItemIdToGameRecipe;
+	static TMap<int64_t, FString> ItemIdToGameBuilding;
 
 	static void SetReplyCallback(AP_SetReply setReply);
 	static void ItemClearCallback();
@@ -110,8 +110,13 @@ private:
 	static void LocationScoutedCallback(std::vector<AP_NetworkItem>);
 	static void ParseSlotData(std::string json);
 
+	AFGSchematicManager* SManager;
+	AFGResearchManager* RManager;
+	AFGGamePhaseManager* PManager;
+
 	UContentLibSubsystem* contentLibSubsystem;
 	AModContentRegistry* contentRegistry;
+	AFGResourceSinkSubsystem* resourceSinkSubsystem;
 
 	TMap<TSubclassOf<class UFGSchematic>, TArray<AP_NetworkItem>> locationsPerMileStone;
 	TMap<int64_t, TSubclassOf<class UFGSchematic>> ItemSchematics;
@@ -121,14 +126,19 @@ private:
 
 	TArray<AP_NetworkItem> scoutedLocations;
 	bool shouldParseItemsToScout;
-	int firstHubLocation;
-	int lastHubLocation;
-	int currentPlayerSlot = -1;
+
+	//slot data
+	int currentPlayerSlot;
+	int numberOfChecksPerMilestone;
+	TArray<TArray<TMap<FString, int>>> hubLayout;
+	int finalSpaceElevatorTier;
+	int64 finalResourceSinkPoints;
 	bool hasLoadedSlotData;
 
+	bool hasSendGoal;
+
 	void ConnectToArchipelago(FApConfigurationStruct config);
-	UFUNCTION() //required for event
-	void TimeoutConnectionIfNotConnected();
+	void TimeoutConnection();
 
 	void CheckConnectionState(FApConfigurationStruct config);
 	void ParseScoutedItems();
@@ -138,13 +148,17 @@ private:
 	void SendChatMessage(const FString& Message, const FLinearColor& Color);
 
 	void CreateSchematicBoundToItemId(int64_t item);
-	FContentLib_UnlockInfoOnly CreateUnlockInfoOnly(AP_NetworkItem item, FString customIcon = FString());
+	FContentLib_UnlockInfoOnly CreateUnlockInfoOnly(TMap<FName, FAssetData> recipeAssets, TMap<FName, FAssetData> itemDescriptorAssets, AP_NetworkItem item);
+	void UpdateInfoOnlyUnlockWithBuildingInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, TMap<FName, FAssetData> buildingRecipyAssets, AP_NetworkItem* item);
+	void UpdateInfoOnlyUnlockWithRecipeInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, TMap<FName, FAssetData> recipeAssets, AP_NetworkItem* item);
+	void UpdateInfoOnlyUnlockWithItemInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, TMap<FName, FAssetData> itemDescriptorAssets, AP_NetworkItem* item);
+	void UpdateInfoOnlyUnlockWithGenericApInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, AP_NetworkItem* item);
 	void CreateRecipe(AP_NetworkItem item);
 	void CreateDescriptor(AP_NetworkItem item);
-	void CreateHubSchematic(TArray<FAssetData> recipeAssets, TArray<FAssetData> itemDescriptorAssets, FString name, TSubclassOf<UFGSchematic> factorySchematic, TArray<AP_NetworkItem> items);
+	void CreateHubSchematic(TMap<FName, FAssetData> recipeAssets, TMap<FName, FAssetData> itemDescriptorAssets, FString name, TSubclassOf<UFGSchematic> factorySchematic, TArray<AP_NetworkItem> items);
 	
-	UFGRecipe* GetRecipeByName(TArray<FAssetData> recipeAssets, FString name);
-	UFGItemDescriptor* GetItemDescriptorByName(TArray<FAssetData> itemDescriptorAssets, FString name);
+	UFGRecipe* GetRecipeByName(TMap<FName, FAssetData> recipeAssets, FString name);
+	UFGItemDescriptor* GetItemDescriptorByName(TMap<FName, FAssetData> itemDescriptorAssets, FString name);
 
 	UFUNCTION() //required for event
 	void OnMamResearchCompleted(TSubclassOf<class UFGSchematic> schematic);

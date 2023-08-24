@@ -33,24 +33,27 @@ FString UApUtils::GetImagePathForItem(UFGItemDescriptor* item) {
 	return item->GetBigIconFromInstance()->GetPathName();
 }
 
-TArray<FAssetData> UApUtils::GetBlueprintAssetsIn(FName&& packagePath) {
+TMap<FName, FAssetData> UApUtils::GetBlueprintAssetsIn(FName&& packagePath) {
 	FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
 	IAssetRegistry& registery = AssetRegistryModule.Get();
 
-	TArray<FAssetData> assets;
 	FARFilter filter;
 	filter.ClassPaths.Add(FTopLevelAssetPath("/Script/Engine", "BlueprintGeneratedClass"));
 	filter.PackagePaths.Add(packagePath);
 	filter.bRecursivePaths = true;
+
+	TArray<FAssetData> assets;
 	registery.GetAssets(filter, assets);
-	return assets;
+
+	TMap<FName, FAssetData> assetsMap;
+	for (auto asset : assets) {
+		assetsMap.Add(asset.AssetName, asset);
+	}
+
+	return assetsMap;
 }
 
-UObject* UApUtils::FindAssetByName(TArray<FAssetData> assets, FString assetName) {
-	for (const auto& asset : assets) {
-		if (asset.AssetName == FName(*assetName)) {
-			return Cast<UBlueprintGeneratedClass>(asset.GetAsset())->GetDefaultObject();
-		}
-	}
-	return nullptr;
+UObject* UApUtils::FindAssetByName(TMap<FName, FAssetData> assets, FString assetName) {
+	FName key = FName(*assetName);
+	return Cast<UBlueprintGeneratedClass>(assets[key].GetAsset())->GetDefaultObject();
 }
