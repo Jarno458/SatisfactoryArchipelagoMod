@@ -855,17 +855,17 @@ void AApSubsystem::UpdateInfoOnlyUnlockWithItemInfo(FContentLib_UnlockInfoOnly* 
 }
 
 void AApSubsystem::UpdateInfoOnlyUnlockWithGenericApInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, AP_NetworkItem* item) {
-	infoCard->CategoryIcon = TEXT("/Archipelago/Assets/ArchipelagoIconWhite128.ArchipelagoIconWhite128");
+	infoCard->CategoryIcon = TEXT("/Archipelago/Assets/SourceArt/ArchipelagoAssetPack/ArchipelagoIconWhite128.ArchipelagoIconWhite128");
 	infoCard->mUnlockDescription = FText::Format(LOCTEXT("NetworkItemUnlockDescription", "This will unlock {ApPlayerName} {ApItemName} which is considered a {ProgressionType}."), Args);
 
 	if (item->flags == 0b001) {
-		infoCard->BigIcon = infoCard->SmallIcon = TEXT("/Archipelago/Assets/AP-Purple.AP-Purple");
+		infoCard->BigIcon = infoCard->SmallIcon = TEXT("/Archipelago/Assets/DerivedArt/AP-Purple.AP-Purple");
 	}	else if (item->flags == 0b010) {
-		infoCard->BigIcon = infoCard->SmallIcon = TEXT("/Archipelago/Assets/AP-Blue.AP-Blue");
+		infoCard->BigIcon = infoCard->SmallIcon = TEXT("/Archipelago/Assets/DerivedArt/AP-Blue.AP-Blue");
 	} else if (item->flags == 0b100) {
-		infoCard->BigIcon = infoCard->SmallIcon = TEXT("/Archipelago/Assets/AP-Red.AP-Red");
+		infoCard->BigIcon = infoCard->SmallIcon = TEXT("/Archipelago/Assets/DerivedArt/AP-Red.AP-Red");
 	} else {
-		infoCard->BigIcon = infoCard->SmallIcon = TEXT("/Archipelago/Assets/AP-Cyan.AP-Cyan");
+		infoCard->BigIcon = infoCard->SmallIcon = TEXT("/Archipelago/Assets/DerivedArt/AP-Cyan.AP-Cyan");
 	}
 }
 
