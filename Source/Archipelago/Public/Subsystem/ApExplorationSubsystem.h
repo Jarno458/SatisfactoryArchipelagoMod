@@ -64,6 +64,7 @@ public:
 	static AApExplorationSubsystem* Get();
 
 	// This is a static field so blueprint access needs a getter to convert
+	// TODO still needed?
 	UFUNCTION(BlueprintCallable)
 		void GetDropPodLocationMap(TMap<int, FVector_NetQuantize> in_idToLocation);
 
