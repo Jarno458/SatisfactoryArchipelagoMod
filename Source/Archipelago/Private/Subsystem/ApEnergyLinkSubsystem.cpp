@@ -12,12 +12,12 @@ void AApEnergyLinkSubsystem::BeginPlay()
 {
 	Super::BeginPlay();
 	
-	UE_LOG(LogApSubsystem, Display, TEXT("AEnergyLinkSubsystem:BeginPlay()"));
+	UE_LOG(LogApEnergyLink, Display, TEXT("AEnergyLinkSubsystem:BeginPlay()"));
 
 	if (!hooksInitialized) {
 		AFGBuildablePowerStorage* bpscdo = GetMutableDefault<AFGBuildablePowerStorage>();
 		SUBSCRIBE_METHOD_VIRTUAL(AFGBuildablePowerStorage::BeginPlay, bpscdo, [this](auto& scope, AFGBuildablePowerStorage* self) {
-			UE_LOG(LogApSubsystem, Display, TEXT("AFGBuildablePowerStorage::BeginPlay()"));
+			UE_LOG(LogApEnergyLink, Display, TEXT("AFGBuildablePowerStorage::BeginPlay()"));
 
 			if (!PowerStorages.Contains(self)) {
 				PowerStorages.Add(self);
