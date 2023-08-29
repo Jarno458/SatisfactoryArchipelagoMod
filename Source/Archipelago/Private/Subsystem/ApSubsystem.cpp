@@ -124,7 +124,7 @@ TMap<int64_t, FString> AApSubsystem::ItemIdToGameItemDescriptor = {
 	{1338107, TEXT("Desc_QuantumOscillator_C")},
 	{1338108, TEXT("Desc_SpaceElevatorPart_8_C")}, //Thermal Propulsion Rocket
 	{1338109, TEXT("Desc_MotorLightweight_C")},
-	{1338110, TEXT("Desc_HogParts_C'")},
+	{1338110, TEXT("Desc_HogParts_C")},
 	{1338111, TEXT("Desc_OreUranium_C")},
 	{1338112, TEXT("Desc_NuclearFuelRod_C")},
 	{1338113, TEXT("Desc_NuclearWaste_C")},
@@ -631,8 +631,10 @@ void AApSubsystem::ParseScoutedItems() {
 		}
 	}
 
-	const auto recipeAssets = UApUtils::GetBlueprintAssetsIn("/Game/FactoryGame/Recipes");
-	const auto itemDescriptorAssets = UApUtils::GetBlueprintAssetsIn("/Game/FactoryGame/Resource");
+	TMap<FName, FAssetData> recipeAssets = UApUtils::GetBlueprintAssetsIn("/Game/FactoryGame/Recipes", TArray<FString>{ "Recipe_" });
+	recipeAssets.Append(UApUtils::GetBlueprintAssetsIn("/Game/FactoryGame/Equipment", TArray<FString>{ "Recipe_" }));
+	TMap<FName, FAssetData> itemDescriptorAssets = UApUtils::GetBlueprintAssetsIn("/Game/FactoryGame/Resource", TArray<FString>{ "Desc_", "BP_" });
+	itemDescriptorAssets.Append(UApUtils::GetBlueprintAssetsIn("/Game/FactoryGame/Equipment", TArray<FString>{ "Desc_", "BP_" }));
 
 	for (auto& itemPerMilestone : locationsPerMileStone) {
 		FString schematicName;
@@ -931,7 +933,8 @@ UFGRecipe* AApSubsystem::GetRecipeByName(TMap<FName, FAssetData> recipeAssets, F
 }
 
 UFGItemDescriptor* AApSubsystem::GetItemDescriptorByName(TMap<FName, FAssetData> itemDescriptorAssets, FString name) {
-	return Cast<UFGItemDescriptor>(UApUtils::FindAssetByName(itemDescriptorAssets, name));
+	UObject* obj = UApUtils::FindAssetByName(itemDescriptorAssets, name);
+	return Cast<UFGItemDescriptor>(obj);
 }
 
 void AApSubsystem::TimeoutConnection() {

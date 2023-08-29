@@ -3,6 +3,9 @@
 #include <string>
 #include "Reflection/ClassGenerator.h"
 
+//TODO REMOVE
+#pragma optimize("", off)
+
 DEFINE_LOG_CATEGORY(LogApUtils);
 
 DEFINE_LOG_CATEGORY(LogArchipelagoCpp);
@@ -33,7 +36,7 @@ FString UApUtils::GetImagePathForItem(UFGItemDescriptor* item) {
 	return item->GetBigIconFromInstance()->GetPathName();
 }
 
-TMap<FName, FAssetData> UApUtils::GetBlueprintAssetsIn(FName&& packagePath) {
+TMap<FName, FAssetData> UApUtils::GetBlueprintAssetsIn(FName&& packagePath, TArray<FString> namePrefixes) {
 	FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
 	IAssetRegistry& registery = AssetRegistryModule.Get();
 
@@ -47,7 +50,13 @@ TMap<FName, FAssetData> UApUtils::GetBlueprintAssetsIn(FName&& packagePath) {
 
 	TMap<FName, FAssetData> assetsMap;
 	for (auto asset : assets) {
-		assetsMap.Add(asset.AssetName, asset);
+		FString nameString;
+		asset.AssetName.ToString(nameString);
+
+		for (FString prefix : namePrefixes) {
+			if (nameString.StartsWith(prefix))
+				assetsMap.Add(asset.AssetName, asset);
+		}
 	}
 
 	return assetsMap;
@@ -55,5 +64,10 @@ TMap<FName, FAssetData> UApUtils::GetBlueprintAssetsIn(FName&& packagePath) {
 
 UObject* UApUtils::FindAssetByName(TMap<FName, FAssetData> assets, FString assetName) {
 	FName key = FName(*assetName);
+	
+	verify(assets.Contains(key));
+
 	return Cast<UBlueprintGeneratedClass>(assets[key].GetAsset())->GetDefaultObject();
 }
+
+#pragma optimize("", on)
