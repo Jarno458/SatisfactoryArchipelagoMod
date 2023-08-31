@@ -90,6 +90,8 @@ public:
 	UPROPERTY(BlueprintReadOnly)
 	FText ConnectionStateDescription;
 
+	TQueue<TSubclassOf<UFGItemDescriptor>> PortalItems;
+
 	// Get a copy of the subsystem
 	UFUNCTION(BlueprintCallable, BlueprintPure, meta = (DisplayName = "Get ApSubsystem"))
 	static AApSubsystem* Get();

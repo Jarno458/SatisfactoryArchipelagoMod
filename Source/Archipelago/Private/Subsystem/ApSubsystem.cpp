@@ -567,20 +567,25 @@ void AApSubsystem::Tick(float DeltaTime) {
 	// Consider processing only one queue item per tick for performance reasons
 	int64_t item;
 	while (ReceivedItems.Dequeue(item)) {
-		if (ItemSchematics.Contains(item))
+		if (ItemSchematics.Contains(item)) {
 			SManager->GiveAccessToSchematic(ItemSchematics[item], nullptr);
-		else if (auto trapName = ItemIdToTrap.Find(item))
+		} else if (ItemIdToGameItemDescriptor.Contains(item)) {
+			TMap<FName, FAssetData> itemDescriptorAssets = UApUtils::GetBlueprintAssetsIn("/Game/FactoryGame/Resource", TArray<FString>{ "Desc_", "BP_" });
+			itemDescriptorAssets.Append(UApUtils::GetBlueprintAssetsIn("/Game/FactoryGame/Equipment", TArray<FString>{ "Desc_", "BP_" }));
+
+			UFGItemDescriptor* itemDescriptor = GetItemDescriptorByName(itemDescriptorAssets, ItemIdToGameItemDescriptor[item]);
+
+			PortalItems.Enqueue(itemDescriptor->GetClass());
+		} else if (auto trapName = ItemIdToTrap.Find(item)) {
 			AApTrapSubsystem::Get()->SpawnTrap(*trapName, nullptr);
+		}
 	}
 
 	HandleAPMessages();
 
 	if (!hasSentGoal) {
-		if (
-				(slotData.finalSpaceElevatorTier > 0 &&
-				 PManager->GetGamePhase() >= slotData.finalSpaceElevatorTier)
-			 || (slotData.finalResourceSinkPoints > 0 &&
-				  resourceSinkSubsystem->GetNumTotalPoints(EResourceSinkTrack::RST_Default) >= slotData.finalResourceSinkPoints)
+		if (	 (slotData.finalSpaceElevatorTier  > 0 && PManager->GetGamePhase() >= slotData.finalSpaceElevatorTier)
+			 || (slotData.finalResourceSinkPoints > 0 && resourceSinkSubsystem->GetNumTotalPoints(EResourceSinkTrack::RST_Default) >= slotData.finalResourceSinkPoints)
 		) {
 			UE_LOG(LogApSubsystem, Display, TEXT("Sending goal completion to server"));
 			AP_StoryComplete();
@@ -862,7 +867,7 @@ void AApSubsystem::UpdateInfoOnlyUnlockWithGenericApInfo(FContentLib_UnlockInfoO
 
 	if (item->flags == 0b001) {
 		infoCard->BigIcon = infoCard->SmallIcon = TEXT("/Archipelago/Assets/DerivedArt/AP-Purple.AP-Purple");
-	}	else if (item->flags == 0b010) {
+	} else if (item->flags == 0b010) {
 		infoCard->BigIcon = infoCard->SmallIcon = TEXT("/Archipelago/Assets/DerivedArt/AP-Blue.AP-Blue");
 	} else if (item->flags == 0b100) {
 		infoCard->BigIcon = infoCard->SmallIcon = TEXT("/Archipelago/Assets/DerivedArt/AP-Red.AP-Red");
@@ -934,6 +939,7 @@ UFGRecipe* AApSubsystem::GetRecipeByName(TMap<FName, FAssetData> recipeAssets, F
 
 UFGItemDescriptor* AApSubsystem::GetItemDescriptorByName(TMap<FName, FAssetData> itemDescriptorAssets, FString name) {
 	UObject* obj = UApUtils::FindAssetByName(itemDescriptorAssets, name);
+	verify(obj != nullptr);
 	return Cast<UFGItemDescriptor>(obj);
 }
 
