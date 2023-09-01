@@ -22,8 +22,8 @@ AApPortal::AApPortal() : Super() {
 	//mFactoryTickFunction.TickInterval = 0;
 
 	bReplicates = true;
-	//this->NetCullDistanceSquared = 5624999936;
 
+	//this->NetCullDistanceSquared = 5624999936;
 	//this->Registered = false;
 
 	mPowerConsumption = 10;
@@ -53,14 +53,6 @@ void AApPortal::BeginPlay() {
 
 void AApPortal::CheckPower() {
 	bool factoryHasPower = Factory_HasPower();
-
-	if (factoryHasPower)	{
-		input->SetActive(false, true);
-		output->SetActive(true, true);
-	} else {
-		input->SetActive(false, true);
-		output->SetActive(false, true);
-	}
 }
 
 void AApPortal::Factory_Tick(float dt) {
@@ -74,12 +66,16 @@ void AApPortal::Factory_Tick(float dt) {
 		if (apSubSystem->PortalItems.Dequeue(item)) {
 			int stackSize = UFGItemDescriptor::GetStackSize(item);
 
-			FInventoryStack stack(stackSize, item);
+			/*FInventoryStack stack(stackSize, item);
 
 			int added = inventory->AddStack(stack, true);
 
 			if (added != stackSize) {
 				//Tobad!!
+			}*/
+
+			for (size_t i=0; i < stackSize; i++) {
+				outputQueue.Enqueue(FInventoryItem(item));
 			}
 		}
 	}
@@ -111,21 +107,21 @@ void AApPortal::Factory_Tick(float dt) {
 			*/
 }
 
-/*bool AApPortal::Factory_PeekOutput_Implementation(const class UFGFactoryConnectionComponent* connection, TArray<FInventoryItem>& out_items, TSubclassOf<UFGItemDescriptor> type) const {
+bool AApPortal::Factory_PeekOutput_Implementation(const class UFGFactoryConnectionComponent* connection, TArray<FInventoryItem>& out_items, TSubclassOf<UFGItemDescriptor> type) const {
+	if (!Factory_HasPower() || outputQueue.IsEmpty())
+		return false;
 	
+	FInventoryItem item = *outputQueue.Peek();
 	
+	out_items.Emplace(item);
 	
-	return false;
+	return true;
 }
 
 bool AApPortal::Factory_GrabOutput_Implementation(class UFGFactoryConnectionComponent* connection, FInventoryItem& out_item, float& out_OffsetBeyond, TSubclassOf<UFGItemDescriptor> type) {
+	out_OffsetBeyond = 0;
 	
-	
-	
-	
-	
-	
-	return false;
-}*/
+	return Factory_HasPower() && outputQueue.Dequeue(out_item);
+}
 
 #pragma optimize("", on)
