@@ -2,6 +2,8 @@
 
 #include <string>
 #include "Reflection/ClassGenerator.h"
+#include "Module/GameInstanceModuleManager.h"
+#include "Module/ApGameInstanceModule.h"
 
 //TODO REMOVE
 #pragma optimize("", off)
@@ -73,6 +75,16 @@ UObject* UApUtils::FindAssetByName(TMap<FName, FAssetData> assets, FString asset
 	}
 
 	return Cast<UBlueprintGeneratedClass>(assets[key].GetAsset())->GetDefaultObject();
+}
+
+UApBlueprintDataBridge* UApUtils::GetBlueprintDataBridge(UObject* worldContext) {
+	if (const auto world = worldContext->GetWorld()) {
+		const auto moduleManager = world->GetGameInstance()->GetSubsystem<UGameInstanceModuleManager>();
+		const auto module = moduleManager->FindModule("Archipelago");
+		const auto modModule = Cast<UApGameInstanceModule>(module);
+		return modModule->BlueprintData;
+	}
+	return nullptr;
 }
 
 #pragma optimize("", on)

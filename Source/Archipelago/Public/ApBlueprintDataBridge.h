@@ -1,6 +1,7 @@
 #pragma once
 #include "CoreMinimal.h"
 #include "Resources/FGItemDescriptor.h"
+#include "Buildables/FGBuildablePowerStorage.h"
 #include "ApBlueprintDataBridge.generated.h"
 
 /**
@@ -10,6 +11,10 @@ UCLASS(NotBlueprintable, BlueprintType)
 class UApBlueprintDataBridge : public UDataAsset {
 	GENERATED_BODY()
 public:
+
+	// Power Storage building asset for UI modifications
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		TSubclassOf<AFGBuildablePowerStorage> PowerStorageBuilding;
 
 	// Item to use as the Archipelago Blocker
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)

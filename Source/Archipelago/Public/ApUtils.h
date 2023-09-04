@@ -4,6 +4,7 @@
 #include "UObject/NoExportTypes.h"
 #include "Resources/FGItemDescriptor.h"
 #include "AssetRegistry/AssetRegistryModule.h"
+#include "ApBlueprintDataBridge.h"
 
 #include "ApUtils.generated.h"
 
@@ -39,4 +40,7 @@ public:
 	static TMap<FName, FAssetData> GetBlueprintAssetsIn(FName&& packagePath, TArray<FString> namePrefixes);
 
 	static UObject* FindAssetByName(TMap<FName, FAssetData> assets, FString assetName);
+
+	UFUNCTION(BlueprintCallable)
+	static UApBlueprintDataBridge* GetBlueprintDataBridge(UObject* worldContext);
 };

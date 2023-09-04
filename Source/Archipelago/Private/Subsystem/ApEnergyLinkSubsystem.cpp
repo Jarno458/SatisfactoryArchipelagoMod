@@ -1,6 +1,9 @@
 #include "Subsystem/ApEnergyLinkSubsystem.h"
+#include "ApUtils.h"
 
 DEFINE_LOG_CATEGORY(LogApEnergyLink);
+
+#define LOCTEXT_NAMESPACE "Archipelago"
 
 AApEnergyLinkSubsystem::AApEnergyLinkSubsystem()
 {
@@ -14,7 +17,10 @@ void AApEnergyLinkSubsystem::BeginPlay()
 	
 	UE_LOG(LogApEnergyLink, Display, TEXT("AEnergyLinkSubsystem:BeginPlay()"));
 
+	// TODO check yaml to see if EnergyLink is enabled
+
 	if (!hooksInitialized) {
+		UE_LOG(LogApEnergyLink, Display, TEXT("Initializing hooks"));
 		AFGBuildablePowerStorage* bpscdo = GetMutableDefault<AFGBuildablePowerStorage>();
 		SUBSCRIBE_METHOD_VIRTUAL(AFGBuildablePowerStorage::BeginPlay, bpscdo, [this](auto& scope, AFGBuildablePowerStorage* self) {
 			UE_LOG(LogApEnergyLink, Display, TEXT("AFGBuildablePowerStorage::BeginPlay()"));
@@ -23,6 +29,13 @@ void AApEnergyLinkSubsystem::BeginPlay()
 				PowerStorages.Add(self);
 			}
 		});
+
+		UE_LOG(LogApEnergyLink, Display, TEXT("Modifying Power Storage asset"));
+		const auto asset = UApUtils::GetBlueprintDataBridge(GetWorld())->PowerStorageBuilding;
+		verify(asset);
+		const auto buildingCDO = Cast<AFGBuildablePowerStorage>(asset->ClassDefaultObject);
+		buildingCDO->mDisplayName = FText::FormatOrdered(LOCTEXT("EnergyLinkName", "{VanillaName} [EnergyLink]"), buildingCDO->mDisplayName);
+		buildingCDO->mDescription = LOCTEXT("EnergyLinkDescription", "TODO accurate Storage, Max Capacity, Max Discharge Rate info. Talk about how to use the building.");
 
 		hooksInitialized = true;
 	}
@@ -173,3 +186,5 @@ void AApEnergyLinkSubsystem::SendEnergyToServer(long amount) {
 		//UE_LOG(LogApSubsystem, Display, TEXT("AFGBuildablePowerStorage::CalculateIndicatorLevel(): %f"), f);
 		scope.Override(5.0f);
 	});*/
+
+#undef LOCTEXT_NAMESPACE
