@@ -754,9 +754,10 @@ void AApSubsystem::CreateHubSchematic(TMap<FName, FAssetData> recipeAssets, TMap
 		"Type": "Milestone",
 		"Time": 200,
 		"Tier": %i,
+		"MenuPriority": %i,
 		"VisualKit": "Kit_AP_Logo",
 		"Cost": [ %s ]
-	})"), *name, tier, *costs);
+	})"), *name, tier, milestone, *costs);
 
 	FContentLib_Schematic schematic = UCLSchematicBPFLib::GenerateCLSchematicFromString(json);
 
