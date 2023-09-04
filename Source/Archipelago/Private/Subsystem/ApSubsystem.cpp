@@ -636,10 +636,15 @@ void AApSubsystem::ParseScoutedItems() {
 		}
 	}
 
+	UE_LOG(LogApSubsystem, Display, TEXT("Generating HUB milestones"));
+
 	TMap<FName, FAssetData> recipeAssets = UApUtils::GetBlueprintAssetsIn("/Game/FactoryGame/Recipes", TArray<FString>{ "Recipe_" });
 	recipeAssets.Append(UApUtils::GetBlueprintAssetsIn("/Game/FactoryGame/Equipment", TArray<FString>{ "Recipe_" }));
+	
 	TMap<FName, FAssetData> itemDescriptorAssets = UApUtils::GetBlueprintAssetsIn("/Game/FactoryGame/Resource", TArray<FString>{ "Desc_", "BP_" });
 	itemDescriptorAssets.Append(UApUtils::GetBlueprintAssetsIn("/Game/FactoryGame/Equipment", TArray<FString>{ "Desc_", "BP_" }));
+	// BP_WAT1 and BP_WAT2 (alien artifacts)
+	itemDescriptorAssets.Append(UApUtils::GetBlueprintAssetsIn("/Game/FactoryGame/Prototype", TArray<FString>{ "Desc_", "BP_" }));
 
 	for (auto& itemPerMilestone : locationsPerMileStone) {
 		FString schematicName;

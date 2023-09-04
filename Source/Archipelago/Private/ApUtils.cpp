@@ -37,6 +37,7 @@ FString UApUtils::GetImagePathForItem(UFGItemDescriptor* item) {
 }
 
 TMap<FName, FAssetData> UApUtils::GetBlueprintAssetsIn(FName&& packagePath, TArray<FString> namePrefixes) {
+	UE_LOG(LogApUtils, Display, TEXT("Processing assets in path: %s"), *packagePath.ToString());
 	FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
 	IAssetRegistry& registery = AssetRegistryModule.Get();
 
@@ -54,8 +55,10 @@ TMap<FName, FAssetData> UApUtils::GetBlueprintAssetsIn(FName&& packagePath, TArr
 		asset.AssetName.ToString(nameString);
 
 		for (FString prefix : namePrefixes) {
-			if (nameString.StartsWith(prefix))
+			if (nameString.StartsWith(prefix)) {
 				assetsMap.Add(asset.AssetName, asset);
+				UE_LOG(LogApUtils, VeryVerbose, TEXT("Adding asset %s that matches prefix %s"), *asset.AssetName.ToString(), *prefix);
+			}
 		}
 	}
 
@@ -65,7 +68,9 @@ TMap<FName, FAssetData> UApUtils::GetBlueprintAssetsIn(FName&& packagePath, TArr
 UObject* UApUtils::FindAssetByName(TMap<FName, FAssetData> assets, FString assetName) {
 	FName key = FName(*assetName);
 	
-	verify(assets.Contains(key));
+	if (!assets.Contains(key)) {
+		UE_LOG(LogApUtils, Fatal, TEXT("Key '%s' not present in assets to search"), *assetName);
+	}
 
 	return Cast<UBlueprintGeneratedClass>(assets[key].GetAsset())->GetDefaultObject();
 }

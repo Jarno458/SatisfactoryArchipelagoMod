@@ -7,7 +7,7 @@
 
 #include "ApUtils.generated.h"
 
-DECLARE_LOG_CATEGORY_EXTERN(LogApUtils, All, All);
+DECLARE_LOG_CATEGORY_EXTERN(LogApUtils, Log, All);
 
 DECLARE_LOG_CATEGORY_EXTERN(LogArchipelagoCpp, Log, All);
 
