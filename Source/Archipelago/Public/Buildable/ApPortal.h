@@ -26,7 +26,7 @@ public:
 
 	virtual void EndPlay(const EEndPlayReason::Type reason) override;
 
-	TQueue<FInventoryItem> outputQueue;
+	mutable TQueue<FInventoryItem> outputQueue;
 
 private:
 	UFGFactoryConnectionComponent* input;
@@ -38,7 +38,7 @@ private:
 
 public:
 	UFUNCTION()
-	void CheckPower(bool newHasPower);
+	void CheckPower(bool newHasPower) const;
 
 	virtual bool Factory_HasPower() const override;
 	//virtual bool IsConfigured() const override;

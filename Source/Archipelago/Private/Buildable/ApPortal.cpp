@@ -32,7 +32,9 @@ AApPortal::AApPortal() : Super() {
 void AApPortal::BeginPlay() {
 	Super::BeginPlay();
 
-	mPowerInfo = Cast<UFGPowerInfoComponent>(GetComponentByClass(UFGPowerInfoComponent::StaticClass()));
+	//if (!mPowerInfo) {
+	//	mPowerInfo = Cast<UFGPowerInfoComponent>(GetComponentByClass(UFGPowerInfoComponent::StaticClass()));
+	//}
 	mPowerInfo->OnHasPowerChanged.BindUFunction(this, "CheckPower");
 
 	for (UFGFactoryConnectionComponent* connection : GetConnectionComponents()) {
@@ -67,23 +69,27 @@ void AApPortal::EndPlay(const EEndPlayReason::Type reason) {
 	return true;
 }*/
 
-/*bool AApPortal::Factory_HasPower() const {
+bool AApPortal::Factory_HasPower() const {
 	bool hasPowah = Super::Factory_HasPower();
 
-	CheckPower(false);
+	/*if (hasPowah) {
+		AApPortalSubsystem::Get(GetWorld())->RegisterPortal(this);
+	}	else {
+		AApPortalSubsystem::Get(GetWorld())->UnRegisterPortal(this);
+	}*/
 
 	return hasPowah;
-}*/
+}
 
 /*bool AApPortal::Factory_IsProducing() const {
 	return true;
 }*/
 
 bool AApPortal::CanProduce_Implementation() const {
-	return true;
+	return HasPower();
 }
 
-void AApPortal::CheckPower(bool newHasPower) {
+void AApPortal::CheckPower(bool newHasPower) const {
 	if (Factory_HasPower()) {
 		AApPortalSubsystem::Get(GetWorld())->RegisterPortal(this);
 	}	else {

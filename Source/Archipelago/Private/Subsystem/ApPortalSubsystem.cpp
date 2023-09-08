@@ -52,7 +52,7 @@ void AApPortalSubsystem::Tick(float dt) {
 	if(OutputQueue.IsEmpty())
 		return;
 
-	for (AApPortal* portal : BuiltPortals) {
+	for (const AApPortal* portal : BuiltPortals) {
 		if (OutputQueue.IsEmpty())
 			return;
 
@@ -64,12 +64,12 @@ void AApPortalSubsystem::Tick(float dt) {
 	}
 }
 
-void AApPortalSubsystem::RegisterPortal(AApPortal* portal) {
+void AApPortalSubsystem::RegisterPortal(const AApPortal* portal) {
 	bool alreadyExists;
 	BuiltPortals.Add(portal, &alreadyExists);
 }
 
-void AApPortalSubsystem::UnRegisterPortal(AApPortal* portal) {
+void AApPortalSubsystem::UnRegisterPortal(const AApPortal* portal) {
 	BuiltPortals.Remove(portal);
 	
 	//TODO should be added to front of queue

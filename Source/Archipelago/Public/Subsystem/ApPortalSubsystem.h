@@ -38,8 +38,8 @@ private:
 
 public:
 	UPROPERTY(BlueprintReadOnly) //blueprint likely dont need this
-	TSet<AApPortal*> BuiltPortals;
+	TSet<const AApPortal*> BuiltPortals;
 
-	void RegisterPortal(AApPortal* portal);
-	void UnRegisterPortal(AApPortal* portal);
+	void RegisterPortal(const AApPortal* portal);
+	void UnRegisterPortal(const AApPortal* portal);
 };
