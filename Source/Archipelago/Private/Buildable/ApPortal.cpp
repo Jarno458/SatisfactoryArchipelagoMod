@@ -1,4 +1,5 @@
 #include "Buildable/ApPortal.h"
+#include "Subsystem/ApPortalSubsystem.h"
 
 DEFINE_LOG_CATEGORY(LogGame); // A base-game header is using this category so we must do this to avoid unresolved external symbol
 
@@ -7,8 +8,8 @@ DEFINE_LOG_CATEGORY(LogGame); // A base-game header is using this category so we
 
 AApPortal::AApPortal() : Super() {
 	mPowerInfoClass = UFGPowerInfoComponent::StaticClass();
-	mInventorySizeX = 20;
-	mInventorySizeY = 20;
+	mInventorySizeX = 5;
+	mInventorySizeY = 1;
 	mSignificanceRange = 18000;
 	MaxRenderDistance = -1;
 
@@ -24,21 +25,16 @@ AApPortal::AApPortal() : Super() {
 	bReplicates = true;
 
 	//this->NetCullDistanceSquared = 5624999936;
-	//this->Registered = false;
 
 	mPowerConsumption = 10;
 }
 
 void AApPortal::BeginPlay() {
-	// for some reason we need to set the Power Info here again otherwise power doesn't work
-	// maybe the game expects it to be named something specific -Robb
 	Super::BeginPlay();
-
-	apSubSystem = AApSubsystem::Get(GetWorld());
 
 	mPowerInfo = Cast<UFGPowerInfoComponent>(GetComponentByClass(UFGPowerInfoComponent::StaticClass()));
 	mPowerInfo->OnHasPowerChanged.BindUFunction(this, "CheckPower");
-	
+
 	for (UFGFactoryConnectionComponent* connection : GetConnectionComponents()) {
 		if (connection->GetDirection() == EFactoryConnectionDirection::FCD_INPUT)
 			input = connection;
@@ -49,62 +45,63 @@ void AApPortal::BeginPlay() {
 	if (!HasAuthority()) {
 		return;
 	}
+
+	//Factory_StartProducing();
+
+	
+
+	//TODO lock item from getting inserted until we implement sending
+	UFGInventoryComponent* inventory = GetStorageInventory();
+	//inventory->SetLocked(true);
 }
 
-void AApPortal::CheckPower() {
-	bool factoryHasPower = Factory_HasPower();
+void AApPortal::EndPlay(const EEndPlayReason::Type reason) {
+	Super::EndPlay(reason);
+
+	if (!HasAuthority()) {
+		return;
+	}
+}
+
+/*bool AApPortal::IsConfigured() const {
+	return true;
+}*/
+
+/*bool AApPortal::Factory_HasPower() const {
+	bool hasPowah = Super::Factory_HasPower();
+
+	CheckPower(false);
+
+	return hasPowah;
+}*/
+
+/*bool AApPortal::Factory_IsProducing() const {
+	return true;
+}*/
+
+bool AApPortal::CanProduce_Implementation() const {
+	return true;
+}
+
+void AApPortal::CheckPower(bool newHasPower) {
+	if (Factory_HasPower()) {
+		AApPortalSubsystem::Get(GetWorld())->RegisterPortal(this);
+	}	else {
+		AApPortalSubsystem::Get(GetWorld())->UnRegisterPortal(this);
+	}
 }
 
 void AApPortal::Factory_Tick(float dt) {
 	Super::Factory_Tick(dt);
 
-	UFGInventoryComponent* inventory = GetStorageInventory();
+	/*UFGInventoryComponent* inventory = GetStorageInventory();
 
 	if (inventory != nullptr) {
-		TSubclassOf<UFGItemDescriptor> item;
-
-		if (apSubSystem->PortalItems.Dequeue(item)) {
-			int stackSize = UFGItemDescriptor::GetStackSize(item);
-
-			/*FInventoryStack stack(stackSize, item);
-
-			int added = inventory->AddStack(stack, true);
-
-			if (added != stackSize) {
-				//Tobad!!
-			}*/
-
-			for (size_t i=0; i < stackSize; i++) {
-				outputQueue.Enqueue(FInventoryItem(item));
-			}
-		}
-	}
-
-
-	// Fluid input logic, remove if not desired
-	/*if (HasAuthority() && IsValid(this) && GetStorageInventory()) {
-		if (Factory_HasPower()) {
-			if (output->IsConnected()) {
-				if (GetStorageInventory()) {
-					//output->
-
-				}
-			}
-		}
+		if (targetPlayerSlot <= 0)
+			inventory->SetLocked(true);
+		else
+			inventory->SetLocked(false);
 	}*/
-			/*
-			 if (Pipe->IsConnected()) {
-				if (GetStorageInventory() && GetStorageInventory()->IsSomethingOnIndex(0)) {
-					FInventoryStack CurrentItem; GetStorageInventory()->GetStackFromIndex(0, CurrentItem);
-					if (CurrentItem.Item.GetItemClass()) {
-						FInventoryStack Stack;
-						Pipe->Factory_PullPipeInput(dt, Stack, CurrentItem.Item.GetItemClass(), FMath::Clamp((5000.f * mFluidStackSizeMultiplier) - CurrentItem.NumItems, 0.f, 300.f * dt));
-						if (Stack.HasItems()) {
-							GetStorageInventory()->AddStackToIndex(0, Stack);
-						}
-					}
-				}
-			*/
 }
 
 bool AApPortal::Factory_PeekOutput_Implementation(const class UFGFactoryConnectionComponent* connection, TArray<FInventoryItem>& out_items, TSubclassOf<UFGItemDescriptor> type) const {

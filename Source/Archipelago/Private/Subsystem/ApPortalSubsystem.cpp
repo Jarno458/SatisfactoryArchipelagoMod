@@ -2,14 +2,34 @@
 
 DEFINE_LOG_CATEGORY(LogApPortalSubsystem);
 
+//TODO REMOVE
+#pragma optimize("", off)
+
+AApPortalSubsystem* AApPortalSubsystem::Get() {
+	return Get(GEngine->GameViewport->GetWorld());
+}
+
+AApPortalSubsystem* AApPortalSubsystem::Get(class UWorld* world) {
+	USubsystemActorManager* SubsystemActorManager = world->GetSubsystem<USubsystemActorManager>();
+	check(SubsystemActorManager);
+
+	return SubsystemActorManager->GetSubsystemActor<AApPortalSubsystem>();
+}
+
 AApPortalSubsystem::AApPortalSubsystem() : Super() {
 	UE_LOG(LogApPortalSubsystem, Display, TEXT("AApPortalSubsystem::AApPortalSubsystem()"));
+
+	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bStartWithTickEnabled = true;
+	PrimaryActorTick.TickInterval = 0;
 }
 
 void AApPortalSubsystem::BeginPlay() {
 	Super::BeginPlay();
 
 	UE_LOG(LogApPortalSubsystem, Display, TEXT("AApPortalSubsystem::BeginPlay()"));
+
+	apSubSystem = AApSubsystem::Get(GetWorld());
 }
 
 void AApPortalSubsystem::Tick(float dt) {
@@ -19,10 +39,43 @@ void AApPortalSubsystem::Tick(float dt) {
 		return;
 	}
 
-	// TODO: building registration to BuiltPortals array
-	// Do we want the list of BuiltPortals to be stored in saves, or be retrieved each time on save load?
+	TSubclassOf<UFGItemDescriptor> cls;
 
-	// Remove buildables from BuiltPortals that are no longer valid	
+	if (apSubSystem->PortalItems.Dequeue(cls)) {
+		int stackSize = UFGItemDescriptor::GetStackSize(cls);
 
-	// Do inventory operations
+		for (size_t i = 0; i < stackSize; i++) {
+			OutputQueue.Enqueue(FInventoryItem(cls));
+		}
+	}
+
+	if(OutputQueue.IsEmpty())
+		return;
+
+	for (AApPortal* portal : BuiltPortals) {
+		if (OutputQueue.IsEmpty())
+			return;
+
+		if (portal->outputQueue.IsEmpty()) {
+			FInventoryItem item;
+			OutputQueue.Dequeue(item);
+			portal->outputQueue.Enqueue(item);
+		}
+	}
 }
+
+void AApPortalSubsystem::RegisterPortal(AApPortal* portal) {
+	bool alreadyExists;
+	BuiltPortals.Add(portal, &alreadyExists);
+}
+
+void AApPortalSubsystem::UnRegisterPortal(AApPortal* portal) {
+	BuiltPortals.Remove(portal);
+	
+	//TODO should be added to front of queue
+	FInventoryItem item;
+	while (portal->outputQueue.Dequeue(item))
+		OutputQueue.Enqueue(item);
+}
+
+#pragma optimize("", on)
