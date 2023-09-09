@@ -261,9 +261,9 @@ void AApSubsystem::Tick(float DeltaTime) {
 	HandleAPMessages();
 
 	if (!hasSentGoal) {
-		if (	 (slotData.finalSpaceElevatorTier  > 0 && PManager->GetGamePhase() >= slotData.finalSpaceElevatorTier)
-			 || (slotData.finalResourceSinkPoints > 0 && resourceSinkSubsystem->GetNumTotalPoints(EResourceSinkTrack::RST_Default) >= slotData.finalResourceSinkPoints)
-		) {
+		const bool spElevatorGoalReached = slotData.finalSpaceElevatorTier > 0 && PManager->GetGamePhase() >= slotData.finalSpaceElevatorTier;
+		const bool sinkPointsGoalReached = slotData.finalResourceSinkPoints > 0 && resourceSinkSubsystem->GetNumTotalPoints(EResourceSinkTrack::RST_Default) >= slotData.finalResourceSinkPoints;
+		if (spElevatorGoalReached || sinkPointsGoalReached) {
 			UE_LOG(LogApSubsystem, Display, TEXT("Sending goal completion to server"));
 			AP_StoryComplete();
 			hasSentGoal = true;
