@@ -136,7 +136,13 @@ void AApSubsystem::ConnectToArchipelago(FApConfigurationStruct config) {
 void AApSubsystem::OnMamResearchCompleted(TSubclassOf<class UFGSchematic> schematic) {
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubSystem::OnResearchCompleted(schematic), MAM Research Completed"));
 
-	//if (schematic.) //if name is Archipelago #xxxx send check to server
+	ESchematicType type = UFGSchematic::GetType(schematic);
+
+	if (type != ESchematicType::EST_MAM || !locationsPerMamNode.Contains(schematic))
+		return;
+
+	for (auto& location : locationsPerMamNode[schematic])
+		AP_SendItem(location.location);
 }
 
 
@@ -312,10 +318,25 @@ void AApSubsystem::ParseScoutedItems() {
 			}
 		} else if (apLocation.locationName.starts_with("Mam")) {
 			UE_LOG(LogApSubsystem, Verbose, TEXT("AP Location %s"), *UApUtils::FStr(apLocation.locationName));
+
+			// TODO verify this matches MAM node server naming pattern
+			std::string milestoneString = apLocation.locationName.substr(0, apLocation.locationName.find(","));
+			FString milestone = UApUtils::FStr(milestoneString);
+
+			if (!schematicsPerMilestone.Contains(milestone)) {
+				TSubclassOf<UFGSchematic> schematic = UApUtils::FindOrCreateClass(TEXT("/Archipelago/"), *milestone, UFGSchematic::StaticClass());
+				schematicsPerMilestone.Add(milestone, schematic);
+			}
+
+			if (!locationsPerMamNode.Contains(schematicsPerMilestone[milestone])) {
+				locationsPerMamNode.Add(schematicsPerMilestone[milestone], TArray<AP_NetworkItem>{ apLocation });
+			} else {
+				locationsPerMamNode[schematicsPerMilestone[milestone]].Add(apLocation);
+			}
 		}
 	}
 
-	UE_LOG(LogApSubsystem, Display, TEXT("Generating HUB milestones"));
+	UE_LOG(LogApSubsystem, Display, TEXT("Preparing game asset data"));
 
 	TMap<FName, FAssetData> recipeAssets = UApUtils::GetBlueprintAssetsIn("/Game/FactoryGame/Recipes", TArray<FString>{ "Recipe_" });
 	recipeAssets.Append(UApUtils::GetBlueprintAssetsIn("/Game/FactoryGame/Equipment", TArray<FString>{ "Recipe_" }));
@@ -324,6 +345,8 @@ void AApSubsystem::ParseScoutedItems() {
 	itemDescriptorAssets.Append(UApUtils::GetBlueprintAssetsIn("/Game/FactoryGame/Equipment", TArray<FString>{ "Desc_", "BP_" }));
 	// BP_WAT1 and BP_WAT2 (alien artifacts)
 	itemDescriptorAssets.Append(UApUtils::GetBlueprintAssetsIn("/Game/FactoryGame/Prototype", TArray<FString>{ "Desc_", "BP_" }));
+
+	UE_LOG(LogApSubsystem, Display, TEXT("Generating HUB milestones"));
 
 	for (auto& itemPerMilestone : locationsPerMilestone) {
 		FString schematicName;
@@ -335,6 +358,22 @@ void AApSubsystem::ParseScoutedItems() {
 		}
 
 		CreateHubSchematic(recipeAssets, itemDescriptorAssets, schematicName, itemPerMilestone.Key, itemPerMilestone.Value);
+	}
+
+	UE_LOG(LogApSubsystem, Display, TEXT("Generating MAM nodes"));
+
+	for (auto& itemPerMamNode : locationsPerMamNode) {
+		FString schematicName;
+		for (auto schematicAndName : schematicsPerMilestone) {
+			if (itemPerMamNode.Key == schematicAndName.Value) {
+				schematicName = schematicAndName.Key;
+				break;
+			}
+		}
+
+		CreateMamSchematic(recipeAssets, itemDescriptorAssets, schematicName, itemPerMamNode.Key, itemPerMamNode.Value);
+
+		// TODO replace the node contained in the game's BPD research node with this schematic
 	}
 
 	scoutedLocations.Empty();
@@ -411,7 +450,7 @@ void AApSubsystem::CreateDescriptor(AP_NetworkItem item) {
 	//contentRegistry->RegisterItem(FName(TEXT("Archipelago")), factoryItem); //no idea how/where to register items
 }
 
-void AApSubsystem::CreateHubSchematic(TMap<FName, FAssetData> recipeAssets, TMap<FName, FAssetData> itemDescriptorAssets, FString name, TSubclassOf<UFGSchematic> factorySchematic, TArray<AP_NetworkItem> items) {
+void AApSubsystem::CreateHubSchematic(TMap<FName, FAssetData> recipeAssets, TMap<FName, FAssetData> itemDescriptorAssets, FString name, TSubclassOf<UFGSchematic> factorySchematic, TArray<AP_NetworkItem> apItems) {
 	int delimeterPos;
 	name.FindChar('-', delimeterPos);
 	int32 tier = FCString::Atoi(*name.Mid(delimeterPos - 1, 1));
@@ -440,7 +479,32 @@ void AApSubsystem::CreateHubSchematic(TMap<FName, FAssetData> recipeAssets, TMap
 
 	FContentLib_Schematic schematic = UCLSchematicBPFLib::GenerateCLSchematicFromString(json);
 
-	for (auto& item : items)
+	for (auto& item : apItems)
+		schematic.InfoCards.Add(CreateUnlockInfoOnly(recipeAssets, itemDescriptorAssets, item));
+
+	UCLSchematicBPFLib::InitSchematicFromStruct(schematic, factorySchematic, contentLibSubsystem);
+
+	contentRegistry->RegisterSchematic(FName(TEXT("Archipelago")), factorySchematic);
+}
+
+void AApSubsystem::CreateMamSchematic(TMap<FName, FAssetData> recipeAssets, TMap<FName, FAssetData> itemDescriptorAssets, FString name, TSubclassOf<UFGSchematic> factorySchematic, TArray<AP_NetworkItem> apItems) {
+	// TODO mam node costs
+	FString costs = "";
+	FString description = "TODO MAM Node Descriptions, probably what node this used to be";
+
+	// https://raw.githubusercontent.com/budak7273/ContentLib_Documentation/main/JsonSchemas/CL_Schematic.json
+	FString json = FString::Printf(TEXT(R"({
+		"Name": "%s",
+		"Description": "%s",
+		"Type": "MAM",
+		"Time": 3,
+		"VisualKit": "Kit_AP_Logo",
+		"Cost": [ %s ]
+	})"), *name, *description, *costs);
+
+	FContentLib_Schematic schematic = UCLSchematicBPFLib::GenerateCLSchematicFromString(json);
+
+	for (auto& item : apItems)
 		schematic.InfoCards.Add(CreateUnlockInfoOnly(recipeAssets, itemDescriptorAssets, item));
 
 	UCLSchematicBPFLib::InitSchematicFromStruct(schematic, factorySchematic, contentLibSubsystem);

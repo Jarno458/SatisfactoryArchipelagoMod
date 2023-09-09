@@ -129,6 +129,7 @@ private:
 	AFGResourceSinkSubsystem* resourceSinkSubsystem;
 
 	TMap<TSubclassOf<class UFGSchematic>, TArray<AP_NetworkItem>> locationsPerMilestone;
+	TMap<TSubclassOf<class UFGSchematic>, TArray<AP_NetworkItem>> locationsPerMamNode;
 	TMap<int64_t, TSubclassOf<class UFGSchematic>> ItemSchematics;
 	TQueue<int64_t> ReceivedItems;
 	TQueue<TPair<FString, FLinearColor>> ChatMessageQueue;
@@ -163,7 +164,8 @@ private:
 	void UpdateInfoOnlyUnlockWithGenericApInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, AP_NetworkItem* item);
 	void CreateRecipe(AP_NetworkItem item);
 	void CreateDescriptor(AP_NetworkItem item);
-	void CreateHubSchematic(TMap<FName, FAssetData> recipeAssets, TMap<FName, FAssetData> itemDescriptorAssets, FString name, TSubclassOf<UFGSchematic> factorySchematic, TArray<AP_NetworkItem> items);
+	void CreateHubSchematic(TMap<FName, FAssetData> recipeAssets, TMap<FName, FAssetData> itemDescriptorAssets, FString name, TSubclassOf<UFGSchematic> factorySchematic, TArray<AP_NetworkItem> apItems);
+	void CreateMamSchematic(TMap<FName, FAssetData> recipeAssets, TMap<FName, FAssetData> itemDescriptorAssets, FString name, TSubclassOf<UFGSchematic> factorySchematic, TArray<AP_NetworkItem> apItems);
 	
 	UFGRecipe* GetRecipeByName(TMap<FName, FAssetData> recipeAssets, FString name);
 	UFGItemDescriptor* GetItemDescriptorByName(TMap<FName, FAssetData> itemDescriptorAssets, FString name);
