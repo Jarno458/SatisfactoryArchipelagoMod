@@ -1,5 +1,4 @@
 #include "Data/ApSlotData.h"
-#include "Data/ApItemIdMapping.h"
 
 FApSlotData::FApSlotData() {
 }

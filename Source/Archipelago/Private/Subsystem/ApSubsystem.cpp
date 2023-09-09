@@ -144,10 +144,10 @@ void AApSubsystem::OnSchematicCompleted(TSubclassOf<class UFGSchematic> schemati
 
 	ESchematicType type = UFGSchematic::GetType(schematic);
 
-	if (type != ESchematicType::EST_Milestone || !locationsPerMileStone.Contains(schematic))
+	if (type != ESchematicType::EST_Milestone || !locationsPerMilestone.Contains(schematic))
 		return;
 
-	for (auto& location : locationsPerMileStone[schematic])
+	for (auto& location : locationsPerMilestone[schematic])
 		AP_SendItem(location.location);
 }
 
@@ -251,7 +251,7 @@ void AApSubsystem::Tick(float DeltaTime) {
 
 			UFGItemDescriptor* itemDescriptor = GetItemDescriptorByName(itemDescriptorAssets, UApMappings::ItemIdToGameItemDescriptor[item]);
 
-			//PortalItems.Enqueue(itemDescriptor->GetClass());
+			portalSubsystem->Enqueue(itemDescriptor->GetClass());
 		} else if (auto trapName = UApMappings::ItemIdToTrap.Find(item)) {
 			AApTrapSubsystem::Get()->SpawnTrap(*trapName, nullptr);
 		}
@@ -304,10 +304,10 @@ void AApSubsystem::ParseScoutedItems() {
 				schematicsPerMilestone.Add(milestone, schematic);
 			}
 
-			if (!locationsPerMileStone.Contains(schematicsPerMilestone[milestone])) {
-				locationsPerMileStone.Add(schematicsPerMilestone[milestone], TArray<AP_NetworkItem>{ location });
+			if (!locationsPerMilestone.Contains(schematicsPerMilestone[milestone])) {
+				locationsPerMilestone.Add(schematicsPerMilestone[milestone], TArray<AP_NetworkItem>{ location });
 			} else {
-				locationsPerMileStone[schematicsPerMilestone[milestone]].Add(location);
+				locationsPerMilestone[schematicsPerMilestone[milestone]].Add(location);
 			}
 		}
 	}
@@ -322,7 +322,7 @@ void AApSubsystem::ParseScoutedItems() {
 	// BP_WAT1 and BP_WAT2 (alien artifacts)
 	itemDescriptorAssets.Append(UApUtils::GetBlueprintAssetsIn("/Game/FactoryGame/Prototype", TArray<FString>{ "Desc_", "BP_" }));
 
-	for (auto& itemPerMilestone : locationsPerMileStone) {
+	for (auto& itemPerMilestone : locationsPerMilestone) {
 		FString schematicName;
 		for (auto schematicAndName : schematicsPerMilestone) {
 			if (itemPerMilestone.Key == schematicAndName.Value) {
