@@ -1,6 +1,5 @@
 #include "Subsystem/ApSubsystem.h"
 #include "ApUtils.h"
-#include "Data/ApItemIdMapping.h"
 
 DEFINE_LOG_CATEGORY(LogApSubsystem);
 
@@ -42,6 +41,7 @@ void AApSubsystem::BeginPlay() {
 	SManager = AFGSchematicManager::Get(world);
 	PManager  = AFGGamePhaseManager::Get(world);
 	resourceSinkSubsystem = AFGResourceSinkSubsystem::Get(world);
+	portalSubsystem = AApPortalSubsystem::Get(world);
 	
 	RManager->ResearchCompletedDelegate.AddDynamic(this, &AApSubsystem::OnMamResearchCompleted);
 	SManager->PurchasedSchematicDelegate.AddDynamic(this, &AApSubsystem::OnSchematicCompleted);
@@ -72,14 +72,13 @@ void AApSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase) {
 		ConnectToArchipelago(config);
 
 		UE_LOG(LogApSubsystem, Display, TEXT("Generating schematics from AP Item IDs..."));
-		for (auto& item : UApItemIdMapping::ItemIdToGameRecipe)
+		for (auto& item : UApMappings::ItemIdToGameRecipe)
 			CreateSchematicBoundToItemId(item.Key);
-		for (auto& item : UApItemIdMapping::ItemIdToGameBuilding)
+		for (auto& item : UApMappings::ItemIdToGameBuilding)
 			CreateSchematicBoundToItemId(item.Key);
 
 		auto trapSystem = AApTrapSubsystem::Get();
-
-			
+					
 		FDateTime connectingStartedTime = FDateTime::Now();
 		FGenericPlatformProcess::ConditionalSleep([this, config, connectingStartedTime]() { return InitializeTick(config, connectingStartedTime); }, 0.5);
 	} else if (phase == ELifecyclePhase::POST_INITIALIZATION) {
@@ -136,13 +135,7 @@ void AApSubsystem::ConnectToArchipelago(FApConfigurationStruct config) {
 void AApSubsystem::OnMamResearchCompleted(TSubclassOf<class UFGSchematic> schematic) {
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubSystem::OnResearchCompleted(schematic), MAM Research Completed"));
 
-	ESchematicType type = UFGSchematic::GetType(schematic);
-
-	if (type != ESchematicType::EST_MAM || !locationsPerMamNode.Contains(schematic))
-		return;
-
-	for (auto& location : locationsPerMamNode[schematic])
-		AP_SendItem(location.location);
+	//if (schematic.) //if name is Archipelago #xxxx send check to server
 }
 
 
@@ -151,10 +144,10 @@ void AApSubsystem::OnSchematicCompleted(TSubclassOf<class UFGSchematic> schemati
 
 	ESchematicType type = UFGSchematic::GetType(schematic);
 
-	if (type != ESchematicType::EST_Milestone || !locationsPerMilestone.Contains(schematic))
+	if (type != ESchematicType::EST_Milestone || !locationsPerMileStone.Contains(schematic))
 		return;
 
-	for (auto& location : locationsPerMilestone[schematic])
+	for (auto& location : locationsPerMileStone[schematic])
 		AP_SendItem(location.location);
 }
 
@@ -252,14 +245,14 @@ void AApSubsystem::Tick(float DeltaTime) {
 	while (ReceivedItems.Dequeue(item)) {
 		if (ItemSchematics.Contains(item)) {
 			SManager->GiveAccessToSchematic(ItemSchematics[item], nullptr);
-		} else if (UApItemIdMapping::ItemIdToGameItemDescriptor.Contains(item)) {
+		} else if (UApMappings::ItemIdToGameItemDescriptor.Contains(item)) {
 			TMap<FName, FAssetData> itemDescriptorAssets = UApUtils::GetBlueprintAssetsIn("/Game/FactoryGame/Resource", TArray<FString>{ "Desc_", "BP_" });
 			itemDescriptorAssets.Append(UApUtils::GetBlueprintAssetsIn("/Game/FactoryGame/Equipment", TArray<FString>{ "Desc_", "BP_" }));
 
-			UFGItemDescriptor* itemDescriptor = GetItemDescriptorByName(itemDescriptorAssets, UApItemIdMapping::ItemIdToGameItemDescriptor[item]);
+			UFGItemDescriptor* itemDescriptor = GetItemDescriptorByName(itemDescriptorAssets, UApMappings::ItemIdToGameItemDescriptor[item]);
 
-			PortalItems.Enqueue(itemDescriptor->GetClass());
-		} else if (auto trapName = UApItemIdMapping::ItemIdToTrap.Find(item)) {
+			//PortalItems.Enqueue(itemDescriptor->GetClass());
+		} else if (auto trapName = UApMappings::ItemIdToTrap.Find(item)) {
 			AApTrapSubsystem::Get()->SpawnTrap(*trapName, nullptr);
 		}
 	}
@@ -267,9 +260,9 @@ void AApSubsystem::Tick(float DeltaTime) {
 	HandleAPMessages();
 
 	if (!hasSentGoal) {
-		const bool spElevatorGoalReached = slotData.finalSpaceElevatorTier > 0 && PManager->GetGamePhase() >= slotData.finalSpaceElevatorTier;
-		const bool sinkPointsGoalReached = slotData.finalResourceSinkPoints > 0 && resourceSinkSubsystem->GetNumTotalPoints(EResourceSinkTrack::RST_Default) >= slotData.finalResourceSinkPoints;
-		if (spElevatorGoalReached || sinkPointsGoalReached) {
+		if (	 (slotData.finalSpaceElevatorTier  > 0 && PManager->GetGamePhase() >= slotData.finalSpaceElevatorTier)
+			 || (slotData.finalResourceSinkPoints > 0 && resourceSinkSubsystem->GetNumTotalPoints(EResourceSinkTrack::RST_Default) >= slotData.finalResourceSinkPoints)
+		) {
 			UE_LOG(LogApSubsystem, Display, TEXT("Sending goal completion to server"));
 			AP_StoryComplete();
 			hasSentGoal = true;
@@ -301,9 +294,9 @@ void AApSubsystem::ParseScoutedItems() {
 
 	TMap<FString, TSubclassOf<UFGSchematic>> schematicsPerMilestone = TMap<FString, TSubclassOf<UFGSchematic>>();
 
-	for (auto& apLocation : scoutedLocations) {
-		if (apLocation.locationName.starts_with("Hub")) {
-			std::string milestoneString = apLocation.locationName.substr(0, apLocation.locationName.find(","));
+	for (auto& location : scoutedLocations) {
+		if (location.locationName.starts_with("Hub")) {
+			std::string milestoneString = location.locationName.substr(0, location.locationName.find(","));
 			FString milestone = UApUtils::FStr(milestoneString);
 
 			if (!schematicsPerMilestone.Contains(milestone)) {
@@ -311,32 +304,15 @@ void AApSubsystem::ParseScoutedItems() {
 				schematicsPerMilestone.Add(milestone, schematic);
 			}
 
-			if (!locationsPerMilestone.Contains(schematicsPerMilestone[milestone])) {
-				locationsPerMilestone.Add(schematicsPerMilestone[milestone], TArray<AP_NetworkItem>{ apLocation });
+			if (!locationsPerMileStone.Contains(schematicsPerMilestone[milestone])) {
+				locationsPerMileStone.Add(schematicsPerMilestone[milestone], TArray<AP_NetworkItem>{ location });
 			} else {
-				locationsPerMilestone[schematicsPerMilestone[milestone]].Add(apLocation);
-			}
-		} else if (apLocation.locationName.starts_with("Mam")) {
-			UE_LOG(LogApSubsystem, Verbose, TEXT("AP Location %s"), *UApUtils::FStr(apLocation.locationName));
-
-			// TODO verify this matches MAM node server naming pattern
-			std::string milestoneString = apLocation.locationName.substr(0, apLocation.locationName.find(","));
-			FString milestone = UApUtils::FStr(milestoneString);
-
-			if (!schematicsPerMilestone.Contains(milestone)) {
-				TSubclassOf<UFGSchematic> schematic = UApUtils::FindOrCreateClass(TEXT("/Archipelago/"), *milestone, UFGSchematic::StaticClass());
-				schematicsPerMilestone.Add(milestone, schematic);
-			}
-
-			if (!locationsPerMamNode.Contains(schematicsPerMilestone[milestone])) {
-				locationsPerMamNode.Add(schematicsPerMilestone[milestone], TArray<AP_NetworkItem>{ apLocation });
-			} else {
-				locationsPerMamNode[schematicsPerMilestone[milestone]].Add(apLocation);
+				locationsPerMileStone[schematicsPerMilestone[milestone]].Add(location);
 			}
 		}
 	}
 
-	UE_LOG(LogApSubsystem, Display, TEXT("Preparing game asset data"));
+	UE_LOG(LogApSubsystem, Display, TEXT("Generating HUB milestones"));
 
 	TMap<FName, FAssetData> recipeAssets = UApUtils::GetBlueprintAssetsIn("/Game/FactoryGame/Recipes", TArray<FString>{ "Recipe_" });
 	recipeAssets.Append(UApUtils::GetBlueprintAssetsIn("/Game/FactoryGame/Equipment", TArray<FString>{ "Recipe_" }));
@@ -346,9 +322,7 @@ void AApSubsystem::ParseScoutedItems() {
 	// BP_WAT1 and BP_WAT2 (alien artifacts)
 	itemDescriptorAssets.Append(UApUtils::GetBlueprintAssetsIn("/Game/FactoryGame/Prototype", TArray<FString>{ "Desc_", "BP_" }));
 
-	UE_LOG(LogApSubsystem, Display, TEXT("Generating HUB milestones"));
-
-	for (auto& itemPerMilestone : locationsPerMilestone) {
+	for (auto& itemPerMilestone : locationsPerMileStone) {
 		FString schematicName;
 		for (auto schematicAndName : schematicsPerMilestone) {
 			if (itemPerMilestone.Key == schematicAndName.Value) {
@@ -360,28 +334,12 @@ void AApSubsystem::ParseScoutedItems() {
 		CreateHubSchematic(recipeAssets, itemDescriptorAssets, schematicName, itemPerMilestone.Key, itemPerMilestone.Value);
 	}
 
-	UE_LOG(LogApSubsystem, Display, TEXT("Generating MAM nodes"));
-
-	for (auto& itemPerMamNode : locationsPerMamNode) {
-		FString schematicName;
-		for (auto schematicAndName : schematicsPerMilestone) {
-			if (itemPerMamNode.Key == schematicAndName.Value) {
-				schematicName = schematicAndName.Key;
-				break;
-			}
-		}
-
-		CreateMamSchematic(recipeAssets, itemDescriptorAssets, schematicName, itemPerMamNode.Key, itemPerMamNode.Value);
-
-		// TODO replace the node contained in the game's BPD research node with this schematic
-	}
-
 	scoutedLocations.Empty();
 	shouldParseItemsToScout = false;
 }
 
 void AApSubsystem::CreateSchematicBoundToItemId(int64_t item) {
-	FString recipy = UApItemIdMapping::ItemIdToGameBuilding.Contains(item) ? UApItemIdMapping::ItemIdToGameBuilding[item] : UApItemIdMapping::ItemIdToGameRecipe[item];
+	FString recipy = UApMappings::ItemIdToGameBuilding.Contains(item) ? UApMappings::ItemIdToGameBuilding[item] : UApMappings::ItemIdToGameRecipe[item];
 	FString name = UApUtils::FStr("AP_ItemId_" + std::to_string(item));
 	// https://raw.githubusercontent.com/budak7273/ContentLib_Documentation/main/JsonSchemas/CL_Schematic.json
 	FString json = FString::Printf(TEXT(R"({
@@ -450,7 +408,7 @@ void AApSubsystem::CreateDescriptor(AP_NetworkItem item) {
 	//contentRegistry->RegisterItem(FName(TEXT("Archipelago")), factoryItem); //no idea how/where to register items
 }
 
-void AApSubsystem::CreateHubSchematic(TMap<FName, FAssetData> recipeAssets, TMap<FName, FAssetData> itemDescriptorAssets, FString name, TSubclassOf<UFGSchematic> factorySchematic, TArray<AP_NetworkItem> apItems) {
+void AApSubsystem::CreateHubSchematic(TMap<FName, FAssetData> recipeAssets, TMap<FName, FAssetData> itemDescriptorAssets, FString name, TSubclassOf<UFGSchematic> factorySchematic, TArray<AP_NetworkItem> items) {
 	int delimeterPos;
 	name.FindChar('-', delimeterPos);
 	int32 tier = FCString::Atoi(*name.Mid(delimeterPos - 1, 1));
@@ -479,32 +437,7 @@ void AApSubsystem::CreateHubSchematic(TMap<FName, FAssetData> recipeAssets, TMap
 
 	FContentLib_Schematic schematic = UCLSchematicBPFLib::GenerateCLSchematicFromString(json);
 
-	for (auto& item : apItems)
-		schematic.InfoCards.Add(CreateUnlockInfoOnly(recipeAssets, itemDescriptorAssets, item));
-
-	UCLSchematicBPFLib::InitSchematicFromStruct(schematic, factorySchematic, contentLibSubsystem);
-
-	contentRegistry->RegisterSchematic(FName(TEXT("Archipelago")), factorySchematic);
-}
-
-void AApSubsystem::CreateMamSchematic(TMap<FName, FAssetData> recipeAssets, TMap<FName, FAssetData> itemDescriptorAssets, FString name, TSubclassOf<UFGSchematic> factorySchematic, TArray<AP_NetworkItem> apItems) {
-	// TODO mam node costs
-	FString costs = "";
-	FString description = "TODO MAM Node Descriptions, probably what node this used to be";
-
-	// https://raw.githubusercontent.com/budak7273/ContentLib_Documentation/main/JsonSchemas/CL_Schematic.json
-	FString json = FString::Printf(TEXT(R"({
-		"Name": "%s",
-		"Description": "%s",
-		"Type": "MAM",
-		"Time": 3,
-		"VisualKit": "Kit_AP_Logo",
-		"Cost": [ %s ]
-	})"), *name, *description, *costs);
-
-	FContentLib_Schematic schematic = UCLSchematicBPFLib::GenerateCLSchematicFromString(json);
-
-	for (auto& item : apItems)
+	for (auto& item : items)
 		schematic.InfoCards.Add(CreateUnlockInfoOnly(recipeAssets, itemDescriptorAssets, item));
 
 	UCLSchematicBPFLib::InitSchematicFromStruct(schematic, factorySchematic, contentLibSubsystem);
@@ -533,11 +466,11 @@ FContentLib_UnlockInfoOnly AApSubsystem::CreateUnlockInfoOnly(TMap<FName, FAsset
 
 		infoCard.mUnlockName = UApUtils::FText(item.itemName);
 
-		if (UApItemIdMapping::ItemIdToGameBuilding.Contains(item.item)) {
+		if (UApMappings::ItemIdToGameBuilding.Contains(item.item)) {
 			UpdateInfoOnlyUnlockWithBuildingInfo(&infoCard, Args, recipeAssets, &item);
-		} else if (UApItemIdMapping::ItemIdToGameRecipe.Contains(item.item)) {
+		} else if (UApMappings::ItemIdToGameRecipe.Contains(item.item)) {
 			UpdateInfoOnlyUnlockWithRecipeInfo(&infoCard, Args, recipeAssets, &item);
-		} else if (UApItemIdMapping::ItemIdToGameItemDescriptor.Contains(item.item)) {
+		} else if (UApMappings::ItemIdToGameItemDescriptor.Contains(item.item)) {
 			UpdateInfoOnlyUnlockWithItemInfo(&infoCard, Args, itemDescriptorAssets, &item);
 		} else {
 			UpdateInfoOnlyUnlockWithGenericApInfo(&infoCard, Args, &item);
@@ -554,7 +487,7 @@ FContentLib_UnlockInfoOnly AApSubsystem::CreateUnlockInfoOnly(TMap<FName, FAsset
 }
 
 void AApSubsystem::UpdateInfoOnlyUnlockWithBuildingInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, TMap<FName, FAssetData> buildingRecipyAssets, AP_NetworkItem* item) {
-	UFGRecipe* recipe = GetRecipeByName(buildingRecipyAssets, UApItemIdMapping::ItemIdToGameBuilding[item->item]);
+	UFGRecipe* recipe = GetRecipeByName(buildingRecipyAssets, UApMappings::ItemIdToGameBuilding[item->item]);
 	UFGItemDescriptor* itemDescriptor = recipe->GetProducts()[0].ItemClass.GetDefaultObject();
 
 	infoCard->BigIcon = infoCard->SmallIcon = UApUtils::GetImagePathForItem(itemDescriptor);
@@ -563,7 +496,8 @@ void AApSubsystem::UpdateInfoOnlyUnlockWithBuildingInfo(FContentLib_UnlockInfoOn
 }
 
 void AApSubsystem::UpdateInfoOnlyUnlockWithRecipeInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, TMap<FName, FAssetData> recipeAssets, AP_NetworkItem* item) {
-	UFGRecipe* recipe = GetRecipeByName(recipeAssets, UApItemIdMapping::ItemIdToGameRecipe[item->item]);
+	FString recipy = UApMappings::ItemIdToGameBuilding.Contains(item->item) ? UApMappings::ItemIdToGameBuilding[item->item] : UApMappings::ItemIdToGameRecipe[item->item];
+	UFGRecipe* recipe = GetRecipeByName(recipeAssets, UApMappings::ItemIdToGameRecipe[item->item]);
 	UFGItemDescriptor* itemDescriptor = recipe->GetProducts()[0].ItemClass.GetDefaultObject();
 
 	TArray<FString> BuildingArray;
@@ -603,7 +537,7 @@ void AApSubsystem::UpdateInfoOnlyUnlockWithRecipeInfo(FContentLib_UnlockInfoOnly
 }
 
 void AApSubsystem::UpdateInfoOnlyUnlockWithItemInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, TMap<FName, FAssetData> itemDescriptorAssets, AP_NetworkItem* item) {
-	UFGItemDescriptor* itemDescriptor = GetItemDescriptorByName(itemDescriptorAssets, UApItemIdMapping::ItemIdToGameItemDescriptor[item->item]);
+	UFGItemDescriptor* itemDescriptor = GetItemDescriptorByName(itemDescriptorAssets, UApMappings::ItemIdToGameItemDescriptor[item->item]);
 
 	infoCard->BigIcon = infoCard->SmallIcon = UApUtils::GetImagePathForItem(itemDescriptor);
 	infoCard->CategoryIcon = TEXT("/Game/FactoryGame/Buildable/Factory/TradingPost/UI/RecipeIcons/Recipe_Icon_Item.Recipe_Icon_Item");

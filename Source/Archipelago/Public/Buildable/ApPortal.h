@@ -34,15 +34,16 @@ private:
 
 	int portalId;
 
-	int targetPlayerSlot = 1;
+	int targetPlayerSlot = -1;
+
+	bool camReceiveOutput = false;
 
 public:
 	UFUNCTION()
 	void CheckPower(bool newHasPower) const;
 
-	virtual bool Factory_HasPower() const override;
-	//virtual bool IsConfigured() const override;
-	//virtual bool Factory_IsProducing() const override;
+	FORCEINLINE bool CanReceiveOutput() const { return camReceiveOutput; };
+
 	virtual bool CanProduce_Implementation() const override;
 
 	virtual void Factory_Tick(float dt) override;

@@ -1,5 +1,8 @@
 //Game/FactoryGame/Schematics/Schematic_StartingRecipes.Schematic_StartingRecipes_C
 {
     "$schema": "https://raw.githubusercontent.com/budak7273/ContentLib_Documentation/main/JsonSchemas/CL_Schematic.json",
-    "Recipes": ["Recipe_ArchipelagoPortal"]
+    "Recipes": [
+        "Recipe_ArchipelagoPortal",
+        "Recipe_ConveyorBeltMk5"
+    ]
 }

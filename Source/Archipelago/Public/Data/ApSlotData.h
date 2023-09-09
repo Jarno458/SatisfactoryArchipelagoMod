@@ -3,7 +3,11 @@
 #pragma once
 
 #include "CoreMinimal.h"
+
 #include "Engine/UserDefinedStruct.h"
+
+#include "ApMappings.h"
+
 #include "ApSlotData.generated.h"
 
 /**
@@ -17,6 +21,9 @@ public:
 	FApSlotData();
 
 	bool hasLoadedSlotData;
+
+	UPROPERTY(BlueprintReadOnly)
+		int currentPlayerTeam;
 
 	UPROPERTY(BlueprintReadOnly)
 		int currentPlayerSlot;

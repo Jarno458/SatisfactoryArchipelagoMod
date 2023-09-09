@@ -2,7 +2,6 @@
 
 #include "CoreMinimal.h"
 #include "Subsystem/ModSubsystem.h"
-#include "Subsystem/ApSubsystem.h"
 
 #include "Buildable/ApPortal.h"
 
@@ -30,15 +29,15 @@ public:
 	static AApPortalSubsystem* Get(class UWorld* world);
 
 private:
-	AApSubsystem* apSubSystem;
-
-	TQueue<FInventoryItem> OutputQueue;
+	TQueue<FInventoryItem> OutputQueue = TQueue<FInventoryItem>();
 
 	int lastUsedPortalIndex;
 
 public:
 	UPROPERTY(BlueprintReadOnly) //blueprint likely dont need this
 	TSet<const AApPortal*> BuiltPortals;
+
+	void Enqueue(TSubclassOf<UFGItemDescriptor> cls);
 
 	void RegisterPortal(const AApPortal* portal);
 	void UnRegisterPortal(const AApPortal* portal);

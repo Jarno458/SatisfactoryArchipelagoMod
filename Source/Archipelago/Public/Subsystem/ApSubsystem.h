@@ -37,6 +37,8 @@
 
 #include "ApConfigurationStruct.h"
 #include "Data/ApSlotData.h"
+#include "Data/ApMappings.h"
+#include "ApPortalSubsystem.h"
 
 #include "ContentLibSubsystem.h"
 #include "CLSchematicBPFLib.h"
@@ -63,7 +65,6 @@ enum EApConnectionState {
 UCLASS()
 class ARCHIPELAGO_API AApSubsystem : public AModSubsystem, public IFGSaveInterface
 {
-	friend struct FApSlotData;
 	GENERATED_BODY()
 
 public:
@@ -90,8 +91,6 @@ public:
 	UPROPERTY(BlueprintReadOnly)
 	FText ConnectionStateDescription;
 
-	TQueue<TSubclassOf<UFGItemDescriptor>> PortalItems;
-
 	// Get a copy of the subsystem
 	UFUNCTION(BlueprintCallable, BlueprintPure, meta = (DisplayName = "Get ApSubsystem"))
 	static AApSubsystem* Get();
@@ -102,6 +101,7 @@ public:
 	// Called every frame
 	bool InitializeTick(FApConfigurationStruct config, FDateTime connectingStartedTime);
 
+	UFUNCTION(BlueprintCallable)
 	void DispatchLifecycleEvent(ELifecyclePhase phase);
 
 	void MonitorDataStoreValue(std::string key, AP_DataType dataType, std::string defaultValue, std::function<void(AP_SetReply)> callback);
@@ -109,6 +109,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	TEnumAsByte<EApConnectionState> GetConnectionState();
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	FORCEINLINE FApSlotData GetSlotData() const { return slotData; };
 
 private:
 	static std::map<std::string, std::function<void(AP_SetReply)>> callbacks;
@@ -127,6 +130,7 @@ private:
 	UContentLibSubsystem* contentLibSubsystem;
 	AModContentRegistry* contentRegistry;
 	AFGResourceSinkSubsystem* resourceSinkSubsystem;
+	AApPortalSubsystem* portalSubsystem;
 
 	TMap<TSubclassOf<class UFGSchematic>, TArray<AP_NetworkItem>> locationsPerMilestone;
 	TMap<TSubclassOf<class UFGSchematic>, TArray<AP_NetworkItem>> locationsPerMamNode;

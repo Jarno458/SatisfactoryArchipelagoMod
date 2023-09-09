@@ -28,8 +28,6 @@ void AApPortalSubsystem::BeginPlay() {
 	Super::BeginPlay();
 
 	UE_LOG(LogApPortalSubsystem, Display, TEXT("AApPortalSubsystem::BeginPlay()"));
-
-	apSubSystem = AApSubsystem::Get(GetWorld());
 }
 
 void AApPortalSubsystem::Tick(float dt) {
@@ -39,16 +37,6 @@ void AApPortalSubsystem::Tick(float dt) {
 		return;
 	}
 
-	TSubclassOf<UFGItemDescriptor> cls;
-
-	if (apSubSystem->PortalItems.Dequeue(cls)) {
-		int stackSize = UFGItemDescriptor::GetStackSize(cls);
-
-		for (size_t i = 0; i < stackSize; i++) {
-			OutputQueue.Enqueue(FInventoryItem(cls));
-		}
-	}
-
 	if(OutputQueue.IsEmpty())
 		return;
 
@@ -56,11 +44,19 @@ void AApPortalSubsystem::Tick(float dt) {
 		if (OutputQueue.IsEmpty())
 			return;
 
-		if (portal->outputQueue.IsEmpty()) {
+		if (portal->CanReceiveOutput() && portal->outputQueue.IsEmpty()) {
 			FInventoryItem item;
 			OutputQueue.Dequeue(item);
 			portal->outputQueue.Enqueue(item);
 		}
+	}
+}
+
+void AApPortalSubsystem::Enqueue(TSubclassOf<UFGItemDescriptor> cls) {
+	int stackSize = UFGItemDescriptor::GetStackSize(cls);
+
+	for (size_t i = 0; i < stackSize; i++) {
+		OutputQueue.Enqueue(FInventoryItem(cls));
 	}
 }
 

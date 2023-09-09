@@ -13,18 +13,7 @@ AApPortal::AApPortal() : Super() {
 	mSignificanceRange = 18000;
 	MaxRenderDistance = -1;
 
-	//this->mFactoryTickFunction.TickGroup = TG_PrePhysics;
-	//this->mFactoryTickFunction.EndTickGroup = TG_PrePhysics;
-	// 
-	//mFactoryTickFunction.bTickEvenWhenPaused = false;
-	//mFactoryTickFunction.bCanEverTick = true;
-	//mFactoryTickFunction.bStartWithTickEnabled = true;
-	//mFactoryTickFunction.bAllowTickOnDedicatedServer = true;
-	//mFactoryTickFunction.TickInterval = 0;
-
 	bReplicates = true;
-
-	//this->NetCullDistanceSquared = 5624999936;
 
 	mPowerConsumption = 10;
 }
@@ -32,9 +21,6 @@ AApPortal::AApPortal() : Super() {
 void AApPortal::BeginPlay() {
 	Super::BeginPlay();
 
-	//if (!mPowerInfo) {
-	//	mPowerInfo = Cast<UFGPowerInfoComponent>(GetComponentByClass(UFGPowerInfoComponent::StaticClass()));
-	//}
 	mPowerInfo->OnHasPowerChanged.BindUFunction(this, "CheckPower");
 
 	for (UFGFactoryConnectionComponent* connection : GetConnectionComponents()) {
@@ -48,13 +34,9 @@ void AApPortal::BeginPlay() {
 		return;
 	}
 
-	//Factory_StartProducing();
-
-	
-
 	//TODO lock item from getting inserted until we implement sending
 	UFGInventoryComponent* inventory = GetStorageInventory();
-	//inventory->SetLocked(true);
+	inventory->SetLocked(true);
 }
 
 void AApPortal::EndPlay(const EEndPlayReason::Type reason) {
@@ -64,26 +46,6 @@ void AApPortal::EndPlay(const EEndPlayReason::Type reason) {
 		return;
 	}
 }
-
-/*bool AApPortal::IsConfigured() const {
-	return true;
-}*/
-
-bool AApPortal::Factory_HasPower() const {
-	bool hasPowah = Super::Factory_HasPower();
-
-	/*if (hasPowah) {
-		AApPortalSubsystem::Get(GetWorld())->RegisterPortal(this);
-	}	else {
-		AApPortalSubsystem::Get(GetWorld())->UnRegisterPortal(this);
-	}*/
-
-	return hasPowah;
-}
-
-/*bool AApPortal::Factory_IsProducing() const {
-	return true;
-}*/
 
 bool AApPortal::CanProduce_Implementation() const {
 	return HasPower();
@@ -100,14 +62,16 @@ void AApPortal::CheckPower(bool newHasPower) const {
 void AApPortal::Factory_Tick(float dt) {
 	Super::Factory_Tick(dt);
 
-	/*UFGInventoryComponent* inventory = GetStorageInventory();
+	UFGInventoryComponent* inventory = GetStorageInventory();
 
 	if (inventory != nullptr) {
 		if (targetPlayerSlot <= 0)
 			inventory->SetLocked(true);
 		else
 			inventory->SetLocked(false);
-	}*/
+	}
+
+	camReceiveOutput = CanProduce() && output->IsConnected();
 }
 
 bool AApPortal::Factory_PeekOutput_Implementation(const class UFGFactoryConnectionComponent* connection, TArray<FInventoryItem>& out_items, TSubclassOf<UFGItemDescriptor> type) const {
