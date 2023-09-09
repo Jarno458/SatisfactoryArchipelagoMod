@@ -145,10 +145,10 @@ void AApSubsystem::OnSchematicCompleted(TSubclassOf<class UFGSchematic> schemati
 
 	ESchematicType type = UFGSchematic::GetType(schematic);
 
-	if (type != ESchematicType::EST_Milestone || !locationsPerMileStone.Contains(schematic))
+	if (type != ESchematicType::EST_Milestone || !locationsPerMilestone.Contains(schematic))
 		return;
 
-	for (auto& location : locationsPerMileStone[schematic])
+	for (auto& location : locationsPerMilestone[schematic])
 		AP_SendItem(location.location);
 }
 
@@ -295,9 +295,9 @@ void AApSubsystem::ParseScoutedItems() {
 
 	TMap<FString, TSubclassOf<UFGSchematic>> schematicsPerMilestone = TMap<FString, TSubclassOf<UFGSchematic>>();
 
-	for (auto& location : scoutedLocations) {
-		if (location.locationName.starts_with("Hub")) {
-			std::string milestoneString = location.locationName.substr(0, location.locationName.find(","));
+	for (auto& apLocation : scoutedLocations) {
+		if (apLocation.locationName.starts_with("Hub")) {
+			std::string milestoneString = apLocation.locationName.substr(0, apLocation.locationName.find(","));
 			FString milestone = UApUtils::FStr(milestoneString);
 
 			if (!schematicsPerMilestone.Contains(milestone)) {
@@ -305,11 +305,13 @@ void AApSubsystem::ParseScoutedItems() {
 				schematicsPerMilestone.Add(milestone, schematic);
 			}
 
-			if (!locationsPerMileStone.Contains(schematicsPerMilestone[milestone])) {
-				locationsPerMileStone.Add(schematicsPerMilestone[milestone], TArray<AP_NetworkItem>{ location });
+			if (!locationsPerMilestone.Contains(schematicsPerMilestone[milestone])) {
+				locationsPerMilestone.Add(schematicsPerMilestone[milestone], TArray<AP_NetworkItem>{ apLocation });
 			} else {
-				locationsPerMileStone[schematicsPerMilestone[milestone]].Add(location);
+				locationsPerMilestone[schematicsPerMilestone[milestone]].Add(apLocation);
 			}
+		} else if (apLocation.locationName.starts_with("Mam")) {
+			UE_LOG(LogApSubsystem, Verbose, TEXT("AP Location %s"), *UApUtils::FStr(apLocation.locationName));
 		}
 	}
 
@@ -323,7 +325,7 @@ void AApSubsystem::ParseScoutedItems() {
 	// BP_WAT1 and BP_WAT2 (alien artifacts)
 	itemDescriptorAssets.Append(UApUtils::GetBlueprintAssetsIn("/Game/FactoryGame/Prototype", TArray<FString>{ "Desc_", "BP_" }));
 
-	for (auto& itemPerMilestone : locationsPerMileStone) {
+	for (auto& itemPerMilestone : locationsPerMilestone) {
 		FString schematicName;
 		for (auto schematicAndName : schematicsPerMilestone) {
 			if (itemPerMilestone.Key == schematicAndName.Value) {
