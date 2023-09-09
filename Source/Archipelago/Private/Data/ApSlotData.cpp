@@ -1,4 +1,5 @@
 #include "Data/ApSlotData.h"
+#include "Data/ApItemIdMapping.h"
 
 FApSlotData::FApSlotData() {
 }
@@ -25,9 +26,9 @@ bool FApSlotData::ParseSlotData(std::string json, FApSlotData* data) {
 			for (TPair<FString, TSharedPtr<FJsonValue>> cost : milestone->AsObject()->Values) {
 				int itemId = FCString::Atoi(*cost.Key);
 
-				verify(AApSubsystem::ItemIdToGameItemDescriptor.Contains(itemId));
+				verify(UApItemIdMapping::ItemIdToGameItemDescriptor.Contains(itemId));
 
-				costs.Add(AApSubsystem::ItemIdToGameItemDescriptor[itemId], cost.Value->AsNumber());
+				costs.Add(UApItemIdMapping::ItemIdToGameItemDescriptor[itemId], cost.Value->AsNumber());
 			}
 
 			milestones.Add(costs);

@@ -113,13 +113,6 @@ public:
 private:
 	static std::map<std::string, std::function<void(AP_SetReply)>> callbacks;
 
-	// TODO move out to another component
-	static TMap<int64_t, FString> ItemIdToGameItemDescriptor;
-	static TMap<int64_t, FString> ItemIdToGameName2;
-	static TMap<int64_t, FString> ItemIdToGameRecipe;
-	static TMap<int64_t, FString> ItemIdToGameBuilding;
-	static TMap<int64_t, FName> ItemIdToTrap;
-
 	static void SetReplyCallback(AP_SetReply setReply);
 	static void ItemClearCallback();
 	static void ItemReceivedCallback(int64_t id, bool notify);
