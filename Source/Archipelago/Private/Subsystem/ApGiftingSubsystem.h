@@ -39,4 +39,7 @@ public:
 private:
 	void OpenGiftbox(const FApSlotData slotData);
 	void OnGiftsUpdated(AP_SetReply setReply);
+
+	TSubclassOf<UFGItemDescriptor> TryGetItemClassByName(FString name);
+	TSubclassOf<UFGItemDescriptor> TryGetItemByTraits(TArray<TSharedPtr<FJsonValue>> traits);
 };

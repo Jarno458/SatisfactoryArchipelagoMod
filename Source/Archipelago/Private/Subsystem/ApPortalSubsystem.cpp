@@ -52,10 +52,9 @@ void AApPortalSubsystem::Tick(float dt) {
 	}
 }
 
-void AApPortalSubsystem::Enqueue(TSubclassOf<UFGItemDescriptor> cls) {
-	int stackSize = UFGItemDescriptor::GetStackSize(cls);
+void AApPortalSubsystem::Enqueue(TSubclassOf<UFGItemDescriptor> cls, int amount) {
 
-	for (size_t i = 0; i < stackSize; i++) {
+	for (size_t i = 0; i < amount; i++) {
 		OutputQueue.Enqueue(FInventoryItem(cls));
 	}
 }

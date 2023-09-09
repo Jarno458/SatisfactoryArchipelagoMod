@@ -37,7 +37,7 @@ public:
 	UPROPERTY(BlueprintReadOnly) //blueprint likely dont need this
 	TSet<const AApPortal*> BuiltPortals;
 
-	void Enqueue(TSubclassOf<UFGItemDescriptor> cls);
+	void Enqueue(TSubclassOf<UFGItemDescriptor> cls, int amount);
 
 	void RegisterPortal(const AApPortal* portal);
 	void UnRegisterPortal(const AApPortal* portal);

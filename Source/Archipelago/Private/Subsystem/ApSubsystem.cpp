@@ -246,12 +246,12 @@ void AApSubsystem::Tick(float DeltaTime) {
 		if (ItemSchematics.Contains(item)) {
 			SManager->GiveAccessToSchematic(ItemSchematics[item], nullptr);
 		} else if (UApMappings::ItemIdToGameItemDescriptor.Contains(item)) {
-			TMap<FName, FAssetData> itemDescriptorAssets = UApUtils::GetBlueprintAssetsIn("/Game/FactoryGame/Resource", TArray<FString>{ "Desc_", "BP_" });
-			itemDescriptorAssets.Append(UApUtils::GetBlueprintAssetsIn("/Game/FactoryGame/Equipment", TArray<FString>{ "Desc_", "BP_" }));
+			TMap<FName, FAssetData> itemDescriptorAssets = UApUtils::GetItemDescriptorAssets();
+			UFGItemDescriptor* itemDescriptor = UApUtils::GetItemDescriptorByName(itemDescriptorAssets, UApMappings::ItemIdToGameItemDescriptor[item]);
+			TSubclassOf<UFGItemDescriptor> itemClass = itemDescriptor->GetClass();
+			int stackSize = UFGItemDescriptor::GetStackSize(itemClass);
 
-			UFGItemDescriptor* itemDescriptor = GetItemDescriptorByName(itemDescriptorAssets, UApMappings::ItemIdToGameItemDescriptor[item]);
-
-			portalSubsystem->Enqueue(itemDescriptor->GetClass());
+			portalSubsystem->Enqueue(itemClass, stackSize);
 		} else if (auto trapName = UApMappings::ItemIdToTrap.Find(item)) {
 			AApTrapSubsystem::Get()->SpawnTrap(*trapName, nullptr);
 		}
@@ -314,14 +314,9 @@ void AApSubsystem::ParseScoutedItems() {
 
 	UE_LOG(LogApSubsystem, Display, TEXT("Generating HUB milestones"));
 
-	TMap<FName, FAssetData> recipeAssets = UApUtils::GetBlueprintAssetsIn("/Game/FactoryGame/Recipes", TArray<FString>{ "Recipe_" });
-	recipeAssets.Append(UApUtils::GetBlueprintAssetsIn("/Game/FactoryGame/Equipment", TArray<FString>{ "Recipe_" }));
+	TMap<FName, FAssetData> recipeAssets = UApUtils::GetRecipeAssets();
+	TMap<FName, FAssetData> itemDescriptorAssets = UApUtils::GetItemDescriptorAssets();
 	
-	TMap<FName, FAssetData> itemDescriptorAssets = UApUtils::GetBlueprintAssetsIn("/Game/FactoryGame/Resource", TArray<FString>{ "Desc_", "BP_" });
-	itemDescriptorAssets.Append(UApUtils::GetBlueprintAssetsIn("/Game/FactoryGame/Equipment", TArray<FString>{ "Desc_", "BP_" }));
-	// BP_WAT1 and BP_WAT2 (alien artifacts)
-	itemDescriptorAssets.Append(UApUtils::GetBlueprintAssetsIn("/Game/FactoryGame/Prototype", TArray<FString>{ "Desc_", "BP_" }));
-
 	for (auto& itemPerMilestone : locationsPerMilestone) {
 		FString schematicName;
 		for (auto schematicAndName : schematicsPerMilestone) {
@@ -487,7 +482,7 @@ FContentLib_UnlockInfoOnly AApSubsystem::CreateUnlockInfoOnly(TMap<FName, FAsset
 }
 
 void AApSubsystem::UpdateInfoOnlyUnlockWithBuildingInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, TMap<FName, FAssetData> buildingRecipyAssets, AP_NetworkItem* item) {
-	UFGRecipe* recipe = GetRecipeByName(buildingRecipyAssets, UApMappings::ItemIdToGameBuilding[item->item]);
+	UFGRecipe* recipe = UApUtils::GetRecipeByName(buildingRecipyAssets, UApMappings::ItemIdToGameBuilding[item->item]);
 	UFGItemDescriptor* itemDescriptor = recipe->GetProducts()[0].ItemClass.GetDefaultObject();
 
 	infoCard->BigIcon = infoCard->SmallIcon = UApUtils::GetImagePathForItem(itemDescriptor);
@@ -497,7 +492,7 @@ void AApSubsystem::UpdateInfoOnlyUnlockWithBuildingInfo(FContentLib_UnlockInfoOn
 
 void AApSubsystem::UpdateInfoOnlyUnlockWithRecipeInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, TMap<FName, FAssetData> recipeAssets, AP_NetworkItem* item) {
 	FString recipy = UApMappings::ItemIdToGameBuilding.Contains(item->item) ? UApMappings::ItemIdToGameBuilding[item->item] : UApMappings::ItemIdToGameRecipe[item->item];
-	UFGRecipe* recipe = GetRecipeByName(recipeAssets, UApMappings::ItemIdToGameRecipe[item->item]);
+	UFGRecipe* recipe = UApUtils::GetRecipeByName(recipeAssets, UApMappings::ItemIdToGameRecipe[item->item]);
 	UFGItemDescriptor* itemDescriptor = recipe->GetProducts()[0].ItemClass.GetDefaultObject();
 
 	TArray<FString> BuildingArray;
@@ -537,7 +532,7 @@ void AApSubsystem::UpdateInfoOnlyUnlockWithRecipeInfo(FContentLib_UnlockInfoOnly
 }
 
 void AApSubsystem::UpdateInfoOnlyUnlockWithItemInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, TMap<FName, FAssetData> itemDescriptorAssets, AP_NetworkItem* item) {
-	UFGItemDescriptor* itemDescriptor = GetItemDescriptorByName(itemDescriptorAssets, UApMappings::ItemIdToGameItemDescriptor[item->item]);
+	UFGItemDescriptor* itemDescriptor = UApUtils::GetItemDescriptorByName(itemDescriptorAssets, UApMappings::ItemIdToGameItemDescriptor[item->item]);
 
 	infoCard->BigIcon = infoCard->SmallIcon = UApUtils::GetImagePathForItem(itemDescriptor);
 	infoCard->CategoryIcon = TEXT("/Game/FactoryGame/Buildable/Factory/TradingPost/UI/RecipeIcons/Recipe_Icon_Item.Recipe_Icon_Item");
@@ -614,16 +609,6 @@ void AApSubsystem::HintUnlockedHubRecipies() {
 	}
 
 	AP_SendLocationScouts(locations, 0);
-}
-
-UFGRecipe* AApSubsystem::GetRecipeByName(TMap<FName, FAssetData> recipeAssets, FString name) {
-	return Cast<UFGRecipe>(UApUtils::FindAssetByName(recipeAssets, name.Append("_C")));
-}
-
-UFGItemDescriptor* AApSubsystem::GetItemDescriptorByName(TMap<FName, FAssetData> itemDescriptorAssets, FString name) {
-	UObject* obj = UApUtils::FindAssetByName(itemDescriptorAssets, name);
-	verify(obj != nullptr);
-	return Cast<UFGItemDescriptor>(obj);
 }
 
 void AApSubsystem::TimeoutConnection() {

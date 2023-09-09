@@ -37,9 +37,13 @@ public:
 
 	static FString GetImagePathForItem(UFGItemDescriptor* item);
 
+	//We might want to move all Assets mamagent to its own place
 	static TMap<FName, FAssetData> GetBlueprintAssetsIn(FName&& packagePath, TArray<FString> namePrefixes);
-
 	static UObject* FindAssetByName(TMap<FName, FAssetData> assets, FString assetName);
+	static UFGRecipe* GetRecipeByName(TMap<FName, FAssetData> recipeAssets, FString name);
+	static UFGItemDescriptor* GetItemDescriptorByName(TMap<FName, FAssetData> itemDescriptorAssets, FString name);
+	static TMap<FName, FAssetData> GetItemDescriptorAssets();
+	static TMap<FName, FAssetData> GetRecipeAssets();
 
 	UFUNCTION(BlueprintCallable)
 	static UApBlueprintDataBridge* GetBlueprintDataBridge(UObject* worldContext);

@@ -42,7 +42,8 @@ void AApGiftingSubsystem::Tick(float dt) {
 			const FApSlotData slotData = ap->GetSlotData();
 			OpenGiftbox(slotData);
 
-			ap->MonitorDataStoreValue("Yolo", AP_DataType::Raw, "{}", [&](AP_SetReply setReply) {
+			FString giftboxKey = FString::Printf(TEXT("GiftBox;%i;%i"), slotData.currentPlayerTeam, slotData.currentPlayerSlot);
+			ap->MonitorDataStoreValue(TCHAR_TO_UTF8(*giftboxKey), AP_DataType::Raw, "{}", [&](AP_SetReply setReply) {
 				OnGiftsUpdated(setReply);
 			});
 
@@ -84,9 +85,56 @@ void AApGiftingSubsystem::OpenGiftbox(const FApSlotData slotData) {
 }
 
 void AApGiftingSubsystem::OnGiftsUpdated(AP_SetReply setReply) {
+	FString jsonString(((std::string*)setReply.value)->c_str());
 
+	const TSharedRef<TJsonReader<>> reader = TJsonReaderFactory<>::Create(*jsonString);
 
+	FJsonSerializer serializer;
+	TSharedPtr<FJsonObject> parsedJson;
 
+	serializer.Deserialize(reader, parsedJson);
+	if (!parsedJson.IsValid())
+		return;
+	
+	for (TPair<FString, TSharedPtr<FJsonValue>> pair : parsedJson->Values)
+	{
+		TSharedPtr<FJsonObject> gift = pair.Value->AsObject();
+		TSharedPtr<FJsonObject> giftItem = gift->GetObjectField("Item");
+		FString itemName = giftItem->GetStringField("Name");
+		int amount = giftItem->GetIntegerField("Amount");
+
+		TSubclassOf<UFGItemDescriptor> itemClass = TryGetItemClassByName(itemName);
+		if (itemClass == nullptr) {
+			TArray<TSharedPtr<FJsonValue>> giftTraits = gift->GetArrayField("Traits");
+			itemClass = TryGetItemByTraits(giftTraits);
+		}
+
+		if (itemClass != nullptr) {
+			portalSubSystem->Enqueue(itemClass, amount);
+		} else {
+			//TODO refund we dont want it
+		}
+	}
+}
+
+TSubclassOf<UFGItemDescriptor> AApGiftingSubsystem::TryGetItemClassByName(FString itemName) {
+	for (TPair<int64_t, FString> itemNamePair : UApMappings::ItemIdToGameItemDescriptor) {
+		if (itemNamePair.Value == itemName)
+		{
+			TMap<FName, FAssetData> itemDescriptorAssets = UApUtils::GetItemDescriptorAssets();
+			UFGItemDescriptor* itemDescriptor = UApUtils::GetItemDescriptorByName(itemDescriptorAssets, itemName);
+			
+			return itemDescriptor->GetClass();
+		}
+	}
+
+	return nullptr;
+}
+
+TSubclassOf<UFGItemDescriptor> AApGiftingSubsystem::TryGetItemByTraits(TArray<TSharedPtr<FJsonValue>> traits) {
+
+	
+	return nullptr;
 }
 
 #pragma optimize("", on)

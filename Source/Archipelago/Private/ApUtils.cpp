@@ -77,6 +77,39 @@ UObject* UApUtils::FindAssetByName(TMap<FName, FAssetData> assets, FString asset
 	return Cast<UBlueprintGeneratedClass>(assets[key].GetAsset())->GetDefaultObject();
 }
 
+UFGRecipe* UApUtils::GetRecipeByName(TMap<FName, FAssetData> recipeAssets, FString name) {
+	UObject* obj = FindAssetByName(recipeAssets, name.Append("_C"));
+	verify(obj != nullptr);
+	return Cast<UFGRecipe>(obj);
+}
+
+UFGItemDescriptor* UApUtils::GetItemDescriptorByName(TMap<FName, FAssetData> itemDescriptorAssets, FString name) {
+	UObject* obj = FindAssetByName(itemDescriptorAssets, name);
+	verify(obj != nullptr);
+	return Cast<UFGItemDescriptor>(obj);
+}
+
+TMap<FName, FAssetData> UApUtils::GetItemDescriptorAssets() {
+	TMap<FName, FAssetData> itemDescriptorAssets;
+		
+	itemDescriptorAssets.Append(GetBlueprintAssetsIn("/Game/FactoryGame/Resource", TArray<FString>{ "Desc_", "BP_" }));
+	itemDescriptorAssets.Append(GetBlueprintAssetsIn("/Game/FactoryGame/Equipment", TArray<FString>{ "Desc_", "BP_" }));
+	itemDescriptorAssets.Append(GetBlueprintAssetsIn("/Game/FactoryGame/Prototype", TArray<FString>{ "Desc_", "BP_" })); // BP_WAT1 and BP_WAT2 (alien artifacts)
+
+	//should prob cache this results
+	return itemDescriptorAssets;
+}
+
+TMap<FName, FAssetData> UApUtils::GetRecipeAssets() {
+	TMap<FName, FAssetData> recipeAssets;
+
+	recipeAssets.Append(GetBlueprintAssetsIn("/Game/FactoryGame/Recipes", TArray<FString>{ "Recipe_" }));
+	recipeAssets.Append(GetBlueprintAssetsIn("/Game/FactoryGame/Equipment", TArray<FString>{ "Recipe_" }));
+
+	//should prob cache this results
+	return recipeAssets;
+}
+
 UApBlueprintDataBridge* UApUtils::GetBlueprintDataBridge(UObject* worldContext) {
 	if (const auto world = worldContext->GetWorld()) {
 		const auto moduleManager = world->GetGameInstance()->GetSubsystem<UGameInstanceModuleManager>();
