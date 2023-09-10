@@ -7,7 +7,9 @@
 #include "FGFactoryConnectionComponent.h"
 #include "FGPowerInfoComponent.h"
 
-//#include "../Subsystem/ApPortalSubsystem.h"
+//#include "../Subsystem/ApPortalSubsystem.h" set inside cpp to avoid circular dep
+
+
 
 #include "ApPortal.generated.h"
 
@@ -27,6 +29,7 @@ public:
 	virtual void EndPlay(const EEndPlayReason::Type reason) override;
 
 	mutable TQueue<FInventoryItem> outputQueue;
+	mutable TMap<int, TQueue<FInventoryStack>> inputQueue;
 
 private:
 	UFGFactoryConnectionComponent* input;

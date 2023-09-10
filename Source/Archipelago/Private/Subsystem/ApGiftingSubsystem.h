@@ -31,15 +31,18 @@ public:
 private:
 	bool apInitialized;
 
+	TMap<FString, TSubclassOf<UFGItemDescriptor>> ItemNameMapping;
+
 	AApSubsystem* ap;
 	AApPortalSubsystem* portalSubSystem;
 
 public:
 
 private:
+	void LoadItemNameMapping();
+
 	void OpenGiftbox(const FApSlotData slotData);
 	void OnGiftsUpdated(AP_SetReply setReply);
 
-	TSubclassOf<UFGItemDescriptor> TryGetItemClassByName(FString name);
-	TSubclassOf<UFGItemDescriptor> TryGetItemByTraits(TArray<TSharedPtr<FJsonValue>> traits);
+	TSubclassOf<UFGItemDescriptor> TryGetItemClassByTraits(TArray<TSharedPtr<FJsonValue>> traits);
 };

@@ -113,6 +113,9 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FORCEINLINE FApSlotData GetSlotData() const { return slotData; };
 
+	FString GetItemName(int64_t);
+	FString GetLocationName(int64_t);
+
 private:
 	static std::map<std::string, std::function<void(AP_SetReply)>> callbacks;
 

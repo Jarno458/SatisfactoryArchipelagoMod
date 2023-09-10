@@ -39,6 +39,8 @@ void AApGiftingSubsystem::Tick(float dt) {
 
 	if (!apInitialized) {
 		if (ap->ConnectionState == EApConnectionState::Connected) {
+			LoadItemNameMapping();
+
 			const FApSlotData slotData = ap->GetSlotData();
 			OpenGiftbox(slotData);
 
@@ -49,6 +51,17 @@ void AApGiftingSubsystem::Tick(float dt) {
 
 			apInitialized = true;
 		}
+	}
+}
+
+void AApGiftingSubsystem::LoadItemNameMapping() {
+	TMap<FName, FAssetData> itemDescriptorAssets = UApUtils::GetItemDescriptorAssets();
+	for (TPair<int64_t, FString> itemMapping : UApMappings::ItemIdToGameItemDescriptor) {
+		UFGItemDescriptor* itemDescriptor = UApUtils::GetItemDescriptorByName(itemDescriptorAssets, itemMapping.Value);
+		TSubclassOf<UFGItemDescriptor> itemClass = itemDescriptor->GetClass();
+		FString itemName = ap->GetItemName(itemMapping.Key);
+
+		ItemNameMapping.Add(itemName, itemClass);
 	}
 }
 
@@ -103,36 +116,24 @@ void AApGiftingSubsystem::OnGiftsUpdated(AP_SetReply setReply) {
 		FString itemName = giftItem->GetStringField("Name");
 		int amount = giftItem->GetIntegerField("Amount");
 
-		TSubclassOf<UFGItemDescriptor> itemClass = TryGetItemClassByName(itemName);
-		if (itemClass == nullptr) {
+		if (ItemNameMapping.Contains(itemName))
+			portalSubSystem->Enqueue(ItemNameMapping[itemName], amount);
+		else {
 			TArray<TSharedPtr<FJsonValue>> giftTraits = gift->GetArrayField("Traits");
-			itemClass = TryGetItemByTraits(giftTraits);
-		}
+			TSubclassOf<UFGItemDescriptor> itemClass = TryGetItemClassByTraits(giftTraits);
 
-		if (itemClass != nullptr) {
-			portalSubSystem->Enqueue(itemClass, amount);
-		} else {
-			//TODO refund we dont want it
+			if (itemClass != nullptr) {
+				portalSubSystem->Enqueue(itemClass, amount);
+			}
+			else {
+				//TODO refund we dont want it
+			}
 		}
 	}
 }
 
-TSubclassOf<UFGItemDescriptor> AApGiftingSubsystem::TryGetItemClassByName(FString itemName) {
-	for (TPair<int64_t, FString> itemNamePair : UApMappings::ItemIdToGameItemDescriptor) {
-		if (itemNamePair.Value == itemName)
-		{
-			TMap<FName, FAssetData> itemDescriptorAssets = UApUtils::GetItemDescriptorAssets();
-			UFGItemDescriptor* itemDescriptor = UApUtils::GetItemDescriptorByName(itemDescriptorAssets, itemName);
-			
-			return itemDescriptor->GetClass();
-		}
-	}
-
-	return nullptr;
-}
-
-TSubclassOf<UFGItemDescriptor> AApGiftingSubsystem::TryGetItemByTraits(TArray<TSharedPtr<FJsonValue>> traits) {
-
+TSubclassOf<UFGItemDescriptor> AApGiftingSubsystem::TryGetItemClassByTraits(TArray<TSharedPtr<FJsonValue>> traits) {
+	//TODO process item traits and quality, like "Metal" with quality 2 might be Encased Steam Beam
 	
 	return nullptr;
 }

@@ -636,6 +636,14 @@ FApConfigurationStruct AApSubsystem::GetActiveConfig() {
 	return config;
 }
 
+FString AApSubsystem::GetItemName(int64_t id) {
+	return FString(AP_GetItemName(id).c_str());
+}
+
+FString AApSubsystem::GetLocationName(int64_t id) {
+	return FString(AP_GetLocationName(id).c_str());
+}
+
 #pragma optimize("", on)
 
 #undef LOCTEXT_NAMESPACE

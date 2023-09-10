@@ -29,9 +29,11 @@ public:
 	static AApPortalSubsystem* Get(class UWorld* world);
 
 private:
-	TQueue<FInventoryItem> OutputQueue = TQueue<FInventoryItem>();
+	TQueue<FInventoryItem, EQueueMode::Mpsc> OutputQueue = TQueue<FInventoryItem, EQueueMode::Mpsc>();
 
 	int lastUsedPortalIndex;
+
+	FDateTime lastInventoryDump;
 
 public:
 	UPROPERTY(BlueprintReadOnly) //blueprint likely dont need this
@@ -41,4 +43,8 @@ public:
 
 	void RegisterPortal(const AApPortal* portal);
 	void UnRegisterPortal(const AApPortal* portal);
+
+private:
+	void ProcessInputQueue();
+	void ProcessOutputQueue();
 };

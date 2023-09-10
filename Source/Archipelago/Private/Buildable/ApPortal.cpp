@@ -34,7 +34,6 @@ void AApPortal::BeginPlay() {
 		return;
 	}
 
-	//TODO lock item from getting inserted until we implement sending
 	UFGInventoryComponent* inventory = GetStorageInventory();
 	inventory->SetLocked(true);
 }
@@ -67,8 +66,21 @@ void AApPortal::Factory_Tick(float dt) {
 	if (inventory != nullptr) {
 		if (targetPlayerSlot <= 0)
 			inventory->SetLocked(true);
-		else
+		else {
 			inventory->SetLocked(false);
+
+			TArray<FInventoryStack> stacks;
+			inventory->GetInventoryStacks(stacks);
+
+			if (!inputQueue.Contains(targetPlayerSlot))
+				inputQueue.Add(targetPlayerSlot, TQueue<FInventoryStack>());
+
+			for (FInventoryStack stack : stacks) {
+				inputQueue[targetPlayerSlot].Enqueue(stack);
+			}
+
+			inventory->Empty();
+		}
 	}
 
 	camReceiveOutput = CanProduce() && output->IsConnected();

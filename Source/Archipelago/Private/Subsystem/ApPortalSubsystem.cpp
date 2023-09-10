@@ -37,7 +37,30 @@ void AApPortalSubsystem::Tick(float dt) {
 		return;
 	}
 
-	if(OutputQueue.IsEmpty())
+	ProcessInputQueue();
+	ProcessOutputQueue();
+}
+
+void AApPortalSubsystem::ProcessInputQueue() {
+
+
+	TMap<int, TQueue<FInventoryStack>> totalInputQueue;
+	for (const AApPortal* portal : BuiltPortals) {
+		TMap<int, TQueue<FInventoryStack>> portalInputQueue = portal->inputQueue;
+
+		for (TPair<int, TQueue<FInventoryStack>> stacksPerPlayer : portalInputQueue) {
+			if (!totalInputQueue.Contains(stacksPerPlayer.Key))
+				totalInputQueue.Add(stacksPerPlayer.Key, TQueue<FInventoryStack>());
+
+			FInventoryStack stack;
+			while (stacksPerPlayer.Value.Dequeue(stack))
+				totalInputQueue[stacksPerPlayer.Key].Enqueue(stack);
+		}
+	}
+}
+
+void AApPortalSubsystem::ProcessOutputQueue() {
+	if (OutputQueue.IsEmpty())
 		return;
 
 	for (const AApPortal* portal : BuiltPortals) {
@@ -51,6 +74,7 @@ void AApPortalSubsystem::Tick(float dt) {
 		}
 	}
 }
+
 
 void AApPortalSubsystem::Enqueue(TSubclassOf<UFGItemDescriptor> cls, int amount) {
 
