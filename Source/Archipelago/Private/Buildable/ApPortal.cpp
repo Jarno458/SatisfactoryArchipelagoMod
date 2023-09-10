@@ -21,6 +21,8 @@ AApPortal::AApPortal() : Super() {
 void AApPortal::BeginPlay() {
 	Super::BeginPlay();
 
+	portalSubsystem = AApPortalSubsystem::Get(GetWorld());
+
 	mPowerInfo->OnHasPowerChanged.BindUFunction(this, "CheckPower");
 
 	for (UFGFactoryConnectionComponent* connection : GetConnectionComponents()) {
@@ -34,7 +36,7 @@ void AApPortal::BeginPlay() {
 		return;
 	}
 
-	UFGInventoryComponent* inventory = GetStorageInventory();
+	inventory = GetStorageInventory();
 	inventory->SetLocked(true);
 }
 
@@ -52,16 +54,14 @@ bool AApPortal::CanProduce_Implementation() const {
 
 void AApPortal::CheckPower(bool newHasPower) const {
 	if (Factory_HasPower()) {
-		AApPortalSubsystem::Get(GetWorld())->RegisterPortal(this);
+		((AApPortalSubsystem*)portalSubsystem)->RegisterPortal(this);
 	}	else {
-		AApPortalSubsystem::Get(GetWorld())->UnRegisterPortal(this);
+		((AApPortalSubsystem*)portalSubsystem)->UnRegisterPortal(this);
 	}
 }
 
 void AApPortal::Factory_Tick(float dt) {
 	Super::Factory_Tick(dt);
-
-	UFGInventoryComponent* inventory = GetStorageInventory();
 
 	if (inventory != nullptr) {
 		if (targetPlayerSlot <= 0)
@@ -72,11 +72,8 @@ void AApPortal::Factory_Tick(float dt) {
 			TArray<FInventoryStack> stacks;
 			inventory->GetInventoryStacks(stacks);
 
-			if (!inputQueue.Contains(targetPlayerSlot))
-				inputQueue.Add(targetPlayerSlot, TQueue<FInventoryStack>());
-
 			for (FInventoryStack stack : stacks) {
-				inputQueue[targetPlayerSlot].Enqueue(stack);
+				((AApPortalSubsystem*)portalSubsystem)->Send(targetPlayerSlot, stack);
 			}
 
 			inventory->Empty();

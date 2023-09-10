@@ -29,7 +29,8 @@ public:
 	static AApPortalSubsystem* Get(class UWorld* world);
 
 private:
-	TQueue<FInventoryItem, EQueueMode::Mpsc> OutputQueue = TQueue<FInventoryItem, EQueueMode::Mpsc>();
+	TQueue<FInventoryItem, EQueueMode::Mpsc> OutputQueue;
+	TMap<int, TQueue<FInventoryStack, EQueueMode::Mpsc>*> InputQueue;
 
 	int lastUsedPortalIndex;
 
@@ -40,6 +41,8 @@ public:
 	TSet<const AApPortal*> BuiltPortals;
 
 	void Enqueue(TSubclassOf<UFGItemDescriptor> cls, int amount);
+
+	void Send(int targetSlot, FInventoryStack itemStack);
 
 	void RegisterPortal(const AApPortal* portal);
 	void UnRegisterPortal(const AApPortal* portal);

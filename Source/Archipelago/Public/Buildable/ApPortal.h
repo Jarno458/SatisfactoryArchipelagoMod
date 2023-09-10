@@ -29,11 +29,13 @@ public:
 	virtual void EndPlay(const EEndPlayReason::Type reason) override;
 
 	mutable TQueue<FInventoryItem> outputQueue;
-	mutable TMap<int, TQueue<FInventoryStack>> inputQueue;
 
 private:
+	AModSubsystem* portalSubsystem;
+
 	UFGFactoryConnectionComponent* input;
 	UFGFactoryConnectionComponent* output;
+	UFGInventoryComponent* inventory;
 
 	int portalId;
 

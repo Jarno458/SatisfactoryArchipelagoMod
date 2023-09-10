@@ -42,21 +42,18 @@ void AApPortalSubsystem::Tick(float dt) {
 }
 
 void AApPortalSubsystem::ProcessInputQueue() {
+	TMap<int, TArray<FInventoryStack>> sendQueue;
 
+	for (TPair<int, TQueue<FInventoryStack, EQueueMode::Mpsc>*>& stacksPerPlayer : InputQueue) {
+		if (!sendQueue.Contains(stacksPerPlayer.Key))
+			sendQueue.Add(stacksPerPlayer.Key, TArray<FInventoryStack>());
 
-	TMap<int, TQueue<FInventoryStack>> totalInputQueue;
-	for (const AApPortal* portal : BuiltPortals) {
-		TMap<int, TQueue<FInventoryStack>> portalInputQueue = portal->inputQueue;
-
-		for (TPair<int, TQueue<FInventoryStack>> stacksPerPlayer : portalInputQueue) {
-			if (!totalInputQueue.Contains(stacksPerPlayer.Key))
-				totalInputQueue.Add(stacksPerPlayer.Key, TQueue<FInventoryStack>());
-
-			FInventoryStack stack;
-			while (stacksPerPlayer.Value.Dequeue(stack))
-				totalInputQueue[stacksPerPlayer.Key].Enqueue(stack);
-		}
+		FInventoryStack stack;
+		while (stacksPerPlayer.Value->Dequeue(stack))
+			sendQueue[stacksPerPlayer.Key].Add(stack);
 	}
+
+
 }
 
 void AApPortalSubsystem::ProcessOutputQueue() {
@@ -77,10 +74,18 @@ void AApPortalSubsystem::ProcessOutputQueue() {
 
 
 void AApPortalSubsystem::Enqueue(TSubclassOf<UFGItemDescriptor> cls, int amount) {
-
 	for (size_t i = 0; i < amount; i++) {
 		OutputQueue.Enqueue(FInventoryItem(cls));
 	}
+}
+
+void AApPortalSubsystem::Send(int targetSlot, FInventoryStack itemStack) {
+	if (!InputQueue.Contains(targetSlot)) {
+		TQueue<FInventoryStack, EQueueMode::Mpsc> queue;
+		InputQueue.Add(targetSlot, &queue);
+	}
+
+	InputQueue[targetSlot]->Enqueue(itemStack);
 }
 
 void AApPortalSubsystem::RegisterPortal(const AApPortal* portal) {
