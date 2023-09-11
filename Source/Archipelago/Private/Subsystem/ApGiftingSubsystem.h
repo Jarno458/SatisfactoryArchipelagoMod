@@ -41,13 +41,14 @@ private:
 	AApPortalSubsystem* portalSubSystem;
 
 public:
-	void Send(TMap<int, TArray<FInventoryStack>> itemsToSend);
+	void Send(TMap<int, TMap<TSubclassOf<UFGItemDescriptor>, int>> itemsToSend);
 
 private:
 	void LoadItemNameMapping();
 
 	void OpenGiftbox();
 	void OnGiftsUpdated(AP_SetReply setReply);
+	void HandleProcessedGifts(TArray<FString> procesedGifts, TArray<TSharedPtr<FJsonObject>> giftsToReject);
 
 	TSubclassOf<UFGItemDescriptor> TryGetItemClassByTraits(TArray<TSharedPtr<FJsonValue>> traits);
 };

@@ -54,15 +54,22 @@ void AApPortalSubsystem::ProcessInputQueue() {
 
 	lastInventoryDump = currentTime;
 
-	TMap<int, TArray<FInventoryStack>> itemsToSend;
+	TMap<int, TMap<TSubclassOf<UFGItemDescriptor>, int>> itemsToSend;
 
-	for (TPair<int, TQueue<FInventoryStack, EQueueMode::Mpsc>*>& stacksPerPlayer : InputQueue) {
+	for (TPair<int, TSharedPtr<TQueue<FInventoryStack, EQueueMode::Mpsc>>> stacksPerPlayer : InputQueue) {
 		if (!itemsToSend.Contains(stacksPerPlayer.Key))
-			itemsToSend.Add(stacksPerPlayer.Key, TArray<FInventoryStack>());
+			itemsToSend.Add(stacksPerPlayer.Key, TMap<TSubclassOf<UFGItemDescriptor>, int>());
 
 		FInventoryStack stack;
 		while (stacksPerPlayer.Value->Dequeue(stack))
-			itemsToSend[stacksPerPlayer.Key].Add(stack);
+		{
+			TSubclassOf<UFGItemDescriptor> cls = stack.Item.GetItemClass();
+
+			if (!itemsToSend[stacksPerPlayer.Key].Contains(cls))
+				itemsToSend[stacksPerPlayer.Key].Add(cls, stack.NumItems);
+			else
+				itemsToSend[stacksPerPlayer.Key][cls] += stack.NumItems;
+		}
 	}
 
 	if (!itemsToSend.IsEmpty())
@@ -94,8 +101,8 @@ void AApPortalSubsystem::Enqueue(TSubclassOf<UFGItemDescriptor> cls, int amount)
 
 void AApPortalSubsystem::Send(int targetSlot, FInventoryStack itemStack) {
 	if (!InputQueue.Contains(targetSlot)) {
-		TQueue<FInventoryStack, EQueueMode::Mpsc> queue;
-		InputQueue.Add(targetSlot, &queue);
+		TSharedPtr<TQueue<FInventoryStack, EQueueMode::Mpsc>> queue = MakeShareable(new TQueue<FInventoryStack, EQueueMode::Mpsc>());
+		InputQueue.Add(targetSlot, queue);
 	}
 
 	InputQueue[targetSlot]->Enqueue(itemStack);

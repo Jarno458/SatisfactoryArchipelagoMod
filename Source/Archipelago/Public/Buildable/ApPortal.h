@@ -39,7 +39,7 @@ private:
 
 	int portalId;
 
-	int targetPlayerSlot = -1;
+	int targetPlayerSlot = 1;
 
 	bool camReceiveOutput = false;
 

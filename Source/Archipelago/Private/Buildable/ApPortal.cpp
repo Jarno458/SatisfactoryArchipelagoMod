@@ -63,8 +63,9 @@ void AApPortal::CheckPower(bool newHasPower) const {
 void AApPortal::Factory_Tick(float dt) {
 	Super::Factory_Tick(dt);
 
+	inventory = GetStorageInventory();
 	if (inventory != nullptr) {
-		if (targetPlayerSlot <= 0)
+		if (targetPlayerSlot <= -1)
 			inventory->SetLocked(true);
 		else {
 			inventory->SetLocked(false);

@@ -32,7 +32,7 @@ private:
 	AModSubsystem* giftingSubsystem;
 		
 	TQueue<FInventoryItem, EQueueMode::Mpsc> OutputQueue;
-	TMap<int, TQueue<FInventoryStack, EQueueMode::Mpsc>*> InputQueue;
+	TMap<int, TSharedPtr<TQueue<FInventoryStack, EQueueMode::Mpsc>>> InputQueue;
 
 	int lastUsedPortalIndex;
 

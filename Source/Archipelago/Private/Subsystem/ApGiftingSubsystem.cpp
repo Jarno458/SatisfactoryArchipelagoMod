@@ -112,28 +112,68 @@ void AApGiftingSubsystem::OnGiftsUpdated(AP_SetReply setReply) {
 	if (!parsedJson.IsValid())
 		return;
 	
-	for (TPair<FString, TSharedPtr<FJsonValue>> pair : parsedJson->Values)
-	{
+	TArray<FString> procesedGifts;
+	TArray<TSharedPtr<FJsonObject>> giftsToReject;
+
+	for (TPair<FString, TSharedPtr<FJsonValue>> pair : parsedJson->Values) {
 		TSharedPtr<FJsonObject> gift = pair.Value->AsObject();
 		TSharedPtr<FJsonObject> giftItem = gift->GetObjectField("Item");
 		FString itemName = giftItem->GetStringField("Name");
 		int amount = giftItem->GetIntegerField("Amount");
 
-		if (NameToItemMapping.Contains(itemName))
+		if (NameToItemMapping.Contains(itemName)) {
 			portalSubSystem->Enqueue(NameToItemMapping[itemName], amount);
-		else {
+		} else {
 			TArray<TSharedPtr<FJsonValue>> giftTraits = gift->GetArrayField("Traits");
 			TSubclassOf<UFGItemDescriptor> itemClass = TryGetItemClassByTraits(giftTraits);
 
 			if (itemClass != nullptr) {
 				portalSubSystem->Enqueue(itemClass, amount);
-			}
-			else {
-				//TODO refund we dont want it
+			} else {
+				giftsToReject.Add(gift);
 			}
 		}
+
+		FString id = gift->GetStringField("Id");
+		procesedGifts.Add(id);
 	}
+
+	HandleProcessedGifts(procesedGifts, giftsToReject);
 }
+
+void AApGiftingSubsystem::HandleProcessedGifts(TArray<FString> procesedGifts, TArray<TSharedPtr<FJsonObject>> giftsToReject) {
+	for (TSharedPtr<FJsonObject> rejectedGift : giftsToReject) {
+		//TODO swap sender/receiver & send to other giftbox
+	};
+
+	FString giftboxKey = FString::Printf(TEXT("GiftBox;%i;%i"), slotData.currentPlayerTeam, slotData.currentPlayerSlot);
+
+	AP_SetServerDataRequest removeProcesedGifts;
+	removeProcesedGifts.key = TCHAR_TO_UTF8(*giftboxKey);
+
+	std::vector<AP_DataStorageOperation> operations;
+
+	for (FString id : procesedGifts) {
+		std::string guid = TCHAR_TO_UTF8(*id);
+
+		AP_DataStorageOperation update;
+		update.operation = "pop";
+		update.value = &guid;
+
+		operations.push_back(update);
+	}
+
+	std::string defaultGiftboxValue = "{}";
+
+	removeProcesedGifts.operations = operations;
+	removeProcesedGifts.default_value = &defaultGiftboxValue;
+	removeProcesedGifts.type = AP_DataType::Raw;
+	removeProcesedGifts.want_reply = false;
+
+	ap->SetServerData(&removeProcesedGifts);
+}
+
+
 
 TSubclassOf<UFGItemDescriptor> AApGiftingSubsystem::TryGetItemClassByTraits(TArray<TSharedPtr<FJsonValue>> traits) {
 	//TODO process item traits and quality, like "Metal" with quality 2 might be Encased Steam Beam
@@ -146,8 +186,8 @@ TSubclassOf<UFGItemDescriptor> AApGiftingSubsystem::TryGetItemClassByTraits(TArr
 	return nullptr;
 }
 
-void AApGiftingSubsystem::Send(TMap<int, TArray<FInventoryStack>> itemsToSend) {
-	for (TPair<int, TArray<FInventoryStack>> itemsToSendPerPlayer : itemsToSend) {
+void AApGiftingSubsystem::Send(TMap<int, TMap<TSubclassOf<UFGItemDescriptor>, int>> itemsToSend) {
+	for (TPair<int, TMap<TSubclassOf<UFGItemDescriptor>, int>> itemsToSendPerPlayer : itemsToSend) {
 
 		FString giftboxKey = FString::Printf(TEXT("GiftBox;%i;%i"), slotData.currentPlayerTeam, itemsToSendPerPlayer.Key);
 
@@ -159,9 +199,9 @@ void AApGiftingSubsystem::Send(TMap<int, TArray<FInventoryStack>> itemsToSend) {
 		FString sender = ap->GetPlayerName(slotData.currentPlayerSlot);
 		FString receiver = ap->GetPlayerName(itemsToSendPerPlayer.Key);
 
-		for (FInventoryStack stack : itemsToSendPerPlayer.Value) {
-			FString guid = FGuid::NewGuid().ToString();
-			FString itemName = ItemToNameMapping[stack.Item.GetItemClass()];
+		for (TPair<TSubclassOf<UFGItemDescriptor>, int> stack : itemsToSendPerPlayer.Value) {
+			FString guid = FGuid::NewGuid().ToString(EGuidFormats::DigitsWithHyphensLower);
+			FString itemName = ItemToNameMapping[stack.Key];
 			int64_t itemValue = 0;
 			FString traits = TEXT("");
 			FString json = FString::Printf(TEXT(R"({
@@ -173,14 +213,13 @@ void AApGiftingSubsystem::Send(TMap<int, TArray<FInventoryStack>> itemsToSend) {
 						"Value": %i
 					},
 					"Traits": [ %s ],
-					"Sender": %s,
-					"Receiver": %s,
+					"Sender": "%s",
+					"Receiver": "%s",
 					"SenderTeam": %i,
 					"ReceiverTeam": %i,
-					"IsRefund": false,
-					"GiftValue": %i
+					"IsRefund": false
 				}
-			})"), *guid, *guid, *itemName, stack.NumItems, itemValue, *traits, *sender, *receiver, slotData.currentPlayerTeam, slotData.currentPlayerTeam, stack.NumItems * itemValue);
+			})"), *guid, *guid, *itemName, stack.Value, itemValue, *traits, *sender, *receiver, slotData.currentPlayerTeam, slotData.currentPlayerTeam);
 			std::string stdJson = TCHAR_TO_UTF8(*json);
 
 			AP_DataStorageOperation update;
