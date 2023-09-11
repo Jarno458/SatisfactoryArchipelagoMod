@@ -644,6 +644,10 @@ FString AApSubsystem::GetLocationName(int64_t id) {
 	return FString(AP_GetLocationName(id).c_str());
 }
 
+FString AApSubsystem::GetPlayerName(int slotId) {
+	return TEXT(""); //TODO
+}
+
 #pragma optimize("", on)
 
 #undef LOCTEXT_NAMESPACE

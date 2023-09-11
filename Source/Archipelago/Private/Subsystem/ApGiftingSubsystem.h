@@ -1,6 +1,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Misc/Guid.h"
+
 #include "Subsystem/ModSubsystem.h"
 #include "Subsystem/ApSubsystem.h"
 #include "Subsystem/ApPortalSubsystem.h"
@@ -30,18 +32,21 @@ public:
 
 private:
 	bool apInitialized;
+	FApSlotData slotData;
 
-	TMap<FString, TSubclassOf<UFGItemDescriptor>> ItemNameMapping;
+	TMap<FString, TSubclassOf<UFGItemDescriptor>> NameToItemMapping;
+	TMap<TSubclassOf<UFGItemDescriptor>, FString> ItemToNameMapping;
 
 	AApSubsystem* ap;
 	AApPortalSubsystem* portalSubSystem;
 
 public:
+	void Send(TMap<int, TArray<FInventoryStack>> itemsToSend);
 
 private:
 	void LoadItemNameMapping();
 
-	void OpenGiftbox(const FApSlotData slotData);
+	void OpenGiftbox();
 	void OnGiftsUpdated(AP_SetReply setReply);
 
 	TSubclassOf<UFGItemDescriptor> TryGetItemClassByTraits(TArray<TSharedPtr<FJsonValue>> traits);

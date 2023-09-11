@@ -1,4 +1,5 @@
 #include "Subsystem/ApPortalSubsystem.h"
+#include "Subsystem/ApGiftingSubsystem.h"
 
 DEFINE_LOG_CATEGORY(LogApPortalSubsystem);
 
@@ -22,12 +23,16 @@ AApPortalSubsystem::AApPortalSubsystem() : Super() {
 	PrimaryActorTick.bCanEverTick = true;
 	PrimaryActorTick.bStartWithTickEnabled = true;
 	PrimaryActorTick.TickInterval = 0;
+
+	lastInventoryDump = FDateTime::Now();
 }
 
 void AApPortalSubsystem::BeginPlay() {
 	Super::BeginPlay();
 
 	UE_LOG(LogApPortalSubsystem, Display, TEXT("AApPortalSubsystem::BeginPlay()"));
+
+	giftingSubsystem = AApGiftingSubsystem::Get(GetWorld());
 }
 
 void AApPortalSubsystem::Tick(float dt) {
@@ -42,18 +47,26 @@ void AApPortalSubsystem::Tick(float dt) {
 }
 
 void AApPortalSubsystem::ProcessInputQueue() {
-	TMap<int, TArray<FInventoryStack>> sendQueue;
+	FDateTime currentTime = FDateTime::Now();
+
+	if ((currentTime - lastInventoryDump).GetSeconds() < 30)
+		return;
+
+	lastInventoryDump = currentTime;
+
+	TMap<int, TArray<FInventoryStack>> itemsToSend;
 
 	for (TPair<int, TQueue<FInventoryStack, EQueueMode::Mpsc>*>& stacksPerPlayer : InputQueue) {
-		if (!sendQueue.Contains(stacksPerPlayer.Key))
-			sendQueue.Add(stacksPerPlayer.Key, TArray<FInventoryStack>());
+		if (!itemsToSend.Contains(stacksPerPlayer.Key))
+			itemsToSend.Add(stacksPerPlayer.Key, TArray<FInventoryStack>());
 
 		FInventoryStack stack;
 		while (stacksPerPlayer.Value->Dequeue(stack))
-			sendQueue[stacksPerPlayer.Key].Add(stack);
+			itemsToSend[stacksPerPlayer.Key].Add(stack);
 	}
 
-
+	if (!itemsToSend.IsEmpty())
+		((AApGiftingSubsystem*)giftingSubsystem)->Send(itemsToSend);
 }
 
 void AApPortalSubsystem::ProcessOutputQueue() {

@@ -29,6 +29,8 @@ public:
 	static AApPortalSubsystem* Get(class UWorld* world);
 
 private:
+	AModSubsystem* giftingSubsystem;
+		
 	TQueue<FInventoryItem, EQueueMode::Mpsc> OutputQueue;
 	TMap<int, TQueue<FInventoryStack, EQueueMode::Mpsc>*> InputQueue;
 
