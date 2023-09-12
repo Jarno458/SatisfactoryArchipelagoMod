@@ -99,6 +99,9 @@ bool AApSubsystem::InitializeTick(FApConfigurationStruct config, FDateTime conne
 	} else if (ConnectionState == EApConnectionState::Connected) {
 		if (!shouldParseItemsToScout) {
 			if (slotData.hasLoadedSlotData) {
+				currentPlayerSlot = AP_GetCurrentPlayerSlot();
+				currentPlayerTeam = 0; //AP_GetCurrentPlayerTeam(); NYI
+
 				HintUnlockedHubRecipies();
 			} else {
 				// awaiting slot data callback
@@ -352,57 +355,6 @@ void AApSubsystem::CreateSchematicBoundToItemId(int64_t item) {
 	ItemSchematics.Add(item, factorySchematic);
 }
 
-void AApSubsystem::CreateRecipe(AP_NetworkItem item) {
-	FString name(("AP_ITEM_RECIPE_" + item.playerName + " - " + item.itemName).c_str());
-	FString uniqueId = UApUtils::FStr(item.location);
-	// https://raw.githubusercontent.com/budak7273/ContentLib_Documentation/main/JsonSchemas/CL_Recipe.json
-	FString json = FString::Printf(TEXT(R"({
-		 "Name": "%s",
-		 "Ingredients": [],
-		 "Products": [
-			  {
-					"Item": "AP_Logo_Item",
-					"Amount": 1
-			  }
-		 ],
-		 "ManufacturingDuration": 1,
-		 "ProducedIn": [
-			  "Build_HadronCollider"
-		 ]
-	})"), *name);
-
-	FContentLib_Recipe clRecipy = UCLRecipeBPFLib::GenerateCLRecipeFromString(json);
-	TSubclassOf<UFGRecipe> factoryRecipy = UApUtils::FindOrCreateClass(TEXT("/Archipelago/"), *uniqueId, UFGRecipe::StaticClass());
-	UCLRecipeBPFLib::InitRecipeFromStruct(contentLibSubsystem, clRecipy, factoryRecipy);
-
-	contentRegistry->RegisterRecipe(FName(TEXT("Archipelago")), factoryRecipy);
-}
-
-void AApSubsystem::CreateDescriptor(AP_NetworkItem item) {
-	FString name(("AP_ITEM_DESC_" + item.playerName + " " + item.itemName).c_str());
-	FString uniqueId = UApUtils::FStr(item.location);
-	// https://raw.githubusercontent.com/budak7273/ContentLib_Documentation/main/JsonSchemas/CL_Item.json
-	FString json = FString::Printf(TEXT(R"({
-		 "Name": "%s",
-		 "Description": "TODO: Implement",
-		 "StackSize": "One",
-		 "Category": "AP",
-		 "VisualKit": "Kit_AP_Logo",
-		 "NameShort": "APITM",
-		 "CanBeDiscarded": false,
-		 "RememberPickUp": false,
-		 "EnergyValue": 0,
-		 "RadioactiveDecay": 0,
-		 "ResourceSinkPoints": 0
-	})"), *name);
-
-	FContentLib_Item clItem = UCLItemBPFLib::GenerateCLItemFromString(json);
-	TSubclassOf<UFGItemDescriptor> factoryItem = UApUtils::FindOrCreateClass(TEXT("/Archipelago/"), *uniqueId, UFGItemDescriptor::StaticClass());
-	UCLItemBPFLib::InitItemFromStruct(factoryItem, clItem, contentLibSubsystem);
-
-	//contentRegistry->RegisterItem(FName(TEXT("Archipelago")), factoryItem); //no idea how/where to register items
-}
-
 void AApSubsystem::CreateHubSchematic(TMap<FName, FAssetData> recipeAssets, TMap<FName, FAssetData> itemDescriptorAssets, FString name, TSubclassOf<UFGSchematic> factorySchematic, TArray<AP_NetworkItem> items) {
 	int delimeterPos;
 	name.FindChar('-', delimeterPos);
@@ -456,7 +408,7 @@ FContentLib_UnlockInfoOnly AApSubsystem::CreateUnlockInfoOnly(TMap<FName, FAsset
 
 	FContentLib_UnlockInfoOnly infoCard;
 
-	if (item.player == slotData.currentPlayerSlot) {
+	if (item.player == currentPlayerSlot) {
 		Args.Add(TEXT("ApPlayerName"), FText::FromString(TEXT("your")));
 
 		infoCard.mUnlockName = UApUtils::FText(item.itemName);
@@ -644,8 +596,8 @@ FString AApSubsystem::GetLocationName(int64_t id) {
 	return FString(AP_GetLocationName(id).c_str());
 }
 
-FString AApSubsystem::GetPlayerName(int slotId) {
-	return TEXT(""); //TODO
+FString AApSubsystem::GetPlayerName(int id) {
+	return FString(AP_GetPlayerName(id).c_str());
 }
 
 #pragma optimize("", on)

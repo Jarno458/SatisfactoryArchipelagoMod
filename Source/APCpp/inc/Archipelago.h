@@ -205,3 +205,5 @@ void AP_SetNotify(std::string, AP_DataType);
 
 std::string AP_GetItemName(int64_t id);
 std::string AP_GetLocationName(int64_t id);
+std::string AP_GetPlayerName(int id);
+int AP_GetCurrentPlayerSlot();

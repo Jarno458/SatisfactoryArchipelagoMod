@@ -23,12 +23,6 @@ public:
 	bool hasLoadedSlotData;
 
 	UPROPERTY(BlueprintReadOnly)
-		int currentPlayerTeam;
-
-	UPROPERTY(BlueprintReadOnly)
-		int currentPlayerSlot;
-
-	UPROPERTY(BlueprintReadOnly)
 		int numberOfChecksPerMilestone;
 
 	TArray<TArray<TMap<FString, int>>> hubLayout;

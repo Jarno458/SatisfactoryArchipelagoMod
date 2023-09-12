@@ -38,10 +38,10 @@ bool FApSlotData::ParseSlotData(std::string json, FApSlotData* data) {
 
 	TSharedPtr<FJsonObject> options = parsedJson->GetObjectField("Options");
 
-	data->currentPlayerSlot = parsedJson->GetIntegerField("Slot");
 	data->numberOfChecksPerMilestone = parsedJson->GetIntegerField("SlotsPerMilestone");
 	data->finalSpaceElevatorTier = options->GetIntegerField("FinalElevatorTier");
 	data->finalResourceSinkPoints = options->GetIntegerField("FinalResourceSinkPoints");
 	data->hasLoadedSlotData = true;
+
 	return true;
 }

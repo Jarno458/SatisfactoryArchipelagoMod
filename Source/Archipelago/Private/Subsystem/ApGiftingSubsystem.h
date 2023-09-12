@@ -2,10 +2,13 @@
 
 #include "CoreMinimal.h"
 #include "Misc/Guid.h"
+#include "JsonObjectConverter.h"
 
 #include "Subsystem/ModSubsystem.h"
 #include "Subsystem/ApSubsystem.h"
 #include "Subsystem/ApPortalSubsystem.h"
+
+#include "Data/ApGiftJson.h"
 
 #include "ApGiftingSubsystem.generated.h"
 
@@ -32,7 +35,6 @@ public:
 
 private:
 	bool apInitialized;
-	FApSlotData slotData;
 
 	TMap<FString, TSubclassOf<UFGItemDescriptor>> NameToItemMapping;
 	TMap<TSubclassOf<UFGItemDescriptor>, FString> ItemToNameMapping;
@@ -48,7 +50,8 @@ private:
 
 	void OpenGiftbox();
 	void OnGiftsUpdated(AP_SetReply setReply);
-	void HandleProcessedGifts(TArray<FString> procesedGifts, TArray<TSharedPtr<FJsonObject>> giftsToReject);
+	void HandleProcessedGifts(TArray<FString> procesedGifts, TArray<FApGiftJson> giftsToReject);
 
-	TSubclassOf<UFGItemDescriptor> TryGetItemClassByTraits(TArray<TSharedPtr<FJsonValue>> traits);
+	TSubclassOf<UFGItemDescriptor> TryGetItemClassByTraits(TArray<FApGiftTraitJson> traits);
+	TArray<FApGiftTraitJson> GetTraitsForItem(int64_t itemId);
 };

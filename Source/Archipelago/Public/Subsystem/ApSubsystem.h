@@ -91,15 +91,18 @@ public:
 	UPROPERTY(BlueprintReadOnly)
 	FText ConnectionStateDescription;
 
+	UPROPERTY(BlueprintReadOnly)
+	int currentPlayerTeam;
+
+	UPROPERTY(BlueprintReadOnly)
+	int currentPlayerSlot;
+
 	// Get a copy of the subsystem
 	UFUNCTION(BlueprintCallable, BlueprintPure, meta = (DisplayName = "Get ApSubsystem"))
 	static AApSubsystem* Get();
 	static AApSubsystem* Get(class UWorld* world);
 
 	static FApConfigurationStruct GetActiveConfig();
-
-	// Called every frame
-	bool InitializeTick(FApConfigurationStruct config, FDateTime connectingStartedTime);
 
 	UFUNCTION(BlueprintCallable)
 	void DispatchLifecycleEvent(ELifecyclePhase phase);
@@ -154,6 +157,8 @@ private:
 	// UPROPERTY(SaveGame)
 	// int64_t lastReceivedApNetworkItem
 
+	bool InitializeTick(FApConfigurationStruct config, FDateTime connectingStartedTime);
+
 	void ConnectToArchipelago(FApConfigurationStruct config);
 	void TimeoutConnection();
 
@@ -170,8 +175,6 @@ private:
 	void UpdateInfoOnlyUnlockWithRecipeInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, TMap<FName, FAssetData> recipeAssets, AP_NetworkItem* item);
 	void UpdateInfoOnlyUnlockWithItemInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, TMap<FName, FAssetData> itemDescriptorAssets, AP_NetworkItem* item);
 	void UpdateInfoOnlyUnlockWithGenericApInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, AP_NetworkItem* item);
-	void CreateRecipe(AP_NetworkItem item);
-	void CreateDescriptor(AP_NetworkItem item);
 	void CreateHubSchematic(TMap<FName, FAssetData> recipeAssets, TMap<FName, FAssetData> itemDescriptorAssets, FString name, TSubclassOf<UFGSchematic> factorySchematic, TArray<AP_NetworkItem> apItems);
 	void CreateMamSchematic(TMap<FName, FAssetData> recipeAssets, TMap<FName, FAssetData> itemDescriptorAssets, FString name, TSubclassOf<UFGSchematic> factorySchematic, TArray<AP_NetworkItem> apItems);
 	
