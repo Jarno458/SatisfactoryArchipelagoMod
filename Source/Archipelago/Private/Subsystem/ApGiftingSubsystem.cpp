@@ -76,7 +76,6 @@ void AApGiftingSubsystem::OpenGiftbox() {
 	motherBox.IsOpen = true;
 	motherBox.AcceptsAnyGift = true;
 	motherBox.DesiredTraits = TArray<FString>();
-	motherBox.GiftDataVersion = 2;
 
 	FString motherBoxJson;
 	FJsonObjectConverter::UStructToJsonObjectString<FApGiftMotherBoxJson>(motherBox, motherBoxJson);
@@ -182,12 +181,6 @@ void AApGiftingSubsystem::HandleProcessedGifts(TArray<FString> procesedGifts, TA
 
 TSubclassOf<UFGItemDescriptor> AApGiftingSubsystem::TryGetItemClassByTraits(TArray<FApGiftTraitJson> traits) {
 	//TODO process item traits and quality, like "Metal" with quality 2 might be Encased Steam Beam
-	 
-
-
-
-
-
 	return nullptr;
 }
 
@@ -241,6 +234,7 @@ void AApGiftingSubsystem::Send(TMap<int, TMap<TSubclassOf<UFGItemDescriptor>, in
 }
 
 TArray<FApGiftTraitJson> AApGiftingSubsystem::GetTraitsForItem(int64_t itemId) {
+	//TODO map item to trails
 	return TArray<FApGiftTraitJson>();
 }
 

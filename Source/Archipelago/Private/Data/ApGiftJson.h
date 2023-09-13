@@ -73,5 +73,8 @@ struct ARCHIPELAGO_API FApGiftMotherBoxJson
    TArray<FString> DesiredTraits;
 
    UPROPERTY()
-   int GiftDataVersion;
+   int MinimumGiftDataVersion = 2;
+
+   UPROPERTY()
+   int MaximumGiftDataVersion = 2;
 };
