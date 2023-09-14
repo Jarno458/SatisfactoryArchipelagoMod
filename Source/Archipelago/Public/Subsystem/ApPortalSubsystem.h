@@ -30,13 +30,11 @@ public:
 
 private:
 	AModSubsystem* giftingSubsystem;
+	AModSubsystem* ap;
 		
 	TQueue<FInventoryItem, EQueueMode::Mpsc> OutputQueue;
-	TMap<int, TSharedPtr<TQueue<FInventoryStack, EQueueMode::Mpsc>>> InputQueue;
 
 	int lastUsedPortalIndex;
-
-	FDateTime lastInventoryDump;
 
 public:
 	UPROPERTY(BlueprintReadOnly) //blueprint likely dont need this

@@ -7,6 +7,7 @@
 #include "Subsystem/ModSubsystem.h"
 #include "Subsystem/ApSubsystem.h"
 #include "Subsystem/ApPortalSubsystem.h"
+#include "FGResourceSinkSubsystem.h"
 
 #include "Data/ApGiftJson.h"
 
@@ -34,24 +35,39 @@ public:
 	static AApGiftingSubsystem* Get(class UWorld* world);
 
 private:
+	static const int pollInterfall = 10;
+	std::string defaultGiftboxValue = "{}";
+
 	bool apInitialized;
 
 	TMap<FString, TSubclassOf<UFGItemDescriptor>> NameToItemMapping;
 	TMap<TSubclassOf<UFGItemDescriptor>, FString> ItemToNameMapping;
 
+	TMap<int, TSharedPtr<TQueue<FInventoryStack, EQueueMode::Mpsc>>> InputQueue;
+
+	TQueue<FApGiftJson> GiftsToRefund;
+
 	AApSubsystem* ap;
 	AApPortalSubsystem* portalSubSystem;
+	AFGResourceSinkSubsystem* resourceSinkSubsystem;
+
+	FDateTime lastPoll = FDateTime::Now();
 
 public:
-	void Send(TMap<int, TMap<TSubclassOf<UFGItemDescriptor>, int>> itemsToSend);
+	void EnqueueForSending(int targetSlot, FInventoryStack itemStack);
 
 private:
 	void LoadItemNameMapping();
 
 	void OpenGiftbox();
 	void OnGiftsUpdated(AP_SetReply setReply);
-	void HandleProcessedGifts(TArray<FString> procesedGifts, TArray<FApGiftJson> giftsToReject);
+
+	void PullAllGiftsAsync();
+	void ProcessInputQueue();
+	void HandleGiftsToReject();
+
+	void Send(TMap<int, TMap<TSubclassOf<UFGItemDescriptor>, int>> itemsToSend);
 
 	TSubclassOf<UFGItemDescriptor> TryGetItemClassByTraits(TArray<FApGiftTraitJson> traits);
-	TArray<FApGiftTraitJson> GetTraitsForItem(int64_t itemId);
+	FString GetTraitsJsonForItem(int64_t itemId);
 };

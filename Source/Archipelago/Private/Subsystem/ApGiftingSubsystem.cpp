@@ -33,6 +33,7 @@ void AApGiftingSubsystem::BeginPlay() {
 	auto world = GetWorld();
 	ap = AApSubsystem::Get(world);
 	portalSubSystem = AApPortalSubsystem::Get(world);
+	resourceSinkSubsystem = AFGResourceSinkSubsystem::Get(world);
 }
 
 void AApGiftingSubsystem::Tick(float dt) {
@@ -51,6 +52,17 @@ void AApGiftingSubsystem::Tick(float dt) {
 
 			apInitialized = true;
 		}
+	} else {
+		FDateTime currentTime = FDateTime::Now();
+
+		if ((currentTime - lastPoll).GetSeconds() >= pollInterfall)
+		{
+			lastPoll = currentTime;
+
+			PullAllGiftsAsync();
+			ProcessInputQueue();
+			HandleGiftsToReject();
+		}
 	}
 }
 
@@ -67,20 +79,17 @@ void AApGiftingSubsystem::LoadItemNameMapping() {
 }
 
 void AApGiftingSubsystem::OpenGiftbox() {
-	FString motherBoxKey = FString::Printf(TEXT("GiftBoxes;%i"), ap->currentPlayerTeam);
-			
-	AP_SetServerDataRequest motherBoxOpenGiftBox;
-	motherBoxOpenGiftBox.key = TCHAR_TO_UTF8(*motherBoxKey);
 
-	FApGiftMotherBoxJson motherBox;
-	motherBox.IsOpen = true;
-	motherBox.AcceptsAnyGift = true;
-	motherBox.DesiredTraits = TArray<FString>();
+	FString json = FString::Printf(TEXT(R"({
+		"%i": {
+			"IsOpen": true,
+			"AcceptsAnyGift": true,
+			"DesiredTraits": [],
+			"MinimumGiftDataVersion": 2,
+			"MaximumGiftDataVersion": 2
+		}
+	})"), ap->currentPlayerSlot);
 
-	FString motherBoxJson;
-	FJsonObjectConverter::UStructToJsonObjectString<FApGiftMotherBoxJson>(motherBox, motherBoxJson);
-
-	FString json = FString::Printf(TEXT(R"({ "%i": %s })"), ap->currentPlayerSlot, *motherBoxJson);
 	std::string stdJson = TCHAR_TO_UTF8(*json);
 
 	AP_DataStorageOperation update;
@@ -90,8 +99,10 @@ void AApGiftingSubsystem::OpenGiftbox() {
 	std::vector<AP_DataStorageOperation> operations;
 	operations.push_back(update);
 
-	std::string defaultGiftboxValue = "{}";
+	FString motherBoxKey = FString::Printf(TEXT("GiftBoxes;%i"), ap->currentPlayerTeam);
 
+	AP_SetServerDataRequest motherBoxOpenGiftBox;
+	motherBoxOpenGiftBox.key = TCHAR_TO_UTF8(*motherBoxKey);
 	motherBoxOpenGiftBox.operations = operations;
 	motherBoxOpenGiftBox.default_value = &defaultGiftboxValue;
 	motherBoxOpenGiftBox.type = AP_DataType::Raw;
@@ -101,9 +112,13 @@ void AApGiftingSubsystem::OpenGiftbox() {
 }
 
 void AApGiftingSubsystem::OnGiftsUpdated(AP_SetReply setReply) {
-	FString jsonString(((std::string*)setReply.value)->c_str());
+	FString originalValue(((std::string*)setReply.original_value)->c_str());
+	FString value(((std::string*)setReply.value)->c_str());
 
-	const TSharedRef<TJsonReader<>> reader = TJsonReaderFactory<>::Create(*jsonString);
+	if (value != TEXT("{}") || originalValue == TEXT("{}"))
+		return;
+
+	const TSharedRef<TJsonReader<>> reader = TJsonReaderFactory<>::Create(*originalValue);
 
 	FJsonSerializer serializer;
 	TSharedPtr<FJsonObject> parsedJson;
@@ -112,7 +127,6 @@ void AApGiftingSubsystem::OnGiftsUpdated(AP_SetReply setReply) {
 	if (!parsedJson.IsValid())
 		return;
 	
-	TArray<FString> procesedGifts;
 	TArray<FApGiftJson> giftsToReject;
 
 	for (TPair<FString, TSharedPtr<FJsonValue>> pair : parsedJson->Values) {
@@ -121,7 +135,6 @@ void AApGiftingSubsystem::OnGiftsUpdated(AP_SetReply setReply) {
 
 		if (!pair.Value->TryGetObject(giftJsonObject)
 			|| !FJsonObjectConverter::JsonObjectToUStruct<FApGiftJson>((*giftJsonObject).ToSharedRef(), &gift)) {
-			procesedGifts.Add(pair.Key); 
 			continue;
 		}
 
@@ -135,37 +148,67 @@ void AApGiftingSubsystem::OnGiftsUpdated(AP_SetReply setReply) {
 			if (itemClass != nullptr) {
 				portalSubSystem->Enqueue(itemClass, gift.Amount);
 			} else {
-				//if gift cannot be matched to an item, reject it
-				giftsToReject.Add(gift);
+				GiftsToRefund.Enqueue(gift);
 			}
 		}
-
-		procesedGifts.Add(pair.Key);
 	}
-
-	HandleProcessedGifts(procesedGifts, giftsToReject);
 }
 
-void AApGiftingSubsystem::HandleProcessedGifts(TArray<FString> procesedGifts, TArray<FApGiftJson> giftsToReject) {
-	for (FApGiftJson rejectedGift : giftsToReject) {
-		//TODO swap sender/receiver & send to other giftbox
-	};
+void AApGiftingSubsystem::PullAllGiftsAsync() {
+	FString json = TEXT("{}");
+	std::string stdJson = TCHAR_TO_UTF8(*json);
+	AP_DataStorageOperation update;
+	update.operation = "replace";
+	update.value = &stdJson;
+
+	std::vector<AP_DataStorageOperation> operations;
+	operations.push_back(update);
 
 	FString giftboxKey = FString::Printf(TEXT("GiftBox;%i;%i"), ap->currentPlayerTeam, ap->currentPlayerSlot);
 
+	std::string defaultValue = "{}";
+
+	AP_SetServerDataRequest nukeGiftBox;
+	nukeGiftBox.key = TCHAR_TO_UTF8(*giftboxKey);
+	nukeGiftBox.operations = operations;
+	nukeGiftBox.default_value = &defaultValue;
+	nukeGiftBox.type = AP_DataType::Raw;
+	nukeGiftBox.want_reply = false;
+
+	ap->SetServerData(&nukeGiftBox);
+}
+
+void AApGiftingSubsystem::HandleGiftsToReject() {
+	FApGiftJson giftToReject;
+	if (!GiftsToRefund.Dequeue(giftToReject))
+		return;
+
+	FString traits = GetTraitsJsonForItem(0);
+	FString json = FString::Printf(TEXT(R"({
+		"%s": {
+			"ID": "%s",
+			"ItemName": "%s",
+			"Amount": %i,
+			"ItemValue": %i,
+			"Traits": [ %s ],
+			"Sender": "%i",
+			"Receiver": "%i",
+			"SenderTeam": %i,
+			"ReceiverTeam": %i,
+			"IsRefund": true
+		}
+	})"), *giftToReject.ID, *giftToReject.ID, *giftToReject.ItemName, giftToReject.Amount, giftToReject.ItemValue, 
+			*traits, giftToReject.ReceiverSlot, giftToReject.SenderSlot, giftToReject.ReceiverTeam, giftToReject.SenderTeam);
+
+	std::string stdJson = TCHAR_TO_UTF8(*json);
+	AP_DataStorageOperation update;
+	update.operation = "update";
+	update.value = &stdJson;
+
 	std::vector<AP_DataStorageOperation> operations;
+	operations.push_back(update);
 
-	for (FString id : procesedGifts) {
-		std::string guid = TCHAR_TO_UTF8(*id);
-
-		AP_DataStorageOperation update;
-		update.operation = "pop";
-		update.value = &guid;
-
-		operations.push_back(update);
-	}
-
-	std::string defaultGiftboxValue = "{}";
+	FString giftboxKey = FString::Printf(TEXT("GiftBox;%i;%i"), giftToReject.SenderTeam, giftToReject.SenderSlot);
 
 	AP_SetServerDataRequest removeProcesedGifts;
 	removeProcesedGifts.key = TCHAR_TO_UTF8(*giftboxKey);
@@ -177,39 +220,66 @@ void AApGiftingSubsystem::HandleProcessedGifts(TArray<FString> procesedGifts, TA
 	ap->SetServerData(&removeProcesedGifts);
 }
 
+void AApGiftingSubsystem::EnqueueForSending(int targetSlot, FInventoryStack itemStack) {
+	if (!InputQueue.Contains(targetSlot)) {
+		TSharedPtr<TQueue<FInventoryStack, EQueueMode::Mpsc>> queue = MakeShareable(new TQueue<FInventoryStack, EQueueMode::Mpsc>());
+		InputQueue.Add(targetSlot, queue);
+	}
 
+	InputQueue[targetSlot]->Enqueue(itemStack);
+}
 
-TSubclassOf<UFGItemDescriptor> AApGiftingSubsystem::TryGetItemClassByTraits(TArray<FApGiftTraitJson> traits) {
-	//TODO process item traits and quality, like "Metal" with quality 2 might be Encased Steam Beam
-	return nullptr;
+void AApGiftingSubsystem::ProcessInputQueue() {
+	TMap<int, TMap<TSubclassOf<UFGItemDescriptor>, int>> itemsToSend;
+
+	for (TPair<int, TSharedPtr<TQueue<FInventoryStack, EQueueMode::Mpsc>>> stacksPerPlayer : InputQueue) {
+		if (!itemsToSend.Contains(stacksPerPlayer.Key))
+			itemsToSend.Add(stacksPerPlayer.Key, TMap<TSubclassOf<UFGItemDescriptor>, int>());
+
+		FInventoryStack stack;
+		while (stacksPerPlayer.Value->Dequeue(stack))
+		{
+			TSubclassOf<UFGItemDescriptor> cls = stack.Item.GetItemClass();
+
+			if (!itemsToSend[stacksPerPlayer.Key].Contains(cls))
+				itemsToSend[stacksPerPlayer.Key].Add(cls, stack.NumItems);
+			else
+				itemsToSend[stacksPerPlayer.Key][cls] += stack.NumItems;
+		}
+	}
+
+	if (!itemsToSend.IsEmpty())
+		Send(itemsToSend);
 }
 
 void AApGiftingSubsystem::Send(TMap<int, TMap<TSubclassOf<UFGItemDescriptor>, int>> itemsToSend) {
 	for (TPair<int, TMap<TSubclassOf<UFGItemDescriptor>, int>> itemsToSendPerPlayer : itemsToSend) {
-		TArray<FString> jsons;
+		if (itemsToSendPerPlayer.Value.Num() <= 0)
+			continue;
+
+		FString json = TEXT("");
+
 		for (TPair<TSubclassOf<UFGItemDescriptor>, int> stack : itemsToSendPerPlayer.Value) {
 			FString guid = FGuid::NewGuid().ToString(EGuidFormats::DigitsWithHyphensLower);
-
-			FApGiftJson gift;
-			gift.ID = guid;
-			gift.ItemName = ItemToNameMapping[stack.Key];
-			gift.Amount = stack.Value;
-			gift.ItemValue = 0;
-			gift.Traits = GetTraitsForItem(0);
-			gift.SenderSlot = ap->currentPlayerSlot;
-			gift.SenderTeam = ap->currentPlayerTeam;
-			gift.ReceiverSlot = itemsToSendPerPlayer.Key;
-			gift.ReceiverTeam = ap->currentPlayerTeam;
-			gift.IsRefund = false;
-
-			FString giftJson;
-			if (FJsonObjectConverter::UStructToJsonObjectString<FApGiftJson>(gift, giftJson)) {
-				FString json = FString::Printf(TEXT(R"({ "%s": %s })"), *guid, *giftJson);
-				jsons.Add(json);
-			}
+			FString itemName = ItemToNameMapping[stack.Key];
+			int itemValue = resourceSinkSubsystem->GetResourceSinkPointsForItem(stack.Key);
+			FString traits = GetTraitsJsonForItem(0);
+			json += FString::Printf(TEXT(R"("%s": {
+				"ID": "%s",
+				"ItemName": "%s",
+				"Amount": %i,
+				"ItemValue": %i,
+				"Traits": [ %s ],
+				"Sender": "%i",
+				"Receiver": "%i",
+				"SenderTeam": %i,
+				"ReceiverTeam": %i,
+				"IsRefund": false
+			},)"), *guid, *guid, *itemName, stack.Value, itemValue, *traits, ap->currentPlayerSlot, itemsToSendPerPlayer.Key, ap->currentPlayerTeam, ap->currentPlayerTeam);
 		}
 
-		FString json = FString::Join(jsons, TEXT(", "));
+		json.RemoveFromEnd(TEXT(","));
+		json = TEXT("{") + json + TEXT("}");
 		std::string stdJson = TCHAR_TO_UTF8(*json);
 
 		AP_DataStorageOperation update;
@@ -220,9 +290,8 @@ void AApGiftingSubsystem::Send(TMap<int, TMap<TSubclassOf<UFGItemDescriptor>, in
 		operations.push_back(update);
 
 		FString giftboxKey = FString::Printf(TEXT("GiftBox;%i;%i"), ap->currentPlayerTeam, itemsToSendPerPlayer.Key);
-		std::string defaultGiftboxValue = "{}";
-
 		AP_SetServerDataRequest addToGiftBox;
+
 		addToGiftBox.key = TCHAR_TO_UTF8(*giftboxKey);
 		addToGiftBox.operations = operations;
 		addToGiftBox.default_value = &defaultGiftboxValue;
@@ -233,9 +302,14 @@ void AApGiftingSubsystem::Send(TMap<int, TMap<TSubclassOf<UFGItemDescriptor>, in
 	}
 }
 
-TArray<FApGiftTraitJson> AApGiftingSubsystem::GetTraitsForItem(int64_t itemId) {
+TSubclassOf<UFGItemDescriptor> AApGiftingSubsystem::TryGetItemClassByTraits(TArray<FApGiftTraitJson> traits) {
+	//TODO process item traits and quality, like "Metal" with quality 2 might be Encased Steam Beam
+	return nullptr;
+}
+
+FString AApGiftingSubsystem::GetTraitsJsonForItem(int64_t itemId) {
 	//TODO map item to trails
-	return TArray<FApGiftTraitJson>();
+	return TEXT("");
 }
 
 #pragma optimize("", on)
