@@ -41,7 +41,7 @@ public:
 	// so calling this function gets you the "real one" that inherits from the
 	// C++ class and not the C++ abstract class.
 	UFUNCTION(BlueprintPure, Category = "Archipelago", DisplayName = "GetArchipelagoTrapSubsystem", Meta = (DefaultToSelf = "WorldContext"))
-		static AApTrapSubsystem* Get(UObject* WorldContext);
+		static AApTrapSubsystem* Get(UWorld* WorldContext);
 
 	// Auto world context version
 		static AApTrapSubsystem* Get();

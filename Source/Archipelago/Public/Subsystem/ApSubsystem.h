@@ -37,8 +37,8 @@
 
 #include "ApConfigurationStruct.h"
 #include "Data/ApSlotData.h"
-#include "Data/ApMappings.h"
 #include "ApPortalSubsystem.h"
+#include "Subsystem/ApMappingsSubsystem.h"
 
 #include "ContentLibSubsystem.h"
 #include "CLSchematicBPFLib.h"
@@ -111,7 +111,7 @@ public:
 	void SetServerData(AP_SetServerDataRequest* setDataRequest);
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	TEnumAsByte<EApConnectionState> GetConnectionState();
+	FORCEINLINE TEnumAsByte<EApConnectionState> GetConnectionState() const { return TEnumAsByte<EApConnectionState>(ConnectionState); };
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FORCEINLINE FApSlotData GetSlotData() const { return slotData; };
@@ -138,6 +138,8 @@ private:
 	AModContentRegistry* contentRegistry;
 	AFGResourceSinkSubsystem* resourceSinkSubsystem;
 	AApPortalSubsystem* portalSubsystem;
+	AApMappingsSubsystem* mappingSubsystem;
+	AApTrapSubsystem* trapSubsystem;
 
 	TMap<TSubclassOf<class UFGSchematic>, TArray<AP_NetworkItem>> locationsPerMilestone;
 	TMap<TSubclassOf<class UFGSchematic>, TArray<AP_NetworkItem>> locationsPerMamNode;
@@ -146,7 +148,9 @@ private:
 	TQueue<TPair<FString, FLinearColor>> ChatMessageQueue;
 
 	TArray<AP_NetworkItem> scoutedLocations;
-	bool shouldParseItemsToScout;
+	bool hasScoutedLocations;
+	bool areScoutedLocationsReadyToParse;
+	bool areRecipiesAndSchematicsInitialized;
 
 	FApSlotData slotData;
 
@@ -163,24 +167,21 @@ private:
 	void TimeoutConnection();
 
 	void CheckConnectionState(FApConfigurationStruct config);
-	void ParseScoutedItems();
-	void HandleAPMessages();
-	void HintUnlockedHubRecipies();
+	void ScoutArchipelagoItems();
+	void ParseScoutedItemsAndCreateRecipiesAndSchematics();
 
+	void HandleAPMessages();
 	void SendChatMessage(const FString& Message, const FLinearColor& Color);
 
 	void CreateSchematicBoundToItemId(int64_t item);
-	FContentLib_UnlockInfoOnly CreateUnlockInfoOnly(TMap<FName, FAssetData> recipeAssets, TMap<FName, FAssetData> itemDescriptorAssets, AP_NetworkItem item);
-	void UpdateInfoOnlyUnlockWithBuildingInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, TMap<FName, FAssetData> buildingRecipyAssets, AP_NetworkItem* item);
-	void UpdateInfoOnlyUnlockWithRecipeInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, TMap<FName, FAssetData> recipeAssets, AP_NetworkItem* item);
-	void UpdateInfoOnlyUnlockWithItemInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, TMap<FName, FAssetData> itemDescriptorAssets, AP_NetworkItem* item);
+	FContentLib_UnlockInfoOnly CreateUnlockInfoOnly(AP_NetworkItem item);
+	void UpdateInfoOnlyUnlockWithBuildingInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, AP_NetworkItem* item);
+	void UpdateInfoOnlyUnlockWithRecipeInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, AP_NetworkItem* item);
+	void UpdateInfoOnlyUnlockWithItemInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, AP_NetworkItem* item);
 	void UpdateInfoOnlyUnlockWithGenericApInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, AP_NetworkItem* item);
-	void CreateHubSchematic(TMap<FName, FAssetData> recipeAssets, TMap<FName, FAssetData> itemDescriptorAssets, FString name, TSubclassOf<UFGSchematic> factorySchematic, TArray<AP_NetworkItem> apItems);
-	void CreateMamSchematic(TMap<FName, FAssetData> recipeAssets, TMap<FName, FAssetData> itemDescriptorAssets, FString name, TSubclassOf<UFGSchematic> factorySchematic, TArray<AP_NetworkItem> apItems);
+	void CreateHubSchematic(FString name, TSubclassOf<UFGSchematic> factorySchematic, TArray<AP_NetworkItem> apItems);
+	void CreateMamSchematic(FString name, TSubclassOf<UFGSchematic> factorySchematic, TArray<AP_NetworkItem> apItems);
 	
-	UFGRecipe* GetRecipeByName(TMap<FName, FAssetData> recipeAssets, FString name);
-	UFGItemDescriptor* GetItemDescriptorByName(TMap<FName, FAssetData> itemDescriptorAssets, FString name);
-
 	UFUNCTION() //required for event binding
 	void OnMamResearchCompleted(TSubclassOf<class UFGSchematic> schematic);
 	UFUNCTION() //required for event binding

@@ -7,6 +7,7 @@
 #include "Subsystem/ModSubsystem.h"
 #include "Subsystem/ApSubsystem.h"
 #include "Subsystem/ApPortalSubsystem.h"
+#include "Subsystem/ApMappingsSubsystem.h"
 #include "FGResourceSinkSubsystem.h"
 
 #include "Data/ApGiftJson.h"
@@ -40,8 +41,9 @@ private:
 
 	bool apInitialized;
 
-	TMap<FString, TSubclassOf<UFGItemDescriptor>> NameToItemMapping;
-	TMap<TSubclassOf<UFGItemDescriptor>, FString> ItemToNameMapping;
+	TMap<TSubclassOf<UFGItemDescriptor>, int64_t> ItemToItemId;
+	TMap<FString, float> TraitDefaults;
+	TMap<int64_t, TMap<FString, float>> TraitsPerItem;
 
 	TMap<int, TSharedPtr<TQueue<FInventoryStack, EQueueMode::Mpsc>>> InputQueue;
 
@@ -50,6 +52,7 @@ private:
 	AApSubsystem* ap;
 	AApPortalSubsystem* portalSubSystem;
 	AFGResourceSinkSubsystem* resourceSinkSubsystem;
+	AApMappingsSubsystem* mappingSubsystem;
 
 	FDateTime lastPoll = FDateTime::Now();
 
@@ -65,9 +68,10 @@ private:
 	void PullAllGiftsAsync();
 	void ProcessInputQueue();
 	void HandleGiftsToReject();
+	FString BuildTraitsJson(TArray<FApGiftTraitJson> Traits);
 
 	void Send(TMap<int, TMap<TSubclassOf<UFGItemDescriptor>, int>> itemsToSend);
 
 	TSubclassOf<UFGItemDescriptor> TryGetItemClassByTraits(TArray<FApGiftTraitJson> traits);
-	FString GetTraitsJsonForItem(int64_t itemId);
+	FString GetTraitsJsonForItem(int64_t itemId, int itemValue);
 };

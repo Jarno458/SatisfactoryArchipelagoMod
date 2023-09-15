@@ -22,7 +22,7 @@ AApGiftingSubsystem::AApGiftingSubsystem() : Super() {
 
 	PrimaryActorTick.bCanEverTick = true;
 	PrimaryActorTick.bStartWithTickEnabled = true;
-	PrimaryActorTick.TickInterval = 0;
+	PrimaryActorTick.TickInterval = 0.1f;
 }
 
 void AApGiftingSubsystem::BeginPlay() {
@@ -30,17 +30,18 @@ void AApGiftingSubsystem::BeginPlay() {
 
 	UE_LOG(LogApGiftingSubsystem, Display, TEXT("AApGiftingSubsystem::BeginPlay()"));
 
-	auto world = GetWorld();
+	UWorld* world = GetWorld();
 	ap = AApSubsystem::Get(world);
 	portalSubSystem = AApPortalSubsystem::Get(world);
 	resourceSinkSubsystem = AFGResourceSinkSubsystem::Get(world);
+	mappingSubsystem = AApMappingsSubsystem::Get(world);
 }
 
 void AApGiftingSubsystem::Tick(float dt) {
 	Super::Tick(dt);
 
 	if (!apInitialized) {
-		if (ap->ConnectionState == EApConnectionState::Connected) {
+		if (ap->ConnectionState == EApConnectionState::Connected && mappingSubsystem->IsInitialized()) {
 			LoadItemNameMapping();
 
 			OpenGiftbox();
@@ -67,14 +68,8 @@ void AApGiftingSubsystem::Tick(float dt) {
 }
 
 void AApGiftingSubsystem::LoadItemNameMapping() {
-	TMap<FName, FAssetData> itemDescriptorAssets = UApUtils::GetItemDescriptorAssets();
-	for (TPair<int64_t, FString> itemMapping : UApMappings::ItemIdToGameItemDescriptor) {
-		UFGItemDescriptor* itemDescriptor = UApUtils::GetItemDescriptorByName(itemDescriptorAssets, itemMapping.Value);
-		TSubclassOf<UFGItemDescriptor> itemClass = itemDescriptor->GetClass();
-		FString itemName = ap->GetItemName(itemMapping.Key);
-
-		NameToItemMapping.Add(itemName, itemClass);
-		ItemToNameMapping.Add(itemClass, itemName);
+	for (TPair<int64_t, FApItemInfo> itemInfoMapping : mappingSubsystem->ItemInfo) {
+		ItemToItemId.Add(itemInfoMapping.Value.Class, itemInfoMapping.Key);
 	}
 }
 
@@ -115,7 +110,7 @@ void AApGiftingSubsystem::OnGiftsUpdated(AP_SetReply setReply) {
 	FString originalValue(((std::string*)setReply.original_value)->c_str());
 	FString value(((std::string*)setReply.value)->c_str());
 
-	if (value != TEXT("{}") || originalValue == TEXT("{}"))
+	if (!value.StartsWith(TEXT("{}")) || originalValue.StartsWith(TEXT("{}")))
 		return;
 
 	const TSharedRef<TJsonReader<>> reader = TJsonReaderFactory<>::Create(*originalValue);
@@ -139,8 +134,8 @@ void AApGiftingSubsystem::OnGiftsUpdated(AP_SetReply setReply) {
 		}
 
 		//try match on name
-		if (NameToItemMapping.Contains(gift.ItemName)) {
-			portalSubSystem->Enqueue(NameToItemMapping[gift.ItemName], gift.Amount);
+		if (mappingSubsystem->NameToItemId.Contains(gift.ItemName)) {
+			portalSubSystem->Enqueue(mappingSubsystem->ItemInfo[mappingSubsystem->NameToItemId[gift.ItemName]].Class, gift.Amount);
 		} else {
 			//if name cant be matched, try match on traits
 			TSubclassOf<UFGItemDescriptor> itemClass = TryGetItemClassByTraits(gift.Traits);
@@ -183,7 +178,6 @@ void AApGiftingSubsystem::HandleGiftsToReject() {
 	if (!GiftsToRefund.Dequeue(giftToReject))
 		return;
 
-	FString traits = GetTraitsJsonForItem(0);
 	FString json = FString::Printf(TEXT(R"({
 		"%s": {
 			"ID": "%s",
@@ -191,14 +185,14 @@ void AApGiftingSubsystem::HandleGiftsToReject() {
 			"Amount": %i,
 			"ItemValue": %i,
 			"Traits": [ %s ],
-			"Sender": "%i",
-			"Receiver": "%i",
+			"Sender": %i,
+			"Receiver": %i,
 			"SenderTeam": %i,
 			"ReceiverTeam": %i,
 			"IsRefund": true
 		}
 	})"), *giftToReject.ID, *giftToReject.ID, *giftToReject.ItemName, giftToReject.Amount, giftToReject.ItemValue, 
-			*traits, giftToReject.ReceiverSlot, giftToReject.SenderSlot, giftToReject.ReceiverTeam, giftToReject.SenderTeam);
+	*BuildTraitsJson(giftToReject.Traits), giftToReject.SenderSlot, giftToReject.ReceiverSlot, giftToReject.SenderTeam, giftToReject.ReceiverTeam);
 
 	std::string stdJson = TCHAR_TO_UTF8(*json);
 	AP_DataStorageOperation update;
@@ -218,6 +212,22 @@ void AApGiftingSubsystem::HandleGiftsToReject() {
 	removeProcesedGifts.want_reply = false;
 
 	ap->SetServerData(&removeProcesedGifts);
+}
+
+FString AApGiftingSubsystem::BuildTraitsJson(TArray<FApGiftTraitJson> Traits) {
+	FString json = TEXT("");
+
+	for (FApGiftTraitJson trait : Traits) {
+		json += FString::Printf(TEXT(R"({
+			"Trait": "%s",
+			"Quality": %f,
+			"Duration": %f
+		},)"), *trait.Trait, trait.Quality, trait.Duration);
+	}
+
+	json.RemoveFromEnd(TEXT(","));
+
+	return json;
 }
 
 void AApGiftingSubsystem::EnqueueForSending(int targetSlot, FInventoryStack itemStack) {
@@ -260,18 +270,19 @@ void AApGiftingSubsystem::Send(TMap<int, TMap<TSubclassOf<UFGItemDescriptor>, in
 		FString json = TEXT("");
 
 		for (TPair<TSubclassOf<UFGItemDescriptor>, int> stack : itemsToSendPerPlayer.Value) {
+			int64_t itemId = ItemToItemId[stack.Key];
 			FString guid = FGuid::NewGuid().ToString(EGuidFormats::DigitsWithHyphensLower);
-			FString itemName = ItemToNameMapping[stack.Key];
+			FString itemName = mappingSubsystem->ItemInfo[itemId].Name;
 			int itemValue = resourceSinkSubsystem->GetResourceSinkPointsForItem(stack.Key);
-			FString traits = GetTraitsJsonForItem(0);
+			FString traits = GetTraitsJsonForItem(itemId, itemValue);
 			json += FString::Printf(TEXT(R"("%s": {
 				"ID": "%s",
 				"ItemName": "%s",
 				"Amount": %i,
 				"ItemValue": %i,
 				"Traits": [ %s ],
-				"Sender": "%i",
-				"Receiver": "%i",
+				"Sender": %i,
+				"Receiver": %i,
 				"SenderTeam": %i,
 				"ReceiverTeam": %i,
 				"IsRefund": false
@@ -307,9 +318,26 @@ TSubclassOf<UFGItemDescriptor> AApGiftingSubsystem::TryGetItemClassByTraits(TArr
 	return nullptr;
 }
 
-FString AApGiftingSubsystem::GetTraitsJsonForItem(int64_t itemId) {
+FString AApGiftingSubsystem::GetTraitsJsonForItem(int64_t itemId, int itemValue) {
 	//TODO map item to trails
-	return TEXT("");
+
+	if (!TraitsPerItem.Contains(itemId))
+		return TEXT("");
+
+	TArray<FApGiftTraitJson> Traits;
+
+	for (TPair<FString, float> trait : TraitsPerItem[itemId]) {
+		float traitValue = (itemValue / TraitDefaults[trait.Key] / 10) * trait.Value;
+
+		FApGiftTraitJson traitSpecification;
+		traitSpecification.Trait = trait.Key;
+		traitSpecification.Quality = traitValue;
+		traitSpecification.Duration = 1.0f;
+
+		Traits.Add(traitSpecification);
+	}
+
+	return BuildTraitsJson(Traits);
 }
 
 #pragma optimize("", on)
