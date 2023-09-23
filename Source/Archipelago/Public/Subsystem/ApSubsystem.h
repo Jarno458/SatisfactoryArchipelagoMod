@@ -62,6 +62,74 @@ enum EApConnectionState {
 	ConnectionFailed UMETA(DisplayName = "Connection Failed")
 };
 
+USTRUCT()
+struct ARCHIPELAGO_API FApGiftTrait
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY()
+	FString Trait;
+	UPROPERTY()
+	float Quality;
+	UPROPERTY()
+	float Duration;
+};
+
+USTRUCT()
+struct ARCHIPELAGO_API FApGift
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY()
+	FString ItemName;
+	UPROPERTY()
+	int Amount;
+	UPROPERTY()
+	int ItemValue;
+	UPROPERTY()
+	TArray<FApGiftTrait> Traits;
+};
+
+USTRUCT()
+struct ARCHIPELAGO_API FApSendGift : public FApGift
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY()
+		FString Receiver;
+	UPROPERTY()
+	int ReceiverTeam;
+};
+
+USTRUCT()
+struct ARCHIPELAGO_API FApReceiveGift : public FApGift
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY()
+	FString Id;
+	UPROPERTY()
+	int SenderSlot;
+	UPROPERTY()
+	int SenderTeam;
+};
+
+USTRUCT(BlueprintType)
+struct ARCHIPELAGO_API FApPlayer
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY()
+	int Team;
+	UPROPERTY()
+	FString Name;
+};
+
 UCLASS()
 class ARCHIPELAGO_API AApSubsystem : public AModSubsystem, public IFGSaveInterface
 {
@@ -81,7 +149,7 @@ protected:
 	virtual void PostSaveGame_Implementation(int32 saveVersion, int32 gameVersion) override {};
 	virtual void PreLoadGame_Implementation(int32 saveVersion, int32 gameVersion) override {};
 	virtual void PostLoadGame_Implementation(int32 saveVersion, int32 gameVersion) override {};
-	virtual void GatherDependencies_Implementation(TArray< UObject* >& out_dependentObjects) override {};
+	virtual void GatherDependencies_Implementation(TArray<UObject*>& out_dependentObjects) override {};
 	virtual bool NeedTransform_Implementation() override { return false; };
 	virtual bool ShouldSave_Implementation() const override { return true; };
 	// End IFSaveInterface
@@ -117,8 +185,15 @@ public:
 	FORCEINLINE FApSlotData GetSlotData() const { return slotData; };
 
 	FString GetItemName(int64_t itemId);
-	FString GetLocationName(int64_t locationId);
-	FString GetPlayerName(int slotId);
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	TArray<FApPlayer> GetOpenGiftboxes();
+
+	void SetGiftBoxState(bool open);
+	bool SendGift(FApSendGift giftToSend);
+	TArray<FApReceiveGift> GetGifts();
+	void RejectGift(FString id);
+	void AcceptGift(FString id);
 
 private:
 	static std::map<std::string, std::function<void(AP_SetReply)>> callbacks;

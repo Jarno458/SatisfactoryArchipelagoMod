@@ -47,6 +47,8 @@ private:
 
 	TMap<int, TSharedPtr<TQueue<FInventoryStack, EQueueMode::Mpsc>>> InputQueue;
 
+	TSet<FString> ProcessedIds;
+
 	TQueue<FApGiftJson> GiftsToRefund;
 
 	AApSubsystem* ap;
@@ -73,5 +75,10 @@ private:
 	void Send(TMap<int, TMap<TSubclassOf<UFGItemDescriptor>, int>> itemsToSend);
 
 	TSubclassOf<UFGItemDescriptor> TryGetItemClassByTraits(TArray<FApGiftTraitJson> traits);
+	TSubclassOf<UFGItemDescriptor> TryGetItemClassByTraits(TArray<FApGiftTrait> traits);
+
+	TArray<FApGiftTrait> GetTraitsForItem(int64_t itemId, int itemValue);
 	FString GetTraitsJsonForItem(int64_t itemId, int itemValue);
+
+	void UpdatedProcessedIds(TArray<FApReceiveGift> gifts);
 };

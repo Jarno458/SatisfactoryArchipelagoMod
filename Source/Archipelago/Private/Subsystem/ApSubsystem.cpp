@@ -598,16 +598,104 @@ FApConfigurationStruct AApSubsystem::GetActiveConfig() {
 }
 
 FString AApSubsystem::GetItemName(int64_t id) {
-	return FString(AP_GetItemName(id).c_str());
+	return UApUtils::FStr(AP_GetItemName(id));
 }
 
-FString AApSubsystem::GetLocationName(int64_t id) {
-	return FString(AP_GetLocationName(id).c_str());
+void AApSubsystem::SetGiftBoxState(bool open) {
+	AP_UseGiftAutoReject(false);
+
+	AP_GiftBoxProperties giftbox;
+	giftbox.AcceptsAnyGift = true;
+	giftbox.DesiredTraits = std::vector<std::string>();
+	giftbox.IsOpen = open;
+
+	AP_SetGiftBoxProperties(giftbox);
+
+	GetOpenGiftboxes();
 }
 
-FString AApSubsystem::GetPlayerName(int id) {
-	return FString(AP_GetPlayerName(id).c_str());
+bool AApSubsystem::SendGift(FApSendGift giftToSend) {
+	AP_Gift gift;
+	gift.ItemName = TCHAR_TO_UTF8(*giftToSend.ItemName);
+	gift.Amount = giftToSend.Amount;
+	gift.ItemValue = giftToSend.ItemValue;
+	gift.Receiver = TCHAR_TO_UTF8(*giftToSend.Receiver);
+	gift.ReceiverTeam = giftToSend.ReceiverTeam;
+	gift.Traits = std::vector<AP_GiftTrait>(giftToSend.Traits.Num());
+	gift.IsRefund = false;
+
+	for (int i = 0; i < giftToSend.Traits.Num(); i++)
+	{
+		AP_GiftTrait trait;
+		trait.Trait = TCHAR_TO_UTF8(*giftToSend.Traits[i].Trait);
+		trait.Duration = 1.0;
+		trait.Quality = giftToSend.Traits[i].Quality;
+
+		gift.Traits.emplace_back(trait);
+	}
+
+	AP_RequestStatus result = AP_SendGift(gift);
+	return result != AP_RequestStatus::Error;
 }
+
+TArray<FApReceiveGift> AApSubsystem::GetGifts() {
+	std::vector<AP_Gift> gifts = AP_CheckGifts();
+
+	TArray<FApReceiveGift> currentGifts;
+
+	for (AP_Gift apGift : gifts) {
+		FApReceiveGift gift;
+		gift.Id = UApUtils::FStr(apGift.ID);
+		gift.ItemName = UApUtils::FStr(apGift.ItemName);
+		gift.Amount = apGift.Amount;
+		gift.ItemValue = apGift.ItemValue;
+		gift.Traits.SetNum(apGift.Traits.size());
+		
+		for (AP_GiftTrait apTrait : apGift.Traits) {
+			FApGiftTrait trait;
+			trait.Trait = UApUtils::FStr(apTrait.Trait);
+			trait.Duration = apTrait.Duration;
+			trait.Quality = apTrait.Quality;
+
+			gift.Traits.Add(trait);
+		}
+
+		currentGifts.Add(gift);
+	}
+
+	return currentGifts;
+}
+
+void AApSubsystem::RejectGift(FString id) {
+	std::string giftId = TCHAR_TO_UTF8(*id);
+	AP_RejectGift(giftId);
+}
+
+void AApSubsystem::AcceptGift(FString id) {
+	std::string giftId = TCHAR_TO_UTF8(*id);
+	AP_Gift* gift = nullptr;
+
+	AP_AcceptGift(giftId, gift);
+}
+
+TArray<FApPlayer> AApSubsystem::GetOpenGiftboxes() {
+	std::map<std::pair<int, std::string>, AP_GiftBoxProperties> giftboxes = AP_QueryGiftBoxes();
+
+	TArray<FApPlayer> openGiftBoxes;
+
+	for (std::pair<std::pair<int, std::string>, AP_GiftBoxProperties> giftbox : giftboxes) {
+		if (giftbox.second.IsOpen) {
+			FApPlayer player;
+			player.Team = giftbox.first.first;
+			player.Name = UApUtils::FStr(giftbox.first.second);
+
+			openGiftBoxes.Add(player);
+		}
+	}
+
+	return openGiftBoxes;
+}
+
 
 #pragma optimize("", on)
 

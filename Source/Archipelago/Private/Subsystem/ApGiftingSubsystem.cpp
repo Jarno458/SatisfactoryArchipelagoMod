@@ -44,12 +44,12 @@ void AApGiftingSubsystem::Tick(float dt) {
 		if (ap->ConnectionState == EApConnectionState::Connected && mappingSubsystem->IsInitialized()) {
 			LoadItemNameMapping();
 
-			OpenGiftbox();
+			ap->SetGiftBoxState(true);
 
-			FString giftboxKey = FString::Printf(TEXT("GiftBox;%i;%i"), ap->currentPlayerTeam, ap->currentPlayerSlot);
+			/*FString giftboxKey = FString::Printf(TEXT("GiftBox;%i;%i"), ap->currentPlayerTeam, ap->currentPlayerSlot);
 			ap->MonitorDataStoreValue(TCHAR_TO_UTF8(*giftboxKey), AP_DataType::Raw, "{}", [&](AP_SetReply setReply) {
 				OnGiftsUpdated(setReply);
-			});
+			});*/
 
 			apInitialized = true;
 		}
@@ -62,7 +62,7 @@ void AApGiftingSubsystem::Tick(float dt) {
 
 			PullAllGiftsAsync();
 			ProcessInputQueue();
-			HandleGiftsToReject();
+			//HandleGiftsToReject();
 		}
 	}
 }
@@ -73,41 +73,8 @@ void AApGiftingSubsystem::LoadItemNameMapping() {
 	}
 }
 
-void AApGiftingSubsystem::OpenGiftbox() {
-
-	FString json = FString::Printf(TEXT(R"({
-		"%i": {
-			"IsOpen": true,
-			"AcceptsAnyGift": true,
-			"DesiredTraits": [],
-			"MinimumGiftDataVersion": 2,
-			"MaximumGiftDataVersion": 2
-		}
-	})"), ap->currentPlayerSlot);
-
-	std::string stdJson = TCHAR_TO_UTF8(*json);
-
-	AP_DataStorageOperation update;
-	update.operation = "update";
-	update.value = &stdJson;
-
-	std::vector<AP_DataStorageOperation> operations;
-	operations.push_back(update);
-
-	FString motherBoxKey = FString::Printf(TEXT("GiftBoxes;%i"), ap->currentPlayerTeam);
-
-	AP_SetServerDataRequest motherBoxOpenGiftBox;
-	motherBoxOpenGiftBox.key = TCHAR_TO_UTF8(*motherBoxKey);
-	motherBoxOpenGiftBox.operations = operations;
-	motherBoxOpenGiftBox.default_value = &defaultGiftboxValue;
-	motherBoxOpenGiftBox.type = AP_DataType::Raw;
-	motherBoxOpenGiftBox.want_reply = false;
-
-	ap->SetServerData(&motherBoxOpenGiftBox);
-}
-
 void AApGiftingSubsystem::OnGiftsUpdated(AP_SetReply setReply) {
-	FString originalValue(((std::string*)setReply.original_value)->c_str());
+/*	FString originalValue(((std::string*)setReply.original_value)->c_str());
 	FString value(((std::string*)setReply.value)->c_str());
 
 	if (!value.StartsWith(TEXT("{}")) || originalValue.StartsWith(TEXT("{}")))
@@ -146,10 +113,10 @@ void AApGiftingSubsystem::OnGiftsUpdated(AP_SetReply setReply) {
 				GiftsToRefund.Enqueue(gift);
 			}
 		}
-	}
+	}*/
 }
 
-void AApGiftingSubsystem::PullAllGiftsAsync() {
+/*void AApGiftingSubsystem::PullAllGiftsAsync() {
 	FString json = TEXT("{}");
 	std::string stdJson = TCHAR_TO_UTF8(*json);
 	AP_DataStorageOperation update;
@@ -171,10 +138,56 @@ void AApGiftingSubsystem::PullAllGiftsAsync() {
 	nukeGiftBox.want_reply = false;
 
 	ap->SetServerData(&nukeGiftBox);
+}*/
+
+void AApGiftingSubsystem::PullAllGiftsAsync() {
+	TArray<FApReceiveGift> gifts = ap->GetGifts();
+
+	UpdatedProcessedIds(gifts);
+
+	for (FApReceiveGift gift : gifts) {
+		if (ProcessedIds.Contains(gift.Id))
+			continue;
+
+		ProcessedIds.Add(gift.Id);
+
+		//try match on name
+		if (mappingSubsystem->NameToItemId.Contains(gift.ItemName)) {
+			portalSubSystem->Enqueue(mappingSubsystem->ItemInfo[mappingSubsystem->NameToItemId[gift.ItemName]].Class, gift.Amount);
+		}	else {
+			//if name cant be matched, try match on traits
+			TSubclassOf<UFGItemDescriptor> itemClass = TryGetItemClassByTraits(gift.Traits);
+
+			if (itemClass != nullptr) {
+				portalSubSystem->Enqueue(itemClass, gift.Amount);
+			} else {
+				ap->RejectGift(gift.Id);
+			}
+		}
+
+		ap->AcceptGift(gift.Id);
+	}
+}
+
+void AApGiftingSubsystem::UpdatedProcessedIds(TArray<FApReceiveGift> gifts) {
+	TSet<FString> currentGiftIds;
+	for (FApReceiveGift gift : gifts) {
+		currentGiftIds.Add(gift.Id);
+	}
+
+	TArray<FString> giftIdsToForget;
+	for (FString id : ProcessedIds) {
+		if (!currentGiftIds.Contains(id))
+			giftIdsToForget.Add(id);
+	}
+
+	for (FString id : giftIdsToForget) {
+		ProcessedIds.Remove(id);
+	}
 }
 
 void AApGiftingSubsystem::HandleGiftsToReject() {
-	FApGiftJson giftToReject;
+	/*FApGiftJson giftToReject;
 	if (!GiftsToRefund.Dequeue(giftToReject))
 		return;
 
@@ -211,7 +224,7 @@ void AApGiftingSubsystem::HandleGiftsToReject() {
 	removeProcesedGifts.type = AP_DataType::Raw;
 	removeProcesedGifts.want_reply = false;
 
-	ap->SetServerData(&removeProcesedGifts);
+	ap->SetServerData(&removeProcesedGifts);*/
 }
 
 FString AApGiftingSubsystem::BuildTraitsJson(TArray<FApGiftTraitJson> Traits) {
@@ -267,7 +280,23 @@ void AApGiftingSubsystem::Send(TMap<int, TMap<TSubclassOf<UFGItemDescriptor>, in
 		if (itemsToSendPerPlayer.Value.Num() <= 0)
 			continue;
 
-		FString json = TEXT("");
+		for (TPair<TSubclassOf<UFGItemDescriptor>, int> stack : itemsToSendPerPlayer.Value) {
+			int64_t itemId = ItemToItemId[stack.Key];
+			FString itemName = mappingSubsystem->ItemInfo[itemId].Name;
+			int itemValue = resourceSinkSubsystem->GetResourceSinkPointsForItem(stack.Key);
+
+			FApSendGift gift;
+			gift.ItemName = mappingSubsystem->ItemInfo[itemId].Name;
+			gift.Amount = stack.Value;
+			gift.ItemValue = resourceSinkSubsystem->GetResourceSinkPointsForItem(stack.Key);
+			gift.Traits = GetTraitsForItem(itemId, itemValue);
+			gift.ReceiverTeam = ap->currentPlayerTeam;
+			gift.Receiver = ap->GetActiveConfig().Login; //itemsToSendPerPlayer.Key;
+
+			ap->SendGift(gift);
+		}
+
+	/*FString json = TEXT("");
 
 		for (TPair<TSubclassOf<UFGItemDescriptor>, int> stack : itemsToSendPerPlayer.Value) {
 			int64_t itemId = ItemToItemId[stack.Key];
@@ -309,11 +338,16 @@ void AApGiftingSubsystem::Send(TMap<int, TMap<TSubclassOf<UFGItemDescriptor>, in
 		addToGiftBox.type = AP_DataType::Raw;
 		addToGiftBox.want_reply = false;
 
-		ap->SetServerData(&addToGiftBox);
+		ap->SetServerData(&addToGiftBox);*/
 	}
 }
 
 TSubclassOf<UFGItemDescriptor> AApGiftingSubsystem::TryGetItemClassByTraits(TArray<FApGiftTraitJson> traits) {
+	//TODO process item traits and quality, like "Metal" with quality 2 might be Encased Steam Beam
+	return nullptr;
+}
+
+TSubclassOf<UFGItemDescriptor> AApGiftingSubsystem::TryGetItemClassByTraits(TArray<FApGiftTrait> traits) {
 	//TODO process item traits and quality, like "Metal" with quality 2 might be Encased Steam Beam
 	return nullptr;
 }
@@ -338,6 +372,28 @@ FString AApGiftingSubsystem::GetTraitsJsonForItem(int64_t itemId, int itemValue)
 	}
 
 	return BuildTraitsJson(Traits);
+}
+
+TArray<FApGiftTrait> AApGiftingSubsystem::GetTraitsForItem(int64_t itemId, int itemValue) {
+	//TODO map item to trails
+
+	if (!TraitsPerItem.Contains(itemId))
+		return TArray<FApGiftTrait>();
+
+	TArray<FApGiftTrait> Traits;
+
+	for (TPair<FString, float> trait : TraitsPerItem[itemId]) {
+		float traitValue = (itemValue / TraitDefaults[trait.Key] / 10) * trait.Value;
+
+		FApGiftTrait traitSpecification;
+		traitSpecification.Trait = trait.Key;
+		traitSpecification.Quality = traitValue;
+		traitSpecification.Duration = 1.0f;
+
+		Traits.Add(traitSpecification);
+	}
+
+	return Traits;
 }
 
 #pragma optimize("", on)
