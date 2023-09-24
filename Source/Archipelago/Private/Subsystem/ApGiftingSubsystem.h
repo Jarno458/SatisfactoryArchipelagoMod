@@ -1,16 +1,12 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Misc/Guid.h"
-#include "JsonObjectConverter.h"
 
 #include "Subsystem/ModSubsystem.h"
 #include "Subsystem/ApSubsystem.h"
 #include "Subsystem/ApPortalSubsystem.h"
 #include "Subsystem/ApMappingsSubsystem.h"
 #include "FGResourceSinkSubsystem.h"
-
-#include "Data/ApGiftJson.h"
 
 #include "ApGiftingSubsystem.generated.h"
 
@@ -37,7 +33,6 @@ public:
 
 private:
 	static const int pollInterfall = 10;
-	std::string defaultGiftboxValue = "{}";
 
 	bool apInitialized;
 
@@ -45,11 +40,9 @@ private:
 	TMap<FString, float> TraitDefaults;
 	TMap<int64_t, TMap<FString, float>> TraitsPerItem;
 
-	TMap<int, TSharedPtr<TQueue<FInventoryStack, EQueueMode::Mpsc>>> InputQueue;
+	TMap<FApPlayer, TSharedPtr<TQueue<FInventoryStack, EQueueMode::Mpsc>>> InputQueue;
 
 	TSet<FString> ProcessedIds;
-
-	TQueue<FApGiftJson> GiftsToRefund;
 
 	AApSubsystem* ap;
 	AApPortalSubsystem* portalSubSystem;
@@ -59,26 +52,19 @@ private:
 	FDateTime lastPoll = FDateTime::Now();
 
 public:
-	void EnqueueForSending(int targetSlot, FInventoryStack itemStack);
+	void EnqueueForSending(FApPlayer targetPlayer, FInventoryStack itemStack);
 
 private:
 	void LoadItemNameMapping();
 
-	void OpenGiftbox();
-	void OnGiftsUpdated(AP_SetReply setReply);
-
 	void PullAllGiftsAsync();
 	void ProcessInputQueue();
-	void HandleGiftsToReject();
-	FString BuildTraitsJson(TArray<FApGiftTraitJson> Traits);
 
-	void Send(TMap<int, TMap<TSubclassOf<UFGItemDescriptor>, int>> itemsToSend);
+	void Send(TMap<FApPlayer, TMap<TSubclassOf<UFGItemDescriptor>, int>> itemsToSend);
 
-	TSubclassOf<UFGItemDescriptor> TryGetItemClassByTraits(TArray<FApGiftTraitJson> traits);
 	TSubclassOf<UFGItemDescriptor> TryGetItemClassByTraits(TArray<FApGiftTrait> traits);
 
 	TArray<FApGiftTrait> GetTraitsForItem(int64_t itemId, int itemValue);
-	FString GetTraitsJsonForItem(int64_t itemId, int itemValue);
 
 	void UpdatedProcessedIds(TArray<FApReceiveGift> gifts);
 };

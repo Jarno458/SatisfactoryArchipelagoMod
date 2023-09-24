@@ -37,6 +37,7 @@
 
 #include "ApConfigurationStruct.h"
 #include "Data/ApSlotData.h"
+#include "Data/ApTypes.h"
 #include "ApPortalSubsystem.h"
 #include "Subsystem/ApMappingsSubsystem.h"
 
@@ -60,74 +61,6 @@ enum EApConnectionState {
 	Connecting UMETA(DisplayName = "Connecting"),
 	Connected UMETA(DisplayName = "Connection Successful"),
 	ConnectionFailed UMETA(DisplayName = "Connection Failed")
-};
-
-USTRUCT()
-struct ARCHIPELAGO_API FApGiftTrait
-{
-	GENERATED_BODY()
-
-public:
-	UPROPERTY()
-	FString Trait;
-	UPROPERTY()
-	float Quality;
-	UPROPERTY()
-	float Duration;
-};
-
-USTRUCT()
-struct ARCHIPELAGO_API FApGift
-{
-	GENERATED_BODY()
-
-public:
-	UPROPERTY()
-	FString ItemName;
-	UPROPERTY()
-	int Amount;
-	UPROPERTY()
-	int ItemValue;
-	UPROPERTY()
-	TArray<FApGiftTrait> Traits;
-};
-
-USTRUCT()
-struct ARCHIPELAGO_API FApSendGift : public FApGift
-{
-	GENERATED_BODY()
-
-public:
-	UPROPERTY()
-		FString Receiver;
-	UPROPERTY()
-	int ReceiverTeam;
-};
-
-USTRUCT()
-struct ARCHIPELAGO_API FApReceiveGift : public FApGift
-{
-	GENERATED_BODY()
-
-public:
-	UPROPERTY()
-	FString Id;
-	UPROPERTY()
-	int SenderSlot;
-	UPROPERTY()
-	int SenderTeam;
-};
-
-USTRUCT(BlueprintType)
-struct ARCHIPELAGO_API FApPlayer
-{
-	GENERATED_BODY()
-
-public:
-	UPROPERTY()
-	int Team;
-	UPROPERTY()
-	FString Name;
 };
 
 UCLASS()

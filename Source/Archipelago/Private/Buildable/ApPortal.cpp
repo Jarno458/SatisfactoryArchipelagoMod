@@ -16,6 +16,10 @@ AApPortal::AApPortal() : Super() {
 	bReplicates = true;
 
 	mPowerConsumption = 10;
+
+	//TODO implelemt through ui
+	targetPlayer.Name = TEXT("JarnoSF");
+	targetPlayer.Team = 0;
 }
 
 void AApPortal::BeginPlay() {
@@ -65,7 +69,7 @@ void AApPortal::Factory_Tick(float dt) {
 
 	inventory = GetStorageInventory();
 	if (inventory != nullptr) {
-		if (targetPlayerSlot <= -1)
+		if (targetPlayer.Team <= -1)
 			inventory->SetLocked(true);
 		else {
 			inventory->SetLocked(false);
@@ -74,7 +78,7 @@ void AApPortal::Factory_Tick(float dt) {
 			inventory->GetInventoryStacks(stacks);
 
 			for (FInventoryStack stack : stacks) {
-				((AApPortalSubsystem*)portalSubsystem)->Send(targetPlayerSlot, stack);
+				((AApPortalSubsystem*)portalSubsystem)->Send(targetPlayer, stack);
 			}
 
 			inventory->Empty();

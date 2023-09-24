@@ -8,8 +8,7 @@
 #include "FGPowerInfoComponent.h"
 
 //#include "../Subsystem/ApPortalSubsystem.h" set inside cpp to avoid circular dep
-
-
+#include "Data/ApTypes.h"
 
 #include "ApPortal.generated.h"
 
@@ -30,6 +29,9 @@ public:
 
 	mutable TQueue<FInventoryItem> outputQueue;
 
+	UPROPERTY(BlueprintReadWrite)
+	FApPlayer targetPlayer;
+
 private:
 	AModSubsystem* portalSubsystem;
 
@@ -38,8 +40,6 @@ private:
 	UFGInventoryComponent* inventory;
 
 	int portalId;
-
-	int targetPlayerSlot = 1;
 
 	bool camReceiveOutput = false;
 

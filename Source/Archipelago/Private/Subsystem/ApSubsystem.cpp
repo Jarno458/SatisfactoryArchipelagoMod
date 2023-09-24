@@ -619,8 +619,8 @@ bool AApSubsystem::SendGift(FApSendGift giftToSend) {
 	gift.ItemName = TCHAR_TO_UTF8(*giftToSend.ItemName);
 	gift.Amount = giftToSend.Amount;
 	gift.ItemValue = giftToSend.ItemValue;
-	gift.Receiver = TCHAR_TO_UTF8(*giftToSend.Receiver);
-	gift.ReceiverTeam = giftToSend.ReceiverTeam;
+	gift.Receiver = TCHAR_TO_UTF8(*giftToSend.Receiver.Name);
+	gift.ReceiverTeam = giftToSend.Receiver.Team;
 	gift.Traits = std::vector<AP_GiftTrait>(giftToSend.Traits.Num());
 	gift.IsRefund = false;
 
@@ -668,14 +668,15 @@ TArray<FApReceiveGift> AApSubsystem::GetGifts() {
 
 void AApSubsystem::RejectGift(FString id) {
 	std::string giftId = TCHAR_TO_UTF8(*id);
+
 	AP_RejectGift(giftId);
 }
 
 void AApSubsystem::AcceptGift(FString id) {
 	std::string giftId = TCHAR_TO_UTF8(*id);
-	AP_Gift* gift = nullptr;
+	AP_Gift gift;
 
-	AP_AcceptGift(giftId, gift);
+	AP_AcceptGift(giftId, &gift);
 }
 
 TArray<FApPlayer> AApSubsystem::GetOpenGiftboxes() {
@@ -695,7 +696,6 @@ TArray<FApPlayer> AApSubsystem::GetOpenGiftboxes() {
 
 	return openGiftBoxes;
 }
-
 
 #pragma optimize("", on)
 

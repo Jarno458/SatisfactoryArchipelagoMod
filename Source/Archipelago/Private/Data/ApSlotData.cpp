@@ -4,6 +4,8 @@ FApSlotData::FApSlotData() {
 }
 
 bool FApSlotData::ParseSlotData(std::string json, FApSlotData* data) {
+	//TODO use https://docs.unrealengine.com/5.1/en-US/API/Runtime/JsonUtilities/FJsonObjectConverter/JsonObjectStringToUStruct/
+
 	FString jsonString(json.c_str());
 
 	const TSharedRef<TJsonReader<>> reader = TJsonReaderFactory<>::Create(*jsonString);

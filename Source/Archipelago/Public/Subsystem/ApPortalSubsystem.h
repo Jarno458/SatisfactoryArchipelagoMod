@@ -5,6 +5,8 @@
 
 #include "Buildable/ApPortal.h"
 
+#include "Data/ApTypes.h"
+
 #include "ApPortalSubsystem.generated.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(LogApPortalSubsystem, Log, All);
@@ -42,7 +44,7 @@ public:
 
 	void Enqueue(TSubclassOf<UFGItemDescriptor> cls, int amount);
 
-	void Send(int targetSlot, FInventoryStack itemStack);
+	void Send(FApPlayer targetPlayer, FInventoryStack itemStack);
 
 	void RegisterPortal(const AApPortal* portal);
 	void UnRegisterPortal(const AApPortal* portal);

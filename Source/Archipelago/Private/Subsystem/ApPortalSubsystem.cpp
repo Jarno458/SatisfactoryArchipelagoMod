@@ -69,8 +69,8 @@ void AApPortalSubsystem::Enqueue(TSubclassOf<UFGItemDescriptor> cls, int amount)
 	}
 }
 
-void AApPortalSubsystem::Send(int targetSlot, FInventoryStack itemStack) {
-	((AApGiftingSubsystem*)giftingSubsystem)->EnqueueForSending(targetSlot, itemStack);
+void AApPortalSubsystem::Send(FApPlayer targetPlayer, FInventoryStack itemStack) {
+	((AApGiftingSubsystem*)giftingSubsystem)->EnqueueForSending(targetPlayer, itemStack);
 }
 
 void AApPortalSubsystem::RegisterPortal(const AApPortal* portal) {
