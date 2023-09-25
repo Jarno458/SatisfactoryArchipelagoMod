@@ -43,6 +43,8 @@ private:
 
 	bool camReceiveOutput = false;
 
+	static const TSet<FString> ItemClassesBlockedFromSending;
+
 public:
 	UFUNCTION()
 	void CheckPower(bool newHasPower) const;

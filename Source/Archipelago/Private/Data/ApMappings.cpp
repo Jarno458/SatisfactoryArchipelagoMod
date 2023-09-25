@@ -90,7 +90,7 @@ const TMap<int64_t, FString> UApMappings::ItemIdToGameItemDescriptor = {
 	{1338085, TEXT("Desc_ComputerQuantum_C")},
 	{1338086, TEXT("Desc_QuartzCrystal_C")},
 	{1338087, TEXT("Desc_HighSpeedWire_C")},
-	{1338088, TEXT("Desc_ModularFrameLightweight_C")},
+	{1338088, TEXT("Desc_ModularFrameLightweight_C")}, //Radio Control Unit
 	{1338089, TEXT("Desc_RawQuartz_C")},
 	{1338090, TEXT("Desc_IronPlateReinforced_C")},
 	{1338091, TEXT("Desc_Rotor_C")},
@@ -122,6 +122,7 @@ const TMap<int64_t, FString> UApMappings::ItemIdToGameItemDescriptor = {
 	{1338117, TEXT("Desc_SpitterParts_C")},
 	{1338118, TEXT("Desc_StingerParts_C")},
 	{1338119, TEXT("Desc_HatcherParts_C")},
+	{1338120, TEXT("Desc_AlienDNACapsule_C")},
 
 	//Enquipment/Ammo
 	{1338150, TEXT("Desc_Shroom_C")},

@@ -6,6 +6,12 @@ DEFINE_LOG_CATEGORY(LogGame); // A base-game header is using this category so we
 //TODO REMOVE
 #pragma optimize("", off)
 
+const TSet<FString> AApPortal::ItemClassesBlockedFromSending = {
+	"Desc_HUBParts_C",
+	"Desc_SAM_C",
+	"Desc_SAMIngot_C"
+};
+
 AApPortal::AApPortal() : Super() {
 	mPowerInfoClass = UFGPowerInfoComponent::StaticClass();
 	mInventorySizeX = 5;
@@ -74,14 +80,25 @@ void AApPortal::Factory_Tick(float dt) {
 		else {
 			inventory->SetLocked(false);
 
+
 			TArray<FInventoryStack> stacks;
 			inventory->GetInventoryStacks(stacks);
 
+			TArray<FInventoryStack> stacksToKeep;
+
 			for (FInventoryStack stack : stacks) {
-				((AApPortalSubsystem*)portalSubsystem)->Send(targetPlayer, stack);
+				FString className = stack.Item.GetItemClass()->GetName();
+				if (ItemClassesBlockedFromSending.Contains(className))
+					stacksToKeep.Add(stack);
+				else
+					((AApPortalSubsystem*)portalSubsystem)->Send(targetPlayer, stack);
 			}
 
 			inventory->Empty();
+
+			for (FInventoryStack stack : stacksToKeep) {
+				inventory->AddStack(stack);
+			}
 		}
 	}
 

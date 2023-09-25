@@ -37,8 +37,12 @@ private:
 	bool apInitialized;
 
 	TMap<TSubclassOf<UFGItemDescriptor>, int64_t> ItemToItemId;
-	TMap<FString, float> TraitDefaults;
-	TMap<int64_t, TMap<FString, float>> TraitsPerItem;
+	TMap<FString, int> TraitAvarageValue;
+
+	static const TMap<FString, int64_t> TraitDefaultItemIds;
+	static const TMap<int64_t, TMap<FString, float>> TraitsPerItem;
+	static const TMap<FString, FString> TraitParents;
+	static const TMap<int64_t, int> HardcodedSinkValues;
 
 	TMap<FApPlayer, TSharedPtr<TQueue<FInventoryStack, EQueueMode::Mpsc>>> InputQueue;
 
@@ -67,4 +71,6 @@ private:
 	TArray<FApGiftTrait> GetTraitsForItem(int64_t itemId, int itemValue);
 
 	void UpdatedProcessedIds(TArray<FApReceiveGift> gifts);
+
+	int GetResourceSinkPointsForItem(TSubclassOf<UFGItemDescriptor> itemClass, int64_t itemId);
 };
