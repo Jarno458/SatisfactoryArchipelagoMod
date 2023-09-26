@@ -631,7 +631,7 @@ bool AApSubsystem::SendGift(FApSendGift giftToSend) {
 		trait.Duration = 1.0;
 		trait.Quality = giftToSend.Traits[i].Quality;
 
-		gift.Traits.emplace_back(trait);
+		gift.Traits[i] = trait;
 	}
 
 	AP_RequestStatus result = AP_SendGift(gift);

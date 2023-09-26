@@ -80,7 +80,6 @@ void AApPortal::Factory_Tick(float dt) {
 		else {
 			inventory->SetLocked(false);
 
-
 			TArray<FInventoryStack> stacks;
 			inventory->GetInventoryStacks(stacks);
 

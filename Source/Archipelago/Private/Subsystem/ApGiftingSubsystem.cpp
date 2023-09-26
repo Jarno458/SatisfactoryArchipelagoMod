@@ -179,15 +179,15 @@ const TMap<int64_t, TMap<FString, float>> AApGiftingSubsystem::TraitsPerItem = {
 	{1338119, {{"Grass", 1.0f},{"Resource", 0.1f}}}, // Desc_HatcherParts_C, 
 
 	//Enquipment/Ammo
-	{1338150, {{"Vegetable", 1.0f},{"Heal", 1.0f}}}, // Desc_Shroom_C, 
+	{1338150, {{"Vegetable", 1.0f},{"Heal", 1.0f}}}, // Desc_Shroom_C, //Bacon Agaric
 	{1338151, {{"Seed", 1.0f},{"Heal", 1.0f}}}, // Desc_Nut_C, 
 	{1338152, {{"Tool", 1.0f},{"Speed", 1.0f}}}, // BP_EquipmentDescriptorJumpingStilts_C, 
-	//{1338153, {{"Weapon", 1.0f},{"Buff", 1.0f}}}, //BoomBox
+	{1338153, {{"Weapon", 1.0f},{"Buff", 1.0f}}}, //BoomBox
 	{1338154, {{"Weapon", 1.0f}}}, // Desc_Chainsaw_C, 
 	{1338155, {{"Bomb", 1.0f}}}, // Desc_NobeliskCluster_C, 
 	//{1338156, {{ }}}, // Unused, 
-	{1338157, {{ }}}, // BP_EquipmentDescriptorCup_C, 
-	{1338158, {{ }}}, // BP_EquipmentDescriptorCupGold_C, 
+	{1338157, {{"Speed", 1.0f}}}, // BP_EquipmentDescriptorCup_C, 
+	{1338158, {{"Speed", 1.0f},{"Gold", 1.0f}}}, // BP_EquipmentDescriptorCupGold_C, 
 	{1338159, {{"Weapon", 1.0f}}}, // Desc_Rebar_Explosive_C, 
 	{1338160, {{"Tool", 1.0f},{"Speed", 1.0f}}}, // Desc_GolfCart_C, 
 	{1338161, {{"Tool", 1.0f},{"Speed", 1.0f}}}, // Desc_GolfCartGold_C, 
@@ -218,23 +218,53 @@ const TMap<int64_t, TMap<FString, float>> AApGiftingSubsystem::TraitsPerItem = {
 	{1338186, {{"Tool", 1.0f}}}, // BP_ItemDescriptorPortableMiner_C,
 };
 
+// The Unsinkables
 const TMap<int64_t, int> AApGiftingSubsystem::HardcodedSinkValues = {
 	{1338003, 10}, // Desc_Crystal_C, //Blue Power Slug
 	{1338004, 30}, // Desc_Crystal_mk2_C, //Yellow Power Slug
 	{1338006, 100}, // Desc_Crystal_mk3_C, //Purple Power Slug
 	{1338082, 50}, // Desc_CrystalShard_C, //Power Shard
+
 	{1338110, 700}, // Desc_HogParts_C,
 	{1338119, 750}, // Desc_HatcherParts_C,
 	{1338117, 800}, // Desc_SpitterParts_C,
 	{1338118, 900}, // Desc_StingerParts_C,
 	{1338005, 1000}, // Desc_AlienProtein_C, //High value as 1 Protein = 100 biomass = 12 * 100 = 1200 points
 	{1338120, 14}, // Desc_AlienDNACapsule_C,
-	{1338043, 1000}, //Desc_HardDrive_C
+
+	{1338043, 900}, //Desc_HardDrive_C
 	{1338099, 1000}, //Desc_WAT1_C, //Somersloop
-	{1338057, 1000}, //Desc_WAT2_C, //Mercer Sphere
-	//Uranium Waste and every derived item, with the exception of Plutonium Fuel Rods, but including Plutonium Waste, which will show a warning that radioactive items are not allowed for contaminating the results
+	{1338057, 1050}, //Desc_WAT2_C, //Mercer Sphere
+
+	// Uranium = 35
+	//Encased Uranium Cell = 147
+	{1338113, 40000}, // Desc_NuclearWaste_C,
+	// Uranium Fuel Rod = 44092
+	{1338062, 60000}, // Desc_NonFissibleUranium_C,
+	{1338079, 80000}, // Desc_PlutoniumPellet_C, 
+	{1338037, 100000}, // Desc_PlutoniumCell_C,
+	{1338080, 125000}, // Desc_PlutoniumWaste_C, 
+	// Plutonium Fuel Rod = 153184
+
 	//Cups, Statues and the Boom Box
-	//Consumables such as Beryl Nuts, Bacon Agarics, and Paleberries (does not apply to Medicinal Inhalers)
+	{1338031, 25}, // Desc_CharacterRunStatue_C, 
+	{1338101, 50}, // Desc_Hog_Statue_C, 
+	{1338048, 51}, // Desc_CharacterClap_Statue_C, 
+	{1338064, 100}, // Desc_DoggoStatue_C, 
+	{1338047, 150}, // Desc_CharacterSpin_Statue_C, 
+	{1338083, 200}, // Desc_SpaceGiraffeStatue_C, 
+	{1338053, 1000}, // Desc_GoldenNut_Statue_C, 
+
+	{1338157, 1}, // BP_EquipmentDescriptorCup_C, 
+	{1338158, 10000}, // BP_EquipmentDescriptorCupGold_C, 
+
+	{1338153, 10}, //BoomBox
+
+	{1338151, 5}, // Desc_Nut_C, 
+	{1338174, 12}, // Desc_Berry_C, 
+	{1338150, 30}, // Desc_Shroom_C, //Bacon Agaric
+	// Medicinal Inhaler = 125
+
 	{1338085, 300000}, // Desc_ComputerQuantum_C, 
 	{1338107, 400000}, // Desc_QuantumOscillator_C,
 };
@@ -389,16 +419,25 @@ void AApGiftingSubsystem::Send(TMap<FApPlayer, TMap<TSubclassOf<UFGItemDescripto
 			continue;
 
 		for (TPair<TSubclassOf<UFGItemDescriptor>, int> stack : itemsToSendPerPlayer.Value) {
-			int64_t itemId = ItemToItemId[stack.Key];
-			FString itemName = mappingSubsystem->ItemInfo[itemId].Name;
-			int itemValue = GetResourceSinkPointsForItem(stack.Key, itemId);
-
 			FApSendGift gift;
-			gift.ItemName = mappingSubsystem->ItemInfo[itemId].Name;
-			gift.Amount = stack.Value;
-			gift.ItemValue = itemValue;
-			gift.Traits = GetTraitsForItem(itemId, itemValue);
-			gift.Receiver = itemsToSendPerPlayer.Key;
+
+			if (!ItemToItemId.Contains(stack.Key)) {
+				gift.ItemName = UFGItemDescriptor::GetItemName(stack.Key).ToString();
+				gift.Amount = stack.Value;
+				gift.ItemValue = 0;
+				gift.Traits = TArray<FApGiftTrait>();
+				gift.Receiver = itemsToSendPerPlayer.Key;
+			} else {
+				int64_t itemId = ItemToItemId[stack.Key];
+				FString itemName = mappingSubsystem->ItemInfo[itemId].Name;
+				int itemValue = GetResourceSinkPointsForItem(stack.Key, itemId);
+
+				gift.ItemName = mappingSubsystem->ItemInfo[itemId].Name;
+				gift.Amount = stack.Value;
+				gift.ItemValue = itemValue;
+				gift.Traits = GetTraitsForItem(itemId, itemValue);
+				gift.Receiver = itemsToSendPerPlayer.Key;
+			}
 
 			ap->SendGift(gift);
 		}
@@ -434,17 +473,17 @@ TArray<FApGiftTrait> AApGiftingSubsystem::GetTraitsForItem(int64_t itemId, int i
 
 		FString traitName = trait.Key;
 		while (TraitParents.Contains(traitName)) {
-			FString parentTraitName = TraitParents[traitName];
+			traitName = TraitParents[traitName];
 
-			if (Traits.Contains(parentTraitName)) {
-				Traits[parentTraitName].Quality += traitValue;
+			if (Traits.Contains(traitName)) {
+				Traits[traitName].Quality += traitValue;
 			} else {
 				FApGiftTrait parentTraitSpecification;
-				parentTraitSpecification.Trait = parentTraitName;
+				parentTraitSpecification.Trait = traitName;
 				parentTraitSpecification.Quality = traitValue;
 				parentTraitSpecification.Duration = 1.0f;
 
-				Traits.Add(parentTraitName, parentTraitSpecification);
+				Traits.Add(traitName, parentTraitSpecification);
 			}
 		}
 	}
@@ -458,7 +497,15 @@ int AApGiftingSubsystem::GetResourceSinkPointsForItem(TSubclassOf<UFGItemDescrip
 	if (HardcodedSinkValues.Contains(itemId))
 		return HardcodedSinkValues[itemId];
 	
-	return resourceSinkSubsystem->GetResourceSinkPointsForItem(itemClass);
+	int value = resourceSinkSubsystem->GetResourceSinkPointsForItem(itemClass);
+
+	if (value == 0) {
+		FString itemName = UFGItemDescriptor::GetItemName(itemClass).ToString();
+		UE_LOG(LogApGiftingSubsystem, Error, TEXT("AApGiftingSubsystem::GetResourceSinkPointsForItem(\"%s\", % i) Not sink value for item"), *itemName, itemId);
+		value = 1;
+	}
+
+	return value;
 }
 
 #pragma optimize("", on)
