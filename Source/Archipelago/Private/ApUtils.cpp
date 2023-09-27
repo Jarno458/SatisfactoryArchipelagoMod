@@ -20,7 +20,7 @@ FString UApUtils::FStr(std::string inString) {
 	return FString(inString.c_str());
 }
 
-FString UApUtils::FStr(int64_t inInt) {
+FString UApUtils::FStr(int64 inInt) {
 	return FString(std::to_string(inInt).c_str());
 }
 

@@ -26,7 +26,7 @@ const TMap<FString, FString> AApGiftingSubsystem::TraitParents = {
 	{"Food", "Consumable"},
 };
 
-const TMap<FString, int64_t> AApGiftingSubsystem::TraitDefaultItemIds = {
+const TMap<FString, int64> AApGiftingSubsystem::TraitDefaultItemIds = {
 	{"Electronics", 1338001}, // Desc_CircuitBoardHighSpeed_C, //AI Limiter
 	{"Iron", 1338051}, // Desc_IronPlate_C,
 	{"Silver", 1338002}, // Desc_AluminumPlate_C
@@ -56,7 +56,7 @@ const TMap<FString, int64_t> AApGiftingSubsystem::TraitDefaultItemIds = {
 	{"Coal", 1338021}, // Desc_Coal_C, 
 };
 
-const TMap<int64_t, TMap<FString, float>> AApGiftingSubsystem::TraitsPerItem = {
+const TMap<int64, TMap<FString, float>> AApGiftingSubsystem::TraitsPerItem = {
 	{1338000, {{"Electronics", 1.0f}}}, // Desc_SpaceElevatorPart_5_C, //Adaptive Control Unit
 	{1338001, {{"Electronics", 1.0f}}}, // Desc_CircuitBoardHighSpeed_C, //AI Limiter
 	{1338002, {{"Silver", 1.0f}}}, // Desc_AluminumPlate_C, 
@@ -219,7 +219,7 @@ const TMap<int64_t, TMap<FString, float>> AApGiftingSubsystem::TraitsPerItem = {
 };
 
 // The Unsinkables
-const TMap<int64_t, int> AApGiftingSubsystem::HardcodedSinkValues = {
+const TMap<int64, int> AApGiftingSubsystem::HardcodedSinkValues = {
 	{1338003, 10}, // Desc_Crystal_C, //Blue Power Slug
 	{1338004, 30}, // Desc_Crystal_mk2_C, //Yellow Power Slug
 	{1338006, 100}, // Desc_Crystal_mk3_C, //Purple Power Slug
@@ -327,13 +327,13 @@ void AApGiftingSubsystem::Tick(float dt) {
 }
 
 void AApGiftingSubsystem::LoadItemNameMapping() {
-	for (TPair<int64_t, FApItemInfo> itemInfoMapping : mappingSubsystem->ItemInfo) {
+	for (TPair<int64, FApItemInfo> itemInfoMapping : mappingSubsystem->ItemInfo) {
 		ItemToItemId.Add(itemInfoMapping.Value.Class, itemInfoMapping.Key);
 	}
 
 	TSet<FString> allTraits;
 
-	for (TPair<FString, int64_t> traitDefault : TraitDefaultItemIds) {
+	for (TPair<FString, int64> traitDefault : TraitDefaultItemIds) {
 		allTraits.Add(traitDefault.Key);
 
 		TraitAvarageValue.Add(traitDefault.Key, GetResourceSinkPointsForItem(mappingSubsystem->ItemInfo[traitDefault.Value].Class, traitDefault.Value));
@@ -410,7 +410,7 @@ bool AApGiftingSubsystem::CanSend(FApPlayer targetPlayer, FInventoryItem item) {
 	if (!ItemToItemId.Contains(itemClass))
 		return false;
 
-	int64_t itemId = ItemToItemId[itemClass];
+	int64 itemId = ItemToItemId[itemClass];
 	if (!TraitsPerItem.Contains(itemId))
 		return false;
 		
@@ -446,7 +446,7 @@ TArray<FString> AApGiftingSubsystem::GetTraitPerItem(TSubclassOf<UFGItemDescript
 	if (!ItemToItemId.Contains(itemClass))
 		return traits;
 
-	int64_t itemId = ItemToItemId[itemClass];
+	int64 itemId = ItemToItemId[itemClass];
 
 	for (TPair<FString, float> trait : TraitsPerItem[itemId]) {
 		FString traitName = trait.Key;
@@ -511,7 +511,7 @@ void AApGiftingSubsystem::Send(TMap<FApPlayer, TMap<TSubclassOf<UFGItemDescripto
 				gift.Traits = TArray<FApGiftTrait>();
 				gift.Receiver = itemsToSendPerPlayer.Key;
 			} else {
-				int64_t itemId = ItemToItemId[stack.Key];
+				int64 itemId = ItemToItemId[stack.Key];
 				FString itemName = mappingSubsystem->ItemInfo[itemId].Name;
 				int itemValue = GetResourceSinkPointsForItem(stack.Key, itemId);
 
@@ -532,7 +532,7 @@ TSubclassOf<UFGItemDescriptor> AApGiftingSubsystem::TryGetItemClassByTraits(TArr
 	return nullptr;
 }
 
-TArray<FApGiftTrait> AApGiftingSubsystem::GetTraitsForItem(int64_t itemId, int itemValue) {
+TArray<FApGiftTrait> AApGiftingSubsystem::GetTraitsForItem(int64 itemId, int itemValue) {
 	if (!TraitsPerItem.Contains(itemId))
 		return TArray<FApGiftTrait>();
 
@@ -576,7 +576,7 @@ TArray<FApGiftTrait> AApGiftingSubsystem::GetTraitsForItem(int64_t itemId, int i
 	return traitsToReturn;
 }
 
-int AApGiftingSubsystem::GetResourceSinkPointsForItem(TSubclassOf<UFGItemDescriptor> itemClass, int64_t itemId) {
+int AApGiftingSubsystem::GetResourceSinkPointsForItem(TSubclassOf<UFGItemDescriptor> itemClass, int64 itemId) {
 	if (HardcodedSinkValues.Contains(itemId))
 		return HardcodedSinkValues[itemId];
 	
@@ -589,6 +589,10 @@ int AApGiftingSubsystem::GetResourceSinkPointsForItem(TSubclassOf<UFGItemDescrip
 	}
 
 	return value;
+}
+
+TArray<FApPlayer> AApGiftingSubsystem::GetAllPlayers() {
+	return ap->GetAllPlayers();
 }
 
 #pragma optimize("", on)

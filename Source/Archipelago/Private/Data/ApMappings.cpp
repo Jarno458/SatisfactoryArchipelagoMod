@@ -1,6 +1,6 @@
 #include "Data/ApMappings.h"
 
-const TMap<int64_t, FString> UApMappings::ItemIdToGameItemDescriptor = {
+const TMap<int64, FString> UApMappings::ItemIdToGameItemDescriptor = {
 	//Parts
 	{1338000, TEXT("Desc_SpaceElevatorPart_5_C")}, //Adaptive Control Unit
 	{1338001, TEXT("Desc_CircuitBoardHighSpeed_C")}, //AI Limiter
@@ -164,7 +164,7 @@ const TMap<int64_t, FString> UApMappings::ItemIdToGameItemDescriptor = {
 	{1338186, TEXT("BP_ItemDescriptorPortableMiner_C")}
 };
 
-const TMap<int64_t, FString> UApMappings::ItemIdToGameRecipe = {
+const TMap<int64, FString> UApMappings::ItemIdToGameRecipe = {
 	{1338200, TEXT("Recipe_IronPlateReinforced")},
 	{1338201, TEXT("Recipe_Alternate_AdheredIronPlate")},
 	{1338202, TEXT("Recipe_Alternate_ReinforcedIronPlate_1")},
@@ -276,7 +276,7 @@ const TMap<int64_t, FString> UApMappings::ItemIdToGameRecipe = {
 	{1338308, TEXT("Recipe_Alternate_AutomatedMiner")},
 };
 
-const TMap<int64_t, FString> UApMappings::ItemIdToGameBuilding = {
+const TMap<int64, FString> UApMappings::ItemIdToGameBuilding = {
 	{1338400, TEXT("Recipe_ConstructorMk1")},
 	{1338401, TEXT("Recipe_AssemblerMk1")},
 	{1338402, TEXT("Recipe_ManufacturerMk1")},
@@ -298,7 +298,7 @@ const TMap<int64_t, FString> UApMappings::ItemIdToGameBuilding = {
 	{1338499, TEXT("Recipe_SpaceElevator")},
 };
 
-const TMap<int64_t, FName> UApMappings::ItemIdToTrap = {
+const TMap<int64, FName> UApMappings::ItemIdToTrap = {
 	// Regenerate via /Script/Blutility.EditorUtilityWidgetBlueprint'/Archipelago/Debug/EU_GenerateTrapIds.EU_GenerateTrapIds'
 	{1338900, FName(TEXT("HogBasic"))},
 	{1338901, FName(TEXT("HogAlpha"))},
@@ -322,5 +322,5 @@ const TMap<int64_t, FName> UApMappings::ItemIdToTrap = {
 };
 
 
-const TMap<int64_t, FString> UApMappings::ItemIdToGameName2 = {
+const TMap<int64, FString> UApMappings::ItemIdToGameName2 = {
 };

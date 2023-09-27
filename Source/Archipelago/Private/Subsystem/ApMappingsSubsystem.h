@@ -57,9 +57,9 @@ public:
 	static AApMappingsSubsystem* Get(class UWorld* world);
 
 public:
-	TMap<FString, int64_t> NameToItemId;
-	TMap<int64_t, FApItemInfo> ItemInfo;
-	TMap<int64_t, FApRecipeInfo> RecipeInfo;
+	TMap<FString, int64> NameToItemId;
+	TMap<int64, FApItemInfo> ItemInfo;
+	TMap<int64, FApRecipeInfo> RecipeInfo;
 
 private:
 	AModSubsystem* ap;

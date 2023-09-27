@@ -48,6 +48,7 @@
 #include "BPFContentLib.h"
 
 #include "Archipelago.h"
+#include "Archipelago_Satisfactory.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(LogApSubsystem, Log, All);
 
@@ -117,7 +118,7 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FORCEINLINE FApSlotData GetSlotData() const { return slotData; };
 
-	FString GetItemName(int64_t itemId);
+	FString GetItemName(int64 itemId);
 
 	void SetGiftBoxState(bool open);
 	bool SendGift(FApSendGift giftToSend);
@@ -126,13 +127,15 @@ public:
 	void AcceptGift(FString id);
 	TMap<FApPlayer, FApGiftBoxMetaData> GetAcceptedTraitsPerPlayer();
 
+	TArray<FApPlayer> GetAllPlayers();
+
 private:
 	static std::map<std::string, std::function<void(AP_SetReply)>> callbacks;
 
 	static void SetReplyCallback(AP_SetReply setReply);
 	static void ItemClearCallback();
-	static void ItemReceivedCallback(int64_t id, bool notify);
-	static void LocationCheckedCallback(int64_t id);
+	static void ItemReceivedCallback(int64 id, bool notify);
+	static void LocationCheckedCallback(int64 id);
 	static void LocationScoutedCallback(std::vector<AP_NetworkItem>);
 	static void ParseSlotData(std::string json);
 
@@ -149,8 +152,8 @@ private:
 
 	TMap<TSubclassOf<class UFGSchematic>, TArray<AP_NetworkItem>> locationsPerMilestone;
 	TMap<TSubclassOf<class UFGSchematic>, TArray<AP_NetworkItem>> locationsPerMamNode;
-	TMap<int64_t, TSubclassOf<class UFGSchematic>> ItemSchematics;
-	TQueue<int64_t> ReceivedItems;
+	TMap<int64, TSubclassOf<class UFGSchematic>> ItemSchematics;
+	TQueue<int64> ReceivedItems;
 	TQueue<TPair<FString, FLinearColor>> ChatMessageQueue;
 
 	TArray<AP_NetworkItem> scoutedLocations;
@@ -165,7 +168,7 @@ private:
 
 	// TODO
 	// UPROPERTY(SaveGame)
-	// int64_t lastReceivedApNetworkItem
+	// int64 lastReceivedApNetworkItem
 
 	bool InitializeTick(FApConfigurationStruct config, FDateTime connectingStartedTime);
 
@@ -179,7 +182,7 @@ private:
 	void HandleAPMessages();
 	void SendChatMessage(const FString& Message, const FLinearColor& Color);
 
-	void CreateSchematicBoundToItemId(int64_t item);
+	void CreateSchematicBoundToItemId(int64 item);
 	FContentLib_UnlockInfoOnly CreateUnlockInfoOnly(AP_NetworkItem item);
 	void UpdateInfoOnlyUnlockWithBuildingInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, AP_NetworkItem* item);
 	void UpdateInfoOnlyUnlockWithRecipeInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, AP_NetworkItem* item);

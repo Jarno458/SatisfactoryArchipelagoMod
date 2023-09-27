@@ -38,14 +38,14 @@ private:
 
 	bool apInitialized;
 
-	TMap<TSubclassOf<UFGItemDescriptor>, int64_t> ItemToItemId;
+	TMap<TSubclassOf<UFGItemDescriptor>, int64> ItemToItemId;
 	TMap<FString, int> TraitAvarageValue;
 	TArray<FString> AllTraits;
 
-	static const TMap<FString, int64_t> TraitDefaultItemIds;
-	static const TMap<int64_t, TMap<FString, float>> TraitsPerItem;
+	static const TMap<FString, int64> TraitDefaultItemIds;
+	static const TMap<int64, TMap<FString, float>> TraitsPerItem;
 	static const TMap<FString, FString> TraitParents;
-	static const TMap<int64_t, int> HardcodedSinkValues;
+	static const TMap<int64, int> HardcodedSinkValues;
 
 	TMap<FApPlayer, TSharedPtr<TQueue<FInventoryStack, EQueueMode::Mpsc>>> InputQueue;
 
@@ -74,6 +74,9 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	bool DoesPlayerAcceptGiftTrait(FApPlayer player, FString giftTrait);
 
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	TArray<FApPlayer> GetAllPlayers(); // forwarded form ApSubsystem
+
 private:
 	void LoadItemNameMapping();
 
@@ -85,9 +88,9 @@ private:
 
 	TSubclassOf<UFGItemDescriptor> TryGetItemClassByTraits(TArray<FApGiftTrait> traits);
 
-	TArray<FApGiftTrait> GetTraitsForItem(int64_t itemId, int itemValue);
+	TArray<FApGiftTrait> GetTraitsForItem(int64 itemId, int itemValue);
 
 	void UpdatedProcessedIds(TArray<FApReceiveGift> gifts);
 
-	int GetResourceSinkPointsForItem(TSubclassOf<UFGItemDescriptor> itemClass, int64_t itemId);
+	int GetResourceSinkPointsForItem(TSubclassOf<UFGItemDescriptor> itemClass, int64 itemId);
 };

@@ -87,7 +87,7 @@ bool AApSubsystem::InitializeTick(FApConfigurationStruct config, FDateTime conne
 		if (!hasScoutedLocations) {
 			ScoutArchipelagoItems();
 
-			currentPlayerTeam = 0; //NYI in APCpp
+			currentPlayerTeam = AP_GetCurrentPlayerTeam();
 			currentPlayerSlot = AP_GetCurrentPlayerSlot();
 		}
 
@@ -175,14 +175,14 @@ void AApSubsystem::ItemClearCallback() {
 
 }
 
-void AApSubsystem::ItemReceivedCallback(int64_t item, bool notify) {
+void AApSubsystem::ItemReceivedCallback(int64 item, bool notify) {
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::ItemReceivedCallback(%i, \"%s\")"), item, (notify ? TEXT("true") : TEXT("false")));
 
 	AApSubsystem* self = AApSubsystem::Get();
 	self->ReceivedItems.Enqueue(item);
 }
 
-void AApSubsystem::LocationCheckedCallback(int64_t id) {
+void AApSubsystem::LocationCheckedCallback(int64 id) {
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::LocationCheckedCallback(%i)"), id);
 
 }
@@ -256,7 +256,7 @@ void AApSubsystem::Tick(float DeltaTime) {
 		return;
 
 	// Consider processing only one queue item per tick for performance reasons
-	int64_t item;
+	int64 item;
 	while (ReceivedItems.Dequeue(item)) {
 		if (ItemSchematics.Contains(item)) {
 			SManager->GiveAccessToSchematic(ItemSchematics[item], nullptr);
@@ -344,7 +344,7 @@ void AApSubsystem::ParseScoutedItemsAndCreateRecipiesAndSchematics() {
 	areRecipiesAndSchematicsInitialized = true;
 }
 
-void AApSubsystem::CreateSchematicBoundToItemId(int64_t item) {
+void AApSubsystem::CreateSchematicBoundToItemId(int64 item) {
 	FString recipy = UApMappings::ItemIdToGameBuilding.Contains(item) ? UApMappings::ItemIdToGameBuilding[item] : UApMappings::ItemIdToGameRecipe[item];
 	FString name = UApUtils::FStr("AP_ItemId_" + std::to_string(item));
 	// https://raw.githubusercontent.com/budak7273/ContentLib_Documentation/main/JsonSchemas/CL_Schematic.json
@@ -546,12 +546,12 @@ void AApSubsystem::SendChatMessage(const FString& Message, const FLinearColor& C
 void AApSubsystem::ScoutArchipelagoItems() {
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::HintUnlockedHubRecipies()"));
 
-	std::vector<int64_t> locations;
+	std::vector<int64> locations;
 
 	int maxMilestones = 5;
 	int maxSlots = 10;
 
-	int64_t hubBaseId = 1338000;
+	int64 hubBaseId = 1338000;
 
 	for (int tier = 1; tier <= slotData.hubLayout.Num(); tier++)
 	{
@@ -597,7 +597,7 @@ FApConfigurationStruct AApSubsystem::GetActiveConfig() {
 	return config;
 }
 
-FString AApSubsystem::GetItemName(int64_t id) {
+FString AApSubsystem::GetItemName(int64 id) {
 	return UApUtils::FStr(AP_GetItemName(id));
 }
 
@@ -713,6 +713,22 @@ void AApSubsystem::AcceptGift(FString id) {
 
 	if (result != AP_RequestStatus::Done)
 		UE_LOG(LogApSubsystem, Error, TEXT("AApSubsystem::AcceptGift(\"%s\") Accepting gift failed"), *id);
+}
+
+TArray<FApPlayer> AApSubsystem::GetAllPlayers() {
+	std::vector<std::pair<int, std::string>> apPlayers = AP_GetAllPlayers();
+
+	TArray<FApPlayer> players;
+
+	for (std::pair<int, std::string> apPlayer : apPlayers) {
+		FApPlayer player;
+		player.Team = apPlayer.first;
+		player.Name = UApUtils::FStr(apPlayer.second);
+
+		players.Add(player);
+	}
+
+	return players;
 }
 
 #pragma optimize("", on)

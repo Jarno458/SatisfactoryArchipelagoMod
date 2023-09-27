@@ -6,7 +6,7 @@ FApExplorationData::FApExplorationData() {
 }
 
 // TODO there should be 109 of these according to SCIM?
-TMap<int64_t, FVector_NetQuantize> AApExplorationSubsystem::IdToDropPodLocation = {
+TMap<int64, FVector_NetQuantize> AApExplorationSubsystem::IdToDropPodLocation = {
 	// Regenerate via /Script/Engine.Blueprint'/Archipelago/Debug/CC_BuildDropPodLocations.CC_BuildDropPodLocations'
 	{1, FVector_NetQuantize(-29068, -22640, 17384)},
 	{2, FVector_NetQuantize(-33340, 5176, 23519)},

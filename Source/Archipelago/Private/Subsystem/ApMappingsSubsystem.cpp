@@ -54,7 +54,7 @@ void AApMappingsSubsystem::Tick(float dt) {
 void AApMappingsSubsystem::LoadItemMapping() {
 	TMap<FName, FAssetData> itemDescriptorAssets = GetItemDescriptorAssets();
 
-	for (TPair<int64_t, FString> itemMapping : UApMappings::ItemIdToGameItemDescriptor) {
+	for (TPair<int64, FString> itemMapping : UApMappings::ItemIdToGameItemDescriptor) {
 		UFGItemDescriptor* itemDescriptor = GetItemDescriptorByName(itemDescriptorAssets, itemMapping.Value);
 		TSubclassOf<UFGItemDescriptor> itemClass = itemDescriptor->GetClass();
 		FString itemName = ((AApSubsystem*)ap)->GetItemName(itemMapping.Key);
@@ -68,12 +68,12 @@ void AApMappingsSubsystem::LoadItemMapping() {
 		NameToItemId.Add(itemName, itemMapping.Key);
 	}
 
-	TMap<int64_t, FString> allRecipies;
+	TMap<int64, FString> allRecipies;
 	allRecipies.Append(UApMappings::ItemIdToGameRecipe);
 	allRecipies.Append(UApMappings::ItemIdToGameBuilding);
 
 	TMap<FName, FAssetData> recipeAssets = GetRecipeAssets();
-	for (TPair<int64_t, FString> recipeMapping : allRecipies) {
+	for (TPair<int64, FString> recipeMapping : allRecipies) {
 		UFGRecipe* recipe = GetRecipeByName(recipeAssets, recipeMapping.Value);
 		TSubclassOf<UFGRecipe> recipeClass = recipe->GetClass();
 		FString recipeName = ((AApSubsystem*)ap)->GetItemName(recipeMapping.Key);
