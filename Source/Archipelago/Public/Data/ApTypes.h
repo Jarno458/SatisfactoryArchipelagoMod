@@ -82,3 +82,15 @@ public:
 	UPROPERTY()
 	int SenderTeam;
 };
+
+USTRUCT()
+struct ARCHIPELAGO_API FApGiftBoxMetaData
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY()
+	bool AcceptAllTraits;
+	UPROPERTY()
+	TArray<FString> AcceptedTraits;
+};

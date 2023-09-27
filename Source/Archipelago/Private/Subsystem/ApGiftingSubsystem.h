@@ -31,6 +31,8 @@ public:
 	static AApGiftingSubsystem* Get();
 	static AApGiftingSubsystem* Get(class UWorld* world);
 
+	TMap<FApPlayer, FApGiftBoxMetaData> AcceptedGiftTraitsPerPlayer;
+
 private:
 	static const int pollInterfall = 10;
 
@@ -38,6 +40,7 @@ private:
 
 	TMap<TSubclassOf<UFGItemDescriptor>, int64_t> ItemToItemId;
 	TMap<FString, int> TraitAvarageValue;
+	TArray<FString> AllTraits;
 
 	static const TMap<FString, int64_t> TraitDefaultItemIds;
 	static const TMap<int64_t, TMap<FString, float>> TraitsPerItem;
@@ -57,10 +60,24 @@ private:
 
 public:
 	void EnqueueForSending(FApPlayer targetPlayer, FInventoryStack itemStack);
+	bool CanSend(FApPlayer targetPlayer, FInventoryItem item);
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	TArray<FApPlayer> GetPlayersAcceptingGifts();
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	TArray<FString> GetAcceptedTraitsPerPlayer(FApPlayer player);
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	TArray<FString> GetTraitPerItem(TSubclassOf<UFGItemDescriptor> itemClass);
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	bool DoesPlayerAcceptGiftTrait(FApPlayer player, FString giftTrait);
 
 private:
 	void LoadItemNameMapping();
 
+	void UpdateAcceptedGifts();
 	void PullAllGiftsAsync();
 	void ProcessInputQueue();
 

@@ -1,21 +1,14 @@
 #include "Buildable/ApPortal.h"
 #include "Subsystem/ApPortalSubsystem.h"
+#include "Subsystem/ApGiftingSubsystem.h"
 
 DEFINE_LOG_CATEGORY(LogGame); // A base-game header is using this category so we must do this to avoid unresolved external symbol
 
 //TODO REMOVE
 #pragma optimize("", off)
 
-const TSet<FString> AApPortal::ItemClassesBlockedFromSending = {
-	"Desc_HUBParts_C",
-	"Desc_SAM_C",
-	"Desc_SAMIngot_C"
-};
-
 AApPortal::AApPortal() : Super() {
 	mPowerInfoClass = UFGPowerInfoComponent::StaticClass();
-	mInventorySizeX = 5;
-	mInventorySizeY = 1;
 	mSignificanceRange = 18000;
 	MaxRenderDistance = -1;
 
@@ -31,7 +24,9 @@ AApPortal::AApPortal() : Super() {
 void AApPortal::BeginPlay() {
 	Super::BeginPlay();
 
-	portalSubsystem = AApPortalSubsystem::Get(GetWorld());
+	UWorld* world = GetWorld();
+	portalSubsystem = AApPortalSubsystem::Get(world);
+	giftingSubsystem = AApGiftingSubsystem::Get(world);
 
 	mPowerInfo->OnHasPowerChanged.BindUFunction(this, "CheckPower");
 
@@ -41,17 +36,6 @@ void AApPortal::BeginPlay() {
 		else
 			output = connection;
 	}
-
-	if (!HasAuthority()) {
-		return;
-	}
-
-	inventory = GetStorageInventory();
-	inventory->SetLocked(true);
-}
-
-void AApPortal::EndPlay(const EEndPlayReason::Type reason) {
-	Super::EndPlay(reason);
 
 	if (!HasAuthority()) {
 		return;
@@ -73,35 +57,33 @@ void AApPortal::CheckPower(bool newHasPower) const {
 void AApPortal::Factory_Tick(float dt) {
 	Super::Factory_Tick(dt);
 
-	inventory = GetStorageInventory();
-	if (inventory != nullptr) {
-		if (targetPlayer.Team <= -1)
-			inventory->SetLocked(true);
-		else {
-			inventory->SetLocked(false);
-
-			TArray<FInventoryStack> stacks;
-			inventory->GetInventoryStacks(stacks);
-
-			TArray<FInventoryStack> stacksToKeep;
-
-			for (FInventoryStack stack : stacks) {
-				FString className = stack.Item.GetItemClass()->GetName();
-				if (ItemClassesBlockedFromSending.Contains(className))
-					stacksToKeep.Add(stack);
-				else
-					((AApPortalSubsystem*)portalSubsystem)->Send(targetPlayer, stack);
-			}
-
-			inventory->Empty();
-
-			for (FInventoryStack stack : stacksToKeep) {
-				inventory->AddStack(stack);
-			}
-		}
-	}
-
 	camReceiveOutput = CanProduce() && output->IsConnected();
+}
+
+void AApPortal::Factory_CollectInput_Implementation() {
+	if (input == nullptr || !input->IsConnected())
+		return;
+
+	TArray<FInventoryItem> items;
+	TSubclassOf<UFGItemDescriptor> itemClass;
+
+	if (!input->Factory_PeekOutput(items, itemClass) || items.Num() == 0)
+		return;
+
+	if (!((AApGiftingSubsystem*)giftingSubsystem)->CanSend(targetPlayer, items[0]))
+		return; //block input
+	
+	FInventoryItem item;
+	float offset;
+
+	if (!input->Factory_GrabOutput(item, offset, itemClass))
+		return;
+
+	FInventoryStack stack;
+	stack.Item = item;
+	stack.NumItems = 1;
+
+	((AApGiftingSubsystem*)giftingSubsystem)->EnqueueForSending(targetPlayer, stack);
 }
 
 bool AApPortal::Factory_PeekOutput_Implementation(const class UFGFactoryConnectionComponent* connection, TArray<FInventoryItem>& out_items, TSubclassOf<UFGItemDescriptor> type) const {

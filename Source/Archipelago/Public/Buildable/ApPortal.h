@@ -2,7 +2,7 @@
 
 #include "CoreMinimal.h"
 
-#include "Buildables/FGBuildableStorage.h"
+#include "Buildables/FGBuildableFactory.h"
 
 #include "FGFactoryConnectionComponent.h"
 #include "FGPowerInfoComponent.h"
@@ -16,7 +16,7 @@
  * 
  */
 UCLASS()
-class ARCHIPELAGO_API AApPortal : public AFGBuildableStorage
+class ARCHIPELAGO_API AApPortal : public AFGBuildableFactory
 {
 	GENERATED_BODY()
 
@@ -25,8 +25,6 @@ public:
 
 	virtual void BeginPlay() override;
 
-	virtual void EndPlay(const EEndPlayReason::Type reason) override;
-
 	mutable TQueue<FInventoryItem> outputQueue;
 
 	UPROPERTY(BlueprintReadWrite)
@@ -34,16 +32,14 @@ public:
 
 private:
 	AModSubsystem* portalSubsystem;
+	AModSubsystem* giftingSubsystem;
 
-	UFGFactoryConnectionComponent* input;
-	UFGFactoryConnectionComponent* output;
-	UFGInventoryComponent* inventory;
+	UFGFactoryConnectionComponent* input = nullptr;
+	UFGFactoryConnectionComponent* output = nullptr;
 
 	int portalId;
 
 	bool camReceiveOutput = false;
-
-	static const TSet<FString> ItemClassesBlockedFromSending;
 
 public:
 	UFUNCTION()
@@ -56,6 +52,7 @@ public:
 	virtual void Factory_Tick(float dt) override;
 	virtual bool Factory_PeekOutput_Implementation(const class UFGFactoryConnectionComponent* connection, TArray<FInventoryItem>& out_items, TSubclassOf<UFGItemDescriptor> type) const override;
 	virtual bool Factory_GrabOutput_Implementation(class UFGFactoryConnectionComponent* connection, FInventoryItem& out_item, float& out_OffsetBeyond, TSubclassOf<UFGItemDescriptor> type) override;
+	virtual void Factory_CollectInput_Implementation() override;
 
 private:
 	void Register();

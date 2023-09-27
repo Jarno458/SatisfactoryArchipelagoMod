@@ -176,7 +176,7 @@ void AApSubsystem::ItemClearCallback() {
 }
 
 void AApSubsystem::ItemReceivedCallback(int64_t item, bool notify) {
-	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::ItemReceivedCallback(%i, %s)"), item, (notify ? TEXT("true") : TEXT("false")));
+	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::ItemReceivedCallback(%i, \"%s\")"), item, (notify ? TEXT("true") : TEXT("false")));
 
 	AApSubsystem* self = AApSubsystem::Get();
 	self->ReceivedItems.Enqueue(item);
@@ -188,7 +188,7 @@ void AApSubsystem::LocationCheckedCallback(int64_t id) {
 }
 
 void AApSubsystem::SetReplyCallback(AP_SetReply setReply) {
-	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::SetReplyCallback(%s)"), *UApUtils::FStr(setReply.key));
+	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::SetReplyCallback(\"%s\")"), *UApUtils::FStr(setReply.key));
 
 	if (callbacks.count(setReply.key))
 		callbacks[setReply.key](setReply);
@@ -208,7 +208,7 @@ void AApSubsystem::LocationScoutedCallback(std::vector<AP_NetworkItem> scoutedLo
 }
 
 void AApSubsystem::ParseSlotData(std::string json) {
-	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::ParseSlotData(%s)"), *UApUtils::FStr(json));
+	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::ParseSlotData(\"%s\")"), *UApUtils::FStr(json));
 
 	AApSubsystem* self = AApSubsystem::Get();
 	bool success = FApSlotData::ParseSlotData(json, &self->slotData);
@@ -609,9 +609,35 @@ void AApSubsystem::SetGiftBoxState(bool open) {
 	giftbox.DesiredTraits = std::vector<std::string>();
 	giftbox.IsOpen = open;
 
-	AP_SetGiftBoxProperties(giftbox);
+	AP_RequestStatus result = AP_SetGiftBoxProperties(giftbox);
 
-	GetOpenGiftboxes();
+	if (result != AP_RequestStatus::Done)
+		UE_LOG(LogApSubsystem, Error, TEXT("AApSubsystem::SetGiftBoxState(\"%s\") Updating giftbox metadata failed"), (open ? TEXT("true") : TEXT("false")));
+}
+
+TMap<FApPlayer, FApGiftBoxMetaData> AApSubsystem::GetAcceptedTraitsPerPlayer() {
+	std::map<std::pair<int, std::string>, AP_GiftBoxProperties> giftboxes = AP_QueryGiftBoxes();
+
+	TMap<FApPlayer, FApGiftBoxMetaData> openGiftBoxes;
+
+	for (std::pair<std::pair<int, std::string>, AP_GiftBoxProperties> giftbox : giftboxes) {
+		if (giftbox.second.IsOpen) {
+			FApPlayer player;
+			player.Team = giftbox.first.first;
+			player.Name = UApUtils::FStr(giftbox.first.second);
+
+			FApGiftBoxMetaData metaData;
+			metaData.AcceptAllTraits = giftbox.second.AcceptsAnyGift;
+			metaData.AcceptedTraits = TArray<FString>();
+
+			for (std::string trait : giftbox.second.DesiredTraits)
+				metaData.AcceptedTraits.Add(UApUtils::FStr(trait));
+
+			openGiftBoxes.Add(player, metaData);
+		}
+	}
+
+	return openGiftBoxes;
 }
 
 bool AApSubsystem::SendGift(FApSendGift giftToSend) {
@@ -635,6 +661,10 @@ bool AApSubsystem::SendGift(FApSendGift giftToSend) {
 	}
 
 	AP_RequestStatus result = AP_SendGift(gift);
+
+	if (result != AP_RequestStatus::Done)
+		UE_LOG(LogApSubsystem, Error, TEXT("AApSubsystem::SendGift({Name: \"%s\", Amount: %i}) Sending gift failed"), *giftToSend.ItemName, giftToSend.Amount);
+
 	return result != AP_RequestStatus::Error;
 }
 
@@ -669,32 +699,20 @@ TArray<FApReceiveGift> AApSubsystem::GetGifts() {
 void AApSubsystem::RejectGift(FString id) {
 	std::string giftId = TCHAR_TO_UTF8(*id);
 
-	AP_RejectGift(giftId);
+	AP_RequestStatus result = AP_RejectGift(giftId);
+
+	if (result != AP_RequestStatus::Done)
+		UE_LOG(LogApSubsystem, Error, TEXT("AApSubsystem::RejectGift(\"%s\") Rejecting gift failed"), *id);
 }
 
 void AApSubsystem::AcceptGift(FString id) {
 	std::string giftId = TCHAR_TO_UTF8(*id);
 	AP_Gift gift;
 
-	AP_AcceptGift(giftId, &gift);
-}
+	AP_RequestStatus result = AP_AcceptGift(giftId, &gift);
 
-TArray<FApPlayer> AApSubsystem::GetOpenGiftboxes() {
-	std::map<std::pair<int, std::string>, AP_GiftBoxProperties> giftboxes = AP_QueryGiftBoxes();
-
-	TArray<FApPlayer> openGiftBoxes;
-
-	for (std::pair<std::pair<int, std::string>, AP_GiftBoxProperties> giftbox : giftboxes) {
-		if (giftbox.second.IsOpen) {
-			FApPlayer player;
-			player.Team = giftbox.first.first;
-			player.Name = UApUtils::FStr(giftbox.first.second);
-
-			openGiftBoxes.Add(player);
-		}
-	}
-
-	return openGiftBoxes;
+	if (result != AP_RequestStatus::Done)
+		UE_LOG(LogApSubsystem, Error, TEXT("AApSubsystem::AcceptGift(\"%s\") Accepting gift failed"), *id);
 }
 
 #pragma optimize("", on)

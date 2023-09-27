@@ -119,14 +119,12 @@ public:
 
 	FString GetItemName(int64_t itemId);
 
-	UFUNCTION(BlueprintCallable, BlueprintPure)
-	TArray<FApPlayer> GetOpenGiftboxes();
-
 	void SetGiftBoxState(bool open);
 	bool SendGift(FApSendGift giftToSend);
 	TArray<FApReceiveGift> GetGifts();
 	void RejectGift(FString id);
 	void AcceptGift(FString id);
+	TMap<FApPlayer, FApGiftBoxMetaData> GetAcceptedTraitsPerPlayer();
 
 private:
 	static std::map<std::string, std::function<void(AP_SetReply)>> callbacks;

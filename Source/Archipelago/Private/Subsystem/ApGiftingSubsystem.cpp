@@ -150,7 +150,7 @@ const TMap<int64_t, TMap<FString, float>> AApGiftingSubsystem::TraitsPerItem = {
 	{1338090, {{"Iron", 1.0f}}}, // Desc_IronPlateReinforced_C, 
 	{1338091, {{"Copper", 1.0f}}}, // Desc_Rotor_C, 
 	{1338092, {{"Material", 1.0f}}}, // Desc_Rubber_C, 
-	{1338093, {{ }}}, // Desc_SAM_C, 
+	//{1338093, {{ }}}, // Desc_SAM_C, 
 	{1338094, {{"Iron", 1.0f}}}, // Desc_IronScrew_C, 
 	{1338095, {{"Crystal", 1.0f}}}, // Desc_Silica_C, 
 	{1338096, {{"Iron", 0.5f},{"Copper", 0.5f}}}, // Desc_SpaceElevatorPart_1_C, //Smart Plating
@@ -204,7 +204,7 @@ const TMap<int64_t, TMap<FString, float>> AApGiftingSubsystem::TraitsPerItem = {
 	{1338172, {{"Bomb", 1.0f}}}, // Desc_NobeliskNuke_C, 
 	{1338173, {{"Tool", 1.0f}}}, // BP_EquipmentDescriptorObjectScanner_C, 
 	{1338174, {{"Fruit", 1.0f},{"Heal", 1.0f}}}, // Desc_Berry_C, 
-	{1338175, {{"Tool", 1.0f}, {"Slowness", 1.0f}}}, // Desc_Parachute_C, 
+	{1338175, {{"Tool", 1.0f},{"Slowness", 1.0f}}}, // Desc_Parachute_C, 
 	{1338176, {{"Bomb", 1.0f}}}, // Desc_NobeliskShockwave_C, 
 	{1338177, {{"Weapon", 1.0f}}}, // Desc_RebarGunProjectile_C, 
 	{1338178, {{"Weapon", 1.0f}}}, // BP_EquipmentDescriptorRifle_C, 
@@ -319,6 +319,7 @@ void AApGiftingSubsystem::Tick(float dt) {
 		{
 			lastPoll = currentTime;
 
+			UpdateAcceptedGifts();
 			ProcessInputQueue();
 			PullAllGiftsAsync();
 		}
@@ -330,9 +331,20 @@ void AApGiftingSubsystem::LoadItemNameMapping() {
 		ItemToItemId.Add(itemInfoMapping.Value.Class, itemInfoMapping.Key);
 	}
 
+	TSet<FString> allTraits;
+
 	for (TPair<FString, int64_t> traitDefault : TraitDefaultItemIds) {
+		allTraits.Add(traitDefault.Key);
+
 		TraitAvarageValue.Add(traitDefault.Key, GetResourceSinkPointsForItem(mappingSubsystem->ItemInfo[traitDefault.Value].Class, traitDefault.Value));
 	}
+
+	for (TPair<FString, FString> traitParent : TraitParents) {
+		allTraits.Add(traitParent.Key);
+		allTraits.Add(traitParent.Value);
+	}
+	
+	AllTraits = allTraits.Array();
 }
 
 void AApGiftingSubsystem::PullAllGiftsAsync() {
@@ -388,6 +400,77 @@ void AApGiftingSubsystem::EnqueueForSending(FApPlayer targetPlayer, FInventorySt
 	}
 
 	InputQueue[targetPlayer]->Enqueue(itemStack);
+}
+
+bool AApGiftingSubsystem::CanSend(FApPlayer targetPlayer, FInventoryItem item) {
+	if (!AcceptedGiftTraitsPerPlayer.Contains(targetPlayer))
+		return false;
+	
+	TSubclassOf<UFGItemDescriptor> itemClass = item.GetItemClass();
+	if (!ItemToItemId.Contains(itemClass))
+		return false;
+
+	int64_t itemId = ItemToItemId[itemClass];
+	if (!TraitsPerItem.Contains(itemId))
+		return false;
+		
+	for (TPair<FString, float> trait : TraitsPerItem[itemId]) {
+		if (DoesPlayerAcceptGiftTrait(targetPlayer, trait.Key))
+			return true;
+	}
+
+	return false;
+}
+
+TArray<FApPlayer> AApGiftingSubsystem::GetPlayersAcceptingGifts() {
+	TArray<FApPlayer> keys;
+	AcceptedGiftTraitsPerPlayer.GenerateKeyArray(keys);
+	return keys;
+}
+
+TArray<FString> AApGiftingSubsystem::GetAcceptedTraitsPerPlayer(FApPlayer player) {
+	TArray<FString> acceptedTraits;
+
+	if (!AcceptedGiftTraitsPerPlayer.Contains(player))
+		return TArray<FString>();
+
+	if (AcceptedGiftTraitsPerPlayer[player].AcceptAllTraits)
+		return AllTraits;
+
+	return AcceptedGiftTraitsPerPlayer[player].AcceptedTraits;
+}
+
+TArray<FString> AApGiftingSubsystem::GetTraitPerItem(TSubclassOf<UFGItemDescriptor> itemClass) {
+	TArray<FString> traits;
+
+	if (!ItemToItemId.Contains(itemClass))
+		return traits;
+
+	int64_t itemId = ItemToItemId[itemClass];
+
+	for (TPair<FString, float> trait : TraitsPerItem[itemId]) {
+		FString traitName = trait.Key;
+
+		traits.Add(traitName);
+
+		while (TraitParents.Contains(traitName)) {
+			traitName = TraitParents[traitName];
+
+			if (!traits.Contains(traitName))
+				traits.Add(traitName);
+		}
+	}
+
+	return traits;
+}
+
+bool AApGiftingSubsystem::DoesPlayerAcceptGiftTrait(FApPlayer player, FString giftTrait) {
+	return AcceptedGiftTraitsPerPlayer.Contains(player)
+		&& (AcceptedGiftTraitsPerPlayer[player].AcceptAllTraits || AcceptedGiftTraitsPerPlayer[player].AcceptedTraits.Contains(giftTrait));
+}
+
+void AApGiftingSubsystem::UpdateAcceptedGifts() {
+	AcceptedGiftTraitsPerPlayer = ap->GetAcceptedTraitsPerPlayer();
 }
 
 void AApGiftingSubsystem::ProcessInputQueue() {
