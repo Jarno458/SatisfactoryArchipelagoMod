@@ -38,12 +38,12 @@ private:
 
 	bool apInitialized;
 
-	TMap<TSubclassOf<UFGItemDescriptor>, int64> ItemToItemId;
 	TMap<FString, int> TraitAvarageValue;
 	TArray<FString> AllTraits;
+	TMap<TSubclassOf<UFGItemDescriptor>, TMap<FString, float>> TraitsPerItem;
 
 	static const TMap<FString, int64> TraitDefaultItemIds;
-	static const TMap<int64, TMap<FString, float>> TraitsPerItem;
+	static const TMap<int64, TMap<FString, float>> TraitsPerItemSimplified;
 	static const TMap<FString, FString> TraitParents;
 	static const TMap<int64, int> HardcodedSinkValues;
 
@@ -75,7 +75,7 @@ public:
 	bool DoesPlayerAcceptGiftTrait(FApPlayer player, FString giftTrait);
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	TArray<FApPlayer> GetAllPlayers(); // forwarded form ApSubsystem
+	TArray<FApPlayer> GetAllPlayers(); // forwarded from ApSubsystem
 
 private:
 	void LoadItemNameMapping();
@@ -88,7 +88,7 @@ private:
 
 	TSubclassOf<UFGItemDescriptor> TryGetItemClassByTraits(TArray<FApGiftTrait> traits);
 
-	TArray<FApGiftTrait> GetTraitsForItem(int64 itemId, int itemValue);
+	TArray<FApGiftTrait> GetTraitsForItem(TSubclassOf<UFGItemDescriptor> itemClass, int itemValue);
 
 	void UpdatedProcessedIds(TArray<FApReceiveGift> gifts);
 

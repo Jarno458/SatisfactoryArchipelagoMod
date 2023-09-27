@@ -66,6 +66,7 @@ void AApMappingsSubsystem::LoadItemMapping() {
 
 		ItemInfo.Add(itemMapping.Key, itemInfo);
 		NameToItemId.Add(itemName, itemMapping.Key);
+		ItemClassToItemId.Add(itemClass, itemMapping.Key);
 	}
 
 	TMap<int64, FString> allRecipies;

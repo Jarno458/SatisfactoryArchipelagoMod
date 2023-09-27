@@ -57,6 +57,7 @@ public:
 	static AApMappingsSubsystem* Get(class UWorld* world);
 
 public:
+	TMap<TSubclassOf<UFGItemDescriptor>, int64> ItemClassToItemId;
 	TMap<FString, int64> NameToItemId;
 	TMap<int64, FApItemInfo> ItemInfo;
 	TMap<int64, FApRecipeInfo> RecipeInfo;

@@ -54,9 +54,12 @@ const TMap<FString, int64> AApGiftingSubsystem::TraitDefaultItemIds = {
 	{"Slowness", 1338175}, // Desc_Parachute_C, 
 	{"Fiber", 1338061}, // Desc_Mycelia_C, 
 	{"Coal", 1338021}, // Desc_Coal_C, 
+	{"Metal", 1338102},  // Desc_SteelPlate_C
+	{"Buff", 1338003}, // Desc_Crystal_C, //Blue Power Slug
+	{"Weapon", 1338154}, // Desc_Chainsaw_C,
 };
 
-const TMap<int64, TMap<FString, float>> AApGiftingSubsystem::TraitsPerItem = {
+const TMap<int64, TMap<FString, float>> AApGiftingSubsystem::TraitsPerItemSimplified = {
 	{1338000, {{"Electronics", 1.0f}}}, // Desc_SpaceElevatorPart_5_C, //Adaptive Control Unit
 	{1338001, {{"Electronics", 1.0f}}}, // Desc_CircuitBoardHighSpeed_C, //AI Limiter
 	{1338002, {{"Silver", 1.0f}}}, // Desc_AluminumPlate_C, 
@@ -328,7 +331,28 @@ void AApGiftingSubsystem::Tick(float dt) {
 
 void AApGiftingSubsystem::LoadItemNameMapping() {
 	for (TPair<int64, FApItemInfo> itemInfoMapping : mappingSubsystem->ItemInfo) {
-		ItemToItemId.Add(itemInfoMapping.Value.Class, itemInfoMapping.Key);
+		if (!TraitsPerItemSimplified.Contains(itemInfoMapping.Key))
+			continue;
+
+		TMap<FString, float> simplifiedTraits = TraitsPerItemSimplified[itemInfoMapping.Key];
+		TMap<FString, float> allTraits;
+
+		for (TPair<FString, float> trait : simplifiedTraits) {
+			allTraits.Add(trait.Key, trait.Value);
+
+			FString traitName = trait.Key;
+			while (TraitParents.Contains(traitName)) {
+				traitName = TraitParents[traitName];
+
+				if (allTraits.Contains(traitName)) {
+					allTraits[traitName] += trait.Value;
+				} else {
+					allTraits.Add(traitName, trait.Value);
+				}
+			}
+		}
+
+		TraitsPerItem.Add(itemInfoMapping.Value.Class, allTraits);
 	}
 
 	TSet<FString> allTraits;
@@ -338,13 +362,6 @@ void AApGiftingSubsystem::LoadItemNameMapping() {
 
 		TraitAvarageValue.Add(traitDefault.Key, GetResourceSinkPointsForItem(mappingSubsystem->ItemInfo[traitDefault.Value].Class, traitDefault.Value));
 	}
-
-	for (TPair<FString, FString> traitParent : TraitParents) {
-		allTraits.Add(traitParent.Key);
-		allTraits.Add(traitParent.Value);
-	}
-	
-	AllTraits = allTraits.Array();
 }
 
 void AApGiftingSubsystem::PullAllGiftsAsync() {
@@ -407,14 +424,11 @@ bool AApGiftingSubsystem::CanSend(FApPlayer targetPlayer, FInventoryItem item) {
 		return false;
 	
 	TSubclassOf<UFGItemDescriptor> itemClass = item.GetItemClass();
-	if (!ItemToItemId.Contains(itemClass))
-		return false;
 
-	int64 itemId = ItemToItemId[itemClass];
-	if (!TraitsPerItem.Contains(itemId))
+	if (!TraitsPerItem.Contains(itemClass))
 		return false;
 		
-	for (TPair<FString, float> trait : TraitsPerItem[itemId]) {
+	for (TPair<FString, float> trait : TraitsPerItem[itemClass]) {
 		if (DoesPlayerAcceptGiftTrait(targetPlayer, trait.Key))
 			return true;
 	}
@@ -443,24 +457,10 @@ TArray<FString> AApGiftingSubsystem::GetAcceptedTraitsPerPlayer(FApPlayer player
 TArray<FString> AApGiftingSubsystem::GetTraitPerItem(TSubclassOf<UFGItemDescriptor> itemClass) {
 	TArray<FString> traits;
 
-	if (!ItemToItemId.Contains(itemClass))
+	if (!TraitsPerItem.Contains(itemClass))
 		return traits;
 
-	int64 itemId = ItemToItemId[itemClass];
-
-	for (TPair<FString, float> trait : TraitsPerItem[itemId]) {
-		FString traitName = trait.Key;
-
-		traits.Add(traitName);
-
-		while (TraitParents.Contains(traitName)) {
-			traitName = TraitParents[traitName];
-
-			if (!traits.Contains(traitName))
-				traits.Add(traitName);
-		}
-	}
-
+	TraitsPerItem[itemClass].GenerateKeyArray(traits);
 	return traits;
 }
 
@@ -504,21 +504,20 @@ void AApGiftingSubsystem::Send(TMap<FApPlayer, TMap<TSubclassOf<UFGItemDescripto
 		for (TPair<TSubclassOf<UFGItemDescriptor>, int> stack : itemsToSendPerPlayer.Value) {
 			FApSendGift gift;
 
-			if (!ItemToItemId.Contains(stack.Key)) {
+			if (!TraitsPerItem.Contains(stack.Key) || !mappingSubsystem->ItemClassToItemId.Contains(stack.Key)) {
 				gift.ItemName = UFGItemDescriptor::GetItemName(stack.Key).ToString();
 				gift.Amount = stack.Value;
 				gift.ItemValue = 0;
 				gift.Traits = TArray<FApGiftTrait>();
 				gift.Receiver = itemsToSendPerPlayer.Key;
 			} else {
-				int64 itemId = ItemToItemId[stack.Key];
-				FString itemName = mappingSubsystem->ItemInfo[itemId].Name;
+				int64 itemId = mappingSubsystem->ItemClassToItemId[stack.Key];
 				int itemValue = GetResourceSinkPointsForItem(stack.Key, itemId);
 
 				gift.ItemName = mappingSubsystem->ItemInfo[itemId].Name;
 				gift.Amount = stack.Value;
 				gift.ItemValue = itemValue;
-				gift.Traits = GetTraitsForItem(itemId, itemValue);
+				gift.Traits = GetTraitsForItem(stack.Key, itemValue);
 				gift.Receiver = itemsToSendPerPlayer.Key;
 			}
 
@@ -528,17 +527,48 @@ void AApGiftingSubsystem::Send(TMap<FApPlayer, TMap<TSubclassOf<UFGItemDescripto
 }
 
 TSubclassOf<UFGItemDescriptor> AApGiftingSubsystem::TryGetItemClassByTraits(TArray<FApGiftTrait> traits) {
+	TMap<TSubclassOf<UFGItemDescriptor>, int> traitMatchesPerItemClass;
+	int mostMatches;
+
+	for (TPair<TSubclassOf<UFGItemDescriptor>, TMap<FString, float>> traitsPerItem : TraitsPerItem) {
+		int matches = 0;
+
+		for (FApGiftTrait trait : traits) {
+			if (traitsPerItem.Value.Contains(trait.Trait)){
+				if (!traitMatchesPerItemClass.Contains(traitsPerItem.Key))
+					traitMatchesPerItemClass.Add(traitsPerItem.Key, 0);
+				else
+					traitMatchesPerItemClass[traitsPerItem.Key]++;
+
+				matches++;
+			}
+		}
+
+		if (matches > mostMatches)
+			mostMatches = matches;
+	}
+
+	TMap<TSubclassOf<UFGItemDescriptor>, TMap<FString, float>> mostAccurateItems;
+
+	for (TPair<TSubclassOf<UFGItemDescriptor>, int> traitMatchingItemClass : traitMatchesPerItemClass) {
+		if (traitMatchingItemClass.Value == mostMatches)
+			mostAccurateItems.Add(traitMatchingItemClass.Key, TraitsPerItem[traitMatchingItemClass.Key]);
+	}
+
 	//TODO process item traits and quality, like "Metal" with quality 2 might be Encased Steam Beam
+	//TODO decide what items has the closes match
+
+
 	return nullptr;
 }
 
-TArray<FApGiftTrait> AApGiftingSubsystem::GetTraitsForItem(int64 itemId, int itemValue) {
-	if (!TraitsPerItem.Contains(itemId))
+TArray<FApGiftTrait> AApGiftingSubsystem::GetTraitsForItem(TSubclassOf<UFGItemDescriptor> itemClass, int itemValue) {
+	if (!TraitsPerItem.Contains(itemClass))
 		return TArray<FApGiftTrait>();
 
 	TMap<FString, FApGiftTrait> Traits;
 
-	for (TPair<FString, float> trait : TraitsPerItem[itemId]) {
+	for (TPair<FString, float> trait : TraitsPerItem[itemClass]) {
 		int traitDefualt;
 		if (TraitAvarageValue.Contains(trait.Key))
 			traitDefualt = TraitAvarageValue[trait.Key];
@@ -553,22 +583,6 @@ TArray<FApGiftTrait> AApGiftingSubsystem::GetTraitsForItem(int64 itemId, int ite
 		traitSpecification.Duration = 1.0f;
 
 		Traits.Add(trait.Key, traitSpecification);
-
-		FString traitName = trait.Key;
-		while (TraitParents.Contains(traitName)) {
-			traitName = TraitParents[traitName];
-
-			if (Traits.Contains(traitName)) {
-				Traits[traitName].Quality += traitValue;
-			} else {
-				FApGiftTrait parentTraitSpecification;
-				parentTraitSpecification.Trait = traitName;
-				parentTraitSpecification.Quality = traitValue;
-				parentTraitSpecification.Duration = 1.0f;
-
-				Traits.Add(traitName, parentTraitSpecification);
-			}
-		}
 	}
 
 	TArray<FApGiftTrait> traitsToReturn;
