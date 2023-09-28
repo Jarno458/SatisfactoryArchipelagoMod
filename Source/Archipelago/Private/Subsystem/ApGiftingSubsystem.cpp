@@ -383,7 +383,7 @@ void AApGiftingSubsystem::LoadMappings() {
 		TraitsPerItem.Add(itemInfoMapping.Value.Class, calucatedTraitsForItem);
 	}
 
-	PrintTraitValuesPerItem();
+	//PrintTraitValuesPerItem();
 }
 
 void AApGiftingSubsystem::PrintTraitValuesPerItem() {
