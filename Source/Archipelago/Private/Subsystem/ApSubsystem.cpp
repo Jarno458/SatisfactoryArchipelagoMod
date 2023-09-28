@@ -681,13 +681,14 @@ TArray<FApReceiveGift> AApSubsystem::GetGifts() {
 		gift.ItemValue = apGift.ItemValue;
 		gift.Traits.SetNum(apGift.Traits.size());
 		
-		for (AP_GiftTrait apTrait : apGift.Traits) {
+		for (int i = 0; i < apGift.Traits.size(); i++)
+		{
 			FApGiftTrait trait;
-			trait.Trait = UApUtils::FStr(apTrait.Trait);
-			trait.Duration = apTrait.Duration;
-			trait.Quality = apTrait.Quality;
+			trait.Trait = UApUtils::FStr(apGift.Traits[i].Trait);
+			trait.Duration = apGift.Traits[i].Duration;
+			trait.Quality = apGift.Traits[i].Quality;
 
-			gift.Traits.Add(trait);
+			gift.Traits[i] = trait;
 		}
 
 		currentGifts.Add(gift);

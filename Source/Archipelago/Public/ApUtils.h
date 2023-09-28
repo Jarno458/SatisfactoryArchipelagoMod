@@ -39,4 +39,6 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	static UApBlueprintDataBridge* GetBlueprintDataBridge(UObject* worldContext);
+
+	static void WriteStringToFile(FString Path, FString text, bool relative);
 };

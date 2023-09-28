@@ -48,4 +48,19 @@ UApBlueprintDataBridge* UApUtils::GetBlueprintDataBridge(UObject* worldContext) 
 	return nullptr;
 }
 
+void UApUtils::WriteStringToFile(FString Path, FString text, bool relative) {
+#if WITH_EDITOR 
+	FFileHelper::SaveStringToFile(text, relative ? *(FPaths::ProjectDir() + Path) : *Path);
+#else
+	const FString AbsoluteRootPath = FPaths::ConvertRelativePathToFull(FPaths::ProjectDir());
+	const FString AbsolutePath = AbsoluteRootPath + TEXT("Mods/") + Path;
+	if (!AbsolutePath.Contains(TEXT(".."))) {
+		FFileHelper::SaveStringToFile(text, *AbsolutePath);
+	}
+	else {
+		UE_LOG(LogApUtils, Error, TEXT("Absolute or escaping Paths are not allowed in Runtime"));
+	}
+#endif
+}
+
 #pragma optimize("", on)

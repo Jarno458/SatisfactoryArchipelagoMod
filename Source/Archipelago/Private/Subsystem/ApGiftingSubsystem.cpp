@@ -6,6 +6,10 @@ DEFINE_LOG_CATEGORY(LogApGiftingSubsystem);
 //TODO REMOVE
 #pragma optimize("", off)
 
+const TMap<FString, int64> AApGiftingSubsystem::HardcodedItemNameToIdMappings = {
+	{"Coffee", 1338157}, // BP_EquipmentDescriptorCup_C, 
+};
+
 const TMap<FString, FString> AApGiftingSubsystem::TraitParents = {
 	{"Electronics", "Material"},
 	{"Iron", "Metal"},
@@ -48,7 +52,7 @@ const TMap<FString, int64> AApGiftingSubsystem::TraitDefaultItemIds = {
 	{"Artifact", 1338057}, // Desc_WAT2_C, //Mercer Sphere
 	{"Mineral", 1338089}, // Desc_RawQuartz_C
 	{"Wood", 1338116}, // Desc_Wood_C, 
-	{"Vegetable", 1338150}, // Desc_Shroom_C, 
+	{"Vegetable", 1338150}, // Desc_Shroom_C, //Bacon Agaric
 	{"Seed", 1338151}, // Desc_Nut_C, 
 	{"Armor", 1338164}, // BP_EquipmentDescriptorHazmatSuit_C,
 	{"Slowness", 1338175}, // Desc_Parachute_C, 
@@ -57,9 +61,16 @@ const TMap<FString, int64> AApGiftingSubsystem::TraitDefaultItemIds = {
 	{"Metal", 1338102},  // Desc_SteelPlate_C
 	{"Buff", 1338003}, // Desc_Crystal_C, //Blue Power Slug
 	{"Weapon", 1338154}, // Desc_Chainsaw_C,
+	{"Trap", 1338038}, // Desc_UraniumCell_C,
+	{"Food", 1338151}, // Desc_Nut_C, 
+	{"Consumable", 1338151}, // Desc_Nut_C, 
+	{"Drink", 1338075}, // Desc_PackagedWater_C,
+	{"Vegetable", 1338150}, // Desc_Shroom_C, //Bacon Agaric
+	{"Heal", 1338174}, // Desc_Berry_C
+	{"Fruit", 1338174}, // Desc_Berry_C
 };
 
-const TMap<int64, TMap<FString, float>> AApGiftingSubsystem::TraitsPerItemSimplified = {
+const TMap<int64, TMap<FString, float>> AApGiftingSubsystem::TraitsPerItemRatings = {
 	{1338000, {{"Electronics", 1.0f}}}, // Desc_SpaceElevatorPart_5_C, //Adaptive Control Unit
 	{1338001, {{"Electronics", 1.0f}}}, // Desc_CircuitBoardHighSpeed_C, //AI Limiter
 	{1338002, {{"Silver", 1.0f}}}, // Desc_AluminumPlate_C, 
@@ -309,7 +320,7 @@ void AApGiftingSubsystem::Tick(float dt) {
 
 	if (!apInitialized) {
 		if (ap->ConnectionState == EApConnectionState::Connected && mappingSubsystem->IsInitialized()) {
-			LoadItemNameMapping();
+			LoadMappings();
 
 			ap->SetGiftBoxState(true);
 
@@ -329,39 +340,85 @@ void AApGiftingSubsystem::Tick(float dt) {
 	}
 }
 
-void AApGiftingSubsystem::LoadItemNameMapping() {
+void AApGiftingSubsystem::LoadMappings() {
+	TMap<FString, float> defaultSinkPointsPerTrait;
+
+	for (TPair<FString, int64> traitDefault : TraitDefaultItemIds) {
+		check(mappingSubsystem->ItemInfo.Contains(traitDefault.Value));
+
+		int defaultItemSinkPoints = GetResourceSinkPointsForItem(mappingSubsystem->ItemInfo[traitDefault.Value].Class, traitDefault.Value);
+
+		defaultSinkPointsPerTrait.Add(traitDefault.Key, defaultItemSinkPoints);
+	}
+
 	for (TPair<int64, FApItemInfo> itemInfoMapping : mappingSubsystem->ItemInfo) {
-		if (!TraitsPerItemSimplified.Contains(itemInfoMapping.Key))
+		if (!TraitsPerItemRatings.Contains(itemInfoMapping.Key))
 			continue;
 
-		TMap<FString, float> simplifiedTraits = TraitsPerItemSimplified[itemInfoMapping.Key];
-		TMap<FString, float> allTraits;
+		TSubclassOf<UFGItemDescriptor> itemClass = mappingSubsystem->ItemInfo[itemInfoMapping.Key].Class;
+		int64 itemId = itemInfoMapping.Key;
 
-		for (TPair<FString, float> trait : simplifiedTraits) {
-			allTraits.Add(trait.Key, trait.Value);
+		int itemValue = GetResourceSinkPointsForItem(itemClass, itemId);
 
-			FString traitName = trait.Key;
+		TMap<FString, float> calucatedTraitsForItem;
+
+		for (TPair<FString, float> traitRelativeRating : TraitsPerItemRatings[itemInfoMapping.Key]) {
+			FString traitName = traitRelativeRating.Key;
+
+			check(defaultSinkPointsPerTrait.Contains(traitName));
+			float traitValue = GetTraitValue(itemValue, defaultSinkPointsPerTrait[traitName], traitRelativeRating.Value);
+			calucatedTraitsForItem.Add(traitName, traitValue);
+
 			while (TraitParents.Contains(traitName)) {
 				traitName = TraitParents[traitName];
 
-				if (allTraits.Contains(traitName)) {
-					allTraits[traitName] += trait.Value;
-				} else {
-					allTraits.Add(traitName, trait.Value);
+				if (!calucatedTraitsForItem.Contains(traitName)) {
+					check(defaultSinkPointsPerTrait.Contains(traitName));
+					traitValue = GetTraitValue(itemValue, defaultSinkPointsPerTrait[traitName], traitRelativeRating.Value);
+					calucatedTraitsForItem.Add(traitName, traitValue);
 				}
 			}
 		}
 
-		TraitsPerItem.Add(itemInfoMapping.Value.Class, allTraits);
+		TraitsPerItem.Add(itemInfoMapping.Value.Class, calucatedTraitsForItem);
 	}
 
-	TSet<FString> allTraits;
+	PrintTraitValuesPerItem();
+}
 
-	for (TPair<FString, int64> traitDefault : TraitDefaultItemIds) {
-		allTraits.Add(traitDefault.Key);
+void AApGiftingSubsystem::PrintTraitValuesPerItem() {
+	TMap<FString, TSortedMap<float, FString>> valuesPerItem;
+	
+	for (TPair<TSubclassOf<UFGItemDescriptor>, TMap<FString, float>> traitsPerItem : TraitsPerItem) {
+		for (TPair<FString, float> trait : traitsPerItem.Value) {
+			if (!valuesPerItem.Contains(trait.Key))
+				valuesPerItem.Add(trait.Key, TSortedMap<float, FString>());
 
-		TraitAvarageValue.Add(traitDefault.Key, GetResourceSinkPointsForItem(mappingSubsystem->ItemInfo[traitDefault.Value].Class, traitDefault.Value));
+			FString itemName = mappingSubsystem->ItemInfo[mappingSubsystem->ItemClassToItemId[traitsPerItem.Key]].Name;
+
+			valuesPerItem[trait.Key].Add(trait.Value, itemName);
+		}
 	}
+
+	TArray<FString> lines;
+	for (TPair<FString, TSortedMap<float, FString>> traitsPerItem : valuesPerItem) {
+		lines.Add(FString::Printf(TEXT("Trait: \"%s\":"), *traitsPerItem.Key));
+
+		for (TPair<float, FString> valuePerItem : traitsPerItem.Value)
+			lines.Add(FString::Printf(TEXT("  - Item: \"%s\": %.2f"), *valuePerItem.Value, valuePerItem.Key));
+	}
+
+	FString fileText = FString::Join(lines, TEXT("\n"));
+
+	UApUtils::WriteStringToFile(fileText, TEXT("T:\\ItemTraits.txt"), false);
+}
+
+
+float AApGiftingSubsystem::GetTraitValue(int itemValue, float avarageItemValueForTrait, float itemSpecificTraitMultiplier) {
+	float scale = itemValue / avarageItemValueForTrait;
+	float reducedScale = ((scale - 1) * 0.25f) + 1;
+
+	return reducedScale * itemSpecificTraitMultiplier;
 }
 
 void AApGiftingSubsystem::PullAllGiftsAsync() {
@@ -378,7 +435,9 @@ void AApGiftingSubsystem::PullAllGiftsAsync() {
 		//try match on name
 		if (mappingSubsystem->NameToItemId.Contains(gift.ItemName)) {
 			portalSubSystem->Enqueue(mappingSubsystem->ItemInfo[mappingSubsystem->NameToItemId[gift.ItemName]].Class, gift.Amount);
-		}	else {
+		} else if (HardcodedItemNameToIdMappings.Contains(gift.ItemName)) {
+			portalSubSystem->Enqueue(mappingSubsystem->ItemInfo[HardcodedItemNameToIdMappings[gift.ItemName]].Class, gift.Amount);
+		} else {
 			//if name cant be matched, try match on traits
 			TSubclassOf<UFGItemDescriptor> itemClass = TryGetItemClassByTraits(gift.Traits);
 
@@ -386,6 +445,7 @@ void AApGiftingSubsystem::PullAllGiftsAsync() {
 				portalSubSystem->Enqueue(itemClass, gift.Amount);
 			} else {
 				ap->RejectGift(gift.Id);
+				continue;
 			}
 		}
 
@@ -446,10 +506,12 @@ TArray<FString> AApGiftingSubsystem::GetAcceptedTraitsPerPlayer(FApPlayer player
 	TArray<FString> acceptedTraits;
 
 	if (!AcceptedGiftTraitsPerPlayer.Contains(player))
-		return TArray<FString>();
+		return acceptedTraits;
 
-	if (AcceptedGiftTraitsPerPlayer[player].AcceptAllTraits)
-		return AllTraits;
+	if (AcceptedGiftTraitsPerPlayer[player].AcceptAllTraits) {
+		TraitDefaultItemIds.GenerateKeyArray(acceptedTraits);
+		return acceptedTraits;
+	}
 
 	return AcceptedGiftTraitsPerPlayer[player].AcceptedTraits;
 }
@@ -526,40 +588,77 @@ void AApGiftingSubsystem::Send(TMap<FApPlayer, TMap<TSubclassOf<UFGItemDescripto
 	}
 }
 
+bool AApGiftingSubsystem::HasTraitKnownToSatisfactory(TArray<FApGiftTrait> traits) {
+	for (FApGiftTrait trait : traits) {
+		if (TraitDefaultItemIds.Contains(trait.Trait))
+			return true;
+	}
+
+	return false;
+}
+
 TSubclassOf<UFGItemDescriptor> AApGiftingSubsystem::TryGetItemClassByTraits(TArray<FApGiftTrait> traits) {
-	TMap<TSubclassOf<UFGItemDescriptor>, int> traitMatchesPerItemClass;
-	int mostMatches;
+	uint32 hash = GetTraitsHash(traits);
+	if (ItemPerTraitsHashCache.Contains(hash))
+		return ItemPerTraitsHashCache[hash];
+
+	TMap<TSubclassOf<UFGItemDescriptor>, TPair<int, float>> numberOfMatchesAndTotalDiviationPerItemClass;
+	int mostMatches = 0;
+
+	if (!HasTraitKnownToSatisfactory(traits))
+		return nullptr;
 
 	for (TPair<TSubclassOf<UFGItemDescriptor>, TMap<FString, float>> traitsPerItem : TraitsPerItem) {
 		int matches = 0;
+		float totalDifference = 0.0f;
 
 		for (FApGiftTrait trait : traits) {
 			if (traitsPerItem.Value.Contains(trait.Trait)){
-				if (!traitMatchesPerItemClass.Contains(traitsPerItem.Key))
-					traitMatchesPerItemClass.Add(traitsPerItem.Key, 0);
-				else
-					traitMatchesPerItemClass[traitsPerItem.Key]++;
-
+				totalDifference += FGenericPlatformMath::Abs(traitsPerItem.Value[trait.Trait] - trait.Quality);
 				matches++;
 			}
 		}
 
-		if (matches > mostMatches)
+		if (matches >= mostMatches) {
 			mostMatches = matches;
+			numberOfMatchesAndTotalDiviationPerItemClass.Add(traitsPerItem.Key, TPair<int, float>(matches, totalDifference));
+		}
 	}
 
-	TMap<TSubclassOf<UFGItemDescriptor>, TMap<FString, float>> mostAccurateItems;
+	float lowestDifference = 0.0f;
+	TMap<TSubclassOf<UFGItemDescriptor>, float> accurencyPerItem;
+	TSubclassOf<UFGItemDescriptor> itemClassWithLowestDifference = nullptr;
 
-	for (TPair<TSubclassOf<UFGItemDescriptor>, int> traitMatchingItemClass : traitMatchesPerItemClass) {
-		if (traitMatchingItemClass.Value == mostMatches)
-			mostAccurateItems.Add(traitMatchingItemClass.Key, TraitsPerItem[traitMatchingItemClass.Key]);
+	for (TPair<TSubclassOf<UFGItemDescriptor>, TPair<int, float>> numberOfMatchesAndTotalDiviation : numberOfMatchesAndTotalDiviationPerItemClass) {
+		if (numberOfMatchesAndTotalDiviation.Value.Key != mostMatches)
+			continue;
+
+		if (itemClassWithLowestDifference == nullptr || numberOfMatchesAndTotalDiviation.Value.Value < lowestDifference) {
+			lowestDifference = numberOfMatchesAndTotalDiviation.Value.Value;
+			itemClassWithLowestDifference = numberOfMatchesAndTotalDiviation.Key;
+		}
 	}
 
-	//TODO process item traits and quality, like "Metal" with quality 2 might be Encased Steam Beam
-	//TODO decide what items has the closes match
+	ItemPerTraitsHashCache.Add(hash, itemClassWithLowestDifference);
 
+	return itemClassWithLowestDifference;
+}
 
-	return nullptr;
+uint32 AApGiftingSubsystem::GetTraitsHash(TArray<FApGiftTrait> traits) {
+	TSortedMap<FString, uint32> hashesPerTrait;
+
+	for (FApGiftTrait trait : traits)
+		hashesPerTrait.Add(trait.Trait, HashCombine(GetTypeHash(trait.Trait), GetTypeHash(trait.Quality)));
+
+	uint32 totalHash = 0;
+
+	TArray<uint32> hashes;
+	hashesPerTrait.GenerateValueArray(hashes);
+
+	for (uint32 hash : hashes)
+		totalHash = HashCombine(totalHash, hash);
+
+	return totalHash;
 }
 
 TArray<FApGiftTrait> AApGiftingSubsystem::GetTraitsForItem(TSubclassOf<UFGItemDescriptor> itemClass, int itemValue) {
@@ -569,17 +668,9 @@ TArray<FApGiftTrait> AApGiftingSubsystem::GetTraitsForItem(TSubclassOf<UFGItemDe
 	TMap<FString, FApGiftTrait> Traits;
 
 	for (TPair<FString, float> trait : TraitsPerItem[itemClass]) {
-		int traitDefualt;
-		if (TraitAvarageValue.Contains(trait.Key))
-			traitDefualt = TraitAvarageValue[trait.Key];
-		else
-			traitDefualt = 1;
-
-		float traitValue = (0.1f * itemValue / traitDefualt) * trait.Value;
-
 		FApGiftTrait traitSpecification;
 		traitSpecification.Trait = trait.Key;
-		traitSpecification.Quality = traitValue;
+		traitSpecification.Quality = trait.Value;
 		traitSpecification.Duration = 1.0f;
 
 		Traits.Add(trait.Key, traitSpecification);

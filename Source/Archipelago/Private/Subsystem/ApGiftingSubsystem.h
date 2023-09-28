@@ -7,6 +7,7 @@
 #include "Subsystem/ApPortalSubsystem.h"
 #include "Subsystem/ApMappingsSubsystem.h"
 #include "FGResourceSinkSubsystem.h"
+#include "ApUtils.h"
 
 #include "ApGiftingSubsystem.generated.h"
 
@@ -38,12 +39,12 @@ private:
 
 	bool apInitialized;
 
-	TMap<FString, int> TraitAvarageValue;
-	TArray<FString> AllTraits;
 	TMap<TSubclassOf<UFGItemDescriptor>, TMap<FString, float>> TraitsPerItem;
+	TMap<uint32, TSubclassOf<UFGItemDescriptor>> ItemPerTraitsHashCache;
 
+	static const TMap<FString, int64> HardcodedItemNameToIdMappings;
 	static const TMap<FString, int64> TraitDefaultItemIds;
-	static const TMap<int64, TMap<FString, float>> TraitsPerItemSimplified;
+	static const TMap<int64, TMap<FString, float>> TraitsPerItemRatings;
 	static const TMap<FString, FString> TraitParents;
 	static const TMap<int64, int> HardcodedSinkValues;
 
@@ -78,7 +79,7 @@ public:
 	TArray<FApPlayer> GetAllPlayers(); // forwarded from ApSubsystem
 
 private:
-	void LoadItemNameMapping();
+	void LoadMappings();
 
 	void UpdateAcceptedGifts();
 	void PullAllGiftsAsync();
@@ -93,4 +94,11 @@ private:
 	void UpdatedProcessedIds(TArray<FApReceiveGift> gifts);
 
 	int GetResourceSinkPointsForItem(TSubclassOf<UFGItemDescriptor> itemClass, int64 itemId);
+
+	bool HasTraitKnownToSatisfactory(TArray<FApGiftTrait> traits);
+
+	uint32 GetTraitsHash(TArray<FApGiftTrait> traits);
+	float GetTraitValue(int itemValue, float defaultValueForTrait, float itemTraitMultiplier);
+
+	void PrintTraitValuesPerItem();
 };
