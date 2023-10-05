@@ -102,7 +102,7 @@ const TMap<int64, TMap<FString, float>> AApGiftingSubsystem::TraitsPerItemRating
 	{1338028, {{"Copper", 1.0f}}}, // Desc_OreCopper_C, //Copper Ore
 	{1338029, {{"Copper", 1.0f}}}, // Desc_CopperDust_C, 
 	{1338030, {{"Copper", 1.0f}}}, // Desc_CopperSheet_C, 
-	{1338031, {{"Copper", 10.0f}}}, // Desc_CharacterRunStatue_C, 
+	{1338031, {{"Copper", 5.0f}}}, // Desc_CharacterRunStatue_C, 
 	{1338032, {{"Crystal", 1.0f}}}, // Desc_CrystalOscillator_C, 
 	{1338033, {{"Copper", 1.0f}}}, // Desc_ElectromagneticControlRod_C, 
 	{1338034, {{"Material", 1.0f}}}, // Desc_FluidCanister_C, 
@@ -118,13 +118,13 @@ const TMap<int64, TMap<FString, float>> AApGiftingSubsystem::TraitsPerItemRating
 	{1338044, {{"Silver", 1.0f}}}, // Desc_AluminumPlateReinforced_C, //Heatsink
 	{1338045, {{"Steel", 1.0f}}}, // Desc_ModularFrameHeavy_C, 
 	{1338046, {{"Electronics", 1.0f}}}, // Desc_HighSpeedConnector_C, 
-	{1338047, {{"Gold", 10.0f}}}, // Desc_CharacterSpin_Statue_C, 
-	{1338048, {{"Silver", 10.0f}}}, // Desc_CharacterClap_Statue_C, 
+	{1338047, {{"Gold", 5.0f}}}, // Desc_CharacterSpin_Statue_C, 
+	{1338048, {{"Silver", 5.0f}}}, // Desc_CharacterClap_Statue_C, 
 	{1338049, {{"Iron", 1.0f}}}, // Desc_IronIngot_C, 
 	{1338050, {{"Iron", 1.0f},{"Ore", 1.0f}}}, // Desc_OreIron_C, 
 	{1338051, {{"Iron", 1.0f}}}, // Desc_IronPlate_C, 
 	{1338052, {{"Iron", 1.0f}}}, // Desc_IronRod_C, 
-	{1338053, {{"Gold", 1000.0f}}}, // Desc_GoldenNut_Statue_C, 
+	{1338053, {{"Gold", 5.0f}}}, // Desc_GoldenNut_Statue_C, 
 	{1338054, {{"Grass", 1.0f}}}, // Desc_Leaves_C, 
 	{1338055, {{"Stone", 1.0f},{"Ore", 1.0f}}}, // Desc_Stone_C, //Limestone
 	{1338056, {{"Copper", 0.4f},{"Iron", 0.3f},{"Steel",0.3f}}}, // Desc_SpaceElevatorPart_6_C, //Magnetic Field Generator
@@ -135,7 +135,7 @@ const TMap<int64, TMap<FString, float>> AApGiftingSubsystem::TraitsPerItemRating
 	{1338061, {{"Fiber", 1.0f}}}, // Desc_Mycelia_C, 
 	{1338062, {{"Radioactive", 0.075f},{"Damage", 0.075f}}}, // Desc_NonFissibleUranium_C, 
 	{1338063, {{"Silver", 0.3f},{"Electronics", 0.4f},{"Copper", 0.3f}}}, // Desc_SpaceElevatorPart_9_C, //Nuclear Pasta
-	{1338064, {{"Gold", 100.0f}}}, // Desc_DoggoStatue_C, 
+	{1338064, {{"Gold", 5.0f}}}, // Desc_DoggoStatue_C, 
 	{1338065, {{"Resource", 1.0f}}}, // Desc_AlienDNACapsule_C, 
 	{1338066, {{"Silver", 1.0f}}}, // Desc_PackagedAlumina_C, 
 	{1338067, {{"Material", 1.0f}}}, // Desc_Fuel_C, 
@@ -154,7 +154,7 @@ const TMap<int64, TMap<FString, float>> AApGiftingSubsystem::TraitsPerItemRating
 	{1338080, {{"Stone", 1.0f},{"Radioactive", 20.0f},{"Damage", 20.0f}}}, // Desc_PlutoniumWaste_C, 
 	{1338081, {{"Material", 1.0f}}}, // Desc_PolymerResin_C, 
 	{1338082, {{"Artifact",1.0f},{"Speed",1.0f}}}, // Desc_CrystalShard_C, //Power Shard
-	{1338083, {{"Gold", 200.0f}}}, // Desc_SpaceGiraffeStatue_C, 
+	{1338083, {{"Gold", 5.0f}}}, // Desc_SpaceGiraffeStatue_C, 
 	{1338084, {{"Silver", 0.4f},{"Electronics", 0.6f}}}, // Desc_PressureConversionCube_C, 
 	{1338085, {{"Electronics", 1.0f}}}, // Desc_ComputerQuantum_C, 
 	{1338086, {{"Crystal", 1.0f}}}, // Desc_QuartzCrystal_C, 
@@ -383,7 +383,7 @@ void AApGiftingSubsystem::LoadMappings() {
 		TraitsPerItem.Add(itemInfoMapping.Value.Class, calucatedTraitsForItem);
 	}
 
-	//PrintTraitValuesPerItem();
+	PrintTraitValuesPerItem();
 }
 
 void AApGiftingSubsystem::PrintTraitValuesPerItem() {
@@ -415,10 +415,7 @@ void AApGiftingSubsystem::PrintTraitValuesPerItem() {
 
 
 float AApGiftingSubsystem::GetTraitValue(int itemValue, float avarageItemValueForTrait, float itemSpecificTraitMultiplier) {
-	float scale = itemValue / avarageItemValueForTrait;
-	float reducedScale = ((scale - 1) * 0.25f) + 1;
-
-	return reducedScale * itemSpecificTraitMultiplier;
+	return (FPlatformMath::LogX(10, (double)itemValue + 0.1) / FPlatformMath::LogX(10, (double)avarageItemValueForTrait + 0.1)) * itemSpecificTraitMultiplier;
 }
 
 void AApGiftingSubsystem::PullAllGiftsAsync() {

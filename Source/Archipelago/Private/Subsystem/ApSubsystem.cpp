@@ -541,6 +541,23 @@ void AApSubsystem::SendChatMessage(const FString& Message, const FLinearColor& C
 	ChatManager->AddChatMessageToReceived(MessageStruct);
 
 	UE_LOG(LogApChat, Display, TEXT("Archipelago Chat Message: %s"), *Message);
+
+	//	FOutputLogModule& consoleLog = FOutputLogModule::Get();
+	//TSharedPtr<SOutputLog> log = StaticCastSharedPtr<SOutputLog>(consoleLog.GetOutputLog());
+
+	//FString message = FString::Printf("Archipelago Chat Message: %s", *Message);
+
+	/*
+	* APlayerController
+	* 
+		APawn* Pawn = GetOuterAPlayerController()->GetPawn();
+	if (Pawn != NULL)
+	{
+		GetOuterAPlayerController()->ClientMessage(TEXT("You feel much lighter"));
+	*/
+
+	//log.CreateLogMessages(message, ELogVerbosity::Type::Display, FName("Archipelago"), TArray<TSharedPtr<FOutputLogMessage>>());
+	//SOutputLog::CreateLogMessages(message, ELogVerbosity::Type::Display, FName("Archipelago"), TArray<TSharedPtr<FOutputLogMessage>>());
 }
 
 void AApSubsystem::ScoutArchipelagoItems() {
