@@ -1,8 +1,6 @@
 #include "Buildable/ApPortal.h"
 #include "Subsystem/ApPortalSubsystem.h"
 
-DEFINE_LOG_CATEGORY(LogGame); // A base-game header is using this category so we must do this to avoid unresolved external symbol
-
 //TODO REMOVE
 #pragma optimize("", off)
 

@@ -96,8 +96,6 @@ public:
 	static AApSubsystem* Get();
 	static AApSubsystem* Get(class UWorld* world);
 
-	static FApConfigurationStruct GetActiveConfig();
-
 	// Called every frame
 	bool InitializeTick(FApConfigurationStruct config, FDateTime connectingStartedTime);
 
@@ -128,7 +126,7 @@ private:
 	AFGGamePhaseManager* PManager;
 
 	UContentLibSubsystem* contentLibSubsystem;
-	AModContentRegistry* contentRegistry;
+	UModContentRegistry* contentRegistry;
 	AFGResourceSinkSubsystem* resourceSinkSubsystem;
 	AApPortalSubsystem* portalSubsystem;
 

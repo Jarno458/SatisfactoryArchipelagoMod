@@ -37,7 +37,7 @@ public:
 
 	static FString GetImagePathForItem(UFGItemDescriptor* item);
 
-	//We might want to move all Assets mamagent to its own place
+	//We might want to move all Assets management to its own place
 	static TMap<FName, FAssetData> GetBlueprintAssetsIn(FName&& packagePath, TArray<FString> namePrefixes);
 	static UObject* FindAssetByName(TMap<FName, FAssetData> assets, FString assetName);
 	static UFGRecipe* GetRecipeByName(TMap<FName, FAssetData> recipeAssets, FString name);

@@ -48,7 +48,7 @@ void AApSubsystem::BeginPlay() {
 }
 
 void AApSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase) {
-	FApConfigurationStruct config = GetActiveConfig();
+	FApConfigurationStruct config = FApConfigurationStruct::GetActiveConfig(GetWorld());
 	UE_LOG(LogApSubsystem, Warning, TEXT("Archipelago manually disabled by user config"));
 	if (!config.Enabled) {
 		return;
@@ -65,7 +65,7 @@ void AApSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase) {
 
 		contentLibSubsystem = GetWorld()->GetGameInstance()->GetSubsystem<UContentLibSubsystem>();
 		check(contentLibSubsystem)
-		contentRegistry = AModContentRegistry::Get(GetWorld());
+		contentRegistry = UModContentRegistry::Get(GetWorld());
 		check(contentRegistry)
 
 		UE_LOG(LogApSubsystem, Display, TEXT("Initiating Archipelago server connection in background..."));
@@ -617,23 +617,6 @@ void AApSubsystem::TimeoutConnection() {
 	UE_LOG(LogApSubsystem, Error, TEXT("AApSubsystem::TimeoutConnectionIfNotConnected(), Authenticated Failed"));
 
 	SetActorTickEnabled(false);
-}
-
-FApConfigurationStruct AApSubsystem::GetActiveConfig() {
-	UConfigManager* ConfigManager = GEngine->GetEngineSubsystem<UConfigManager>();
-	FConfigId ConfigId { "Archipelago", "" };
-	auto Config = ConfigManager->GetConfigurationById(ConfigId);
-	auto ConfigProperty = URuntimeBlueprintFunctionLibrary::GetModConfigurationPropertyByClass(Config);
-	auto CPSection = Cast<UConfigPropertySection>(ConfigProperty);
-
-	FApConfigurationStruct config;
-	config.Enabled = Cast<UConfigPropertyBool>(CPSection->SectionProperties["Enabled"])->Value;
-	config.Url = Cast<UConfigPropertyString>(CPSection->SectionProperties["Url"])->Value;
-	config.Game = Cast<UConfigPropertyString>(CPSection->SectionProperties["Game"])->Value;
-	config.Login = Cast<UConfigPropertyString>(CPSection->SectionProperties["Login"])->Value;
-	config.Password = Cast<UConfigPropertyString>(CPSection->SectionProperties["Password"])->Value;
-
-	return config;
 }
 
 #pragma optimize("", on)
