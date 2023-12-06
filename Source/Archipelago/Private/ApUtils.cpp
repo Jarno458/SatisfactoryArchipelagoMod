@@ -20,7 +20,7 @@ FString UApUtils::FStr(std::string inString) {
 	return FString(inString.c_str());
 }
 
-FString UApUtils::FStr(int64_t inInt) {
+FString UApUtils::FStr(int64 inInt) {
 	return FString(std::to_string(inInt).c_str());
 }
 
@@ -38,78 +38,6 @@ FString UApUtils::GetImagePathForItem(UFGItemDescriptor* item) {
 	return item->GetBigIconFromInstance()->GetPathName();
 }
 
-TMap<FName, FAssetData> UApUtils::GetBlueprintAssetsIn(FName&& packagePath, TArray<FString> namePrefixes) {
-	UE_LOG(LogApUtils, Display, TEXT("Processing assets in path: %s"), *packagePath.ToString());
-	FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
-	IAssetRegistry& registery = AssetRegistryModule.Get();
-
-	FARFilter filter;
-	filter.ClassPaths.Add(FTopLevelAssetPath("/Script/Engine", "BlueprintGeneratedClass"));
-	filter.PackagePaths.Add(packagePath);
-	filter.bRecursivePaths = true;
-
-	TArray<FAssetData> assets;
-	registery.GetAssets(filter, assets);
-
-	TMap<FName, FAssetData> assetsMap;
-	for (auto asset : assets) {
-		FString nameString;
-		asset.AssetName.ToString(nameString);
-
-		for (FString prefix : namePrefixes) {
-			if (nameString.StartsWith(prefix)) {
-				assetsMap.Add(asset.AssetName, asset);
-				UE_LOG(LogApUtils, VeryVerbose, TEXT("Adding asset %s that matches prefix %s"), *asset.AssetName.ToString(), *prefix);
-			}
-		}
-	}
-
-	return assetsMap;
-}
-
-UObject* UApUtils::FindAssetByName(TMap<FName, FAssetData> assets, FString assetName) {
-	FName key = FName(*assetName);
-	
-	if (!assets.Contains(key)) {
-		UE_LOG(LogApUtils, Fatal, TEXT("Key '%s' not present in assets to search"), *assetName);
-	}
-
-	return Cast<UBlueprintGeneratedClass>(assets[key].GetAsset())->GetDefaultObject();
-}
-
-UFGRecipe* UApUtils::GetRecipeByName(TMap<FName, FAssetData> recipeAssets, FString name) {
-	UObject* obj = FindAssetByName(recipeAssets, name.Append("_C"));
-	verify(obj != nullptr);
-	return Cast<UFGRecipe>(obj);
-}
-
-UFGItemDescriptor* UApUtils::GetItemDescriptorByName(TMap<FName, FAssetData> itemDescriptorAssets, FString name) {
-	UObject* obj = FindAssetByName(itemDescriptorAssets, name);
-	verify(obj != nullptr);
-	return Cast<UFGItemDescriptor>(obj);
-}
-
-TMap<FName, FAssetData> UApUtils::GetItemDescriptorAssets() {
-	TMap<FName, FAssetData> itemDescriptorAssets;
-		
-	itemDescriptorAssets.Append(GetBlueprintAssetsIn("/Game/FactoryGame/Resource", TArray<FString>{ "Desc_", "BP_" }));
-	itemDescriptorAssets.Append(GetBlueprintAssetsIn("/Game/FactoryGame/Equipment", TArray<FString>{ "Desc_", "BP_" }));
-	itemDescriptorAssets.Append(GetBlueprintAssetsIn("/Game/FactoryGame/Prototype", TArray<FString>{ "Desc_", "BP_" })); // BP_WAT1 and BP_WAT2 (alien artifacts)
-
-	//should prob cache this results
-	return itemDescriptorAssets;
-}
-
-TMap<FName, FAssetData> UApUtils::GetRecipeAssets() {
-	TMap<FName, FAssetData> recipeAssets;
-
-	recipeAssets.Append(GetBlueprintAssetsIn("/Game/FactoryGame/Recipes", TArray<FString>{ "Recipe_" }));
-	recipeAssets.Append(GetBlueprintAssetsIn("/Game/FactoryGame/Equipment", TArray<FString>{ "Recipe_" }));
-
-	//should prob cache this results
-	return recipeAssets;
-}
-
 UApBlueprintDataBridge* UApUtils::GetBlueprintDataBridge(UObject* worldContext) {
 	if (const auto world = worldContext->GetWorld()) {
 		const auto moduleManager = world->GetGameInstance()->GetSubsystem<UGameInstanceModuleManager>();
@@ -118,6 +46,21 @@ UApBlueprintDataBridge* UApUtils::GetBlueprintDataBridge(UObject* worldContext) 
 		return modModule->BlueprintData;
 	}
 	return nullptr;
+}
+
+void UApUtils::WriteStringToFile(FString Path, FString text, bool relative) {
+#if WITH_EDITOR 
+	FFileHelper::SaveStringToFile(text, relative ? *(FPaths::ProjectDir() + Path) : *Path);
+#else
+	const FString AbsoluteRootPath = FPaths::ConvertRelativePathToFull(FPaths::ProjectDir());
+	const FString AbsolutePath = AbsoluteRootPath + TEXT("Mods/") + Path;
+	if (!AbsolutePath.Contains(TEXT(".."))) {
+		FFileHelper::SaveStringToFile(text, *AbsolutePath);
+	}
+	else {
+		UE_LOG(LogApUtils, Error, TEXT("Absolute or escaping Paths are not allowed in Runtime"));
+	}
+#endif
 }
 
 #pragma optimize("", on)

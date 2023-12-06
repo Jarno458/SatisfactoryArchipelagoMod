@@ -44,10 +44,10 @@ class ARCHIPELAGO_API AApExplorationSubsystem : public AModSubsystem
 {
 	GENERATED_BODY()
 
-	static TMap<int64_t, FVector_NetQuantize> IdToDropPodLocation;
+	static TMap<int64, FVector_NetQuantize> IdToDropPodLocation;
 
 	// TODO populate this array instead of IdToDropPodLocation once we decide what's needed and the debug tools can auto generate it
-	static TMap<int64_t, FApExplorationData> IdToDropPodData;
+	static TMap<int64, FApExplorationData> IdToDropPodData;
 	
 public:
 	UPROPERTY(BlueprintReadOnly)

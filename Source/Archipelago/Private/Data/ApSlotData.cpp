@@ -4,6 +4,8 @@ FApSlotData::FApSlotData() {
 }
 
 bool FApSlotData::ParseSlotData(std::string json, FApSlotData* data) {
+	//TODO use https://docs.unrealengine.com/5.1/en-US/API/Runtime/JsonUtilities/FJsonObjectConverter/JsonObjectStringToUStruct/
+
 	FString jsonString(json.c_str());
 
 	const TSharedRef<TJsonReader<>> reader = TJsonReaderFactory<>::Create(*jsonString);
@@ -38,10 +40,10 @@ bool FApSlotData::ParseSlotData(std::string json, FApSlotData* data) {
 
 	TSharedPtr<FJsonObject> options = parsedJson->GetObjectField("Options");
 
-	data->currentPlayerSlot = parsedJson->GetIntegerField("Slot");
 	data->numberOfChecksPerMilestone = parsedJson->GetIntegerField("SlotsPerMilestone");
 	data->finalSpaceElevatorTier = options->GetIntegerField("FinalElevatorTier");
 	data->finalResourceSinkPoints = options->GetIntegerField("FinalResourceSinkPoints");
 	data->hasLoadedSlotData = true;
+
 	return true;
 }

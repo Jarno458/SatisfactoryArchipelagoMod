@@ -1,23 +1,30 @@
 #include "Buildable/ApPortal.h"
 #include "Subsystem/ApPortalSubsystem.h"
+#include "Subsystem/ApGiftingSubsystem.h"
 
 //TODO REMOVE
 #pragma optimize("", off)
 
 AApPortal::AApPortal() : Super() {
 	mPowerInfoClass = UFGPowerInfoComponent::StaticClass();
-	mInventorySizeX = 5;
-	mInventorySizeY = 1;
 	mSignificanceRange = 18000;
 	MaxRenderDistance = -1;
 
 	bReplicates = true;
 
 	mPowerConsumption = 10;
+
+	//TODO implelemt through ui
+	targetPlayer.Name = TEXT("JarnoSF");
+	targetPlayer.Team = 0;
 }
 
 void AApPortal::BeginPlay() {
 	Super::BeginPlay();
+
+	UWorld* world = GetWorld();
+	portalSubsystem = AApPortalSubsystem::Get(world);
+	giftingSubsystem = AApGiftingSubsystem::Get(world);
 
 	mPowerInfo->OnHasPowerChanged.BindUFunction(this, "CheckPower");
 
@@ -31,18 +38,6 @@ void AApPortal::BeginPlay() {
 	if (!HasAuthority()) {
 		return;
 	}
-
-	//TODO lock item from getting inserted until we implement sending
-	UFGInventoryComponent* inventory = GetStorageInventory();
-	inventory->SetLocked(true);
-}
-
-void AApPortal::EndPlay(const EEndPlayReason::Type reason) {
-	Super::EndPlay(reason);
-
-	if (!HasAuthority()) {
-		return;
-	}
 }
 
 bool AApPortal::CanProduce_Implementation() const {
@@ -51,25 +46,42 @@ bool AApPortal::CanProduce_Implementation() const {
 
 void AApPortal::CheckPower(bool newHasPower) const {
 	if (Factory_HasPower()) {
-		AApPortalSubsystem::Get(GetWorld())->RegisterPortal(this);
+		((AApPortalSubsystem*)portalSubsystem)->RegisterPortal(this);
 	}	else {
-		AApPortalSubsystem::Get(GetWorld())->UnRegisterPortal(this);
+		((AApPortalSubsystem*)portalSubsystem)->UnRegisterPortal(this);
 	}
 }
 
 void AApPortal::Factory_Tick(float dt) {
 	Super::Factory_Tick(dt);
 
-	UFGInventoryComponent* inventory = GetStorageInventory();
-
-	if (inventory != nullptr) {
-		if (targetPlayerSlot <= 0)
-			inventory->SetLocked(true);
-		else
-			inventory->SetLocked(false);
-	}
-
 	camReceiveOutput = CanProduce() && output->IsConnected();
+}
+
+void AApPortal::Factory_CollectInput_Implementation() {
+	if (input == nullptr || !input->IsConnected())
+		return;
+
+	TArray<FInventoryItem> items;
+	TSubclassOf<UFGItemDescriptor> itemClass;
+
+	if (!input->Factory_PeekOutput(items, itemClass) || items.Num() == 0)
+		return;
+
+	if (!((AApGiftingSubsystem*)giftingSubsystem)->CanSend(targetPlayer, items[0]))
+		return; //block input
+	
+	FInventoryItem item;
+	float offset;
+
+	if (!input->Factory_GrabOutput(item, offset, itemClass))
+		return;
+
+	FInventoryStack stack;
+	stack.Item = item;
+	stack.NumItems = 1;
+
+	((AApGiftingSubsystem*)giftingSubsystem)->EnqueueForSending(targetPlayer, stack);
 }
 
 bool AApPortal::Factory_PeekOutput_Implementation(const class UFGFactoryConnectionComponent* connection, TArray<FInventoryItem>& out_items, TSubclassOf<UFGItemDescriptor> type) const {

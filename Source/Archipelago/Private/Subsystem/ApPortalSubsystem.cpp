@@ -1,4 +1,6 @@
 #include "Subsystem/ApPortalSubsystem.h"
+#include "Subsystem/ApSubsystem.h"
+#include "Subsystem/ApGiftingSubsystem.h"
 
 DEFINE_LOG_CATEGORY(LogApPortalSubsystem);
 
@@ -28,16 +30,24 @@ void AApPortalSubsystem::BeginPlay() {
 	Super::BeginPlay();
 
 	UE_LOG(LogApPortalSubsystem, Display, TEXT("AApPortalSubsystem::BeginPlay()"));
+
+	auto world = GetWorld();
+	giftingSubsystem = AApGiftingSubsystem::Get(world);
+	ap = AApSubsystem::Get(world);
 }
 
 void AApPortalSubsystem::Tick(float dt) {
 	Super::Tick(dt);
 
-	if (!HasAuthority()) {
+	if (!HasAuthority() || ((AApSubsystem*)ap)->ConnectionState != EApConnectionState::Connected) {
 		return;
 	}
 
-	if(OutputQueue.IsEmpty())
+	ProcessOutputQueue();
+}
+
+void AApPortalSubsystem::ProcessOutputQueue() {
+	if (OutputQueue.IsEmpty())
 		return;
 
 	for (const AApPortal* portal : BuiltPortals) {
@@ -52,11 +62,15 @@ void AApPortalSubsystem::Tick(float dt) {
 	}
 }
 
-void AApPortalSubsystem::Enqueue(TSubclassOf<UFGItemDescriptor> cls, int amount) {
 
+void AApPortalSubsystem::Enqueue(TSubclassOf<UFGItemDescriptor> cls, int amount) {
 	for (size_t i = 0; i < amount; i++) {
 		OutputQueue.Enqueue(FInventoryItem(cls));
 	}
+}
+
+void AApPortalSubsystem::Send(FApPlayer targetPlayer, FInventoryStack itemStack) {
+	((AApGiftingSubsystem*)giftingSubsystem)->EnqueueForSending(targetPlayer, itemStack);
 }
 
 void AApPortalSubsystem::RegisterPortal(const AApPortal* portal) {

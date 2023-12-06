@@ -5,6 +5,8 @@
 
 #include "Buildable/ApPortal.h"
 
+#include "Data/ApTypes.h"
+
 #include "ApPortalSubsystem.generated.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(LogApPortalSubsystem, Log, All);
@@ -29,7 +31,10 @@ public:
 	static AApPortalSubsystem* Get(class UWorld* world);
 
 private:
-	TQueue<FInventoryItem> OutputQueue = TQueue<FInventoryItem>();
+	AModSubsystem* giftingSubsystem;
+	AModSubsystem* ap;
+		
+	TQueue<FInventoryItem, EQueueMode::Mpsc> OutputQueue;
 
 	int lastUsedPortalIndex;
 
@@ -39,6 +44,12 @@ public:
 
 	void Enqueue(TSubclassOf<UFGItemDescriptor> cls, int amount);
 
+	void Send(FApPlayer targetPlayer, FInventoryStack itemStack);
+
 	void RegisterPortal(const AApPortal* portal);
 	void UnRegisterPortal(const AApPortal* portal);
+
+private:
+	void ProcessInputQueue();
+	void ProcessOutputQueue();
 };

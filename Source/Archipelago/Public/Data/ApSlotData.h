@@ -23,21 +23,15 @@ public:
 	bool hasLoadedSlotData;
 
 	UPROPERTY(BlueprintReadOnly)
-		int currentPlayerTeam;
-
-	UPROPERTY(BlueprintReadOnly)
-		int currentPlayerSlot;
-
-	UPROPERTY(BlueprintReadOnly)
-		int numberOfChecksPerMilestone;
+	int numberOfChecksPerMilestone;
 
 	TArray<TArray<TMap<FString, int>>> hubLayout;
 
 	UPROPERTY(BlueprintReadOnly)
-		int finalSpaceElevatorTier;
+	int finalSpaceElevatorTier;
 
 	UPROPERTY(BlueprintReadOnly)
-		int64 finalResourceSinkPoints;
+	int64 finalResourceSinkPoints;
 
 public:
 	// Parse slot data from server. Returns false if invalid.

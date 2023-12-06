@@ -1,6 +1,6 @@
 #include "Data/ApMappings.h"
 
-const TMap<int64_t, FString> UApMappings::ItemIdToGameItemDescriptor = {
+const TMap<int64, FString> UApMappings::ItemIdToGameItemDescriptor = {
 	//Parts
 	{1338000, TEXT("Desc_SpaceElevatorPart_5_C")}, //Adaptive Control Unit
 	{1338001, TEXT("Desc_CircuitBoardHighSpeed_C")}, //AI Limiter
@@ -90,7 +90,7 @@ const TMap<int64_t, FString> UApMappings::ItemIdToGameItemDescriptor = {
 	{1338085, TEXT("Desc_ComputerQuantum_C")},
 	{1338086, TEXT("Desc_QuartzCrystal_C")},
 	{1338087, TEXT("Desc_HighSpeedWire_C")},
-	{1338088, TEXT("Desc_ModularFrameLightweight_C")},
+	{1338088, TEXT("Desc_ModularFrameLightweight_C")}, //Radio Control Unit
 	{1338089, TEXT("Desc_RawQuartz_C")},
 	{1338090, TEXT("Desc_IronPlateReinforced_C")},
 	{1338091, TEXT("Desc_Rotor_C")},
@@ -122,6 +122,7 @@ const TMap<int64_t, FString> UApMappings::ItemIdToGameItemDescriptor = {
 	{1338117, TEXT("Desc_SpitterParts_C")},
 	{1338118, TEXT("Desc_StingerParts_C")},
 	{1338119, TEXT("Desc_HatcherParts_C")},
+	{1338120, TEXT("Desc_AlienDNACapsule_C")},
 
 	//Enquipment/Ammo
 	{1338150, TEXT("Desc_Shroom_C")},
@@ -131,11 +132,11 @@ const TMap<int64_t, FString> UApMappings::ItemIdToGameItemDescriptor = {
 	{1338154, TEXT("Desc_Chainsaw_C")},
 	{1338155, TEXT("Desc_NobeliskCluster_C")},
 	//{1338156, TEXT("Unused")},
-	{1338157, TEXT("BP_EquipmentDescriptorCup")},
-	{1338158, TEXT("BP_EquipmentDescriptorCupGold")},
+	{1338157, TEXT("BP_EquipmentDescriptorCup_C")},
+	{1338158, TEXT("BP_EquipmentDescriptorCupGold_C")},
 	{1338159, TEXT("Desc_Rebar_Explosive_C")},
 	{1338160, TEXT("Desc_GolfCart_C")},
-	{1338161, TEXT("Desc_GolfCartGold")},
+	{1338161, TEXT("Desc_GolfCartGold_C")},
 	{1338162, TEXT("BP_EquipmentDescriptorGasmask_C")},
 	{1338163, TEXT("Desc_NobeliskGas_C")},
 	{1338164, TEXT("BP_EquipmentDescriptorHazmatSuit_C")},
@@ -163,7 +164,7 @@ const TMap<int64_t, FString> UApMappings::ItemIdToGameItemDescriptor = {
 	{1338186, TEXT("BP_ItemDescriptorPortableMiner_C")}
 };
 
-const TMap<int64_t, FString> UApMappings::ItemIdToGameRecipe = {
+const TMap<int64, FString> UApMappings::ItemIdToGameRecipe = {
 	{1338200, TEXT("Recipe_IronPlateReinforced")},
 	{1338201, TEXT("Recipe_Alternate_AdheredIronPlate")},
 	{1338202, TEXT("Recipe_Alternate_ReinforcedIronPlate_1")},
@@ -275,7 +276,7 @@ const TMap<int64_t, FString> UApMappings::ItemIdToGameRecipe = {
 	{1338308, TEXT("Recipe_Alternate_AutomatedMiner")},
 };
 
-const TMap<int64_t, FString> UApMappings::ItemIdToGameBuilding = {
+const TMap<int64, FString> UApMappings::ItemIdToGameBuilding = {
 	{1338400, TEXT("Recipe_ConstructorMk1")},
 	{1338401, TEXT("Recipe_AssemblerMk1")},
 	{1338402, TEXT("Recipe_ManufacturerMk1")},
@@ -297,7 +298,7 @@ const TMap<int64_t, FString> UApMappings::ItemIdToGameBuilding = {
 	{1338499, TEXT("Recipe_SpaceElevator")},
 };
 
-const TMap<int64_t, FName> UApMappings::ItemIdToTrap = {
+const TMap<int64, FName> UApMappings::ItemIdToTrap = {
 	// Regenerate via /Script/Blutility.EditorUtilityWidgetBlueprint'/Archipelago/Debug/EU_GenerateTrapIds.EU_GenerateTrapIds'
 	{1338900, FName(TEXT("HogBasic"))},
 	{1338901, FName(TEXT("HogAlpha"))},
@@ -321,5 +322,5 @@ const TMap<int64_t, FName> UApMappings::ItemIdToTrap = {
 };
 
 
-const TMap<int64_t, FString> UApMappings::ItemIdToGameName2 = {
+const TMap<int64, FString> UApMappings::ItemIdToGameName2 = {
 };

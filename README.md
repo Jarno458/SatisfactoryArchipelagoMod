@@ -35,7 +35,7 @@ You will need to import it into your project using the tutorial above before thi
 
 ### APCpp
 
-This mod uses [APCpp](https://github.com/N00byKing/APCpp) to communicate with the AP server.
+This mod uses a [APCpp](https://github.com/Jarno458/APCpp/tree/Satisfactory) to communicate with the AP server.
 
 In order to get this to work this mod uses static compiled libraries from APCpp.
 The libraries are included in this repo, but if you want to update them you can follow these steps:
