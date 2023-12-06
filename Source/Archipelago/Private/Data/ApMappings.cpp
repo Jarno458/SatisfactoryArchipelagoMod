@@ -126,7 +126,7 @@ const TMap<int64, FString> UApMappings::ItemIdToGameItemDescriptor = {
 
 	//Enquipment/Ammo
 	{1338150, TEXT("Desc_Shroom_C")},
-	{1338151, TEXT("Desc_Nut_C")},
+	{ MISSING_ITEMID_DEVELOPER_BACKUP, TEXT("Desc_Nut_C")},
 	{1338152, TEXT("BP_EquipmentDescriptorJumpingStilts_C")},
 	//{1338153, TEXT("")}, //BoomBox
 	{1338154, TEXT("Desc_Chainsaw_C")},

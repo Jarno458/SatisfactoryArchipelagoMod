@@ -1,4 +1,9 @@
 #include "Data/ApSlotData.h"
+#include "ApUtils.h"
+
+// Possibly switch this over to reading from mod config?
+// #define UNKNOWN_ITEMID_LOG_MESSAGE_TYPE Fatal
+#define UNKNOWN_ITEMID_LOG_MESSAGE_TYPE Error
 
 FApSlotData::FApSlotData() {
 }
@@ -27,9 +32,13 @@ bool FApSlotData::ParseSlotData(std::string json, FApSlotData* data) {
 			for (TPair<FString, TSharedPtr<FJsonValue>> cost : milestone->AsObject()->Values) {
 				int itemId = FCString::Atoi(*cost.Key);
 
-				verify(UApMappings::ItemIdToGameItemDescriptor.Contains(itemId));
-
-				costs.Add(UApMappings::ItemIdToGameItemDescriptor[itemId], cost.Value->AsNumber());
+				if (UApMappings::ItemIdToGameItemDescriptor.Contains(itemId)) {
+					costs.Add(UApMappings::ItemIdToGameItemDescriptor[itemId], cost.Value->AsNumber());
+				} else {
+					// Edit the define to control if this crashes or just errors
+					UE_LOG(LogArchipelagoCpp, UNKNOWN_ITEMID_LOG_MESSAGE_TYPE, TEXT("Archipelago slot data contained AP itemId %d that is not present in ItemIdToGameItemDescriptor mappings. Are you using an out of date version of the mod for the Archipelago server version?"), itemId);
+					costs.Add(UApMappings::ItemIdToGameItemDescriptor[MISSING_ITEMID_DEVELOPER_BACKUP], cost.Value->AsNumber());
+				}
 			}
 
 			milestones.Add(costs);
