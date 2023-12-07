@@ -151,10 +151,19 @@ void AApSubsystem::BeginPlay() {
 	SManager->PurchasedSchematicDelegate.AddDynamic(this, &AApSubsystem::OnSchematicCompleted);
 }
 
+void SendLocation(int64_t locationId) {
+	UE_LOG(LogArchipelagoCpp, Display, TEXT("Sending location id %s to server"), *UApUtils::FStr(locationId));
+	AP_SendItem(locationId);
+}
+
 void AApSubsystem::OnMamResearchCompleted(TSubclassOf<class UFGSchematic> schematic) {
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubSystem::OnResearchCompleted(schematic), MAM Research Completed"));
 
-	//if (schematic.) //if name is Archipelago #xxxx send check to server
+	if (!locationsPerMamNode.Contains(schematic))
+		return;
+
+	for (auto& location : locationsPerMamNode[schematic])
+		SendLocation(location.location);
 }
 
 
@@ -167,7 +176,7 @@ void AApSubsystem::OnSchematicCompleted(TSubclassOf<class UFGSchematic> schemati
 		return;
 
 	for (auto& location : locationsPerMilestone[schematic])
-		AP_SendItem(location.location);
+		SendLocation(location.location);
 }
 
 void AApSubsystem::ItemClearCallback() {
@@ -270,8 +279,6 @@ void AApSubsystem::Tick(float DeltaTime) {
 	}
 
 	HandleAPMessages();
-
-	// TODO GoalSubsystem
 	
 	if (!hasSentGoal) {
 		hasSentGoal = goalSubsystem->AreGoalsCompleted(&slotData);
