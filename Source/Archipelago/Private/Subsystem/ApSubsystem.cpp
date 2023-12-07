@@ -543,6 +543,10 @@ void AApSubsystem::HandleAPMessages() {
 void AApSubsystem::SendChatMessage(const FString& Message, const FLinearColor& Color) {
 	// TODO this does not replicate to multiplayer clients
 	AFGChatManager* ChatManager = AFGChatManager::Get(GetWorld());
+	if (!ChatManager) {
+		UE_LOG(LogApChat, Error, TEXT("Too early to send chat message. Would have been: Archipelago Chat Message: %s"), *Message);
+		return;
+	}
 	FChatMessageStruct MessageStruct;
 	MessageStruct.MessageString = Message;
 	MessageStruct.MessageType = EFGChatMessageType::CMT_SystemMessage;
@@ -551,23 +555,6 @@ void AApSubsystem::SendChatMessage(const FString& Message, const FLinearColor& C
 	ChatManager->AddChatMessageToReceived(MessageStruct);
 
 	UE_LOG(LogApChat, Display, TEXT("Archipelago Chat Message: %s"), *Message);
-
-	//	FOutputLogModule& consoleLog = FOutputLogModule::Get();
-	//TSharedPtr<SOutputLog> log = StaticCastSharedPtr<SOutputLog>(consoleLog.GetOutputLog());
-
-	//FString message = FString::Printf("Archipelago Chat Message: %s", *Message);
-
-	/*
-	* APlayerController
-	* 
-		APawn* Pawn = GetOuterAPlayerController()->GetPawn();
-	if (Pawn != NULL)
-	{
-		GetOuterAPlayerController()->ClientMessage(TEXT("You feel much lighter"));
-	*/
-
-	//log.CreateLogMessages(message, ELogVerbosity::Type::Display, FName("Archipelago"), TArray<TSharedPtr<FOutputLogMessage>>());
-	//SOutputLog::CreateLogMessages(message, ELogVerbosity::Type::Display, FName("Archipelago"), TArray<TSharedPtr<FOutputLogMessage>>());
 }
 
 void AApSubsystem::ScoutArchipelagoItems() {
