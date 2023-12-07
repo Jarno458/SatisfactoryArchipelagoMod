@@ -38,8 +38,9 @@
 #include "ApConfigurationStruct.h"
 #include "Data/ApSlotData.h"
 #include "Data/ApTypes.h"
-#include "ApPortalSubsystem.h"
+#include "Subsystem/ApPortalSubsystem.h"
 #include "Subsystem/ApMappingsSubsystem.h"
+#include "Subsystem/ApGoalSubsystem.h"
 
 #include "ContentLibSubsystem.h"
 #include "CLSchematicBPFLib.h"
@@ -139,14 +140,13 @@ private:
 
 	AFGSchematicManager* SManager;
 	AFGResearchManager* RManager;
-	AFGGamePhaseManager* PManager;
 
 	UContentLibSubsystem* contentLibSubsystem;
 	UModContentRegistry* contentRegistry;
-	AFGResourceSinkSubsystem* resourceSinkSubsystem;
 	AApPortalSubsystem* portalSubsystem;
 	AApMappingsSubsystem* mappingSubsystem;
 	AApTrapSubsystem* trapSubsystem;
+	AApGoalSubsystem* goalSubsystem;
 
 	TMap<TSubclassOf<class UFGSchematic>, TArray<AP_NetworkItem>> locationsPerMilestone;
 	TMap<TSubclassOf<class UFGSchematic>, TArray<AP_NetworkItem>> locationsPerMamNode;

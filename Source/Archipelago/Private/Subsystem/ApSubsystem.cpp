@@ -141,11 +141,11 @@ void AApSubsystem::BeginPlay() {
 	UWorld* world = GetWorld();
 	RManager = AFGResearchManager::Get(world);
 	SManager = AFGSchematicManager::Get(world);
-	PManager = AFGGamePhaseManager::Get(world);
-	resourceSinkSubsystem = AFGResourceSinkSubsystem::Get(world);
+
 	portalSubsystem = AApPortalSubsystem::Get(world);
 	mappingSubsystem = AApMappingsSubsystem::Get(world);
 	trapSubsystem = AApTrapSubsystem::Get(world);
+	goalSubsystem = AApGoalSubsystem::Get(world);
 
 	RManager->ResearchCompletedDelegate.AddDynamic(this, &AApSubsystem::OnMamResearchCompleted);
 	SManager->PurchasedSchematicDelegate.AddDynamic(this, &AApSubsystem::OnSchematicCompleted);
@@ -271,13 +271,13 @@ void AApSubsystem::Tick(float DeltaTime) {
 
 	HandleAPMessages();
 
+	// TODO GoalSubsystem
+	
 	if (!hasSentGoal) {
-		if (	 (slotData.finalSpaceElevatorTier  > 0 && PManager->GetGamePhase() >= slotData.finalSpaceElevatorTier)
-			 || (slotData.finalResourceSinkPoints > 0 && resourceSinkSubsystem->GetNumTotalPoints(EResourceSinkTrack::RST_Default) >= slotData.finalResourceSinkPoints)
-		) {
+		hasSentGoal = goalSubsystem->AreGoalsCompleted(&slotData);
+		if (hasSentGoal) {
 			UE_LOG(LogApSubsystem, Display, TEXT("Sending goal completion to server"));
 			AP_StoryComplete();
-			hasSentGoal = true;
 		}
 	}
 }
