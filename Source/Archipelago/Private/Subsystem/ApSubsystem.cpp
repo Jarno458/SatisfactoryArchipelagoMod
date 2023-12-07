@@ -417,7 +417,7 @@ FContentLib_UnlockInfoOnly AApSubsystem::CreateUnlockInfoOnly(AP_NetworkItem ite
 	FContentLib_UnlockInfoOnly infoCard;
 
 	if (item.player == currentPlayerSlot) {
-		Args.Add(TEXT("ApPlayerName"), FText::FromString(TEXT("your")));
+		Args.Add(TEXT("ApPlayerName"), LOCTEXT("NetworkItemDescriptionYourOwnName", "your"));
 
 		infoCard.mUnlockName = UApUtils::FText(item.itemName);
 
@@ -426,12 +426,14 @@ FContentLib_UnlockInfoOnly AApSubsystem::CreateUnlockInfoOnly(AP_NetworkItem ite
 		} else if (UApMappings::ItemIdToGameRecipe.Contains(item.item)) {
 			UpdateInfoOnlyUnlockWithRecipeInfo(&infoCard, Args, &item);
 		} else if (UApMappings::ItemIdToGameItemDescriptor.Contains(item.item)) {
-			UpdateInfoOnlyUnlockWithItemInfo(&infoCard, Args, &item);
+			UpdateInfoOnlyUnlockWithItemBundleInfo(&infoCard, Args, &item);
 		} else {
 			UpdateInfoOnlyUnlockWithGenericApInfo(&infoCard, Args, &item);
 		}
 	} else {
-		Args.Add(TEXT("ApPlayerName"), UApUtils::FText(item.playerName + "'s"));
+		Args.Add(TEXT("ApPlayerName"), FText::FormatNamed(LOCTEXT("NetworkItemPlayerOwnerPossessive", "{remotePlayerName}'s"),
+			TEXT("remotePlayerName"), UApUtils::FText(item.playerName)
+		));
 
 		infoCard.mUnlockName = FText::Format(LOCTEXT("NetworkItemUnlockDisplayName", "{ApPlayerName} {ApItemName}"), Args);
 
@@ -490,12 +492,13 @@ void AApSubsystem::UpdateInfoOnlyUnlockWithRecipeInfo(FContentLib_UnlockInfoOnly
 	infoCard->mUnlockDescription = FText::Format(LOCTEXT("NetworkItemUnlockPersonalRecipeDescription", "This will unlock {ApPlayerName} {ApItemName} which is considered a {ProgressionType}.\nProduced in: {Building}.\nCosts: {Costs}.\nProduces: {Output}."), Args);
 }
 
-void AApSubsystem::UpdateInfoOnlyUnlockWithItemInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, AP_NetworkItem* item) {
+void AApSubsystem::UpdateInfoOnlyUnlockWithItemBundleInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, AP_NetworkItem* item) {
 	UFGItemDescriptor* itemDescriptor = mappingSubsystem->ItemInfo[item->item].Descriptor;
 
 	infoCard->BigIcon = infoCard->SmallIcon = UApUtils::GetImagePathForItem(itemDescriptor);
 	infoCard->CategoryIcon = TEXT("/Game/FactoryGame/Buildable/Factory/TradingPost/UI/RecipeIcons/Recipe_Icon_Item.Recipe_Icon_Item");
-	infoCard->mUnlockDescription = FText::Format(LOCTEXT("NetworkItemUnlockPersonalItemDescription", "This will give {ApPlayerName} {ApItemName}"), Args);
+	// TODO move "Item Bundle" to the name of the AP Item for clarity when hinting and similar
+	infoCard->mUnlockDescription = FText::Format(LOCTEXT("NetworkItemUnlockPersonalItemDescription", "This will give {ApPlayerName} Item Bundle: {ApItemName}. It can be collected by building an Archipelago Portal."), Args);
 }
 
 void AApSubsystem::UpdateInfoOnlyUnlockWithGenericApInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, AP_NetworkItem* item) {
