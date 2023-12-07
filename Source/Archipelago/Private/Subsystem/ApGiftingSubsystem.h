@@ -76,7 +76,7 @@ public:
 	bool DoesPlayerAcceptGiftTrait(FApPlayer player, FString giftTrait);
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	TArray<FApPlayer> GetAllPlayers(); // forwarded from ApSubsystem
+	TArray<FApPlayer> GetAllApPlayers(); // forwarded from ApSubsystem
 
 private:
 	void LoadMappings();

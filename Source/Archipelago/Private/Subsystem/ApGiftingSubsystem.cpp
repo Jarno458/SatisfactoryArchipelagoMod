@@ -693,8 +693,8 @@ int AApGiftingSubsystem::GetResourceSinkPointsForItem(TSubclassOf<UFGItemDescrip
 	return value;
 }
 
-TArray<FApPlayer> AApGiftingSubsystem::GetAllPlayers() {
-	return ap->GetAllPlayers();
+TArray<FApPlayer> AApGiftingSubsystem::GetAllApPlayers() {
+	return ap->GetAllApPlayers();
 }
 
 #pragma optimize("", on)

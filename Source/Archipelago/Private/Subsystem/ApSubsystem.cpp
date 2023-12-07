@@ -594,7 +594,7 @@ void AApSubsystem::TimeoutConnection() {
 	SetActorTickEnabled(false);
 }
 
-FString AApSubsystem::GetItemName(int64 id) {
+FString AApSubsystem::GetApItemName(int64 id) {
 	return UApUtils::FStr(AP_GetItemName(id));
 }
 
@@ -713,7 +713,7 @@ void AApSubsystem::AcceptGift(FString id) {
 		UE_LOG(LogApSubsystem, Error, TEXT("AApSubsystem::AcceptGift(\"%s\") Accepting gift failed"), *id);
 }
 
-TArray<FApPlayer> AApSubsystem::GetAllPlayers() {
+TArray<FApPlayer> AApSubsystem::GetAllApPlayers() {
 	std::vector<std::pair<int, std::string>> apPlayers = AP_GetAllPlayers();
 
 	TArray<FApPlayer> players;

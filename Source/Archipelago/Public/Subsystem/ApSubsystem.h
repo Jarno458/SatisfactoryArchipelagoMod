@@ -117,7 +117,7 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FORCEINLINE FApSlotData GetSlotData() const { return slotData; };
 
-	FString GetItemName(int64 itemId);
+	FString GetApItemName(int64 itemId);
 
 	void SetGiftBoxState(bool open);
 	bool SendGift(FApSendGift giftToSend);
@@ -126,7 +126,7 @@ public:
 	void AcceptGift(FString id);
 	TMap<FApPlayer, FApGiftBoxMetaData> GetAcceptedTraitsPerPlayer();
 
-	TArray<FApPlayer> GetAllPlayers();
+	TArray<FApPlayer> GetAllApPlayers();
 
 private:
 	static std::map<std::string, std::function<void(AP_SetReply)>> callbacks;

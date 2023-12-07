@@ -57,7 +57,7 @@ void AApMappingsSubsystem::LoadItemMapping() {
 	for (TPair<int64, FString> itemMapping : UApMappings::ItemIdToGameItemDescriptor) {
 		UFGItemDescriptor* itemDescriptor = GetItemDescriptorByName(itemDescriptorAssets, itemMapping.Value);
 		TSubclassOf<UFGItemDescriptor> itemClass = itemDescriptor->GetClass();
-		FString itemName = ((AApSubsystem*)ap)->GetItemName(itemMapping.Key);
+		FString itemName = ((AApSubsystem*)ap)->GetApItemName(itemMapping.Key);
 
 		FApItemInfo itemInfo;
 		itemInfo.Name = itemName;
@@ -77,7 +77,7 @@ void AApMappingsSubsystem::LoadItemMapping() {
 	for (TPair<int64, FString> recipeMapping : allRecipies) {
 		UFGRecipe* recipe = GetRecipeByName(recipeAssets, recipeMapping.Value);
 		TSubclassOf<UFGRecipe> recipeClass = recipe->GetClass();
-		FString recipeName = ((AApSubsystem*)ap)->GetItemName(recipeMapping.Key);
+		FString recipeName = ((AApSubsystem*)ap)->GetApItemName(recipeMapping.Key);
 
 		FApRecipeInfo recipeInfo;
 		recipeInfo.Name = recipeName;
