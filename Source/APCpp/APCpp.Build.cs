@@ -11,15 +11,13 @@ public class APCpp : ModuleRules
         PublicIncludePaths.Add(Path.Combine(ModuleDirectory, "inc"));
 
         var PlatformName = Target.Platform.ToString();
+
         var LibFolder = Path.Combine(ModuleDirectory, "lib", PlatformName);
+
         if (Target.Platform == UnrealTargetPlatform.Win64)
         {
-            PublicAdditionalLibraries.Add(Path.Combine(LibFolder, "APCpp-static.lib"));
-            PublicAdditionalLibraries.Add(Path.Combine(LibFolder, "ixwebsocket.lib"));
-            PublicAdditionalLibraries.Add(Path.Combine(LibFolder, "jsoncpp.lib"));
-            PublicAdditionalLibraries.Add(Path.Combine(LibFolder, "mbedcrypto.lib"));
-            PublicAdditionalLibraries.Add(Path.Combine(LibFolder, "mbedtls.lib"));
-            PublicAdditionalLibraries.Add(Path.Combine(LibFolder, "mbedx509.lib"));
+            foreach (var file in Directory.EnumerateFiles(LibFolder, "*.lib"))
+                PublicAdditionalLibraries.Add(file);
 
             PublicSystemLibraries.Add("crypt32.lib");
         }

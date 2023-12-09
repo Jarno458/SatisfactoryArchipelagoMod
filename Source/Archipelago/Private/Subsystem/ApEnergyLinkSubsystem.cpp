@@ -17,8 +17,6 @@ void AApEnergyLinkSubsystem::BeginPlay()
 	
 	UE_LOG(LogApEnergyLink, Display, TEXT("AEnergyLinkSubsystem:BeginPlay()"));
 
-	// TODO check yaml to see if EnergyLink is enabled
-
 	if (!hooksInitialized) {
 		UE_LOG(LogApEnergyLink, Display, TEXT("Initializing hooks"));
 		AFGBuildablePowerStorage* bpscdo = GetMutableDefault<AFGBuildablePowerStorage>();
@@ -48,9 +46,11 @@ void AApEnergyLinkSubsystem::Tick(float DeltaTime)
 	if (!apInitialized) {
 		ap = AApSubsystem::Get(GetWorld());
 
+		//TOOD check if energy link is enabled
+
 		if (ap->ConnectionState == EApConnectionState::Connected)
 		{
-			ap->MonitorDataStoreValue("EnergyLink", AP_DataType::Raw, energyLinkDefault, [&](AP_SetReply setReply) {
+			ap->MonitorDataStoreValue("EnergyLink" + std::to_string(ap->currentPlayerTeam), AP_DataType::Raw, energyLinkDefault, [&](AP_SetReply setReply) {
 				OnEnergyLinkValueChanged(setReply);
 			});
 
@@ -125,7 +125,7 @@ void AApEnergyLinkSubsystem::SendEnergyToServer(long amount) {
 		return;
 
 	AP_SetServerDataRequest sendEnergyLinkUpdate;
-	sendEnergyLinkUpdate.key = "EnergyLink";
+	sendEnergyLinkUpdate.key = "EnergyLink" + std::to_string(ap->currentPlayerTeam);
 
 	std::string valueToAdd = std::to_string(amount);
 
