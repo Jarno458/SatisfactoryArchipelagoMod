@@ -126,7 +126,7 @@ const TMap<int64, FString> UApMappings::ItemIdToGameItemDescriptor = {
 
 	//Enquipment/Ammo
 	{1338150, TEXT("Desc_Shroom_C")},
-	{ MISSING_ITEMID_DEVELOPER_BACKUP, TEXT("Desc_Nut_C")},
+	{1338151, TEXT("Desc_Nut_C")},
 	{1338152, TEXT("BP_EquipmentDescriptorJumpingStilts_C")},
 	//{1338153, TEXT("")}, //BoomBox
 	{1338154, TEXT("Desc_Chainsaw_C")},
@@ -274,28 +274,279 @@ const TMap<int64, FString> UApMappings::ItemIdToGameRecipe = {
 	{1338306, TEXT("Recipe_Alternate_DilutedFuel")},
 	{1338307, TEXT("Recipe_AluminaSolution")},
 	{1338308, TEXT("Recipe_Alternate_AutomatedMiner")},
+	//{1338309, TEXT("")}, //Bauxite
+	{1338310, TEXT("Recipe_AluminumScrap.Recipe_AluminumScrap")},
+	{1338311, TEXT("Recipe_Alternate_ElectroAluminumScrap")},
+	{1338312, TEXT("Recipe_Alternate_InstantScrap")},
+	{1338313, TEXT("Recipe_IngotAluminum")},
+	{1338314, TEXT("Recipe_PureAluminumIngot")},
+	{1338315, TEXT("Recipe_AluminumSheet")},
+	{1338316, TEXT("Recipe_AluminumCasing")},
+	{1338317, TEXT("Recipe_Alternate_AlcladCasing")},
+	{1338318, TEXT("Recipe_HeatSink")},
+	{1338319, TEXT("Recipe_Alternate_HeatSink_1")},
+	//{1338320, TEXT("")}, //Nitrogen Gas
+	{1338321, TEXT("Recipe_NitricAcid")},
+	{1338322, TEXT("Recipe_FusedModularFrame")},
+	{1338323, TEXT("Recipe_Alternate_HeatFusedFrame")},
+	{1338324, TEXT("Recipe_RadioControlUnit")},
+	{1338325, TEXT("Recipe_Alternate_RadioControlUnit_1")},
+	{1338326, TEXT("Recipe_Alternate_RadioControlSystem")},
+	{1338327, TEXT("Recipe_PressureConversionCube")},
+	{1338328, TEXT("Recipe_CoolingSystem")},
+	{1338329, TEXT("Recipe_Alternate_CoolingDevice")},
+	{1338330, TEXT("Recipe_MotorTurbo")},
+	{1338331, TEXT("Recipe_Alternate_TurboMotor_1")},
+	{1338332, TEXT("Recipe_Alternate_TurboPressureMotor")},
+	{1338333, TEXT("Recipe_Battery")},
+	{1338334, TEXT("Recipe_Alternate_ClassicBattery")},
+	{1338335, TEXT("Recipe_ComputerSuper")},
+	{1338336, TEXT("Recipe_Alternate_OCSupercomputer")},
+	{1338337, TEXT("Recipe_Alternate_SuperStateComputer")},
+	//{1338338, TEXT("")}, //Uranium
+	{1338339, TEXT("Recipe_SulfuricAcid")},
+	//{1338340, TEXT("")}, //Unused
+	{1338341, TEXT("Recipe_UraniumCell")},
+	{1338342, TEXT("Recipe_Alternate_UraniumCell_1")},
+	{1338343, TEXT("Recipe_NuclearFuelRod")},
+	{1338344, TEXT("Recipe_Alternate_NuclearFuelRod_1")},
+	{1338345, TEXT("Recipe_Beacon")},
+	{1338346, TEXT("Recipe_Alternate_Beacon_1")},
+	//{1338347, TEXT("")}, // Recipe: Uranium Waste
+	{1338348, TEXT("Recipe_NonFissileUranium")},
+	{1338349, TEXT("Recipe_Alternate_FertileUranium")},
+	{1338350, TEXT("Recipe_Plutonium")},
+	{1338351, TEXT("Recipe_PlutoniumCell")},
+	{1338352, TEXT("Recipe_Alternate_InstantPlutoniumCell")},
+	{1338353, TEXT("Recipe_PlutoniumFuelRod")},
+	{1338354, TEXT("Recipe_Alternate_PlutoniumFuelUnit")},
+	{1338355, TEXT("Recipe_FilterGasMask")},
+	{1338356, TEXT("Recipe_FilterHazmat")},
+	{1338357, TEXT("Recipe_SpaceElevatorPart_7")},
+	{1338358, TEXT("Recipe_SpaceElevatorPart_6")},
+	{1338359, TEXT("Recipe_CopperDust")},
+	{1338360, TEXT("Recipe_SpaceElevatorPart_9")},
+	{1338361, TEXT("Recipe_SpaceElevatorPart_8")},
+	//{1338362, TEXT("")}, //Recipe: Leaves
+	//{1338363, TEXT("")}, //Recipe: Wood
+	//{1338364, TEXT("")}, //Recipe: Hatcher Remains
+	//{1338365, TEXT("")}, //Recipe: Hog Remains
+	//{1338366, TEXT("")}, //Recipe: Plasma Spitter Remains
+	//{1338367, TEXT("")}, //Recipe: Stinger Remains
+	{1338368, TEXT("Recipe_Protein_Crab")},
+	{1338369, TEXT("Recipe_Protein_Hog")},
+	{1338370, TEXT("Recipe_Protein_Spitter")},
+	{1338371, TEXT("Recipe_Protein_Stinger")},
+	{1338372, TEXT("Recipe_Biomass_Leaves")},
+	{1338373, TEXT("Recipe_Biomass_Wood")},
+	{1338374, TEXT("Recipe_Biomass_Mycelia")},
+	{1338375, TEXT("Recipe_Biomass_AlienProtein")},
+	{1338376, TEXT("Recipe_CartridgeChaos_Packaged")}, 
+	{1338377, TEXT("Recipe_Fabric")},
+	{1338378, TEXT("Recipe_Alternate_PolyesterFabric")},
+	{1338379, TEXT("Recipe_Biofuel")},
+	{1338380, TEXT("Recipe_LiquidBiofuel")},
+	{1338381, TEXT("Recipe_FluidCanister")},
+	{1338382, TEXT("Recipe_Alternate_CoatedIronCanister")},
+	{1338383, TEXT("Recipe_Alternate_SteelCanister")},
+	{1338384, TEXT("Recipe_GasTank")}, // Empty Fluid Tank
+	{1338385, TEXT("Recipe_PackagedAlumina")}, // TODO include unpackage
+	{1338386, TEXT("Recipe_Fuel")}, //Packaged Fuel
+	{1338387, TEXT("Recipe_Alternate_DilutedPackagedFuel")},
+	{1338388, TEXT("Recipe_PackagedOilResidue")},
+	{1338389, TEXT("Recipe_PackagedBiofuel")}, //Packaged Liquid Biofuel
+	{1338390, TEXT("Recipe_PackagedNitricAcid")},
+	{1338391, TEXT("Recipe_PackagedNitrogen")},
+	{1338392, TEXT("Recipe_PackagedCrudeOil")},
+	{1338393, TEXT("Recipe_PackagedSulfuricAcid")},
+	{1338394, TEXT("Recipe_PackagedTurboFuel")},
+	{1338395, TEXT("Recipe_PackagedWater")},
+	{1338396, TEXT("Recipe_Alternate_Turbofuel")},
+	{1338397, TEXT("Recipe_Alternate_TurboHeavyFuel")},
+	{1338398, TEXT("Recipe_Alternate_TurboBlendFuel")},
+	{1338399, TEXT("Recipe_HazmatSuit")},
+	{1338400, TEXT("Recipe_Gasmask")},
+	{1338401, TEXT("Recipe_Gunpowder")},
+	{1338402, TEXT("Recipe_BladeRunners")},
+	{1338403, TEXT("Recipe_Chainsaw")},
+	{1338404, TEXT("Recipe_NobeliskCluster")},
+	{1338405, TEXT("Recipe_Rebar_Explosive")},
+	{1338406, TEXT("Recipe_FactoryCart")},
+	{1338407, TEXT("Recipe_NobeliskGas")},
+	{1338408, TEXT("Recipe_GoldenCart")},
+	{1338409, TEXT("Recipe_CartridgeSmart")}, //Homing Rifle Cartridge
+	{1338410, TEXT("Recipe_SpikedRebar")}, //Iron Rebar
+	{1338411, TEXT("Recipe_Nobelisk")},
+	{1338412, TEXT("Recipe_NobeliskNuke")},
+	{1338413, TEXT("Recipe_NutritionalInhaler")},
+	{1338414, TEXT("Recipe_ObjectScanner")},
+	{1338415, TEXT("Recipe_Parachute")},
+	{1338416, TEXT("Recipe_MedicinalInhalerAlienOrgans")}, //Protein Inhaler
+	{1338403, TEXT("Recipe_NobeliskShockwave")},
+	{1338417, TEXT("Recipe_RebarGun")},
+	{1338418, TEXT("Recipe_SpaceRifleMk1")},
+	{1338419, TEXT("Recipe_Cartridge")},
+	{1338420, TEXT("Recipe_Rebar_Spreadshot")}, //Shatter Rebar
+	{1338421, TEXT("Recipe_Rebar_Stunshot")},
+	{1338422, TEXT("Recipe_TherapeuticInhaler")},
+	{1338423, TEXT("Recipe_CartridgeChaos")},
+	{1338424, TEXT("Recipe_MedicinalInhaler")},
+	{1338425, TEXT("Recipe_XenoBasher")},
+	{1338426, TEXT("Recipe_XenoZapper")},
+	{1338427, TEXT("Recipe_ZipLine")},
+	{1338428, TEXT("Recipe_Alternate_Gunpowder_1")},
+	{1338429, TEXT("Recipe_GunpowderMK2")},
+	{1338430, TEXT("Recipe_AlienDNACapsule")},
+	{1338431, TEXT("Recipe_PowerCrystalShard_1")},
+	{1338432, TEXT("Recipe_PowerCrystalShard_2")},
+	{1338433, TEXT("Recipe_PowerCrystalShard_3")},
+	//TODO implement
+	// "BP_UnlockInventorySlot"
+	//{1338188, TEXT("Small inflated Pocket Dimension")},
+	//{1338189, TEXT("Inflated Pocket Dimension")},
+	//{1338190, TEXT("Expanded Toolbelt")},
 };
 
-const TMap<int64, FString> UApMappings::ItemIdToGameBuilding = {
-	{1338400, TEXT("Recipe_ConstructorMk1")},
-	{1338401, TEXT("Recipe_AssemblerMk1")},
-	{1338402, TEXT("Recipe_ManufacturerMk1")},
-	{1338403, TEXT("Recipe_Packager")},
-	{1338404, TEXT("Recipe_OilRefinery")},
-	{1338405, TEXT("Recipe_Blender")},
-	{1338406, TEXT("Recipe_HadronCollider")},
-	{1338407, TEXT("Recipe_GeneratorBiomass")},
-	{1338408, TEXT("Recipe_GeneratorCoal")},
-	{1338409, TEXT("Recipe_GeneratorGeoThermal")},
-	{1338410, TEXT("Recipe_GeneratorNuclear")},
-	{1338411, TEXT("Recipe_MinerMk1")},
-	{1338412, TEXT("Recipe_MinerMk2")},
-	{1338413, TEXT("Recipe_MinerMk3")},
-	{1338414, TEXT("Recipe_OilPump")},
-	{1338415, TEXT("Recipe_WaterPump")},
-	{1338416, TEXT("Recipe_SmelterBasicMk1")},
-	{1338417, TEXT("Recipe_SmelterMk1")},
-	{1338499, TEXT("Recipe_SpaceElevator")},
+const TMap<int64, TArray<FString>> UApMappings::ItemIdToGameBuilding = {
+	{1338600, {TEXT("Recipe_ConstructorMk1")}},
+	{1338601, {TEXT("Recipe_AssemblerMk1")}},
+	{1338602, {TEXT("Recipe_ManufacturerMk1")}},
+	{1338603, {TEXT("Recipe_Packager")}},
+	{1338604, {TEXT("Recipe_OilRefinery")}},
+	{1338605, {TEXT("Recipe_Blender")}},
+	{1338606, {TEXT("Recipe_HadronCollider")}},
+	{1338607, {TEXT("Recipe_GeneratorBiomass")}},
+	{1338608, {TEXT("Recipe_GeneratorCoal")}},
+	{1338609, {TEXT("Recipe_GeneratorGeoThermal")}},
+	{1338610, {TEXT("Recipe_GeneratorNuclear")}},
+	{1338611, {TEXT("Recipe_MinerMk1")}},
+	{1338612, {TEXT("Recipe_MinerMk2")}},
+	{1338613, {TEXT("Recipe_MinerMk3")}},
+	{1338614, {TEXT("Recipe_OilPump")}},
+	{1338615, {TEXT("Recipe_WaterPump")}},
+	{1338616, {TEXT("Recipe_SmelterBasicMk1")}},
+	{1338617, {TEXT("Recipe_SmelterMk1")}},
+
+
+	{1338618, {TEXT("Recipe_GeneratorFuel")}},
+	{1338619, {TEXT("Recipe_FrackingSmasher"), TEXT("Recipe_FrackingExtractor")}},
+	{1338620, {TEXT("Recipe_Workshop")}},
+	{1338621, {TEXT("Recipe_ResourceSink")}},
+	{1338622, {TEXT("Recipe_ResourceSinkShop")}},
+	//1338623 Schematic
+	{1338624, {TEXT("Recipe_BlueprintDesigner")}},
+	{1338625, {TEXT("Recipe_PipeStorageTank")}},
+	{1338626, {TEXT("Recipe_IndustrialTank")}},
+	{1338627, {TEXT("Recipe_JumpPad")}},
+	//1338628 Schematic
+	{1338629, {TEXT("Recipe_Mam")}},
+	{1338630, {TEXT("Recipe_StoragePlayer")}}, //TODO: include "Recipe_StorageMedkit", "Recipe_StorageHazard"
+	{1338631, {TEXT("Recipe_PowerStorageMk1")}},
+	{1338632, {TEXT("Recipe_UJellyLandingPad")}},
+	{1338633, {TEXT("Recipe_PowerSwitch")}},
+	{1338634, {TEXT("Recipe_PriorityPowerSwitch")}},
+	{1338635, {TEXT("Recipe_StorageContainerMk1")}},
+	{1338636, {TEXT("Recipe_LookoutTower")}},
+	{1338637, {TEXT("Recipe_PowerPoleMk1")}},
+	{1338638, {TEXT("Recipe_PowerPoleMk2")}},
+	{1338639, {TEXT("Recipe_PowerPoleMk3")}},
+	{1338640, {TEXT("Recipe_StorageContainerMk2")}},
+	{1338641, {TEXT("Recipe_ConveyorAttachmentMerger")}},
+	{1338642, {TEXT("Recipe_ConveyorAttachmentSplitter")}},
+	{1338643, {TEXT("Recipe_ConveyorBeltMk1")}}, //TODO include "Recipe_ConveyorPole"
+	{1338644, {TEXT("Recipe_ConveyorBeltMk2")}},
+	{1338645, {TEXT("Recipe_ConveyorBeltMk3")}},
+	{1338646, {TEXT("Recipe_ConveyorBeltMk4")}},
+	{1338647, {TEXT("Recipe_ConveyorBeltMk5")}},
+	{1338648, {TEXT("Recipe_ConveyorLiftMk1")}},
+	{1338649, {TEXT("Recipe_ConveyorLiftMk2")}},
+	{1338650, {TEXT("Recipe_ConveyorLiftMk3")}},
+	{1338651, {TEXT("Recipe_ConveyorLiftMk4")}},
+	{1338652, {TEXT("Recipe_ConveyorLiftMk5")}},
+	//1338653 Schematic
+	{1338654, {TEXT("Recipe_ConveyorPoleStackable")}},
+	{1338655, {TEXT("Recipe_ConveyorPoleWall")}},
+	{1338656, {TEXT("Recipe_FoundationPassthrough_Lift")}},
+	{1338657, {TEXT("Recipe_ConveyorCeilingAttachment")}},
+	{1338658, {TEXT("Recipe_Pipeline")}}, //TODO include: "Recipe_PipeSupport"
+	{1338659, {TEXT("Recipe_PipelineMK2")}},
+	{1338660, {TEXT("Recipe_PipelinePump")}},
+	{1338661, {TEXT("Recipe_PipelinePumpMK2")}},
+	{1338662, {TEXT("Recipe_PipelineJunction_Cross")}},
+	{1338663, {TEXT("Recipe_Valve")}},
+	{1338664, {TEXT("Recipe_PipeSupportStackable")}},
+	{1338665, {TEXT("Recipe_PipeSupportWall")}},
+	{1338666, {TEXT("Recipe_PipeSupportWallHole")}},
+	{1338667, {TEXT("Recipe_FoundationPassthrough_Pipe")}},
+	{1338668, {TEXT("Recipe_LightsControlPanel")}},
+	{1338669, {TEXT("Recipe_FloodlightWall")}},
+	{1338670, {TEXT("Recipe_StreetLight")}},
+	{1338671, {TEXT("Recipe_FloodlightPole")}},
+	{1338672, {TEXT("Recipe_CeilingLight")}},
+	{1338673, {TEXT("Recipe_PowerTower")}}, //TODO include "Recipe_PowerTowerPlatform"
+	{1338674, {TEXT("Recipe_Wall_8x4_01")}}, //TODO include "Recipe_Wall_Orange_8x1"
+	{1338675, {TEXT("Recipe_RadarTower")}},
+	{1338676, {TEXT("Recipe_ConveyorAttachmentSplitterSmart")}},
+	{1338677, {TEXT("Recipe_ConveyorAttachmentSplitterProgrammable")}},
+	//1338678 Schematic
+	//1338679 Schematic
+	//1338680 Schematic
+	//1338681 Schematic
+	//1338682 Schematic
+	//1338683 Schematic
+	//1338684 Schematic
+	//1338685 Schematic
+	//{1338686, {TEXT("")}},
+	//{1338687, {TEXT("")}},
+	//{1338688, {TEXT("")}},
+	//{1338689, {TEXT("")}},
+	//{1338690, {TEXT("")}},
+	//{1338691, {TEXT("")}},
+	{1338692, {TEXT("Recipe_Foundation_8x4_01")}}, //TODO include: "Recipe_Foundation_8x1_01", "Recipe_Foundation_8x2_01", "Recipe_Ramp_8x1_01", "Recipe_Ramp_8x2_01","Recipe_Ramp_8x4_01"
+	//1338693 Schematic
+	//1338694 Schematic
+	//1338695 Schematic
+	//1338696 Schematic
+	//1338697 Schematic
+	//1338698 Schematic
+	//1338699 Schematic
+
+	{1338999, {TEXT("Recipe_SpaceElevator")}},
+};
+
+const TMap<int64, FString> UApMappings::ItemIdToGameSchematic = {
+	{1338628, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_Ladders.ResourceSink_Ladders")},
+
+	{1338623, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_BeamSet.ResourceSink_BeamSet")},
+	{1338653, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/Parts/Tier3/ResourceSink_SteelBeam.ResourceSink_SteelBeam")},
+
+	{1338678, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_LabelSigns.ResourceSink_LabelSigns")},
+	{1338679, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_DisplaySigns.ResourceSink_DisplaySigns")},
+	{1338680, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_BillboardSigns.ResourceSink_BillboardSigns")},
+	{1338681, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/Customizer_Background/CBG_Steel_Walls_Basic.CBG_Steel_Walls_Basic")}, //TODO include i dont f*cking know
+	{1338682, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_FoudationPillar.ResourceSink_FoudationPillar")},
+	{1338683, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_ConcretePillarSet.ResourceSink_ConcretePillarSet'")},
+	{1338684, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_FramePillarSet.ResourceSink_FramePillarSet'")},
+	{1338685, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/Customizer_Background/CBG_Concrete_Walls_Basic.CBG_Concrete_Walls_Basic")},
+
+	{1338693, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_HalfFoundations.ResourceSink_HalfFoundations'")},
+	//{1338694, TEXT("Corner Ramp Pack")},
+	{1338695, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_InvertedRampPack.ResourceSink_InvertedRampPack'")},
+	{1338696, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_InvertedCornerRamps.ResourceSink_InvertedCornerRamps'")},
+	//{1338697, TEXT("Quarter Pipes Pack")},
+	{1338698, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_QuarterPipeExtensions.ResourceSink_QuarterPipeExtensions'")},
+	{1338699, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_FrameworkFoundations.ResourceSink_FrameworkFoundations'")},
+
+
+
+	//TODO
+	// walls
+	// roofs
+	// wall power
+	// frame foundations
+	// stairs
+
+
 };
 
 const TMap<int64, FName> UApMappings::ItemIdToTrap = {

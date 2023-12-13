@@ -35,9 +35,9 @@ bool FApSlotData::ParseSlotData(std::string json, FApSlotData* data) {
 				if (UApMappings::ItemIdToGameItemDescriptor.Contains(itemId)) {
 					costs.Add(UApMappings::ItemIdToGameItemDescriptor[itemId], cost.Value->AsNumber());
 				} else {
-					// Edit the define to control if this crashes or just errors
+					//TODO: Remove Edit the define to control if this crashes or just errors
 					UE_LOG(LogArchipelagoCpp, UNKNOWN_ITEMID_LOG_MESSAGE_TYPE, TEXT("Archipelago slot data contained AP itemId %d that is not present in ItemIdToGameItemDescriptor mappings. Are you using an out of date version of the mod for the Archipelago server version?"), itemId);
-					costs.Add(UApMappings::ItemIdToGameItemDescriptor[MISSING_ITEMID_DEVELOPER_BACKUP], cost.Value->AsNumber());
+					costs.Add(UApMappings::ItemIdToGameItemDescriptor[1338151], cost.Value->AsNumber());
 				}
 			}
 

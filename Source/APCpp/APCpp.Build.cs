@@ -16,8 +16,7 @@ public class APCpp : ModuleRules
 
         if (Target.Platform == UnrealTargetPlatform.Win64)
         {
-            foreach (var file in Directory.EnumerateFiles(LibFolder, "*.lib"))
-                PublicAdditionalLibraries.Add(file);
+            PublicAdditionalLibraries.AddRange(Directory.EnumerateFiles(LibFolder, "*.lib"));
 
             PublicSystemLibraries.Add("crypt32.lib");
         }

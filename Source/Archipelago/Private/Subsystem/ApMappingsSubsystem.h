@@ -10,14 +10,36 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(LogApMappingsSubsystem, Log, All);
 
+UENUM()
+enum class EItemType : uint8
+{
+	Item,
+	Recipe,
+	Building,
+	Schematic,
+	InventorySlot
+};
 
 USTRUCT()
-struct ARCHIPELAGO_API FApItemInfo
+struct ARCHIPELAGO_API FApItem 
 {
 	GENERATED_BODY()
 
 	UPROPERTY()
 	FString Name;
+
+	UPROPERTY()
+	EItemType Type;
+};
+
+USTRUCT()
+struct ARCHIPELAGO_API FApItemInfo : public FApItem
+{
+	GENERATED_BODY()
+
+	FApItemInfo() { 
+		Type = EItemType::Item;
+	} 
 
 	UPROPERTY()
 	UFGItemDescriptor* Descriptor;
@@ -27,12 +49,13 @@ struct ARCHIPELAGO_API FApItemInfo
 };
 
 USTRUCT()
-struct ARCHIPELAGO_API FApRecipeInfo
+struct ARCHIPELAGO_API FApRecipeInfo : public FApItem
 {
 	GENERATED_BODY()
 
-	UPROPERTY()
-	FString Name;
+	FApRecipeInfo() {
+		Type = EItemType::Recipe;
+	}
 
 	UPROPERTY()
 	UFGRecipe* Recipe;
@@ -40,6 +63,33 @@ struct ARCHIPELAGO_API FApRecipeInfo
 	UPROPERTY()
 	TSubclassOf<UFGRecipe> Class;
 };
+
+USTRUCT()
+struct ARCHIPELAGO_API FApBuildingRecipeInfo : public FApRecipeInfo
+{
+	GENERATED_BODY()
+
+	FApBuildingRecipeInfo() {
+		Type = EItemType::Building;
+	}
+};
+
+USTRUCT()
+struct ARCHIPELAGO_API FApSchematicInfo : public FApItem
+{
+	GENERATED_BODY()
+
+	FApSchematicInfo() {
+		Type = EItemType::Schematic;
+	}
+
+	UPROPERTY()
+	UFGSchematic* Schematic;
+
+	UPROPERTY()
+	TSubclassOf<UFGSchematic> Class;
+};
+
 
 UCLASS()
 class AApMappingsSubsystem : public AModSubsystem
@@ -59,8 +109,8 @@ public:
 public:
 	TMap<TSubclassOf<UFGItemDescriptor>, int64> ItemClassToItemId;
 	TMap<FString, int64> NameToItemId;
-	TMap<int64, FApItemInfo> ItemInfo;
-	TMap<int64, FApRecipeInfo> RecipeInfo;
+
+	TMap<int64, TSharedRef<FApItem>> ApItems;
 
 private:
 	AModSubsystem* ap;
@@ -74,12 +124,16 @@ public:
 	void Initialize();
 
 private:
-	void LoadItemMapping();
+	void LoadMappings();
+	void LoadItemMappings(TMap<FName, FAssetData> itemDescriptorAssets);
+	void LoadRecipeMappings(TMap<FName, FAssetData> recipeAssets);
+	void LoadBuildingMappings(TMap<FName, FAssetData> recipeAssets);
+	void LoadSchematicMappings(IAssetRegistry& registery);
 
 	static UFGItemDescriptor* GetItemDescriptorByName(TMap<FName, FAssetData> itemDescriptorAssets, FString name);
-	static TMap<FName, FAssetData> GetItemDescriptorAssets();
-	static TMap<FName, FAssetData> GetRecipeAssets();
-	static TMap<FName, FAssetData> GetBlueprintAssetsIn(FName&& packagePath, TArray<FString> namePrefixes);
+	static TMap<FName, FAssetData> GetItemDescriptorAssets(IAssetRegistry& registery);
+	static TMap<FName, FAssetData> GetRecipeAssets(IAssetRegistry& registery);
+	static TMap<FName, FAssetData> GetBlueprintAssetsIn(IAssetRegistry& registery, FName&& packagePath, TArray<FString> namePrefixes);
 	static UObject* FindAssetByName(TMap<FName, FAssetData> assets, FString assetName);
 	static UFGRecipe* GetRecipeByName(TMap<FName, FAssetData> recipeAssets, FString name);
 };

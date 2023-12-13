@@ -269,12 +269,16 @@ void AApSubsystem::Tick(float DeltaTime) {
 	while (ReceivedItems.Dequeue(item)) {
 		if (ItemSchematics.Contains(item)) {
 			SManager->GiveAccessToSchematic(ItemSchematics[item], nullptr);
-		} else if (mappingSubsystem->ItemInfo.Contains(item)) {
-			TSubclassOf<UFGItemDescriptor> itemClass = mappingSubsystem->ItemInfo[item].Class;
-			int stackSize = UFGItemDescriptor::GetStackSize(itemClass);
-			portalSubsystem->Enqueue(itemClass, stackSize);
 		} else if (auto trapName = UApMappings::ItemIdToTrap.Find(item)) {
 			trapSubsystem->SpawnTrap(*trapName, nullptr);
+		} else if (mappingSubsystem->ApItems.Contains(item)) {
+			if (mappingSubsystem->ApItems[item]->Type == EItemType::Item) {
+				TSubclassOf<UFGItemDescriptor> itemClass = StaticCastSharedRef<FApItemInfo>(mappingSubsystem->ApItems[item])->Class;
+				int stackSize = UFGItemDescriptor::GetStackSize(itemClass);
+				portalSubsystem->Enqueue(itemClass, stackSize);
+			} else if (mappingSubsystem->ApItems[item]->Type == EItemType::Schematic) {
+				SManager->GiveAccessToSchematic(StaticCastSharedRef<FApSchematicInfo>(mappingSubsystem->ApItems[item])->Class, nullptr);
+			}
 		}
 	}
 
@@ -352,7 +356,8 @@ void AApSubsystem::ParseScoutedItemsAndCreateRecipiesAndSchematics() {
 }
 
 void AApSubsystem::CreateSchematicBoundToItemId(int64 item) {
-	FString recipy = UApMappings::ItemIdToGameBuilding.Contains(item) ? UApMappings::ItemIdToGameBuilding[item] : UApMappings::ItemIdToGameRecipe[item];
+	//TODO For buildings create list of recipies
+	FString recipy = UApMappings::ItemIdToGameBuilding.Contains(item) ? UApMappings::ItemIdToGameBuilding[item][0] : UApMappings::ItemIdToGameRecipe[item];
 	FString name = UApUtils::FStr("AP_ItemId_" + std::to_string(item));
 	// https://raw.githubusercontent.com/budak7273/ContentLib_Documentation/main/JsonSchemas/CL_Schematic.json
 	FString json = FString::Printf(TEXT(R"({
@@ -366,7 +371,7 @@ void AApSubsystem::CreateSchematicBoundToItemId(int64 item) {
 	UCLSchematicBPFLib::InitSchematicFromStruct(schematic, factorySchematic, contentLibSubsystem);
 
 	contentRegistry->RegisterSchematic(FName(TEXT("Archipelago")), factorySchematic);
-
+	
 	ItemSchematics.Add(item, factorySchematic);
 }
 
@@ -428,12 +433,20 @@ FContentLib_UnlockInfoOnly AApSubsystem::CreateUnlockInfoOnly(AP_NetworkItem ite
 
 		infoCard.mUnlockName = UApUtils::FText(item.itemName);
 
-		if (UApMappings::ItemIdToGameBuilding.Contains(item.item)) {
-			UpdateInfoOnlyUnlockWithBuildingInfo(&infoCard, Args, &item);
-		} else if (UApMappings::ItemIdToGameRecipe.Contains(item.item)) {
-			UpdateInfoOnlyUnlockWithRecipeInfo(&infoCard, Args, &item);
-		} else if (UApMappings::ItemIdToGameItemDescriptor.Contains(item.item)) {
-			UpdateInfoOnlyUnlockWithItemBundleInfo(&infoCard, Args, &item);
+		if (item.player == currentPlayerSlot && mappingSubsystem->ApItems.Contains(item.item)) {
+			TSharedRef<FApItem> apItem = mappingSubsystem->ApItems[item.item];
+
+			if (apItem->Type == EItemType::Building) {
+				UpdateInfoOnlyUnlockWithBuildingInfo(&infoCard, Args, &item, StaticCastSharedRef<FApBuildingRecipeInfo>(apItem));
+			} else if (apItem->Type == EItemType::Recipe) {
+				UpdateInfoOnlyUnlockWithRecipeInfo(&infoCard, Args, &item, StaticCastSharedRef<FApRecipeInfo>(apItem));
+			} else if (apItem->Type == EItemType::Item) {
+				UpdateInfoOnlyUnlockWithItemBundleInfo(&infoCard, Args, &item, StaticCastSharedRef<FApItemInfo>(apItem));
+			} else if (apItem->Type == EItemType::Schematic) {
+				UpdateInfoOnlyUnlockWithSchematicInfo(&infoCard, Args, &item, StaticCastSharedRef<FApSchematicInfo>(apItem));
+			} else if (apItem->Type == EItemType::InventorySlot) {
+				//TODO Implement
+			}
 		} else {
 			UpdateInfoOnlyUnlockWithGenericApInfo(&infoCard, Args, &item);
 		}
@@ -450,8 +463,8 @@ FContentLib_UnlockInfoOnly AApSubsystem::CreateUnlockInfoOnly(AP_NetworkItem ite
 	return infoCard;
 }
 
-void AApSubsystem::UpdateInfoOnlyUnlockWithBuildingInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, AP_NetworkItem* item) {
-	UFGRecipe* recipe = mappingSubsystem->RecipeInfo[item->item].Recipe;
+void AApSubsystem::UpdateInfoOnlyUnlockWithBuildingInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, AP_NetworkItem* item, TSharedRef<FApBuildingRecipeInfo> itemInfo) {
+	UFGRecipe* recipe = itemInfo->Recipe;
 	UFGItemDescriptor* itemDescriptor = recipe->GetProducts()[0].ItemClass.GetDefaultObject();
 
 	infoCard->BigIcon = infoCard->SmallIcon = UApUtils::GetImagePathForItem(itemDescriptor);
@@ -459,8 +472,8 @@ void AApSubsystem::UpdateInfoOnlyUnlockWithBuildingInfo(FContentLib_UnlockInfoOn
 	infoCard->mUnlockDescription = FText::Format(LOCTEXT("NetworkItemUnlockPersonalBuildingDescription", "This will unlock your {ApItemName}"), Args);
 }
 
-void AApSubsystem::UpdateInfoOnlyUnlockWithRecipeInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, AP_NetworkItem* item) {
-	UFGRecipe* recipe = mappingSubsystem->RecipeInfo[item->item].Recipe;
+void AApSubsystem::UpdateInfoOnlyUnlockWithRecipeInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, AP_NetworkItem* item, TSharedRef<FApRecipeInfo> itemInfo) {
+	UFGRecipe* recipe = itemInfo->Recipe;
 	UFGItemDescriptor* itemDescriptor = recipe->GetProducts()[0].ItemClass.GetDefaultObject();
 
 	TArray<FString> BuildingArray;
@@ -499,13 +512,23 @@ void AApSubsystem::UpdateInfoOnlyUnlockWithRecipeInfo(FContentLib_UnlockInfoOnly
 	infoCard->mUnlockDescription = FText::Format(LOCTEXT("NetworkItemUnlockPersonalRecipeDescription", "This will unlock {ApPlayerName} {ApItemName} which is considered a {ProgressionType}.\nProduced in: {Building}.\nCosts: {Costs}.\nProduces: {Output}."), Args);
 }
 
-void AApSubsystem::UpdateInfoOnlyUnlockWithItemBundleInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, AP_NetworkItem* item) {
-	UFGItemDescriptor* itemDescriptor = mappingSubsystem->ItemInfo[item->item].Descriptor;
+void AApSubsystem::UpdateInfoOnlyUnlockWithItemBundleInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, AP_NetworkItem* item, TSharedRef<FApItemInfo> itemInfo) {
+	UFGItemDescriptor* itemDescriptor = itemInfo->Descriptor;
 
 	infoCard->BigIcon = infoCard->SmallIcon = UApUtils::GetImagePathForItem(itemDescriptor);
 	infoCard->CategoryIcon = TEXT("/Game/FactoryGame/Buildable/Factory/TradingPost/UI/RecipeIcons/Recipe_Icon_Item.Recipe_Icon_Item");
 	// TODO move "Item Bundle" to the name of the AP Item for clarity when hinting and similar
+	// No not needed, item names are unique, "Plastic" is just that a stack of plastic, where "Recipe: Plastic" is the recipy to craft it
 	infoCard->mUnlockDescription = FText::Format(LOCTEXT("NetworkItemUnlockPersonalItemDescription", "This will give {ApPlayerName} Item Bundle: {ApItemName}. It can be collected by building an Archipelago Portal."), Args);
+}
+
+void AApSubsystem::UpdateInfoOnlyUnlockWithSchematicInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, AP_NetworkItem* item, TSharedRef<FApSchematicInfo> itemInfo) {
+	UFGSchematic* schematic = itemInfo->Schematic;
+
+	//infoCard->BigIcon = infoCard->SmallIcon = UApUtils::GetImagePathForItem(itemDescriptor);
+	//infoCard->CategoryIcon = TEXT("/Game/FactoryGame/Buildable/Factory/TradingPost/UI/RecipeIcons/Recipe_Icon_Item.Recipe_Icon_Item");
+	// TODO move "Item Bundle" to the name of the AP Item for clarity when hinting and similar
+	//infoCard->mUnlockDescription = FText::Format(LOCTEXT("NetworkItemUnlockPersonalItemDescription", "This will give {ApPlayerName} Item Bundle: {ApItemName}. It can be collected by building an Archipelago Portal."), Args);
 }
 
 void AApSubsystem::UpdateInfoOnlyUnlockWithGenericApInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, AP_NetworkItem* item) {

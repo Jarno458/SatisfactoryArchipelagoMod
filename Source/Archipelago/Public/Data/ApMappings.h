@@ -4,8 +4,6 @@
 
 #include "ApMappings.generated.h"
 
-#define MISSING_ITEMID_DEVELOPER_BACKUP 1338151
-
 /**
  * 
  */
@@ -18,6 +16,7 @@ public:
 	static const TMap<int64, FString> ItemIdToGameItemDescriptor;
 	static const TMap<int64, FString> ItemIdToGameName2;
 	static const TMap<int64, FString> ItemIdToGameRecipe;
-	static const TMap<int64, FString> ItemIdToGameBuilding;
+	static const TMap<int64, TArray<FString>> ItemIdToGameBuilding;
+	static const TMap<int64, FString> ItemIdToGameSchematic;
 	static const TMap<int64, FName> ItemIdToTrap;
 };
