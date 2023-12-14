@@ -25,7 +25,6 @@ AApMappingsSubsystem::AApMappingsSubsystem() : Super() {
 
 	PrimaryActorTick.bCanEverTick = false;
 	PrimaryActorTick.bStartWithTickEnabled = false;
-	//PrimaryActorTick.TickInterval = 0.2f;
 }
 
 void AApMappingsSubsystem::Initialize() {
@@ -64,6 +63,10 @@ void AApMappingsSubsystem::LoadMappings() {
 	LoadRecipeMappings(recipeAssets);
 	LoadBuildingMappings(recipeAssets);
 	LoadSchematicMappings(registery);
+
+	for (TPair<int64, TSharedRef<FApItem>> itemMapping : ApItems) {
+		NameToItemId.Add(itemMapping.Value->Name, itemMapping.Key);
+	}
 }
 
 void AApMappingsSubsystem::LoadItemMappings(TMap<FName, FAssetData> itemDescriptorAssets) {
@@ -77,9 +80,8 @@ void AApMappingsSubsystem::LoadItemMappings(TMap<FName, FAssetData> itemDescript
 		itemInfo.Descriptor = itemDescriptor;
 		itemInfo.Class = itemClass; 
 
-		//ItemInfo.Add(itemMapping.Key, itemInfo);
 		ApItems.Add(itemMapping.Key, MakeShared<FApItemInfo>(itemInfo));
-		NameToItemId.Add(itemName, itemMapping.Key);
+
 		ItemClassToItemId.Add(itemClass, itemMapping.Key);
 	}
 }
@@ -95,9 +97,7 @@ void AApMappingsSubsystem::LoadRecipeMappings(TMap<FName, FAssetData> recipeAsse
 		recipeInfo.Recipe = recipe;
 		recipeInfo.Class = recipeClass;
 
-		//RecipeInfo.Add(recipeMapping.Key, recipeInfo);
 		ApItems.Add(recipeMapping.Key, MakeShared<FApRecipeInfo>(recipeInfo));
-		NameToItemId.Add(recipeName, recipeMapping.Key);
 	}
 }
 
@@ -113,7 +113,6 @@ void AApMappingsSubsystem::LoadBuildingMappings(TMap<FName, FAssetData> recipeAs
 			recipeInfo.Recipe = recipe;
 			recipeInfo.Class = recipeClass;
 
-			//RecipeInfo.Add(buildingMapping.Key, recipeInfo);
 			ApItems.Add(buildingMapping.Key, MakeShared<FApRecipeInfo>(recipeInfo));
 		}
 	}
@@ -121,25 +120,19 @@ void AApMappingsSubsystem::LoadBuildingMappings(TMap<FName, FAssetData> recipeAs
 
 void AApMappingsSubsystem::LoadSchematicMappings(IAssetRegistry& registery) {
 	for (TPair<int64, FString> schmaticMapping : UApMappings::ItemIdToGameSchematic) {
-		//UFGSchematic* schematic = LoadObject<>();
-
-		//auto contentRegistry = UModContentRegistry::Get(GetWorld());
-		//TArray<FGameObjectRegistration> registeredSchematics = contentRegistry->GetRegisteredSchematics();
-
-		// schmaticMapping.Value
-
 		UClass* bp = LoadClass<UFGSchematic>(NULL, *schmaticMapping.Value);
 		UFGSchematic* schematic = Cast<UFGSchematic>(bp->GetDefaultObject());
+		TSubclassOf<UFGSchematic> schematicClass = schematic->GetClass();
+		FString schematicName = ((AApSubsystem*)ap)->GetApItemName(schmaticMapping.Key);
 
 		FApSchematicInfo schematicInfo;
-		schematicInfo.Name = TEXT("Name pending");
+		schematicInfo.Name = schematicName;
 		schematicInfo.Schematic = schematic;
-		schematicInfo.Class = schematic->GetClass();
+		schematicInfo.Class = schematicClass;
 
-		ApItems.Add(schmaticMapping.Key, MakeShared<FApRecipeInfo>(schematicInfo));
+		ApItems.Add(schmaticMapping.Key, MakeShared<FApSchematicInfo>(schematicInfo));
 	}
 }
-
 
 TMap<FName, FAssetData> AApMappingsSubsystem::GetBlueprintAssetsIn(IAssetRegistry& registery, FName&& packagePath, TArray<FString> namePrefixes) {
 	UE_LOG(LogApMappingsSubsystem, Display, TEXT("AApMappingsSubsystem::GetBlueprintAssetsIn(packagePath: %s, namePrefixes: [%i])"), *packagePath.ToString(), namePrefixes.Num());
