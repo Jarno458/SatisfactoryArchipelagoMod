@@ -161,7 +161,12 @@ const TMap<int64, FString> UApMappings::ItemIdToGameItemDescriptor = {
 	{1338183, TEXT("BP_EquipmentDescriptorStunSpear_C")},
 	{1338184, TEXT("BP_EquipmentDescriptorShockShank_C")},
 	{1338185, TEXT("BP_EqDescZipLine_C")},
-	{1338186, TEXT("BP_ItemDescriptorPortableMiner_C")}
+	{1338186, TEXT("BP_ItemDescriptorPortableMiner_C")},
+	{1338187, TEXT("Desc_Filter_C")},
+	//TODO implement custom unlocks
+	{1338188, TEXT("Desc_Filter_C")}, //3 "/Script/Engine.Blueprint'/Game/FactoryGame/Unlocks/BP_UnlockInventorySlot.BP_UnlockInventorySlot'"
+	{1338189, TEXT("Desc_Filter_C")}, //6 "/Script/Engine.Blueprint'/Game/FactoryGame/Unlocks/BP_UnlockInventorySlot.BP_UnlockInventorySlot'"
+	{1338190, TEXT("Desc_Filter_C")} //1 "/Script/Engine.Blueprint'/Game/FactoryGame/Unlocks/BP_UnlockArmEquipmentSlot.BP_UnlockArmEquipmentSlot'"
 };
 
 const TMap<int64, FString> UApMappings::ItemIdToGameRecipe = {
@@ -275,7 +280,7 @@ const TMap<int64, FString> UApMappings::ItemIdToGameRecipe = {
 	{1338307, TEXT("Recipe_AluminaSolution")},
 	{1338308, TEXT("Recipe_Alternate_AutomatedMiner")},
 	//{1338309, TEXT("")}, //Bauxite
-	{1338310, TEXT("Recipe_AluminumScrap.Recipe_AluminumScrap")},
+	{1338310, TEXT("Recipe_AluminumScrap")},
 	{1338311, TEXT("Recipe_Alternate_ElectroAluminumScrap")},
 	{1338312, TEXT("Recipe_Alternate_InstantScrap")},
 	{1338313, TEXT("Recipe_IngotAluminum")},

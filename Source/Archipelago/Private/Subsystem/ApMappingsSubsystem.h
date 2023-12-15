@@ -128,12 +128,15 @@ private:
 	void LoadItemMappings(TMap<FName, FAssetData> itemDescriptorAssets);
 	void LoadRecipeMappings(TMap<FName, FAssetData> recipeAssets);
 	void LoadBuildingMappings(TMap<FName, FAssetData> recipeAssets);
-	void LoadSchematicMappings(IAssetRegistry& registery);
+	void LoadSchematicMappings();
 
-	static UFGItemDescriptor* GetItemDescriptorByName(TMap<FName, FAssetData> itemDescriptorAssets, FString name);
 	static TMap<FName, FAssetData> GetItemDescriptorAssets(IAssetRegistry& registery);
 	static TMap<FName, FAssetData> GetRecipeAssets(IAssetRegistry& registery);
 	static TMap<FName, FAssetData> GetBlueprintAssetsIn(IAssetRegistry& registery, FName&& packagePath, TArray<FString> namePrefixes);
-	static UObject* FindAssetByName(TMap<FName, FAssetData> assets, FString assetName);
+	
 	static UFGRecipe* GetRecipeByName(TMap<FName, FAssetData> recipeAssets, FString name);
+	static UFGItemDescriptor* GetItemDescriptorByName(TMap<FName, FAssetData> itemDescriptorAssets, FString name);
+	static UFGSchematic* GetSchematicByName(FString name);
+
+	static UObject* FindAssetByName(TMap<FName, FAssetData> assets, FString assetName);
 };

@@ -62,7 +62,7 @@ void AApMappingsSubsystem::LoadMappings() {
 	LoadItemMappings(itemDescriptorAssets);
 	LoadRecipeMappings(recipeAssets);
 	LoadBuildingMappings(recipeAssets);
-	LoadSchematicMappings(registery);
+	LoadSchematicMappings();
 
 	for (TPair<int64, TSharedRef<FApItem>> itemMapping : ApItems) {
 		NameToItemId.Add(itemMapping.Value->Name, itemMapping.Key);
@@ -118,10 +118,9 @@ void AApMappingsSubsystem::LoadBuildingMappings(TMap<FName, FAssetData> recipeAs
 	}
 }
 
-void AApMappingsSubsystem::LoadSchematicMappings(IAssetRegistry& registery) {
+void AApMappingsSubsystem::LoadSchematicMappings() {
 	for (TPair<int64, FString> schmaticMapping : UApMappings::ItemIdToGameSchematic) {
-		UClass* bp = LoadClass<UFGSchematic>(NULL, *schmaticMapping.Value);
-		UFGSchematic* schematic = Cast<UFGSchematic>(bp->GetDefaultObject());
+		UFGSchematic* schematic = GetSchematicByName(schmaticMapping.Value);
 		TSubclassOf<UFGSchematic> schematicClass = schematic->GetClass();
 		FString schematicName = ((AApSubsystem*)ap)->GetApItemName(schmaticMapping.Key);
 
@@ -162,13 +161,45 @@ TMap<FName, FAssetData> AApMappingsSubsystem::GetBlueprintAssetsIn(IAssetRegistr
 }
 
 UObject* AApMappingsSubsystem::FindAssetByName(TMap<FName, FAssetData> assets, FString assetName) {
-	FName key = FName(*assetName);
-	verify(assets.Contains(key));
-	return Cast<UBlueprintGeneratedClass>(assets[key].GetAsset())->GetDefaultObject();
+	assetName.RemoveFromEnd("'");
+
+	if (!assetName.EndsWith("_C"))
+		assetName = assetName.Append("_C");
+
+	if (assetName.Contains("/")) {
+		//working examples
+		//auto s = LoadObject<UBlueprintGeneratedClass>(NULL, TEXT("/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_Ladders.ResourceSink_Ladders_C"));
+		//auto a = registery.GetAssetByObjectPath(TEXT("/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_Ladders.ResourceSink_Ladders_C"));
+
+		assetName.RemoveFromStart("/Script/Engine.Blueprint'");
+
+		UBlueprintGeneratedClass* blueprint = LoadObject<UBlueprintGeneratedClass>(NULL, *assetName);
+		if (blueprint == nullptr)
+		{
+			auto yolo = 10;
+		}
+		verify(blueprint != nullptr);
+		return blueprint->GetDefaultObject();
+	} else {
+		FName key = FName(*assetName);
+		if (!assets.Contains(key))
+		{
+			auto yolo = 10;
+		}
+		verify(assets.Contains(key));
+
+		return Cast<UBlueprintGeneratedClass>(assets[key].GetAsset())->GetDefaultObject();
+	}
+}
+
+UFGSchematic* AApMappingsSubsystem::GetSchematicByName(FString name) {
+	UObject* obj = FindAssetByName(TMap<FName, FAssetData>(), name);
+	verify(obj != nullptr);
+	return Cast<UFGSchematic>(obj);
 }
 
 UFGRecipe* AApMappingsSubsystem::GetRecipeByName(TMap<FName, FAssetData> recipeAssets, FString name) {
-	UObject* obj = FindAssetByName(recipeAssets, name.Append("_C"));
+	UObject* obj = FindAssetByName(recipeAssets, name);
 	verify(obj != nullptr);
 	return Cast<UFGRecipe>(obj);
 }
@@ -194,6 +225,7 @@ TMap<FName, FAssetData> AApMappingsSubsystem::GetRecipeAssets(IAssetRegistry& re
 
 	recipeAssets.Append(GetBlueprintAssetsIn(registery, "/Game/FactoryGame/Recipes", TArray<FString>{ "Recipe_" }));
 	recipeAssets.Append(GetBlueprintAssetsIn(registery, "/Game/FactoryGame/Equipment", TArray<FString>{ "Recipe_" }));
+	recipeAssets.Append(GetBlueprintAssetsIn(registery, "/Game/FactoryGame/Buildable/Factory", TArray<FString>{ "Recipe_" }));
 
 	return recipeAssets;
 }
