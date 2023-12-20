@@ -3,8 +3,10 @@
 #include "CoreMinimal.h"
 
 #include "Engine/UserDefinedStruct.h"
+#include "JsonObjectConverter.h"
 
 #include "ApTypes.generated.h"
+
 
 USTRUCT(BlueprintType)
 struct ARCHIPELAGO_API FApPlayer
@@ -12,15 +14,37 @@ struct ARCHIPELAGO_API FApPlayer
 	GENERATED_BODY()
 
 public:
-	UPROPERTY()
+	UPROPERTY(BlueprintReadWrite)
 	int Team;
-	UPROPERTY()
+	UPROPERTY(BlueprintReadWrite)
 	FString Name;
 
 	//Override the comparison operator
 	bool operator==(const FApPlayer& Other) const
 	{
 		return Team == Other.Team && Name.Equals(Other.Name);
+	}
+
+	// Value constructor
+	FApPlayer(int team, FString name) : Name(name), Team(team)
+	{}
+
+	// Default constructor
+	FApPlayer() : FApPlayer(-1, "Invalid")
+	{}
+
+	// Copy constructor
+	FApPlayer(const FApPlayer& Other) : Name(Other.Name), Team(Other.Team)
+	{}
+
+	FORCEINLINE bool IsValid() {
+		return this->Team >= 0;
+	}
+
+	FORCEINLINE FString toString(const FApPlayer& This) {
+		FString out;
+		FJsonObjectConverter::UStructToJsonObjectString(This, out);
+		return out;
 	}
 };
 
@@ -29,7 +53,7 @@ FORCEINLINE uint32 GetTypeHash(const FApPlayer& This)
 	return HashCombine(GetTypeHash(This.Team), GetTypeHash(This.Name));
 };
 
-USTRUCT()
+USTRUCT(BlueprintType)
 struct ARCHIPELAGO_API FApGiftTrait
 {
 	GENERATED_BODY()
