@@ -27,6 +27,14 @@ struct AP_NetworkItem {
     std::string playerName;
 };
 
+struct AP_NetworkPlayer {
+    int team;
+    int slot;
+    std::string name;
+    std::string alias;
+    std::string game;
+};
+
 // Set current client version
 void AP_SetClientVersion(AP_NetworkVersion*);
 
@@ -41,7 +49,7 @@ void AP_SetDeathLinkSupported(bool);
 //Parameter Function must reset local state
 void AP_SetItemClearCallback(void (*f_itemclr)());
 //Parameter Function must collect item id given with parameter. Secound parameter indicates whether or not to notify player
-void AP_SetItemRecvCallback(void (*f_itemrecv)(int64_t,bool));
+void AP_SetItemRecvCallback(void (*f_itemrecv)(int64_t,bool,bool));
 //Parameter Function must mark given location id as checked
 void AP_SetLocationCheckedCallback(void (*f_locrecv)(int64_t));
 
@@ -131,12 +139,10 @@ struct AP_RoomInfo {
     std::map<std::string, int> permissions;
     int hint_cost;
     int location_check_points;
-    //MISSING: players
     //MISSING: games
-    int datapackage_version;
-    std::map<std::string, int> datapackage_versions;
+    std::map<std::string, std::string> datapackage_checksums;
     std::string seed_name;
-    float time;
+    double time;
 };
 
 /* Connection Information Functions */
@@ -144,6 +150,7 @@ struct AP_RoomInfo {
 int AP_GetRoomInfo(AP_RoomInfo*);
 AP_ConnectionStatus AP_GetConnectionStatus();
 int AP_GetUUID();
+int AP_GetPlayerID();
 
 /* Serverside Data Types */
 
@@ -213,8 +220,6 @@ void AP_SetNotify(std::map<std::string,AP_DataType>);
 // Single Key version of above for convenience
 void AP_SetNotify(std::string, AP_DataType);
 
-int AP_GetCurrentPlayerSlot();
-std::string AP_GetItemName(int64_t id);
 /* Gifting API Types */
 
 struct AP_GiftBoxProperties {

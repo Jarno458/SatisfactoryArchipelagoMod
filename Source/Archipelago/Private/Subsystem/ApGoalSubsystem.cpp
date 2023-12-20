@@ -7,14 +7,8 @@
 #include "Data/ApSlotData.h"
 
 
-void AApGoalSubsystem::BeginPlay() {
-	Super::BeginPlay();
-
-	UWorld* world = GetWorld();
-	researchManager = AFGResearchManager::Get(world);
-	schematicManager = AFGSchematicManager::Get(world);
-	phaseManager = AFGGamePhaseManager::Get(world);
-	resourceSinkSubsystem = AFGResourceSinkSubsystem::Get(world);
+AApGoalSubsystem::AApGoalSubsystem() : Super() {
+	PrimaryActorTick.bCanEverTick = false;
 }
 
 AApGoalSubsystem* AApGoalSubsystem::Get() {
@@ -26,6 +20,15 @@ AApGoalSubsystem* AApGoalSubsystem::Get(UWorld* world) {
 	check(SubsystemActorManager);
 
 	return SubsystemActorManager->GetSubsystemActor<AApGoalSubsystem>();
+}
+
+void AApGoalSubsystem::BeginPlay() {
+	Super::BeginPlay();
+
+	UWorld* world = GetWorld();
+
+	phaseManager = AFGGamePhaseManager::Get(world);
+	resourceSinkSubsystem = AFGResourceSinkSubsystem::Get(world);
 }
 
 bool AApGoalSubsystem::AreGoalsCompleted(const FApSlotData* slotData) {

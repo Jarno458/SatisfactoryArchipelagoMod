@@ -27,29 +27,14 @@ AApMappingsSubsystem::AApMappingsSubsystem() : Super() {
 	PrimaryActorTick.bStartWithTickEnabled = false;
 }
 
-void AApMappingsSubsystem::Initialize() {
-	if (!isInitialized) {
-		ap = AApSubsystem::Get(GetWorld());
-
-		//Needs connections to AP to load itemNames (altho we could offload that to loading later or lazy loading)
-		if (((AApSubsystem*)ap)->ConnectionState == EApConnectionState::Connected) {
-			LoadMappings();
-
-			isInitialized = true;
-
-			SetActorTickEnabled(false);
-		}
-	}
-}
-
 void AApMappingsSubsystem::BeginPlay() {
 	Super::BeginPlay();
 
 	UE_LOG(LogApMappingsSubsystem, Display, TEXT("AApMappingsSubsystem::BeginPlay()"));
-}
 
-void AApMappingsSubsystem::Tick(float dt) {
-	Super::Tick(dt);
+	ap = AApSubsystem::Get(GetWorld());
+
+	LoadMappings();
 }
 
 void AApMappingsSubsystem::LoadMappings() {
@@ -63,24 +48,19 @@ void AApMappingsSubsystem::LoadMappings() {
 	LoadRecipeMappings(recipeAssets);
 	LoadBuildingMappings(recipeAssets);
 	LoadSchematicMappings();
-
-	for (TPair<int64, TSharedRef<FApItem>> itemMapping : ApItems) {
-		NameToItemId.Add(itemMapping.Value->Name, itemMapping.Key);
-	}
 }
 
 void AApMappingsSubsystem::LoadItemMappings(TMap<FName, FAssetData> itemDescriptorAssets) {
 	for (TPair<int64, FString> itemMapping : UApMappings::ItemIdToGameItemDescriptor) {
 		UFGItemDescriptor* itemDescriptor = GetItemDescriptorByName(itemDescriptorAssets, itemMapping.Value);
 		TSubclassOf<UFGItemDescriptor> itemClass = itemDescriptor->GetClass();
-		FString itemName = ((AApSubsystem*)ap)->GetApItemName(itemMapping.Key);
 
-		FApItemInfo itemInfo;
-		itemInfo.Name = itemName;
+		FApItem itemInfo;
+		itemInfo.Id = itemMapping.Key;
 		itemInfo.Descriptor = itemDescriptor;
 		itemInfo.Class = itemClass; 
 
-		ApItems.Add(itemMapping.Key, MakeShared<FApItemInfo>(itemInfo));
+		ApItems.Add(itemMapping.Key, MakeShared<FApItem>(itemInfo));
 
 		ItemClassToItemId.Add(itemClass, itemMapping.Key);
 	}
@@ -90,31 +70,38 @@ void AApMappingsSubsystem::LoadRecipeMappings(TMap<FName, FAssetData> recipeAsse
 	for (TPair<int64, FString> recipeMapping : UApMappings::ItemIdToGameRecipe) {
 		UFGRecipe* recipe = GetRecipeByName(recipeAssets, recipeMapping.Value);
 		TSubclassOf<UFGRecipe> recipeClass = recipe->GetClass();
-		FString recipeName = ((AApSubsystem*)ap)->GetApItemName(recipeMapping.Key);
 
 		FApRecipeInfo recipeInfo;
-		recipeInfo.Name = recipeName;
 		recipeInfo.Recipe = recipe;
 		recipeInfo.Class = recipeClass;
 
-		ApItems.Add(recipeMapping.Key, MakeShared<FApRecipeInfo>(recipeInfo));
+		FApRecipeItem recipeItem;
+		recipeItem.Id = recipeMapping.Key;
+		recipeItem.Recipes = TArray<FApRecipeInfo>{ recipeInfo };
+
+		ApItems.Add(recipeMapping.Key, MakeShared<FApRecipeItem>(recipeItem));
 	}
 }
 
 void AApMappingsSubsystem::LoadBuildingMappings(TMap<FName, FAssetData> recipeAssets) {
 	for (TPair<int64, TArray<FString>> buildingMapping : UApMappings::ItemIdToGameBuilding) {
+		TArray<FApRecipeInfo> recipes;
+
 		for (FString recipeShortName : buildingMapping.Value) {
 			UFGRecipe* recipe = GetRecipeByName(recipeAssets, recipeShortName);
 			TSubclassOf<UFGRecipe> recipeClass = recipe->GetClass();
-			FString recipeName = ((AApSubsystem*)ap)->GetApItemName(buildingMapping.Key);
 
 			FApRecipeInfo recipeInfo;
-			recipeInfo.Name = recipeName;
 			recipeInfo.Recipe = recipe;
 			recipeInfo.Class = recipeClass;
-
-			ApItems.Add(buildingMapping.Key, MakeShared<FApRecipeInfo>(recipeInfo));
+			recipes.Add(recipeInfo);
 		}
+
+		FApBuildingItem buildingItem;
+		buildingItem.Id = buildingMapping.Key;
+		buildingItem.Recipes = recipes;
+
+		ApItems.Add(buildingMapping.Key, MakeShared<FApBuildingItem>(buildingItem));
 	}
 }
 
@@ -122,14 +109,13 @@ void AApMappingsSubsystem::LoadSchematicMappings() {
 	for (TPair<int64, FString> schmaticMapping : UApMappings::ItemIdToGameSchematic) {
 		UFGSchematic* schematic = GetSchematicByName(schmaticMapping.Value);
 		TSubclassOf<UFGSchematic> schematicClass = schematic->GetClass();
-		FString schematicName = ((AApSubsystem*)ap)->GetApItemName(schmaticMapping.Key);
 
-		FApSchematicInfo schematicInfo;
-		schematicInfo.Name = schematicName;
+		FApSchematicItem schematicInfo;
+		schematicInfo.Id = schmaticMapping.Key;
 		schematicInfo.Schematic = schematic;
 		schematicInfo.Class = schematicClass;
 
-		ApItems.Add(schmaticMapping.Key, MakeShared<FApSchematicInfo>(schematicInfo));
+		ApItems.Add(schmaticMapping.Key, MakeShared<FApSchematicItem>(schematicInfo));
 	}
 }
 
@@ -170,6 +156,8 @@ UObject* AApMappingsSubsystem::FindAssetByName(TMap<FName, FAssetData> assets, F
 		//working examples
 		//auto s = LoadObject<UBlueprintGeneratedClass>(NULL, TEXT("/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_Ladders.ResourceSink_Ladders_C"));
 		//auto a = registery.GetAssetByObjectPath(TEXT("/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_Ladders.ResourceSink_Ladders_C"));
+		//auto c = LoadClass<UObject>(nullptr, TEXT("/Game/FactoryGame/Resource/RawResources/OreIron/Desc_OreIron.Desc_OreIron_C"));
+		//TSubclassOf<UFGSchematic> d = LoadClass<UFGSchematic>(nullptr, TEXT("/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_Ladders.ResourceSink_Ladders_C"));
 
 		assetName.RemoveFromStart("/Script/Engine.Blueprint'");
 
@@ -228,6 +216,21 @@ TMap<FName, FAssetData> AApMappingsSubsystem::GetRecipeAssets(IAssetRegistry& re
 	recipeAssets.Append(GetBlueprintAssetsIn(registery, "/Game/FactoryGame/Buildable/Factory", TArray<FString>{ "Recipe_" }));
 
 	return recipeAssets;
+}
+
+void AApMappingsSubsystem::InitializeAfterConnectingToAp() {
+	LoadNames();
+
+	isInitialized = true;
+}
+
+void AApMappingsSubsystem::LoadNames() {
+	for (TPair<int64, TSharedRef<FApItemBase>> itemMapping: ApItems) {
+		FString name = ((AApSubsystem*)ap)->GetApItemName(itemMapping.Key);
+
+		NameToItemId.Add(name, itemMapping.Key);
+		ItemIdToName.Add(itemMapping.Key, name);
+	}
 }
 
 #pragma optimize("", on)

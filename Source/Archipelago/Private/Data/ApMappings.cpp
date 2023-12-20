@@ -445,7 +445,7 @@ const TMap<int64, TArray<FString>> UApMappings::ItemIdToGameBuilding = {
 	{1338627, {TEXT("Recipe_JumpPad")}},
 	//1338628 Schematic
 	{1338629, {TEXT("Recipe_Mam")}},
-	{1338630, {TEXT("Recipe_StoragePlayer")}}, //TODO: include "Recipe_StorageMedkit", "Recipe_StorageHazard"
+	{1338630, {TEXT("Recipe_StoragePlayer"), TEXT("Recipe_StorageMedkit"), TEXT("Recipe_StorageHazard")}}, 
 	{1338631, {TEXT("Recipe_PowerStorageMk1")}},
 	{1338632, {TEXT("Recipe_UJellyLandingPad")}},
 	{1338633, {TEXT("Recipe_PowerSwitch")}},
@@ -458,11 +458,11 @@ const TMap<int64, TArray<FString>> UApMappings::ItemIdToGameBuilding = {
 	{1338640, {TEXT("Recipe_StorageContainerMk2")}},
 	{1338641, {TEXT("Recipe_ConveyorAttachmentMerger")}},
 	{1338642, {TEXT("Recipe_ConveyorAttachmentSplitter")}},
-	{1338643, {TEXT("Recipe_ConveyorBeltMk1")}}, //TODO include "Recipe_ConveyorPole"
-	{1338644, {TEXT("Recipe_ConveyorBeltMk2")}},
-	{1338645, {TEXT("Recipe_ConveyorBeltMk3")}},
-	{1338646, {TEXT("Recipe_ConveyorBeltMk4")}},
-	{1338647, {TEXT("Recipe_ConveyorBeltMk5")}},
+	{1338643, {TEXT("Recipe_ConveyorBeltMk1"), TEXT("Recipe_ConveyorPole")}},
+	{1338644, {TEXT("Recipe_ConveyorBeltMk2"), TEXT("Recipe_ConveyorPole")}},
+	{1338645, {TEXT("Recipe_ConveyorBeltMk3"), TEXT("Recipe_ConveyorPole")}},
+	{1338646, {TEXT("Recipe_ConveyorBeltMk4"), TEXT("Recipe_ConveyorPole")}},
+	{1338647, {TEXT("Recipe_ConveyorBeltMk5"), TEXT("Recipe_ConveyorPole")}},
 	{1338648, {TEXT("Recipe_ConveyorLiftMk1")}},
 	{1338649, {TEXT("Recipe_ConveyorLiftMk2")}},
 	{1338650, {TEXT("Recipe_ConveyorLiftMk3")}},
@@ -473,8 +473,8 @@ const TMap<int64, TArray<FString>> UApMappings::ItemIdToGameBuilding = {
 	{1338655, {TEXT("Recipe_ConveyorPoleWall")}},
 	{1338656, {TEXT("Recipe_FoundationPassthrough_Lift")}},
 	{1338657, {TEXT("Recipe_ConveyorCeilingAttachment")}},
-	{1338658, {TEXT("Recipe_Pipeline")}}, //TODO include: "Recipe_PipeSupport"
-	{1338659, {TEXT("Recipe_PipelineMK2")}},
+	{1338658, {TEXT("Recipe_Pipeline"), TEXT("Recipe_PipeSupport")}},
+	{1338659, {TEXT("Recipe_PipelineMK2"), TEXT("Recipe_PipeSupport")}},
 	{1338660, {TEXT("Recipe_PipelinePump")}},
 	{1338661, {TEXT("Recipe_PipelinePumpMK2")}},
 	{1338662, {TEXT("Recipe_PipelineJunction_Cross")}},
@@ -488,8 +488,8 @@ const TMap<int64, TArray<FString>> UApMappings::ItemIdToGameBuilding = {
 	{1338670, {TEXT("Recipe_StreetLight")}},
 	{1338671, {TEXT("Recipe_FloodlightPole")}},
 	{1338672, {TEXT("Recipe_CeilingLight")}},
-	{1338673, {TEXT("Recipe_PowerTower")}}, //TODO include "Recipe_PowerTowerPlatform"
-	{1338674, {TEXT("Recipe_Wall_8x4_01")}}, //TODO include "Recipe_Wall_Orange_8x1"
+	{1338673, {TEXT("Recipe_PowerTower"), TEXT("Recipe_PowerTowerPlatform")}},
+	{1338674, {TEXT("Recipe_Wall_8x4_01"), TEXT("Recipe_Wall_Orange_8x1")}},
 	{1338675, {TEXT("Recipe_RadarTower")}},
 	{1338676, {TEXT("Recipe_ConveyorAttachmentSplitterSmart")}},
 	{1338677, {TEXT("Recipe_ConveyorAttachmentSplitterProgrammable")}},
@@ -507,7 +507,7 @@ const TMap<int64, TArray<FString>> UApMappings::ItemIdToGameBuilding = {
 	//{1338689, {TEXT("")}},
 	//{1338690, {TEXT("")}},
 	//{1338691, {TEXT("")}},
-	{1338692, {TEXT("Recipe_Foundation_8x4_01")}}, //TODO include: "Recipe_Foundation_8x1_01", "Recipe_Foundation_8x2_01", "Recipe_Ramp_8x1_01", "Recipe_Ramp_8x2_01","Recipe_Ramp_8x4_01"
+	{1338692, {TEXT("Recipe_Foundation_8x4_01"),  TEXT("Recipe_Foundation_8x1_01"), TEXT("Recipe_Foundation_8x2_01"), TEXT("Recipe_Ramp_8x1_01"), TEXT("Recipe_Ramp_8x2_01"), TEXT("Recipe_Ramp_8x4_01")}},
 	//1338693 Schematic
 	//1338694 Schematic
 	//1338695 Schematic

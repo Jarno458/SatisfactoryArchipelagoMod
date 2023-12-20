@@ -133,7 +133,7 @@ private:
 
 	static void SetReplyCallback(AP_SetReply setReply);
 	static void ItemClearCallback();
-	static void ItemReceivedCallback(int64 id, bool notify);
+	static void ItemReceivedCallback(int64 id, bool notify, bool isFromServer);
 	static void LocationCheckedCallback(int64 id);
 	static void LocationScoutedCallback(std::vector<AP_NetworkItem>);
 	static void ParseSlotData(std::string json);
@@ -180,12 +180,12 @@ private:
 	void HandleAPMessages();
 	void SendChatMessage(const FString& Message, const FLinearColor& Color);
 
-	void CreateSchematicBoundToItemId(int64 item);
+	void CreateSchematicBoundToItemId(int64 item, TSharedRef<FApRecipeItem> recipe);
 	FContentLib_UnlockInfoOnly CreateUnlockInfoOnly(AP_NetworkItem item);
-	void UpdateInfoOnlyUnlockWithBuildingInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, AP_NetworkItem* item, TSharedRef<FApBuildingRecipeInfo> itemInfo);
-	void UpdateInfoOnlyUnlockWithRecipeInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, AP_NetworkItem* item, TSharedRef<FApRecipeInfo> itemInfo);
-	void UpdateInfoOnlyUnlockWithItemBundleInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, AP_NetworkItem* item, TSharedRef<FApItemInfo> itemInfo);
-	void UpdateInfoOnlyUnlockWithSchematicInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, AP_NetworkItem* item, TSharedRef<FApSchematicInfo> itemInfo);
+	void UpdateInfoOnlyUnlockWithBuildingInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, AP_NetworkItem* item, TSharedRef<FApBuildingItem> itemInfo);
+	void UpdateInfoOnlyUnlockWithRecipeInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, AP_NetworkItem* item, TSharedRef<FApRecipeItem> itemInfo);
+	void UpdateInfoOnlyUnlockWithItemBundleInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, AP_NetworkItem* item, TSharedRef<FApItem> itemInfo);
+	void UpdateInfoOnlyUnlockWithSchematicInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, AP_NetworkItem* item, TSharedRef<FApSchematicItem> itemInfo);
 	void UpdateInfoOnlyUnlockWithGenericApInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, AP_NetworkItem* item);
 	void CreateHubSchematic(FString name, TSubclassOf<UFGSchematic> factorySchematic, TArray<AP_NetworkItem> apItems);
 	void CreateMamSchematic(FString name, TSubclassOf<UFGSchematic> factorySchematic, TArray<AP_NetworkItem> apItems);

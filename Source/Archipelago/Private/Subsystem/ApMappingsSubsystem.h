@@ -17,27 +17,30 @@ enum class EItemType : uint8
 	Recipe,
 	Building,
 	Schematic,
-	InventorySlot
+	Specail
 };
 
 USTRUCT()
-struct ARCHIPELAGO_API FApItem 
+struct ARCHIPELAGO_API FApItemBase
 {
 	GENERATED_BODY()
 
+	//UPROPERTY()
+	//FString Name;
+
 	UPROPERTY()
-	FString Name;
+	int64 Id;
 
 	UPROPERTY()
 	EItemType Type;
 };
 
 USTRUCT()
-struct ARCHIPELAGO_API FApItemInfo : public FApItem
+struct ARCHIPELAGO_API FApItem : public FApItemBase
 {
 	GENERATED_BODY()
 
-	FApItemInfo() { 
+	FApItem() {
 		Type = EItemType::Item;
 	} 
 
@@ -49,13 +52,9 @@ struct ARCHIPELAGO_API FApItemInfo : public FApItem
 };
 
 USTRUCT()
-struct ARCHIPELAGO_API FApRecipeInfo : public FApItem
+struct ARCHIPELAGO_API FApRecipeInfo
 {
 	GENERATED_BODY()
-
-	FApRecipeInfo() {
-		Type = EItemType::Recipe;
-	}
 
 	UPROPERTY()
 	UFGRecipe* Recipe;
@@ -65,21 +64,34 @@ struct ARCHIPELAGO_API FApRecipeInfo : public FApItem
 };
 
 USTRUCT()
-struct ARCHIPELAGO_API FApBuildingRecipeInfo : public FApRecipeInfo
+struct ARCHIPELAGO_API FApRecipeItem : public FApItemBase
 {
 	GENERATED_BODY()
 
-	FApBuildingRecipeInfo() {
+	FApRecipeItem() {
+		Type = EItemType::Recipe;
+	}
+
+	UPROPERTY()
+	TArray<FApRecipeInfo> Recipes;
+};
+
+USTRUCT()
+struct ARCHIPELAGO_API FApBuildingItem : public FApRecipeItem
+{
+	GENERATED_BODY()
+
+	FApBuildingItem() {
 		Type = EItemType::Building;
 	}
 };
 
 USTRUCT()
-struct ARCHIPELAGO_API FApSchematicInfo : public FApItem
+struct ARCHIPELAGO_API FApSchematicItem : public FApItemBase
 {
 	GENERATED_BODY()
 
-	FApSchematicInfo() {
+	FApSchematicItem() {
 		Type = EItemType::Schematic;
 	}
 
@@ -101,16 +113,14 @@ public:
 
 	virtual void BeginPlay() override;
 
-	virtual void Tick(float dt) override;
-
 	static AApMappingsSubsystem* Get();
 	static AApMappingsSubsystem* Get(class UWorld* world);
 
 public:
 	TMap<TSubclassOf<UFGItemDescriptor>, int64> ItemClassToItemId;
 	TMap<FString, int64> NameToItemId;
-
-	TMap<int64, TSharedRef<FApItem>> ApItems;
+	TMap<int64, FString> ItemIdToName;
+	TMap<int64, TSharedRef<FApItemBase>> ApItems;
 
 private:
 	AModSubsystem* ap;
@@ -121,10 +131,11 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FORCEINLINE bool IsInitialized() const { return isInitialized; };
 
-	void Initialize();
+	void InitializeAfterConnectingToAp();
 
 private:
 	void LoadMappings();
+	void LoadNames();
 	void LoadItemMappings(TMap<FName, FAssetData> itemDescriptorAssets);
 	void LoadRecipeMappings(TMap<FName, FAssetData> recipeAssets);
 	void LoadBuildingMappings(TMap<FName, FAssetData> recipeAssets);

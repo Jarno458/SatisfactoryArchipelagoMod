@@ -346,20 +346,20 @@ void AApGiftingSubsystem::LoadMappings() {
 	for (TPair<FString, int64> traitDefault : TraitDefaultItemIds) {
 		check(mappingSubsystem->ApItems.Contains(traitDefault.Value) && mappingSubsystem->ApItems[traitDefault.Value]->Type == EItemType::Item);
 
-		TSharedRef<FApItemInfo> itemInfo = StaticCastSharedRef<FApItemInfo>(mappingSubsystem->ApItems[traitDefault.Value]);
+		TSharedRef<FApItem> itemInfo = StaticCastSharedRef<FApItem>(mappingSubsystem->ApItems[traitDefault.Value]);
 
 		int defaultItemSinkPoints = GetResourceSinkPointsForItem(itemInfo->Class, traitDefault.Value);
 
 		defaultSinkPointsPerTrait.Add(traitDefault.Key, defaultItemSinkPoints);
 	}
 
-	for (TPair<int64, TSharedRef<FApItem>> itemInfoMapping : mappingSubsystem->ApItems) {
+	for (TPair<int64, TSharedRef<FApItemBase>> itemInfoMapping : mappingSubsystem->ApItems) {
 		if (!TraitsPerItemRatings.Contains(itemInfoMapping.Key))
 			continue;
 
 		check(itemInfoMapping.Value->Type == EItemType::Item)
 
-		TSharedRef<FApItemInfo> itemInfo = StaticCastSharedRef<FApItemInfo>(itemInfoMapping.Value);
+		TSharedRef<FApItem> itemInfo = StaticCastSharedRef<FApItem>(itemInfoMapping.Value);
 		TSubclassOf<UFGItemDescriptor> itemClass = itemInfo->Class;
 		int64 itemId = itemInfoMapping.Key;
 
@@ -388,7 +388,7 @@ void AApGiftingSubsystem::LoadMappings() {
 		TraitsPerItem.Add(itemInfo->Class, calucatedTraitsForItem);
 	}
 
-	PrintTraitValuesPerItem();
+	//PrintTraitValuesPerItem();
 }
 
 void AApGiftingSubsystem::PrintTraitValuesPerItem() {
@@ -399,7 +399,7 @@ void AApGiftingSubsystem::PrintTraitValuesPerItem() {
 			if (!valuesPerItem.Contains(trait.Key))
 				valuesPerItem.Add(trait.Key, TSortedMap<float, FString>());
 
-			FString itemName = mappingSubsystem->ApItems[mappingSubsystem->ItemClassToItemId[traitsPerItem.Key]]->Name;
+			FString itemName = mappingSubsystem->ItemIdToName[mappingSubsystem->ItemClassToItemId[traitsPerItem.Key]];
 
 			valuesPerItem[trait.Key].Add(trait.Value, itemName);
 		}
@@ -436,9 +436,9 @@ void AApGiftingSubsystem::PullAllGiftsAsync() {
 
 		//try match on name
 		if (mappingSubsystem->NameToItemId.Contains(gift.ItemName)) {
-			portalSubSystem->Enqueue(StaticCastSharedRef<FApItemInfo>(mappingSubsystem->ApItems[mappingSubsystem->NameToItemId[gift.ItemName]])->Class, gift.Amount);
+			portalSubSystem->Enqueue(StaticCastSharedRef<FApItem>(mappingSubsystem->ApItems[mappingSubsystem->NameToItemId[gift.ItemName]])->Class, gift.Amount);
 		} else if (HardcodedItemNameToIdMappings.Contains(gift.ItemName)) {
-			portalSubSystem->Enqueue(StaticCastSharedRef<FApItemInfo>(mappingSubsystem->ApItems[HardcodedItemNameToIdMappings[gift.ItemName]])->Class, gift.Amount);
+			portalSubSystem->Enqueue(StaticCastSharedRef<FApItem>(mappingSubsystem->ApItems[HardcodedItemNameToIdMappings[gift.ItemName]])->Class, gift.Amount);
 		} else {
 			//if name cant be matched, try match on traits
 			TSubclassOf<UFGItemDescriptor> itemClass = TryGetItemClassByTraits(gift.Traits);
@@ -578,7 +578,7 @@ void AApGiftingSubsystem::Send(TMap<FApPlayer, TMap<TSubclassOf<UFGItemDescripto
 				int64 itemId = mappingSubsystem->ItemClassToItemId[stack.Key];
 				int itemValue = GetResourceSinkPointsForItem(stack.Key, itemId);
 
-				gift.ItemName = mappingSubsystem->ApItems[itemId]->Name;
+				gift.ItemName = mappingSubsystem->ItemIdToName[itemId];
 				gift.Amount = stack.Value;
 				gift.ItemValue = itemValue;
 				gift.Traits = GetTraitsForItem(stack.Key, itemValue);

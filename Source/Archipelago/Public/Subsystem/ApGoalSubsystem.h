@@ -2,9 +2,7 @@
 
 #include "CoreMinimal.h"
 
-#include "FGSchematicManager.h"
 #include "FGGamePhaseManager.h"
-#include "FGResearchManager.h"
 
 #include "Subsystem/ModSubsystem.h"
 
@@ -18,12 +16,12 @@ class ARCHIPELAGO_API AApGoalSubsystem : public AModSubsystem
 {
 	GENERATED_BODY()
 
-	AFGSchematicManager* schematicManager;
-	AFGResearchManager* researchManager;
 	AFGGamePhaseManager* phaseManager;
 	AFGResourceSinkSubsystem* resourceSinkSubsystem;
 
 public:
+	AApGoalSubsystem();
+
 	virtual void BeginPlay() override;
 
 	static AApGoalSubsystem* Get();
