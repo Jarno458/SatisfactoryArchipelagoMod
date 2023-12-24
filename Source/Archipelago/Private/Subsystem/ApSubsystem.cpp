@@ -188,7 +188,9 @@ void AApSubsystem::ItemReceivedCallback(int64 item, bool notify, bool isFromServ
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::ItemReceivedCallback(%i, \"%s\")"), item, (notify ? TEXT("true") : TEXT("false")));
 
 	AApSubsystem* self = AApSubsystem::Get();
-	self->ReceivedItems.Enqueue(item);
+
+	TTuple<int64, bool> receivedItem = TTuple<int64, bool>(item, isFromServer);
+	self->ReceivedItems.Enqueue(receivedItem);
 }
 
 void AApSubsystem::LocationCheckedCallback(int64 id) {
@@ -264,25 +266,7 @@ void AApSubsystem::Tick(float DeltaTime) {
 	if (ConnectionState != EApConnectionState::Connected)
 		return;
 
-	// Consider processing only one queue item per tick for performance reasons
-	int64 item;
-	while (ReceivedItems.Dequeue(item)) {
-		if (ItemSchematics.Contains(item)) {
-			SManager->GiveAccessToSchematic(ItemSchematics[item], nullptr);
-		} else if (auto trapName = UApMappings::ItemIdToTrap.Find(item)) {
-			trapSubsystem->SpawnTrap(*trapName, nullptr);
-		} else if (mappingSubsystem->ApItems.Contains(item)) {
-			if (mappingSubsystem->ApItems[item]->Type == EItemType::Item) {
-				TSubclassOf<UFGItemDescriptor> itemClass = StaticCastSharedRef<FApItem>(mappingSubsystem->ApItems[item])->Class;
-				int stackSize = UFGItemDescriptor::GetStackSize(itemClass);
-				portalSubsystem->Enqueue(itemClass, stackSize);
-			} else if (mappingSubsystem->ApItems[item]->Type == EItemType::Schematic) {
-				SManager->GiveAccessToSchematic(StaticCastSharedRef<FApSchematicItem>(mappingSubsystem->ApItems[item])->Class, nullptr);
-			} else if (mappingSubsystem->ApItems[item]->Type == EItemType::Specail) {
-				//TODO: find out how to award inventroy slots...
-			}
-		}
-	}
+	ReceiveItems();
 
 	HandleAPMessages();
 	
@@ -291,6 +275,38 @@ void AApSubsystem::Tick(float DeltaTime) {
 		if (hasSentGoal) {
 			UE_LOG(LogApSubsystem, Display, TEXT("Sending goal completion to server"));
 			AP_StoryComplete();
+		}
+	}
+}
+
+void AApSubsystem::ReceiveItems()
+{
+	// Consider processing only one queue item per tick for performance reasons
+	TTuple<int64, bool> item;
+	while (ReceivedItems.Dequeue(item)) {
+		int64 itemid = item.Key;
+		bool isFromServer = item.Value;
+
+		if (ItemSchematics.Contains(itemid)) {
+			SManager->GiveAccessToSchematic(ItemSchematics[itemid], nullptr);
+		} else if (auto trapName = UApMappings::ItemIdToTrap.Find(itemid)) {
+			trapSubsystem->SpawnTrap(*trapName, nullptr);
+		} else if (mappingSubsystem->ApItems.Contains(itemid)) {
+			if (mappingSubsystem->ApItems[itemid]->Type == EItemType::Item) {
+				if (isFromServer) {
+					//send directly to inventory
+
+				} else {
+					//send to portal
+					TSubclassOf<UFGItemDescriptor> itemClass = StaticCastSharedRef<FApItem>(mappingSubsystem->ApItems[itemid])->Class;
+					int stackSize = UFGItemDescriptor::GetStackSize(itemClass);
+					portalSubsystem->Enqueue(itemClass, stackSize);
+				}
+			} else if (mappingSubsystem->ApItems[itemid]->Type == EItemType::Schematic) {
+				SManager->GiveAccessToSchematic(StaticCastSharedRef<FApSchematicItem>(mappingSubsystem->ApItems[itemid])->Class, nullptr);
+			} else if (mappingSubsystem->ApItems[itemid]->Type == EItemType::Specail) {
+				//TODO: find out how to award inventroy slots...
+			}
 		}
 	}
 }

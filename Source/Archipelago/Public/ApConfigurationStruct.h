@@ -19,9 +19,6 @@ public:
     FString Password{};
 
     UPROPERTY(BlueprintReadWrite)
-    FString Game{};
-
-    UPROPERTY(BlueprintReadWrite)
     bool Enabled{};
 
     UPROPERTY(BlueprintReadWrite)

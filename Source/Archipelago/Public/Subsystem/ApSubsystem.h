@@ -79,6 +79,8 @@ protected:
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;
 
+	void ReceiveItems();
+
 	// Begin IFGSaveInterface
 	virtual void PreSaveGame_Implementation(int32 saveVersion, int32 gameVersion) override {};
 	virtual void PostSaveGame_Implementation(int32 saveVersion, int32 gameVersion) override {};
@@ -151,7 +153,7 @@ private:
 	TMap<TSubclassOf<class UFGSchematic>, TArray<AP_NetworkItem>> locationsPerMilestone;
 	TMap<TSubclassOf<class UFGSchematic>, TArray<AP_NetworkItem>> locationsPerMamNode;
 	TMap<int64, TSubclassOf<class UFGSchematic>> ItemSchematics;
-	TQueue<int64> ReceivedItems;
+	TQueue<TTuple<int64, bool>> ReceivedItems;
 	TQueue<TPair<FString, FLinearColor>> ChatMessageQueue;
 
 	TArray<AP_NetworkItem> scoutedLocations;
