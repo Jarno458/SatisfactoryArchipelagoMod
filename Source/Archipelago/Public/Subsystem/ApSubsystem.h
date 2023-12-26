@@ -85,7 +85,7 @@ protected:
 	// Begin IFGSaveInterface
 	virtual void PreSaveGame_Implementation(int32 saveVersion, int32 gameVersion) override;
 	virtual void PostSaveGame_Implementation(int32 saveVersion, int32 gameVersion) override;
-	virtual void PreLoadGame_Implementation(int32 saveVersion, int32 gameVersion) override;
+	virtual void PreLoadGame_Implementation(int32 saveVersion, int32 gameVersion) override {};
 	virtual void PostLoadGame_Implementation(int32 saveVersion, int32 gameVersion) override;
 	virtual void GatherDependencies_Implementation(TArray<UObject*>& out_dependentObjects) override;
 	virtual bool NeedTransform_Implementation() override { return false; };
@@ -97,11 +97,11 @@ public:
 	UPROPERTY(BlueprintReadOnly)
 	FText ConnectionStateDescription;
 
-	UPROPERTY(BlueprintReadOnly)
-	int currentPlayerTeam;
+	UPROPERTY(BlueprintReadOnly, SaveGame)
+	int currentPlayerTeam = 0;
 
-	UPROPERTY(BlueprintReadOnly)
-	int currentPlayerSlot;
+	UPROPERTY(BlueprintReadOnly, SaveGame)
+	int currentPlayerSlot = 0;
 
 	// Get a copy of the subsystem
 	UFUNCTION(BlueprintCallable, BlueprintPure, meta = (DisplayName = "Get ApSubsystem"))
@@ -151,25 +151,30 @@ private:
 	AApTrapSubsystem* trapSubsystem;
 	AApGoalSubsystem* goalSubsystem;
 
-	TMap<TSubclassOf<class UFGSchematic>, TArray<AP_NetworkItem>> locationsPerMilestone;
-	TMap<TSubclassOf<class UFGSchematic>, TArray<AP_NetworkItem>> locationsPerMamNode;
-	TMap<int64, TSubclassOf<class UFGSchematic>> ItemSchematics;
-	TQueue<TTuple<int64, bool>> ReceivedItems;
-	TQueue<TPair<FString, FLinearColor>> ChatMessageQueue;
-
-	TArray<AP_NetworkItem> scoutedLocations;
-	bool hasScoutedLocations;
-	bool areScoutedLocationsReadyToParse;
-	bool areRecipiesAndSchematicsInitialized;
-
+	UPROPERTY(SaveGame)
 	FApSlotData slotData;
-
+	UPROPERTY(SaveGame)
+	TArray<FApSaveableHubLayout> saveSlotDataHubLayout;
+	
 	UPROPERTY(SaveGame)
 	bool hasSentGoal;
+
+	UPROPERTY(SaveGame)
+	TArray<FApNetworkItem> scoutedLocations;
 
 	// TODO
 	// UPROPERTY(SaveGame)
 	// int64 lastReceivedApNetworkItem
+
+	TMap<TSubclassOf<class UFGSchematic>, TArray<FApNetworkItem>> locationsPerMilestone;
+	TMap<TSubclassOf<class UFGSchematic>, TArray<FApNetworkItem>> locationsPerMamNode;
+	TMap<int64, TSubclassOf<class UFGSchematic>> ItemSchematics;
+	TQueue<TTuple<int64, bool>> ReceivedItems;
+	TQueue<TPair<FString, FLinearColor>> ChatMessageQueue;
+
+	bool hasScoutedLocations;
+	bool areScoutedLocationsReadyToParse;
+	bool areRecipiesAndSchematicsInitialized;
 
 	bool InitializeTick(FApConfigurationStruct config, FDateTime connectingStartedTime);
 
@@ -184,14 +189,14 @@ private:
 	void SendChatMessage(const FString& Message, const FLinearColor& Color);
 
 	void CreateSchematicBoundToItemId(int64 item, TSharedRef<FApRecipeItem> recipe);
-	FContentLib_UnlockInfoOnly CreateUnlockInfoOnly(AP_NetworkItem item);
-	void UpdateInfoOnlyUnlockWithBuildingInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, AP_NetworkItem* item, TSharedRef<FApBuildingItem> itemInfo);
-	void UpdateInfoOnlyUnlockWithRecipeInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, AP_NetworkItem* item, TSharedRef<FApRecipeItem> itemInfo);
-	void UpdateInfoOnlyUnlockWithItemBundleInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, AP_NetworkItem* item, TSharedRef<FApItem> itemInfo);
-	void UpdateInfoOnlyUnlockWithSchematicInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, AP_NetworkItem* item, TSharedRef<FApSchematicItem> itemInfo);
-	void UpdateInfoOnlyUnlockWithGenericApInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, AP_NetworkItem* item);
-	void CreateHubSchematic(FString name, TSubclassOf<UFGSchematic> factorySchematic, TArray<AP_NetworkItem> apItems);
-	void CreateMamSchematic(FString name, TSubclassOf<UFGSchematic> factorySchematic, TArray<AP_NetworkItem> apItems);
+	FContentLib_UnlockInfoOnly CreateUnlockInfoOnly(FApNetworkItem item);
+	void UpdateInfoOnlyUnlockWithBuildingInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, FApNetworkItem* item, TSharedRef<FApBuildingItem> itemInfo);
+	void UpdateInfoOnlyUnlockWithRecipeInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, FApNetworkItem* item, TSharedRef<FApRecipeItem> itemInfo);
+	void UpdateInfoOnlyUnlockWithItemBundleInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, FApNetworkItem* item, TSharedRef<FApItem> itemInfo);
+	void UpdateInfoOnlyUnlockWithSchematicInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, FApNetworkItem* item, TSharedRef<FApSchematicItem> itemInfo);
+	void UpdateInfoOnlyUnlockWithGenericApInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, FApNetworkItem* item);
+	void CreateHubSchematic(FString name, TSubclassOf<UFGSchematic> factorySchematic, TArray<FApNetworkItem> apItems);
+	void CreateMamSchematic(FString name, TSubclassOf<UFGSchematic> factorySchematic, TArray<FApNetworkItem> apItems);
 	
 	UFUNCTION() //required for event binding
 	void OnMamResearchCompleted(TSubclassOf<class UFGSchematic> schematic);

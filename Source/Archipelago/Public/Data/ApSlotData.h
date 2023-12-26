@@ -22,18 +22,34 @@ public:
 
 	bool hasLoadedSlotData;
 
-	UPROPERTY(BlueprintReadOnly)
+	UPROPERTY(BlueprintReadOnly, SaveGame)
 	int numberOfChecksPerMilestone;
 
 	TArray<TArray<TMap<FString, int>>> hubLayout;
 
-	UPROPERTY(BlueprintReadOnly)
+	UPROPERTY(BlueprintReadOnly, SaveGame)
 	int finalSpaceElevatorTier;
 
-	UPROPERTY(BlueprintReadOnly)
+	UPROPERTY(BlueprintReadOnly, SaveGame)
 	int64 finalResourceSinkPoints;
 
 public:
 	// Parse slot data from server. Returns false if invalid.
 	static bool ParseSlotData(std::string json, FApSlotData* data);
+};
+
+USTRUCT(BlueprintType)
+struct ARCHIPELAGO_API FApSaveableHubLayout
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(SaveGame)
+	int tier;
+
+	UPROPERTY(SaveGame)
+	int milestone;
+
+	UPROPERTY(SaveGame)
+	TMap<FString, int> costs;
 };

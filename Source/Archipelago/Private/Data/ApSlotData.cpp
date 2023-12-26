@@ -30,15 +30,9 @@ bool FApSlotData::ParseSlotData(std::string json, FApSlotData* data) {
 			TMap<FString, int> costs;
 
 			for (TPair<FString, TSharedPtr<FJsonValue>> cost : milestone->AsObject()->Values) {
-				int itemId = FCString::Atoi(*cost.Key);
+				int itemId = FCString::Atoi(*cost.Key); //Is 32 bit int, but should be fine as our id's are own game ids are in the 32 bit range
 
-				if (UApMappings::ItemIdToGameItemDescriptor.Contains(itemId)) {
-					costs.Add(UApMappings::ItemIdToGameItemDescriptor[itemId], cost.Value->AsNumber());
-				} else {
-					//TODO: Remove Edit the define to control if this crashes or just errors
-					UE_LOG(LogArchipelagoCpp, UNKNOWN_ITEMID_LOG_MESSAGE_TYPE, TEXT("Archipelago slot data contained AP itemId %d that is not present in ItemIdToGameItemDescriptor mappings. Are you using an out of date version of the mod for the Archipelago server version?"), itemId);
-					costs.Add(UApMappings::ItemIdToGameItemDescriptor[1338151], cost.Value->AsNumber());
-				}
+				costs.Add(UApMappings::ItemIdToGameItemDescriptor[itemId], cost.Value->AsNumber());
 			}
 
 			milestones.Add(costs);

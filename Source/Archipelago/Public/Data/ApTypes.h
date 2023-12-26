@@ -118,3 +118,31 @@ public:
 	UPROPERTY()
 	TArray<FString> AcceptedTraits;
 };
+
+USTRUCT()
+struct ARCHIPELAGO_API FApNetworkItem
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(SaveGame)
+	int64 item;
+
+	UPROPERTY(SaveGame)
+	int64 location;
+
+	UPROPERTY(SaveGame)
+	int player;
+
+	UPROPERTY(SaveGame)
+	int flags;
+
+	UPROPERTY(SaveGame)
+	FString itemName;
+
+	UPROPERTY(SaveGame)
+	FString locationName;
+
+	UPROPERTY(SaveGame)
+	FString playerName;
+};

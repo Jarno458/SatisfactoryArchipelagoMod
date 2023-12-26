@@ -79,16 +79,19 @@ void AApSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase) {
 
 bool AApSubsystem::InitializeTick(FApConfigurationStruct config, FDateTime connectingStartedTime) {
 	if (ConnectionState == EApConnectionState::Connecting) {
-		if ((FDateTime::Now() - connectingStartedTime).GetSeconds() > 10)
+		if ((FDateTime::Now() - connectingStartedTime).GetSeconds() > 15)
 			TimeoutConnection();
 		else
 			CheckConnectionState(config);
-	} else if (ConnectionState == EApConnectionState::Connected) {
-		if (!hasScoutedLocations) {
-			ScoutArchipelagoItems();
-
+	} 
+	if (ConnectionState == EApConnectionState::Connected) {
+		if (currentPlayerSlot == 0) {
 			currentPlayerTeam = AP_GetCurrentPlayerTeam();
 			currentPlayerSlot = AP_GetPlayerID();
+		}
+
+		if (!areScoutedLocationsReadyToParse && !hasScoutedLocations) {
+			ScoutArchipelagoItems();
 		}
 
 		if (!mappingSubsystem->IsInitialized()){
@@ -100,11 +103,6 @@ bool AApSubsystem::InitializeTick(FApConfigurationStruct config, FDateTime conne
 		}
 
 		if (areRecipiesAndSchematicsInitialized) {
-			//reset state for re-connect
-			hasScoutedLocations = false;
-			areScoutedLocationsReadyToParse = false;
-			areRecipiesAndSchematicsInitialized = false;
-
 			return true;
 		}
 
@@ -126,8 +124,12 @@ void AApSubsystem::ConnectToArchipelago(FApConfigurationStruct config) {
 	AP_SetItemRecvCallback(AApSubsystem::ItemReceivedCallback);
 	AP_SetLocationCheckedCallback(AApSubsystem::LocationCheckedCallback);
 	AP_RegisterSetReplyCallback(AApSubsystem::SetReplyCallback);
-	AP_SetLocationInfoCallback(AApSubsystem::LocationScoutedCallback);
-	AP_RegisterSlotDataRawCallback("Data", AApSubsystem::ParseSlotData);
+
+	if (scoutedLocations.IsEmpty())
+		AP_SetLocationInfoCallback(AApSubsystem::LocationScoutedCallback);
+
+	if (!slotData.hasLoadedSlotData)
+		AP_RegisterSlotDataRawCallback("Data", AApSubsystem::ParseSlotData);
 
 	ConnectionState = EApConnectionState::Connecting;
 	ConnectionStateDescription = LOCTEXT("Connecting", "Connecting...");
@@ -221,17 +223,27 @@ void AApSubsystem::LocationScoutedCallback(std::vector<AP_NetworkItem> scoutedLo
 
 	AApSubsystem* self = AApSubsystem::Get();
 
-	self->scoutedLocations = TArray<AP_NetworkItem>();
+	self->scoutedLocations = TArray<FApNetworkItem>();
 
-	for (auto location : scoutedLocations)
+	for (AP_NetworkItem apLocation : scoutedLocations) {
+		FApNetworkItem location;
+		location.item = apLocation.item;
+		location.location = apLocation.location;
+		location.player = apLocation.player;
+		location.flags = apLocation.flags;
+		location.itemName = UApUtils::FStr(apLocation.itemName);
+		location.locationName = UApUtils::FStr(apLocation.locationName);
+		location.playerName = UApUtils::FStr(apLocation.playerName);
+
 		self->scoutedLocations.Add(location);
-	
+	}
+		
 	self->areScoutedLocationsReadyToParse = true;
 }
 
 void AApSubsystem::ParseSlotData(std::string json) {
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::ParseSlotData(\"%s\")"), *UApUtils::FStr(json));
-
+	
 	AApSubsystem* self = AApSubsystem::Get();
 	bool success = FApSlotData::ParseSlotData(json, &self->slotData);
 	if (!success) {
@@ -347,9 +359,8 @@ void AApSubsystem::ParseScoutedItemsAndCreateRecipiesAndSchematics() {
 	TMap<FString, TSubclassOf<UFGSchematic>> schematicsPerMilestone = TMap<FString, TSubclassOf<UFGSchematic>>();
 
 	for (auto& location : scoutedLocations) {
-		if (location.locationName.starts_with("Hub")) {
-			std::string milestoneString = location.locationName.substr(0, location.locationName.find(","));
-			FString milestone = UApUtils::FStr(milestoneString);
+		if (location.locationName.StartsWith("Hub")) {
+			FString milestone = location.locationName.Left(location.locationName.Find(","));
 
 			if (!schematicsPerMilestone.Contains(milestone)) {
 				TSubclassOf<UFGSchematic> schematic = UApUtils::FindOrCreateClass(TEXT("/Archipelago/"), *milestone, UFGSchematic::StaticClass());
@@ -357,7 +368,7 @@ void AApSubsystem::ParseScoutedItemsAndCreateRecipiesAndSchematics() {
 			}
 
 			if (!locationsPerMilestone.Contains(schematicsPerMilestone[milestone])) {
-				locationsPerMilestone.Add(schematicsPerMilestone[milestone], TArray<AP_NetworkItem>{ location });
+				locationsPerMilestone.Add(schematicsPerMilestone[milestone], TArray<FApNetworkItem>{ location });
 			} else {
 				locationsPerMilestone[schematicsPerMilestone[milestone]].Add(location);
 			}
@@ -378,9 +389,6 @@ void AApSubsystem::ParseScoutedItemsAndCreateRecipiesAndSchematics() {
 		CreateHubSchematic(schematicName, itemPerMilestone.Key, itemPerMilestone.Value);
 	}
 
-	scoutedLocations.Empty();
-
-	areScoutedLocationsReadyToParse = false;
 	areRecipiesAndSchematicsInitialized = true;
 }
 
@@ -408,7 +416,7 @@ void AApSubsystem::CreateSchematicBoundToItemId(int64 itemid, TSharedRef<FApReci
 	ItemSchematics.Add(itemid, factorySchematic);
 }
 
-void AApSubsystem::CreateHubSchematic(FString name, TSubclassOf<UFGSchematic> factorySchematic, TArray<AP_NetworkItem> items) {
+void AApSubsystem::CreateHubSchematic(FString name, TSubclassOf<UFGSchematic> factorySchematic, TArray<FApNetworkItem> items) {
 	int delimeterPos;
 	name.FindChar('-', delimeterPos);
 	int32 tier = FCString::Atoi(*name.Mid(delimeterPos - 1, 1));
@@ -445,7 +453,7 @@ void AApSubsystem::CreateHubSchematic(FString name, TSubclassOf<UFGSchematic> fa
 	contentRegistry->RegisterSchematic(FName(TEXT("Archipelago")), factorySchematic);
 }
 
-FContentLib_UnlockInfoOnly AApSubsystem::CreateUnlockInfoOnly(AP_NetworkItem item) {
+FContentLib_UnlockInfoOnly AApSubsystem::CreateUnlockInfoOnly(FApNetworkItem item) {
 	FFormatNamedArguments Args;
 	if (item.flags == 0b001) {
 		Args.Add(TEXT("ProgressionType"), LOCTEXT("NetworkItemProgressionTypeAdvancement", "progression item"));
@@ -457,14 +465,14 @@ FContentLib_UnlockInfoOnly AApSubsystem::CreateUnlockInfoOnly(AP_NetworkItem ite
 		Args.Add(TEXT("ProgressionType"), LOCTEXT("NetworkItemProgressionTypeJunk", "normal item"));
 	}
 
-	Args.Add(TEXT("ApItemName"), UApUtils::FText(item.itemName));
+	Args.Add(TEXT("ApItemName"), FText::FromString(item.itemName));
 
 	FContentLib_UnlockInfoOnly infoCard;
 
 	if (item.player == currentPlayerSlot) {
 		Args.Add(TEXT("ApPlayerName"), LOCTEXT("NetworkItemDescriptionYourOwnName", "your"));
 
-		infoCard.mUnlockName = UApUtils::FText(item.itemName);
+		infoCard.mUnlockName = FText::FromString(item.itemName);
 
 		if (item.player == currentPlayerSlot && mappingSubsystem->ApItems.Contains(item.item)) {
 			TSharedRef<FApItemBase> apItem = mappingSubsystem->ApItems[item.item];
@@ -485,7 +493,7 @@ FContentLib_UnlockInfoOnly AApSubsystem::CreateUnlockInfoOnly(AP_NetworkItem ite
 		}
 	} else {
 		Args.Add(TEXT("ApPlayerName"), FText::FormatNamed(LOCTEXT("NetworkItemPlayerOwnerPossessive", "{remotePlayerName}'s"),
-			TEXT("remotePlayerName"), UApUtils::FText(item.playerName)
+			TEXT("remotePlayerName"), FText::FromString(item.playerName)
 		));
 
 		infoCard.mUnlockName = FText::Format(LOCTEXT("NetworkItemUnlockDisplayName", "{ApPlayerName} {ApItemName}"), Args);
@@ -496,7 +504,7 @@ FContentLib_UnlockInfoOnly AApSubsystem::CreateUnlockInfoOnly(AP_NetworkItem ite
 	return infoCard;
 }
 
-void AApSubsystem::UpdateInfoOnlyUnlockWithBuildingInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, AP_NetworkItem* item, TSharedRef<FApBuildingItem> itemInfo) {
+void AApSubsystem::UpdateInfoOnlyUnlockWithBuildingInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, FApNetworkItem* item, TSharedRef<FApBuildingItem> itemInfo) {
 	UFGRecipe* recipe = itemInfo->Recipes[0].Recipe;
 	UFGItemDescriptor* itemDescriptor = recipe->GetProducts()[0].ItemClass.GetDefaultObject();
 
@@ -505,7 +513,7 @@ void AApSubsystem::UpdateInfoOnlyUnlockWithBuildingInfo(FContentLib_UnlockInfoOn
 	infoCard->mUnlockDescription = FText::Format(LOCTEXT("NetworkItemUnlockPersonalBuildingDescription", "This will unlock your {ApItemName}"), Args);
 }
 
-void AApSubsystem::UpdateInfoOnlyUnlockWithRecipeInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, AP_NetworkItem* item, TSharedRef<FApRecipeItem> itemInfo) {
+void AApSubsystem::UpdateInfoOnlyUnlockWithRecipeInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, FApNetworkItem* item, TSharedRef<FApRecipeItem> itemInfo) {
 	UFGRecipe* recipe = itemInfo->Recipes[0].Recipe;
 	UFGItemDescriptor* itemDescriptor = recipe->GetProducts()[0].ItemClass.GetDefaultObject();
 
@@ -545,7 +553,7 @@ void AApSubsystem::UpdateInfoOnlyUnlockWithRecipeInfo(FContentLib_UnlockInfoOnly
 	infoCard->mUnlockDescription = FText::Format(LOCTEXT("NetworkItemUnlockPersonalRecipeDescription", "This will unlock {ApPlayerName} {ApItemName} which is considered a {ProgressionType}.\nProduced in: {Building}.\nCosts: {Costs}.\nProduces: {Output}."), Args);
 }
 
-void AApSubsystem::UpdateInfoOnlyUnlockWithItemBundleInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, AP_NetworkItem* item, TSharedRef<FApItem> itemInfo) {
+void AApSubsystem::UpdateInfoOnlyUnlockWithItemBundleInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, FApNetworkItem* item, TSharedRef<FApItem> itemInfo) {
 	UFGItemDescriptor* itemDescriptor = itemInfo->Descriptor;
 
 	infoCard->BigIcon = infoCard->SmallIcon = UApUtils::GetImagePathForItem(itemDescriptor);
@@ -555,7 +563,7 @@ void AApSubsystem::UpdateInfoOnlyUnlockWithItemBundleInfo(FContentLib_UnlockInfo
 	infoCard->mUnlockDescription = FText::Format(LOCTEXT("NetworkItemUnlockPersonalItemDescription", "This will give {ApPlayerName} Item Bundle: {ApItemName}. It can be collected by building an Archipelago Portal."), Args);
 }
 
-void AApSubsystem::UpdateInfoOnlyUnlockWithSchematicInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, AP_NetworkItem* item, TSharedRef<FApSchematicItem> itemInfo) {
+void AApSubsystem::UpdateInfoOnlyUnlockWithSchematicInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, FApNetworkItem* item, TSharedRef<FApSchematicItem> itemInfo) {
 	UFGSchematic* schematic = itemInfo->Schematic;
 
 	//infoCard->BigIcon = infoCard->SmallIcon = UApUtils::GetImagePathForItem(itemDescriptor);
@@ -564,7 +572,7 @@ void AApSubsystem::UpdateInfoOnlyUnlockWithSchematicInfo(FContentLib_UnlockInfoO
 	//infoCard->mUnlockDescription = FText::Format(LOCTEXT("NetworkItemUnlockPersonalItemDescription", "This will give {ApPlayerName} Item Bundle: {ApItemName}. It can be collected by building an Archipelago Portal."), Args);
 }
 
-void AApSubsystem::UpdateInfoOnlyUnlockWithGenericApInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, AP_NetworkItem* item) {
+void AApSubsystem::UpdateInfoOnlyUnlockWithGenericApInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, FApNetworkItem* item) {
 	infoCard->CategoryIcon = TEXT("/Archipelago/Assets/SourceArt/ArchipelagoAssetPack/ArchipelagoIconWhite128.ArchipelagoIconWhite128");
 	infoCard->mUnlockDescription = FText::Format(LOCTEXT("NetworkItemUnlockDescription", "This will unlock {ApPlayerName} {ApItemName} which is considered a {ProgressionType}."), Args);
 
@@ -785,22 +793,45 @@ TArray<FApPlayer> AApSubsystem::GetAllApPlayers() {
 	return players;
 }
 
-
-
 void AApSubsystem::PreSaveGame_Implementation(int32 saveVersion, int32 gameVersion) {
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::PreSaveGame_Implementation(saveVersion: %i, gameVersion: %i)"), saveVersion, gameVersion);
+
+	for (int tier = 0; tier < slotData.hubLayout.Num(); tier++) {
+		for (int milestone = 0; milestone < slotData.hubLayout[tier].Num(); milestone++) {
+			FApSaveableHubLayout hubLayout;
+			hubLayout.tier = tier;
+			hubLayout.milestone = milestone;
+			hubLayout.costs = slotData.hubLayout[tier][milestone];
+
+			saveSlotDataHubLayout.Add(hubLayout);
+		}
+	}
 }	
 
 void AApSubsystem::PostSaveGame_Implementation(int32 saveVersion, int32 gameVersion) {
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::PostSaveGame_Implementation(saveVersion: %i, gameVersion: %i)"), saveVersion, gameVersion);
-}
 
-void AApSubsystem::PreLoadGame_Implementation(int32 saveVersion, int32 gameVersion) {
-	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::PreLoadGame_Implementation(saveVersion: %i, gameVersion: %i)"), saveVersion, gameVersion);
+	saveSlotDataHubLayout.Empty();
 }
 
 void AApSubsystem::PostLoadGame_Implementation(int32 saveVersion, int32 gameVersion) {
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::PostLoadGame_Implementation(saveVersion: %i, gameVersion: %i)"), saveVersion, gameVersion);
+
+	if (!saveSlotDataHubLayout.IsEmpty() && slotData.numberOfChecksPerMilestone > 0)
+	{
+		for (FApSaveableHubLayout hubLayout : saveSlotDataHubLayout) {
+			if ((slotData.hubLayout.Num() - 1) < hubLayout.tier)
+				slotData.hubLayout.Add(TArray<TMap<FString, int>>());
+
+			if ((slotData.hubLayout[hubLayout.tier].Num() - 1) < hubLayout.milestone)
+				slotData.hubLayout[hubLayout.tier].Add(hubLayout.costs);
+		}
+
+		slotData.hasLoadedSlotData = true;
+	}
+
+	if (!scoutedLocations.IsEmpty())
+		areScoutedLocationsReadyToParse = true;
 }
 
 void AApSubsystem::GatherDependencies_Implementation(TArray<UObject*>& out_dependentObjects) {
