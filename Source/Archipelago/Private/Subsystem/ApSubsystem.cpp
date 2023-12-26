@@ -136,6 +136,8 @@ void AApSubsystem::ConnectToArchipelago(FApConfigurationStruct config) {
 }
 
 void AApSubsystem::BeginPlay() {
+	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::BeginPlay()"));
+
 	Super::BeginPlay();
 
 	UWorld* world = GetWorld();
@@ -150,6 +152,15 @@ void AApSubsystem::BeginPlay() {
 	RManager->ResearchCompletedDelegate.AddDynamic(this, &AApSubsystem::OnMamResearchCompleted);
 	SManager->PurchasedSchematicDelegate.AddDynamic(this, &AApSubsystem::OnSchematicCompleted);
 }
+
+void AApSubsystem::EndPlay(const EEndPlayReason::Type endPlayReason) {
+	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::EndPlay(%i)"), endPlayReason);
+
+	Super::EndPlay(endPlayReason);
+
+	AP_Shutdown();
+}
+
 
 void SendLocation(int64_t locationId) {
 	UE_LOG(LogArchipelagoCpp, Display, TEXT("Sending location id %s to server"), *UApUtils::FStr(locationId));
@@ -772,6 +783,28 @@ TArray<FApPlayer> AApSubsystem::GetAllApPlayers() {
 	}
 
 	return players;
+}
+
+
+
+void AApSubsystem::PreSaveGame_Implementation(int32 saveVersion, int32 gameVersion) {
+	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::PreSaveGame_Implementation(saveVersion: %i, gameVersion: %i)"), saveVersion, gameVersion);
+}	
+
+void AApSubsystem::PostSaveGame_Implementation(int32 saveVersion, int32 gameVersion) {
+	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::PostSaveGame_Implementation(saveVersion: %i, gameVersion: %i)"), saveVersion, gameVersion);
+}
+
+void AApSubsystem::PreLoadGame_Implementation(int32 saveVersion, int32 gameVersion) {
+	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::PreLoadGame_Implementation(saveVersion: %i, gameVersion: %i)"), saveVersion, gameVersion);
+}
+
+void AApSubsystem::PostLoadGame_Implementation(int32 saveVersion, int32 gameVersion) {
+	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::PostLoadGame_Implementation(saveVersion: %i, gameVersion: %i)"), saveVersion, gameVersion);
+}
+
+void AApSubsystem::GatherDependencies_Implementation(TArray<UObject*>& out_dependentObjects) {
+	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::GatherDependencies_Implementation()"));
 }
 
 #pragma optimize("", on)
