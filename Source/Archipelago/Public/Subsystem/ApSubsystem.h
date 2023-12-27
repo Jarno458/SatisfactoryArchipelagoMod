@@ -152,6 +152,9 @@ private:
 	AApGoalSubsystem* goalSubsystem;
 
 	UPROPERTY(SaveGame)
+	FString roomSeed;
+
+	UPROPERTY(SaveGame)
 	FApSlotData slotData;
 	UPROPERTY(SaveGame)
 	TArray<FApSaveableHubLayout> saveSlotDataHubLayout;
@@ -175,6 +178,7 @@ private:
 	bool hasScoutedLocations;
 	bool areScoutedLocationsReadyToParse;
 	bool areRecipiesAndSchematicsInitialized;
+	bool hasLoadedRoomInfo;
 
 	bool InitializeTick(FApConfigurationStruct config, FDateTime connectingStartedTime);
 
@@ -184,6 +188,7 @@ private:
 	void CheckConnectionState(FApConfigurationStruct config);
 	void ScoutArchipelagoItems();
 	void ParseScoutedItemsAndCreateRecipiesAndSchematics();
+	void LoadRoomInfo();
 
 	void HandleAPMessages();
 	void SendChatMessage(const FString& Message, const FLinearColor& Color);
@@ -202,4 +207,6 @@ private:
 	void OnMamResearchCompleted(TSubclassOf<class UFGSchematic> schematic);
 	UFUNCTION() //required for event binding
 	void OnSchematicCompleted(TSubclassOf<class UFGSchematic> schematic);
+
+	static void AbortGame(FString reason);
 };

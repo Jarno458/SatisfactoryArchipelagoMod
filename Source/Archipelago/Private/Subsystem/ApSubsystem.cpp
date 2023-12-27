@@ -85,29 +85,25 @@ bool AApSubsystem::InitializeTick(FApConfigurationStruct config, FDateTime conne
 			CheckConnectionState(config);
 	} 
 	if (ConnectionState == EApConnectionState::Connected) {
+		if (!hasLoadedRoomInfo)
+			LoadRoomInfo();
+
 		if (currentPlayerSlot == 0) {
 			currentPlayerTeam = AP_GetCurrentPlayerTeam();
 			currentPlayerSlot = AP_GetPlayerID();
 		}
 
-		if (!areScoutedLocationsReadyToParse && !hasScoutedLocations) {
+		if (!areScoutedLocationsReadyToParse && !hasScoutedLocations)
 			ScoutArchipelagoItems();
-		}
 
-		if (!mappingSubsystem->IsInitialized()){
+		if (!mappingSubsystem->IsInitialized())
 			mappingSubsystem->InitializeAfterConnectingToAp();
-		}
-
-		if (areScoutedLocationsReadyToParse && slotData.hasLoadedSlotData && mappingSubsystem->IsInitialized()) {
+		
+		if (areScoutedLocationsReadyToParse && slotData.hasLoadedSlotData && mappingSubsystem->IsInitialized())
 			ParseScoutedItemsAndCreateRecipiesAndSchematics();
-		}
-
-		if (areRecipiesAndSchematicsInitialized) {
+		
+		return areRecipiesAndSchematicsInitialized;
 			return true;
-		}
-
-		// awaiting data to be parsed
-		return false;
 	}
 
 	return ConnectionState == EApConnectionState::ConnectionFailed;
@@ -248,10 +244,21 @@ void AApSubsystem::ParseSlotData(std::string json) {
 	bool success = FApSlotData::ParseSlotData(json, &self->slotData);
 	if (!success) {
 		FString jsonString(json.c_str());
-		UE_LOG(LogApSubsystem, Fatal, TEXT("Archipelago SlotData Invalid! %s"), *jsonString);
-		// TODO kick people out to the main menu screen or something, this keeps them hanging forever on the loading screen with no clear indication
-		// Switched to Fatal for now so it closes the game, but there must be a better way
+		AbortGame(FString::Printf(TEXT("Archipelago SlotData Invalid! %s"), *jsonString));
 	}
+}
+
+void AApSubsystem::LoadRoomInfo() {
+	AP_RoomInfo roomInfo;
+	AP_GetRoomInfo(&roomInfo);
+
+	FString seedName = UApUtils::FStr(roomInfo.seed_name);
+	if (roomSeed.IsEmpty())
+		roomSeed = seedName;
+	else if (roomSeed != seedName)
+		AbortGame("Room seed does not match seed of save, this save does not belong to the multiworld your connecting to");
+
+	hasLoadedRoomInfo = true;
 }
 
 void AApSubsystem::MonitorDataStoreValue(std::string key, AP_DataType dataType, std::string defaultValue, std::function<void(AP_SetReply)> callback) {
@@ -399,7 +406,7 @@ void AApSubsystem::CreateSchematicBoundToItemId(int64 itemid, TSharedRef<FApReci
 	}
 
 	FString recipes = FString::Join(recipesToUnlock, TEXT("\", \""));
-	FString name = UApUtils::FStr("AP_ItemId_" + std::to_string(itemid));
+	FString name = FString::Printf(TEXT("AP_ItemId_%i_%s"), itemid, *roomSeed);
 	// https://raw.githubusercontent.com/budak7273/ContentLib_Documentation/main/JsonSchemas/CL_Schematic.json
 	FString json = FString::Printf(TEXT(R"({
 		"Name": "%s",
@@ -836,6 +843,12 @@ void AApSubsystem::PostLoadGame_Implementation(int32 saveVersion, int32 gameVers
 
 void AApSubsystem::GatherDependencies_Implementation(TArray<UObject*>& out_dependentObjects) {
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::GatherDependencies_Implementation()"));
+}
+
+void AApSubsystem::AbortGame(FString reason) {
+	UE_LOG(LogApSubsystem, Fatal, TEXT("Archipelago Initailization failed: %s"), *reason);
+	// TODO kick people out to the main menu screen or something, this keeps them hanging forever on the loading screen with no clear indication
+	// Switched to Fatal for now so it closes the game, but there must be a better way
 }
 
 #pragma optimize("", on)
