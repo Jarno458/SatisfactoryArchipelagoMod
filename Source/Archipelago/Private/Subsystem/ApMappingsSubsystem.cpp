@@ -158,24 +158,14 @@ UObject* AApMappingsSubsystem::FindAssetByName(TMap<FName, FAssetData> assets, F
 		//auto a = registery.GetAssetByObjectPath(TEXT("/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_Ladders.ResourceSink_Ladders_C"));
 		//auto c = LoadClass<UObject>(nullptr, TEXT("/Game/FactoryGame/Resource/RawResources/OreIron/Desc_OreIron.Desc_OreIron_C"));
 		//TSubclassOf<UFGSchematic> d = LoadClass<UFGSchematic>(nullptr, TEXT("/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_Ladders.ResourceSink_Ladders_C"));
-
 		assetName.RemoveFromStart("/Script/Engine.Blueprint'");
 
 		UBlueprintGeneratedClass* blueprint = LoadObject<UBlueprintGeneratedClass>(NULL, *assetName);
-		if (blueprint == nullptr)
-		{
-			auto yolo = 10;
-		}
 		verify(blueprint != nullptr);
 		return blueprint->GetDefaultObject();
 	} else {
 		FName key = FName(*assetName);
-		if (!assets.Contains(key))
-		{
-			auto yolo = 10;
-		}
 		verify(assets.Contains(key));
-
 		return Cast<UBlueprintGeneratedClass>(assets[key].GetAsset())->GetDefaultObject();
 	}
 }
@@ -219,18 +209,33 @@ TMap<FName, FAssetData> AApMappingsSubsystem::GetRecipeAssets(IAssetRegistry& re
 }
 
 void AApMappingsSubsystem::InitializeAfterConnectingToAp() {
-	LoadNames();
+	LoadNamesFromAP();
 
 	isInitialized = true;
 }
 
-void AApMappingsSubsystem::LoadNames() {
-	for (TPair<int64, TSharedRef<FApItemBase>> itemMapping: ApItems) {
+void AApMappingsSubsystem::LoadNamesFromAP() {
+	for (TPair<int64, FString> itemMapping: UApMappings::ItemIdToGameItemDescriptor) {
 		FString name = ((AApSubsystem*)ap)->GetApItemName(itemMapping.Key);
 
 		NameToItemId.Add(name, itemMapping.Key);
 		ItemIdToName.Add(itemMapping.Key, name);
 	}
+}
+
+void AApMappingsSubsystem::PreSaveGame_Implementation(int32 saveVersion, int32 gameVersion) {
+
+	auto x = ItemIdToName;
+}
+
+void AApMappingsSubsystem::PostLoadGame_Implementation(int32 saveVersion, int32 gameVersion) {
+	if (ItemIdToName.IsEmpty())
+		return;
+
+	for (TPair<int64, FString> itemNameMapping : ItemIdToName)
+		NameToItemId.Add(itemNameMapping.Value, itemNameMapping.Key);
+
+	isInitialized = true;
 }
 
 #pragma optimize("", on)

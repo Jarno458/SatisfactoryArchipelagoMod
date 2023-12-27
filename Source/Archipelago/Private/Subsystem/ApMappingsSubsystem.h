@@ -104,7 +104,7 @@ struct ARCHIPELAGO_API FApSchematicItem : public FApItemBase
 
 
 UCLASS()
-class AApMappingsSubsystem : public AModSubsystem
+class AApMappingsSubsystem : public AModSubsystem, public IFGSaveInterface
 {
 	GENERATED_BODY()
 
@@ -116,16 +116,28 @@ public:
 	static AApMappingsSubsystem* Get();
 	static AApMappingsSubsystem* Get(class UWorld* world);
 
+protected:
+	// Begin IFGSaveInterface
+	virtual void PreSaveGame_Implementation(int32 saveVersion, int32 gameVersion) override;
+	virtual void PostSaveGame_Implementation(int32 saveVersion, int32 gameVersion) override {};
+	virtual void PreLoadGame_Implementation(int32 saveVersion, int32 gameVersion) override {};
+	virtual void PostLoadGame_Implementation(int32 saveVersion, int32 gameVersion) override;
+	virtual void GatherDependencies_Implementation(TArray<UObject*>& out_dependentObjects) override {};
+	virtual bool NeedTransform_Implementation() override { return false; };
+	virtual bool ShouldSave_Implementation() const override { return true; };
+	// End IFSaveInterface
+
 public:
 	TMap<TSubclassOf<UFGItemDescriptor>, int64> ItemClassToItemId;
-	TMap<FString, int64> NameToItemId;
+	UPROPERTY(SaveGame)
 	TMap<int64, FString> ItemIdToName;
+	TMap<FString, int64> NameToItemId;
 	TMap<int64, TSharedRef<FApItemBase>> ApItems;
 
 private:
 	AModSubsystem* ap;
 
-	bool isInitialized;
+	bool isInitialized = false;
 
 public:
 	UFUNCTION(BlueprintCallable, BlueprintPure)
@@ -135,11 +147,11 @@ public:
 
 private:
 	void LoadMappings();
-	void LoadNames();
 	void LoadItemMappings(TMap<FName, FAssetData> itemDescriptorAssets);
 	void LoadRecipeMappings(TMap<FName, FAssetData> recipeAssets);
 	void LoadBuildingMappings(TMap<FName, FAssetData> recipeAssets);
 	void LoadSchematicMappings();
+	void LoadNamesFromAP();
 
 	static TMap<FName, FAssetData> GetItemDescriptorAssets(IAssetRegistry& registery);
 	static TMap<FName, FAssetData> GetRecipeAssets(IAssetRegistry& registery);

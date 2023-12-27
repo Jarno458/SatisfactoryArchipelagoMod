@@ -34,7 +34,11 @@ AApSubsystem* AApSubsystem::Get(class UWorld* world) {
 }
 
 void AApSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase) {
-	FApConfigurationStruct config = FApConfigurationStruct::GetActiveConfig(GetWorld());
+	if (phase == ELifecyclePhase::CONSTRUCTION) {
+		if (!config.IsLoaded())
+			config = FApConfigurationStruct::GetActiveConfig(GetWorld());
+	}
+		
 	if (!config.Enabled) {
 		UE_LOG(LogApSubsystem, Warning, TEXT("Archipelago manually disabled by user config"));
 		return;
@@ -56,7 +60,7 @@ void AApSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase) {
 		check(contentRegistry)
 
 		UE_LOG(LogApSubsystem, Display, TEXT("Initiating Archipelago server connection in background..."));
-		ConnectToArchipelago(config);
+		ConnectToArchipelago();
 
 		mappingSubsystem = AApMappingsSubsystem::Get(GetWorld());
 
@@ -67,22 +71,36 @@ void AApSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase) {
 		}
 
 		FDateTime connectingStartedTime = FDateTime::Now();
-		FGenericPlatformProcess::ConditionalSleep([this, config, connectingStartedTime]() { return InitializeTick(config, connectingStartedTime); }, 0.5);
+		FGenericPlatformProcess::ConditionalSleep([this, connectingStartedTime]() { return InitializeTick(connectingStartedTime); }, 0.5);
 	} else if (phase == ELifecyclePhase::POST_INITIALIZATION) {
-		if (ConnectionState != EApConnectionState::Connected) {
-			FString message = FString::Printf(TEXT("Failed to connect to Archipelago server: \"%s\", for user \"%s\""), *config.Url, *config.Login);
+		if (ConnectionState == EApConnectionState::Connected) {\
+			TArray<TSubclassOf<UFGSchematic>> unlockedSchematics;
 
-			ChatMessageQueue.Enqueue(TPair<FString, FLinearColor>(message, FLinearColor::Red));
+			SManager->GetAllPurchasedSchematics(unlockedSchematics);
+
+			std::vector<int64> unlockedChecks;
+
+			for (TSubclassOf<UFGSchematic> schematic : unlockedSchematics) {
+				if (locationsPerMilestone.Contains(schematic)) {
+					for (FApNetworkItem item : locationsPerMilestone[schematic]) {
+						unlockedChecks.emplace_back(item.location);
+					}
+				}
+
+				//TODO add other location sources such as Mam, Shops etc
+			}
+
+			AP_SendItem(unlockedChecks);
 		}
 	}
 }
 
-bool AApSubsystem::InitializeTick(FApConfigurationStruct config, FDateTime connectingStartedTime) {
+bool AApSubsystem::InitializeTick(FDateTime connectingStartedTime) {
 	if (ConnectionState == EApConnectionState::Connecting) {
 		if ((FDateTime::Now() - connectingStartedTime).GetSeconds() > 15)
 			TimeoutConnection();
 		else
-			CheckConnectionState(config);
+			CheckConnectionState();
 	} 
 	if (ConnectionState == EApConnectionState::Connected) {
 		if (!hasLoadedRoomInfo)
@@ -98,18 +116,19 @@ bool AApSubsystem::InitializeTick(FApConfigurationStruct config, FDateTime conne
 
 		if (!mappingSubsystem->IsInitialized())
 			mappingSubsystem->InitializeAfterConnectingToAp();
-		
-		if (areScoutedLocationsReadyToParse && slotData.hasLoadedSlotData && mappingSubsystem->IsInitialized())
-			ParseScoutedItemsAndCreateRecipiesAndSchematics();
-		
-		return areRecipiesAndSchematicsInitialized;
-			return true;
 	}
 
-	return ConnectionState == EApConnectionState::ConnectionFailed;
+	if (!areRecipiesAndSchematicsInitialized 
+		&& areScoutedLocationsReadyToParse 
+		&& slotData.hasLoadedSlotData 
+		&& mappingSubsystem->IsInitialized())
+			ParseScoutedItemsAndCreateRecipiesAndSchematics();
+	
+	return ConnectionState == EApConnectionState::ConnectionFailed 
+		|| (areRecipiesAndSchematicsInitialized && ConnectionState == EApConnectionState::Connected);
 }
 
-void AApSubsystem::ConnectToArchipelago(FApConfigurationStruct config) {
+void AApSubsystem::ConnectToArchipelago() {
 	std::string const uri = TCHAR_TO_UTF8(*config.Url);
 	std::string const user = TCHAR_TO_UTF8(*config.Login);
 	std::string const password = TCHAR_TO_UTF8(*config.Password);
@@ -159,22 +178,11 @@ void AApSubsystem::EndPlay(const EEndPlayReason::Type endPlayReason) {
 	AP_Shutdown();
 }
 
-
-void SendLocation(int64_t locationId) {
-	UE_LOG(LogArchipelagoCpp, Display, TEXT("Sending location id %s to server"), *UApUtils::FStr(locationId));
-	AP_SendItem(locationId);
-}
-
 void AApSubsystem::OnMamResearchCompleted(TSubclassOf<class UFGSchematic> schematic) {
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubSystem::OnResearchCompleted(schematic), MAM Research Completed"));
 
-	if (!locationsPerMamNode.Contains(schematic))
-		return;
 
-	for (auto& location : locationsPerMamNode[schematic])
-		SendLocation(location.location);
 }
-
 
 void AApSubsystem::OnSchematicCompleted(TSubclassOf<class UFGSchematic> schematic) {
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubSystem::OnSchematicCompleted(schematic)"));
@@ -184,13 +192,16 @@ void AApSubsystem::OnSchematicCompleted(TSubclassOf<class UFGSchematic> schemati
 	if (type != ESchematicType::EST_Milestone || !locationsPerMilestone.Contains(schematic))
 		return;
 
+	std::vector<int64> unlockedChecks;
+
 	for (auto& location : locationsPerMilestone[schematic])
-		SendLocation(location.location);
+		unlockedChecks.emplace_back(location.location);
+	
+	AP_SendItem(unlockedChecks);
 }
 
 void AApSubsystem::ItemClearCallback() {
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::ItemClearCallback()"));
-
 }
 
 void AApSubsystem::ItemReceivedCallback(int64 item, bool notify, bool isFromServer) {
@@ -205,6 +216,7 @@ void AApSubsystem::ItemReceivedCallback(int64 item, bool notify, bool isFromServ
 void AApSubsystem::LocationCheckedCallback(int64 id) {
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::LocationCheckedCallback(%i)"), id);
 
+	// TODO, can be used to sync in coop or handling !collects of other games
 }
 
 void AApSubsystem::SetReplyCallback(AP_SetReply setReply) {
@@ -243,8 +255,8 @@ void AApSubsystem::ParseSlotData(std::string json) {
 	AApSubsystem* self = AApSubsystem::Get();
 	bool success = FApSlotData::ParseSlotData(json, &self->slotData);
 	if (!success) {
-		FString jsonString(json.c_str());
-		AbortGame(FString::Printf(TEXT("Archipelago SlotData Invalid! %s"), *jsonString));
+		FText jsonText = UApUtils::FText(json);
+		AbortGame(FText::Format(LOCTEXT("SlotDataInvallid", "Archipelago SlotData Invalid! %s"), jsonText));
 	}
 }
 
@@ -256,7 +268,7 @@ void AApSubsystem::LoadRoomInfo() {
 	if (roomSeed.IsEmpty())
 		roomSeed = seedName;
 	else if (roomSeed != seedName)
-		AbortGame("Room seed does not match seed of save, this save does not belong to the multiworld your connecting to");
+		AbortGame(LOCTEXT("RoomSeedMissmatch", "Room seed does not match seed of save, this save does not belong to the multiworld your connecting to"));
 
 	hasLoadedRoomInfo = true;
 }
@@ -341,7 +353,7 @@ void AApSubsystem::ReceiveItems()
 	}
 }
 
-void AApSubsystem::CheckConnectionState(FApConfigurationStruct config) {
+void AApSubsystem::CheckConnectionState() {
 	if (ConnectionState == EApConnectionState::Connecting) {
 		AP_ConnectionStatus status = AP_GetConnectionStatus();
 
@@ -353,9 +365,6 @@ void AApSubsystem::CheckConnectionState(FApConfigurationStruct config) {
 			ConnectionState = EApConnectionState::ConnectionFailed;
 			ConnectionStateDescription = LOCTEXT("ConnectionRefused", "Connection refused by server. Check your connection details and load the save again.");
 			UE_LOG(LogApSubsystem, Error, TEXT("AApSubsystem::CheckConnectionState(), ConnectionRefused"));
-			FString message = FString::Printf(TEXT("Failed to connect to Archipelago server: \"%s\", for user \"%s\""), *config.Url, *config.Login);
-
-			ChatMessageQueue.Enqueue(TPair<FString, FLinearColor>(message, FLinearColor::Red));
 		}
 	}
 }
@@ -368,9 +377,10 @@ void AApSubsystem::ParseScoutedItemsAndCreateRecipiesAndSchematics() {
 	for (auto& location : scoutedLocations) {
 		if (location.locationName.StartsWith("Hub")) {
 			FString milestone = location.locationName.Left(location.locationName.Find(","));
+			FString uniqueMilestone = milestone + TEXT("_") + roomSeed;
 
 			if (!schematicsPerMilestone.Contains(milestone)) {
-				TSubclassOf<UFGSchematic> schematic = UApUtils::FindOrCreateClass(TEXT("/Archipelago/"), *milestone, UFGSchematic::StaticClass());
+				TSubclassOf<UFGSchematic> schematic = UApUtils::FindOrCreateClass(TEXT("/Archipelago/"), *uniqueMilestone, UFGSchematic::StaticClass());
 				schematicsPerMilestone.Add(milestone, schematic);
 			}
 
@@ -841,14 +851,12 @@ void AApSubsystem::PostLoadGame_Implementation(int32 saveVersion, int32 gameVers
 		areScoutedLocationsReadyToParse = true;
 }
 
-void AApSubsystem::GatherDependencies_Implementation(TArray<UObject*>& out_dependentObjects) {
-	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::GatherDependencies_Implementation()"));
-}
+void AApSubsystem::AbortGame(FText reason) {
+	UWorld* world = GEngine->GameViewport->GetWorld();
+	UApGameInstanceModule* gameInstance = UApUtils::GetGameInstanceModule(world);
+	APlayerController* player = world->GetFirstPlayerController();
 
-void AApSubsystem::AbortGame(FString reason) {
-	UE_LOG(LogApSubsystem, Fatal, TEXT("Archipelago Initailization failed: %s"), *reason);
-	// TODO kick people out to the main menu screen or something, this keeps them hanging forever on the loading screen with no clear indication
-	// Switched to Fatal for now so it closes the game, but there must be a better way
+	gameInstance->YeetToMainMenu(player, reason);
 }
 
 #pragma optimize("", on)

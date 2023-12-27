@@ -87,7 +87,7 @@ protected:
 	virtual void PostSaveGame_Implementation(int32 saveVersion, int32 gameVersion) override;
 	virtual void PreLoadGame_Implementation(int32 saveVersion, int32 gameVersion) override {};
 	virtual void PostLoadGame_Implementation(int32 saveVersion, int32 gameVersion) override;
-	virtual void GatherDependencies_Implementation(TArray<UObject*>& out_dependentObjects) override;
+	virtual void GatherDependencies_Implementation(TArray<UObject*>& out_dependentObjects) override {};
 	virtual bool NeedTransform_Implementation() override { return false; };
 	virtual bool ShouldSave_Implementation() const override { return true; };
 	// End IFSaveInterface
@@ -120,6 +120,12 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FORCEINLINE FApSlotData GetSlotData() const { return slotData; };
 
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	FApConfigurationStruct GetConfig() const { return config; };
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	bool IsInitialized() const { return areRecipiesAndSchematicsInitialized; };
+
 	FString GetApItemName(int64 itemId);
 
 	void SetGiftBoxState(bool open);
@@ -128,7 +134,6 @@ public:
 	void RejectGift(FString id);
 	void AcceptGift(FString id);
 	TMap<FApPlayer, FApGiftBoxMetaData> GetAcceptedTraitsPerPlayer();
-
 	TArray<FApPlayer> GetAllApPlayers();
 
 private:
@@ -169,8 +174,10 @@ private:
 	// UPROPERTY(SaveGame)
 	// int64 lastReceivedApNetworkItem
 
+	UPROPERTY(SaveGame)
+	FApConfigurationStruct config;
+
 	TMap<TSubclassOf<class UFGSchematic>, TArray<FApNetworkItem>> locationsPerMilestone;
-	TMap<TSubclassOf<class UFGSchematic>, TArray<FApNetworkItem>> locationsPerMamNode;
 	TMap<int64, TSubclassOf<class UFGSchematic>> ItemSchematics;
 	TQueue<TTuple<int64, bool>> ReceivedItems;
 	TQueue<TPair<FString, FLinearColor>> ChatMessageQueue;
@@ -179,13 +186,14 @@ private:
 	bool areScoutedLocationsReadyToParse;
 	bool areRecipiesAndSchematicsInitialized;
 	bool hasLoadedRoomInfo;
+	bool canRecieveChat;
 
-	bool InitializeTick(FApConfigurationStruct config, FDateTime connectingStartedTime);
+	bool InitializeTick(FDateTime connectingStartedTime);
 
-	void ConnectToArchipelago(FApConfigurationStruct config);
+	void ConnectToArchipelago();
 	void TimeoutConnection();
 
-	void CheckConnectionState(FApConfigurationStruct config);
+	void CheckConnectionState();
 	void ScoutArchipelagoItems();
 	void ParseScoutedItemsAndCreateRecipiesAndSchematics();
 	void LoadRoomInfo();
@@ -208,5 +216,5 @@ private:
 	UFUNCTION() //required for event binding
 	void OnSchematicCompleted(TSubclassOf<class UFGSchematic> schematic);
 
-	static void AbortGame(FString reason);
+	static void AbortGame(FText reason);
 };

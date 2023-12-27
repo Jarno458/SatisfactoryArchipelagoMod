@@ -5,6 +5,7 @@
 #include "Resources/FGItemDescriptor.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "ApBlueprintDataBridge.h"
+#include "Module/ApGameInstanceModule.h"
 
 #include "ApUtils.generated.h"
 
@@ -36,6 +37,8 @@ public:
 	static UClass* FindOrCreateClass(const TCHAR* packageName, const TCHAR* className, UClass* parentClass);
 
 	static FString GetImagePathForItem(UFGItemDescriptor* item);
+
+	static UApGameInstanceModule* GetGameInstanceModule(UObject* worldContext);
 
 	UFUNCTION(BlueprintCallable)
 	static UApBlueprintDataBridge* GetBlueprintDataBridge(UObject* worldContext);

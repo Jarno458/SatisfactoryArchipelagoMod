@@ -2,6 +2,8 @@
 
 #include "CoreMinimal.h"
 
+#include "FGBlueprintFunctionLibrary.h"
+
 #include "ApBlueprintDataBridge.h"
 #include "Module/GameInstanceModule.h"
 
@@ -23,4 +25,6 @@ public:
 	// Data Asset populated in Blueprint that contains references to assets so Cpp can refer to them
 	UPROPERTY(EditDefaultsOnly, Category = "Archipelago")
 	UApBlueprintDataBridge* BlueprintData;
+
+	void YeetToMainMenu(APlayerController* player, FText reason);
 };

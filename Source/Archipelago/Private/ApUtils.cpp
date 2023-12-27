@@ -38,11 +38,17 @@ FString UApUtils::GetImagePathForItem(UFGItemDescriptor* item) {
 	return item->GetBigIconFromInstance()->GetPathName();
 }
 
-UApBlueprintDataBridge* UApUtils::GetBlueprintDataBridge(UObject* worldContext) {
+UApGameInstanceModule* UApUtils::GetGameInstanceModule(UObject* worldContext) {
 	if (const auto world = worldContext->GetWorld()) {
 		const auto moduleManager = world->GetGameInstance()->GetSubsystem<UGameInstanceModuleManager>();
 		const auto module = moduleManager->FindModule("Archipelago");
-		const auto modModule = Cast<UApGameInstanceModule>(module);
+		return Cast<UApGameInstanceModule>(module);
+	}
+	return nullptr;
+}
+
+UApBlueprintDataBridge* UApUtils::GetBlueprintDataBridge(UObject* worldContext) {
+	if (const auto modModule = UApUtils::GetGameInstanceModule(worldContext)) {
 		return modModule->BlueprintData;
 	}
 	return nullptr;
