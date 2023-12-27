@@ -30,7 +30,7 @@ bool FApSlotData::ParseSlotData(std::string json, FApSlotData* data) {
 			TMap<FString, int> costs;
 
 			for (TPair<FString, TSharedPtr<FJsonValue>> cost : milestone->AsObject()->Values) {
-				int itemId = FCString::Atoi(*cost.Key); //Is 32 bit int, but should be fine as our id's are own game ids are in the 32 bit range
+				int64 itemId = FCString::Atoi64(*cost.Key);
 
 				costs.Add(UApMappings::ItemIdToGameItemDescriptor[itemId], cost.Value->AsNumber());
 			}
