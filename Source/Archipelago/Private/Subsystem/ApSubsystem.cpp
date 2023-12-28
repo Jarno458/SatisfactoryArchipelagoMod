@@ -308,7 +308,8 @@ void AApSubsystem::Tick(float DeltaTime) {
 	if (ConnectionState != EApConnectionState::Connected)
 		return;
 
-	ReceiveItems();
+	if (portalSubsystem->IsInitialized())
+		ReceiveItems();
 
 	HandleAPMessages();
 	

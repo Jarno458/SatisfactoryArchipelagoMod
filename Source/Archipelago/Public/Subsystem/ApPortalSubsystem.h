@@ -54,12 +54,13 @@ private:
 	TQueue<FInventoryItem, EQueueMode::Mpsc> StartupQueue;
 
 	int lastUsedPortalIndex;
-
-	volatile bool isInitialized;
+	bool isInitialized;
 
 public:
 	UPROPERTY(BlueprintReadOnly) //blueprint likely dont need this
 	TSet<const AApPortal*> BuiltPortals;
+
+	FORCEINLINE bool IsInitialized() const { return isInitialized; };
 
 	void Enqueue(TSubclassOf<UFGItemDescriptor> cls, int amount);
 

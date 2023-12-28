@@ -45,10 +45,13 @@ void AApPortalSubsystem::Tick(float dt) {
 	//	return;
 	//}
 
-	if (!isInitialized)
+	if (!isInitialized) {
 		RebuildQueueFromSave();
-	else
+
+		isInitialized = true;
+	} else {
 		ProcessOutputQueue();
+	}
 }
 
 void AApPortalSubsystem::ProcessOutputQueue() {
@@ -70,10 +73,7 @@ void AApPortalSubsystem::ProcessOutputQueue() {
 
 void AApPortalSubsystem::Enqueue(TSubclassOf<UFGItemDescriptor> cls, int amount) {
 	for (size_t i = 0; i < amount; i++) {
-		if (isInitialized)
-			OutputQueue.Enqueue(FInventoryItem(cls));
-		else
-			StartupQueue.Enqueue(FInventoryItem(cls));
+		OutputQueue.Enqueue(FInventoryItem(cls));
 	}
 }
 
@@ -118,19 +118,14 @@ void AApPortalSubsystem::StoreQueueForSave() {
 }
 
 void AApPortalSubsystem::RebuildQueueFromSave() {
+	OutputQueue.Empty();
+
 	for (int64 itemId : OutputQueueSave) {
 		TSubclassOf<UFGItemDescriptor> cls = StaticCastSharedRef<FApItem>(mappings->ApItems[itemId])->Class;
 		OutputQueue.Enqueue(FInventoryItem(cls));
 	}
 
 	OutputQueueSave.Empty();
-
-	isInitialized = true;
-
-	FInventoryItem item;
-	while (StartupQueue.Dequeue(item)) {
-		OutputQueue.Enqueue(item);
-	}
 }
 
 #pragma optimize("", on)

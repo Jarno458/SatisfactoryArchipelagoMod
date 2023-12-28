@@ -319,7 +319,10 @@ void AApGiftingSubsystem::Tick(float dt) {
 	Super::Tick(dt);
 
 	if (!apInitialized) {
-		if (ap->ConnectionState == EApConnectionState::Connected && mappingSubsystem->IsInitialized()) {
+		if (ap->ConnectionState == EApConnectionState::Connected 
+			&& mappingSubsystem->IsInitialized() 
+			&& portalSubSystem->IsInitialized())
+		{
 			LoadMappings();
 
 			ap->SetGiftBoxState(true);
@@ -329,8 +332,7 @@ void AApGiftingSubsystem::Tick(float dt) {
 	} else {
 		FDateTime currentTime = FDateTime::Now();
 
-		if ((currentTime - lastPoll).GetSeconds() >= pollInterfall)
-		{
+		if ((currentTime - lastPoll).GetSeconds() >= pollInterfall) {
 			lastPoll = currentTime;
 
 			UpdateAcceptedGifts();
