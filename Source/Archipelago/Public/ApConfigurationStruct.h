@@ -24,6 +24,9 @@ public:
     UPROPERTY(BlueprintReadWrite)
     bool Debugging{};
 
+    UPROPERTY(BlueprintReadWrite)
+    bool ForceOverride{};
+
 	 /* Retrieves active configuration value and returns object of this struct containing it */
     static FApConfigurationStruct GetActiveConfig(UObject* WorldContext) {
         FApConfigurationStruct ConfigStruct{};

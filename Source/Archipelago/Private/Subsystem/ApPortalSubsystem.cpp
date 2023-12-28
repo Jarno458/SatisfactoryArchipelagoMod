@@ -13,7 +13,7 @@ AApPortalSubsystem* AApPortalSubsystem::Get() {
 
 AApPortalSubsystem* AApPortalSubsystem::Get(class UWorld* world) {
 	USubsystemActorManager* SubsystemActorManager = world->GetSubsystem<USubsystemActorManager>();
-	check(SubsystemActorManager);
+	fgcheck(SubsystemActorManager);
 
 	return SubsystemActorManager->GetSubsystemActor<AApPortalSubsystem>();
 }
@@ -31,19 +31,24 @@ void AApPortalSubsystem::BeginPlay() {
 
 	UE_LOG(LogApPortalSubsystem, Display, TEXT("AApPortalSubsystem::BeginPlay()"));
 
-	auto world = GetWorld();
+	UWorld* world = GetWorld();
 	giftingSubsystem = AApGiftingSubsystem::Get(world);
+	mappings = AApMappingsSubsystem::Get(world);
+
 	ap = AApSubsystem::Get(world);
 }
 
 void AApPortalSubsystem::Tick(float dt) {
 	Super::Tick(dt);
 
-	if (!HasAuthority() || ((AApSubsystem*)ap)->ConnectionState != EApConnectionState::Connected) {
-		return;
-	}
+	//if (!HasAuthority()) {
+	//	return;
+	//}
 
-	ProcessOutputQueue();
+	if (!isInitialized)
+		RebuildQueueFromSave();
+	else
+		ProcessOutputQueue();
 }
 
 void AApPortalSubsystem::ProcessOutputQueue() {
@@ -65,7 +70,10 @@ void AApPortalSubsystem::ProcessOutputQueue() {
 
 void AApPortalSubsystem::Enqueue(TSubclassOf<UFGItemDescriptor> cls, int amount) {
 	for (size_t i = 0; i < amount; i++) {
-		OutputQueue.Enqueue(FInventoryItem(cls));
+		if (isInitialized)
+			OutputQueue.Enqueue(FInventoryItem(cls));
+		else
+			StartupQueue.Enqueue(FInventoryItem(cls));
 	}
 }
 
@@ -85,6 +93,44 @@ void AApPortalSubsystem::UnRegisterPortal(const AApPortal* portal) {
 	FInventoryItem item;
 	while (portal->outputQueue.Dequeue(item))
 		OutputQueue.Enqueue(item);
+}
+
+
+void AApPortalSubsystem::PreSaveGame_Implementation(int32 saveVersion, int32 gameVersion) {
+	StoreQueueForSave();
+}
+
+void AApPortalSubsystem::PostSaveGame_Implementation(int32 saveVersion, int32 gameVersion) {
+	RebuildQueueFromSave();
+}
+
+void AApPortalSubsystem::StoreQueueForSave() {
+	FInventoryItem item;
+
+	for (const AApPortal* portal : BuiltPortals) {
+		while (portal->outputQueue.Dequeue(item)) {
+			OutputQueueSave.Add(mappings->ItemClassToItemId[item.GetItemClass()]);
+		}
+	}
+	while (OutputQueue.Dequeue(item)) {
+		OutputQueueSave.Add(mappings->ItemClassToItemId[item.GetItemClass()]);
+	}
+}
+
+void AApPortalSubsystem::RebuildQueueFromSave() {
+	for (int64 itemId : OutputQueueSave) {
+		TSubclassOf<UFGItemDescriptor> cls = StaticCastSharedRef<FApItem>(mappings->ApItems[itemId])->Class;
+		OutputQueue.Enqueue(FInventoryItem(cls));
+	}
+
+	OutputQueueSave.Empty();
+
+	isInitialized = true;
+
+	FInventoryItem item;
+	while (StartupQueue.Dequeue(item)) {
+		OutputQueue.Enqueue(item);
+	}
 }
 
 #pragma optimize("", on)

@@ -290,7 +290,7 @@ AApGiftingSubsystem* AApGiftingSubsystem::Get() {
 
 AApGiftingSubsystem* AApGiftingSubsystem::Get(class UWorld* world) {
 	USubsystemActorManager* SubsystemActorManager = world->GetSubsystem<USubsystemActorManager>();
-	check(SubsystemActorManager);
+	fgcheck(SubsystemActorManager);
 
 	return SubsystemActorManager->GetSubsystemActor<AApGiftingSubsystem>();
 }
@@ -344,7 +344,7 @@ void AApGiftingSubsystem::LoadMappings() {
 	TMap<FString, float> defaultSinkPointsPerTrait;
 
 	for (TPair<FString, int64> traitDefault : TraitDefaultItemIds) {
-		check(mappingSubsystem->ApItems.Contains(traitDefault.Value) && mappingSubsystem->ApItems[traitDefault.Value]->Type == EItemType::Item);
+		fgcheck(mappingSubsystem->ApItems.Contains(traitDefault.Value) && mappingSubsystem->ApItems[traitDefault.Value]->Type == EItemType::Item);
 
 		TSharedRef<FApItem> itemInfo = StaticCastSharedRef<FApItem>(mappingSubsystem->ApItems[traitDefault.Value]);
 
@@ -357,7 +357,7 @@ void AApGiftingSubsystem::LoadMappings() {
 		if (!TraitsPerItemRatings.Contains(itemInfoMapping.Key))
 			continue;
 
-		check(itemInfoMapping.Value->Type == EItemType::Item)
+		fgcheck(itemInfoMapping.Value->Type == EItemType::Item)
 
 		TSharedRef<FApItem> itemInfo = StaticCastSharedRef<FApItem>(itemInfoMapping.Value);
 		TSubclassOf<UFGItemDescriptor> itemClass = itemInfo->Class;
@@ -370,7 +370,7 @@ void AApGiftingSubsystem::LoadMappings() {
 		for (TPair<FString, float> traitRelativeRating : TraitsPerItemRatings[itemInfoMapping.Key]) {
 			FString traitName = traitRelativeRating.Key;
 
-			check(defaultSinkPointsPerTrait.Contains(traitName));
+			fgcheck(defaultSinkPointsPerTrait.Contains(traitName));
 			float traitValue = GetTraitValue(itemValue, defaultSinkPointsPerTrait[traitName], traitRelativeRating.Value);
 			calucatedTraitsForItem.Add(traitName, traitValue);
 
@@ -378,7 +378,7 @@ void AApGiftingSubsystem::LoadMappings() {
 				traitName = TraitParents[traitName];
 
 				if (!calucatedTraitsForItem.Contains(traitName)) {
-					check(defaultSinkPointsPerTrait.Contains(traitName));
+					fgcheck(defaultSinkPointsPerTrait.Contains(traitName));
 					traitValue = GetTraitValue(itemValue, defaultSinkPointsPerTrait[traitName], traitRelativeRating.Value);
 					calucatedTraitsForItem.Add(traitName, traitValue);
 				}

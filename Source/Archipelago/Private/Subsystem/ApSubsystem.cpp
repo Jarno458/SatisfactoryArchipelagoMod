@@ -28,17 +28,12 @@ AApSubsystem* AApSubsystem::Get() {
 
 AApSubsystem* AApSubsystem::Get(class UWorld* world) {
 	USubsystemActorManager* SubsystemActorManager = world->GetSubsystem<USubsystemActorManager>();
-	check(SubsystemActorManager);
+	fgcheck(SubsystemActorManager);
 
 	return SubsystemActorManager->GetSubsystemActor<AApSubsystem>();
 }
 
 void AApSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase) {
-	if (phase == ELifecyclePhase::CONSTRUCTION) {
-		if (!config.IsLoaded())
-			config = FApConfigurationStruct::GetActiveConfig(GetWorld());
-	}
-		
 	if (!config.Enabled) {
 		UE_LOG(LogApSubsystem, Warning, TEXT("Archipelago manually disabled by user config"));
 		return;
@@ -54,16 +49,17 @@ void AApSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase) {
 			UE_LOG(LogApSubsystem, Warning, TEXT("Archipelago Subsystem spawned/replicated on client, this is untested behavior. Keeping tick disabled."));
 		}
 
-		contentLibSubsystem = GetWorld()->GetGameInstance()->GetSubsystem<UContentLibSubsystem>();
-		check(contentLibSubsystem)
-		contentRegistry = UModContentRegistry::Get(GetWorld());
-		check(contentRegistry)
-
 		UE_LOG(LogApSubsystem, Display, TEXT("Initiating Archipelago server connection in background..."));
 		ConnectToArchipelago();
 
+		contentLibSubsystem = GetWorld()->GetGameInstance()->GetSubsystem<UContentLibSubsystem>();
+		fgcheck(contentLibSubsystem)
+		contentRegistry = UModContentRegistry::Get(GetWorld());
+		fgcheck(contentRegistry)
 		mappingSubsystem = AApMappingsSubsystem::Get(GetWorld());
+		fgcheck(mappingSubsystem)
 
+		//TODO: generatic AP Items can be totally hardcoded outside of the initialization phase
 		UE_LOG(LogApSubsystem, Display, TEXT("Generating schematics from AP Item IDs..."));
 		for (TPair<int64, TSharedRef<FApItemBase>> apitem : mappingSubsystem->ApItems) {
 			if (apitem.Value->Type == EItemType::Recipe || apitem.Value->Type == EItemType::Building)
@@ -73,24 +69,13 @@ void AApSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase) {
 		FDateTime connectingStartedTime = FDateTime::Now();
 		FGenericPlatformProcess::ConditionalSleep([this, connectingStartedTime]() { return InitializeTick(connectingStartedTime); }, 0.5);
 	} else if (phase == ELifecyclePhase::POST_INITIALIZATION) {
-		if (ConnectionState == EApConnectionState::Connected) {\
+		if (ConnectionState == EApConnectionState::Connected) {
 			TArray<TSubclassOf<UFGSchematic>> unlockedSchematics;
 
 			SManager->GetAllPurchasedSchematics(unlockedSchematics);
 
-			std::vector<int64> unlockedChecks;
-
-			for (TSubclassOf<UFGSchematic> schematic : unlockedSchematics) {
-				if (locationsPerMilestone.Contains(schematic)) {
-					for (FApNetworkItem item : locationsPerMilestone[schematic]) {
-						unlockedChecks.emplace_back(item.location);
-					}
-				}
-
-				//TODO add other location sources such as Mam, Shops etc
-			}
-
-			AP_SendItem(unlockedChecks);
+			for (TSubclassOf<UFGSchematic> schematic : unlockedSchematics)
+				OnSchematicCompleted(schematic);
 		}
 	}
 }
@@ -179,7 +164,7 @@ void AApSubsystem::EndPlay(const EEndPlayReason::Type endPlayReason) {
 }
 
 void AApSubsystem::OnMamResearchCompleted(TSubclassOf<class UFGSchematic> schematic) {
-	UE_LOG(LogApSubsystem, Display, TEXT("AApSubSystem::OnResearchCompleted(schematic), MAM Research Completed"));
+	UE_LOG(LogApSubsystem, Display, TEXT("AApSubSystem::OnResearchCompleted(schematic)"));
 
 
 }
@@ -193,15 +178,27 @@ void AApSubsystem::OnSchematicCompleted(TSubclassOf<class UFGSchematic> schemati
 		return;
 
 	std::vector<int64> unlockedChecks;
+	std::vector<int64> locationHintsToPublish;
 
-	for (auto& location : locationsPerMilestone[schematic])
+	for (auto& location : locationsPerMilestone[schematic]) {
 		unlockedChecks.emplace_back(location.location);
-	
+
+		if (location.player != currentPlayerSlot)
+			locationHintsToPublish.emplace_back(location.location);
+	}
+
+	//TODO add other location sources such as Mam, Shops etc
+
+	AP_SendLocationScouts(locationHintsToPublish, 2);
 	AP_SendItem(unlockedChecks);
 }
 
 void AApSubsystem::ItemClearCallback() {
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::ItemClearCallback()"));
+
+	AApSubsystem* self = AApSubsystem::Get();
+
+	self->lastReceivedItemIndex = 0;
 }
 
 void AApSubsystem::ItemReceivedCallback(int64 item, bool notify, bool isFromServer) {
@@ -230,6 +227,9 @@ void AApSubsystem::LocationScoutedCallback(std::vector<AP_NetworkItem> scoutedLo
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::LocationScoutedCallback(vector[%i])"), scoutedLocations.size());
 
 	AApSubsystem* self = AApSubsystem::Get();
+
+	if (!self->scoutedLocations.IsEmpty())
+		return;
 
 	self->scoutedLocations = TArray<FApNetworkItem>();
 
@@ -350,6 +350,8 @@ void AApSubsystem::ReceiveItems()
 				//TODO: find out how to award inventroy slots...
 			}
 		}
+
+		lastReceivedItemIndex++;
 	}
 }
 
@@ -416,7 +418,7 @@ void AApSubsystem::CreateSchematicBoundToItemId(int64 itemid, TSharedRef<FApReci
 	}
 
 	FString recipes = FString::Join(recipesToUnlock, TEXT("\", \""));
-	FString name = FString::Printf(TEXT("AP_ItemId_%i_%s"), itemid, *roomSeed);
+	FString name = FString::Printf(TEXT("AP_ItemId_%i"), itemid);
 	// https://raw.githubusercontent.com/budak7273/ContentLib_Documentation/main/JsonSchemas/CL_Schematic.json
 	FString json = FString::Printf(TEXT(R"({
 		"Name": "%s",
@@ -849,6 +851,11 @@ void AApSubsystem::PostLoadGame_Implementation(int32 saveVersion, int32 gameVers
 
 	if (!scoutedLocations.IsEmpty())
 		areScoutedLocationsReadyToParse = true;
+
+	FApConfigurationStruct modConfig = FApConfigurationStruct::GetActiveConfig(GetWorld());
+	if (!config.IsLoaded() || modConfig.ForceOverride)
+		config = modConfig;
+	config.Debugging = modConfig.Debugging;
 }
 
 void AApSubsystem::AbortGame(FText reason) {

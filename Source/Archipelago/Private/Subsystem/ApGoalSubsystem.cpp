@@ -17,7 +17,7 @@ AApGoalSubsystem* AApGoalSubsystem::Get() {
 
 AApGoalSubsystem* AApGoalSubsystem::Get(UWorld* world) {
 	USubsystemActorManager* SubsystemActorManager = world->GetSubsystem<USubsystemActorManager>();
-	check(SubsystemActorManager);
+	fgcheck(SubsystemActorManager);
 
 	return SubsystemActorManager->GetSubsystemActor<AApGoalSubsystem>();
 }

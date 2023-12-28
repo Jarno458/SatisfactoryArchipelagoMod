@@ -15,7 +15,7 @@ AApMappingsSubsystem* AApMappingsSubsystem::Get() {
 
 AApMappingsSubsystem* AApMappingsSubsystem::Get(class UWorld* world) {
 	USubsystemActorManager* SubsystemActorManager = world->GetSubsystem<USubsystemActorManager>();
-	check(SubsystemActorManager);
+	fgcheck(SubsystemActorManager);
 
 	return SubsystemActorManager->GetSubsystemActor<AApMappingsSubsystem>();
 }
@@ -161,30 +161,30 @@ UObject* AApMappingsSubsystem::FindAssetByName(TMap<FName, FAssetData> assets, F
 		assetName.RemoveFromStart("/Script/Engine.Blueprint'");
 
 		UBlueprintGeneratedClass* blueprint = LoadObject<UBlueprintGeneratedClass>(NULL, *assetName);
-		verify(blueprint != nullptr);
+		fgcheck(blueprint != nullptr);
 		return blueprint->GetDefaultObject();
 	} else {
 		FName key = FName(*assetName);
-		verify(assets.Contains(key));
+		fgcheck(assets.Contains(key));
 		return Cast<UBlueprintGeneratedClass>(assets[key].GetAsset())->GetDefaultObject();
 	}
 }
 
 UFGSchematic* AApMappingsSubsystem::GetSchematicByName(FString name) {
 	UObject* obj = FindAssetByName(TMap<FName, FAssetData>(), name);
-	verify(obj != nullptr);
+	fgcheck(obj != nullptr);
 	return Cast<UFGSchematic>(obj);
 }
 
 UFGRecipe* AApMappingsSubsystem::GetRecipeByName(TMap<FName, FAssetData> recipeAssets, FString name) {
 	UObject* obj = FindAssetByName(recipeAssets, name);
-	verify(obj != nullptr);
+	fgcheck(obj != nullptr);
 	return Cast<UFGRecipe>(obj);
 }
 
 UFGItemDescriptor* AApMappingsSubsystem::GetItemDescriptorByName(TMap<FName, FAssetData> itemDescriptorAssets, FString name) {
 	UObject* obj = FindAssetByName(itemDescriptorAssets, name);
-	verify(obj != nullptr);
+	fgcheck(obj != nullptr);
 	return Cast<UFGItemDescriptor>(obj);
 }
 

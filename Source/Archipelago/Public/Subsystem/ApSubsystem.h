@@ -170,9 +170,8 @@ private:
 	UPROPERTY(SaveGame)
 	TArray<FApNetworkItem> scoutedLocations;
 
-	// TODO
 	// UPROPERTY(SaveGame)
-	// int64 lastReceivedApNetworkItem
+	int lastReceivedItemIndex = 0;
 
 	UPROPERTY(SaveGame)
 	FApConfigurationStruct config;
