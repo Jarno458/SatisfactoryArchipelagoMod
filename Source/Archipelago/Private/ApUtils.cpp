@@ -24,13 +24,13 @@ FString UApUtils::FStr(int64 inInt) {
 	return FString(std::to_string(inInt).c_str());
 }
 
-UClass* UApUtils::FindOrCreateClass(const TCHAR* packageName, const TCHAR* className, UClass* parentClass) {
+TTuple<bool, UClass*> UApUtils::FindOrCreateClass(const TCHAR* packageName, const TCHAR* className, UClass* parentClass) {
 	if (auto found = FindObject<UClass>(FindPackage(nullptr, packageName), className, false)) {
 		UE_LOG(LogApUtils, Verbose, TEXT("Class %s already exists, returning that instead"), className);
-		return found;
+		return TTuple<bool, UClass*>(true, found);
 	} else {
 		UE_LOG(LogApUtils, Verbose, TEXT("Creating class %s in package %s"), className, packageName);
-		return FClassGenerator::GenerateSimpleClass(packageName, className, parentClass);
+		return TTuple<bool, UClass*>(false, FClassGenerator::GenerateSimpleClass(packageName, className, parentClass));
 	}
 }
 

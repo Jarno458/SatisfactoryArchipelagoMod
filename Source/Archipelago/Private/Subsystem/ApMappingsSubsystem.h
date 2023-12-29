@@ -145,6 +145,9 @@ public:
 
 	void InitializeAfterConnectingToAp();
 
+	UFUNCTION(BlueprintCallable)
+	void DispatchLifecycleEvent(ELifecyclePhase phase);
+
 private:
 	void LoadMappings();
 	void LoadItemMappings(TMap<FName, FAssetData> itemDescriptorAssets);

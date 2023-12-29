@@ -27,14 +27,20 @@ AApMappingsSubsystem::AApMappingsSubsystem() : Super() {
 	PrimaryActorTick.bStartWithTickEnabled = false;
 }
 
+void AApMappingsSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase) {
+	UE_LOG(LogApMappingsSubsystem, Display, TEXT("AApMappingsSubsystem::DispatchLifecycleEvent()"));
+
+	if (phase == ELifecyclePhase::CONSTRUCTION) {
+		ap = AApSubsystem::Get(GetWorld());
+
+		LoadMappings();
+	}
+}
+
 void AApMappingsSubsystem::BeginPlay() {
 	Super::BeginPlay();
 
 	UE_LOG(LogApMappingsSubsystem, Display, TEXT("AApMappingsSubsystem::BeginPlay()"));
-
-	ap = AApSubsystem::Get(GetWorld());
-
-	LoadMappings();
 }
 
 void AApMappingsSubsystem::LoadMappings() {

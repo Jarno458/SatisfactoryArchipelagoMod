@@ -14,9 +14,9 @@ struct ARCHIPELAGO_API FApPlayer
 	GENERATED_BODY()
 
 public:
-	UPROPERTY(BlueprintReadWrite)
+	UPROPERTY(BlueprintReadWrite, SaveGame)
 	int Team;
-	UPROPERTY(BlueprintReadWrite)
+	UPROPERTY(BlueprintReadWrite, SaveGame)
 	FString Name;
 
 	//Override the comparison operator

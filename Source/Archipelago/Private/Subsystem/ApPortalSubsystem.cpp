@@ -23,7 +23,7 @@ AApPortalSubsystem::AApPortalSubsystem() : Super() {
 
 	PrimaryActorTick.bCanEverTick = true;
 	PrimaryActorTick.bStartWithTickEnabled = true;
-	PrimaryActorTick.TickInterval = 0;
+	PrimaryActorTick.TickInterval = 0.05; //needs to thick atleast 13 times per seconds to keep up with a 780 belt
 }
 
 void AApPortalSubsystem::BeginPlay() {

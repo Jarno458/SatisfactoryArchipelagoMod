@@ -34,12 +34,15 @@ AApSubsystem* AApSubsystem::Get(class UWorld* world) {
 }
 
 void AApSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase) {
-	if (!config.Enabled) {
+	if (config.IsLoaded() && !config.Enabled) {
 		UE_LOG(LogApSubsystem, Warning, TEXT("Archipelago manually disabled by user config"));
 		return;
 	}
 
-	if (phase == ELifecyclePhase::INITIALIZATION) {
+	if (phase == ELifecyclePhase::CONSTRUCTION) {
+		if (!config.IsLoaded())
+			config = FApConfigurationStruct::GetActiveConfig(GetWorld());
+	} else if (phase == ELifecyclePhase::INITIALIZATION) {
 		// TODO_MULTIPLAYER calling HasAuthority crashes multiplayer client? too early?
 		// but we're using SpawnOnServer so why/how is client running this anyways
 		if (HasAuthority()) {
@@ -189,7 +192,8 @@ void AApSubsystem::OnSchematicCompleted(TSubclassOf<class UFGSchematic> schemati
 
 	//TODO add other location sources such as Mam, Shops etc
 
-	AP_SendLocationScouts(locationHintsToPublish, 2);
+	//Would like to autmagically hint out items but ut crashes for some reason
+	//AP_SendLocationScouts(locationHintsToPublish, 2);
 	AP_SendItem(unlockedChecks);
 }
 
@@ -198,7 +202,7 @@ void AApSubsystem::ItemClearCallback() {
 
 	AApSubsystem* self = AApSubsystem::Get();
 
-	self->lastReceivedItemIndex = 0;
+	self->currentItemIndex = 0;
 }
 
 void AApSubsystem::ItemReceivedCallback(int64 item, bool notify, bool isFromServer) {
@@ -213,6 +217,9 @@ void AApSubsystem::ItemReceivedCallback(int64 item, bool notify, bool isFromServ
 void AApSubsystem::LocationCheckedCallback(int64 id) {
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::LocationCheckedCallback(%i)"), id);
 
+	AApSubsystem* self = AApSubsystem::Get();
+
+	self->CheckedLocations.Enqueue(id);
 	// TODO, can be used to sync in coop or handling !collects of other games
 }
 
@@ -311,8 +318,10 @@ void AApSubsystem::Tick(float DeltaTime) {
 	if (portalSubsystem->IsInitialized())
 		ReceiveItems();
 
+	HandleCheckedLocations();
+
 	HandleAPMessages();
-	
+
 	if (!hasSentGoal) {
 		hasSentGoal = goalSubsystem->AreGoalsCompleted(&slotData);
 		if (hasSentGoal) {
@@ -327,6 +336,9 @@ void AApSubsystem::ReceiveItems()
 	// Consider processing only one queue item per tick for performance reasons
 	TTuple<int64, bool> item;
 	while (ReceivedItems.Dequeue(item)) {
+		if (++currentItemIndex < lastProcessedItemIndex)
+			continue;
+
 		int64 itemid = item.Key;
 		bool isFromServer = item.Value;
 
@@ -337,10 +349,9 @@ void AApSubsystem::ReceiveItems()
 		} else if (mappingSubsystem->ApItems.Contains(itemid)) {
 			if (mappingSubsystem->ApItems[itemid]->Type == EItemType::Item) {
 				if (isFromServer) {
-					//send directly to inventory
-
+					//TODO send directly to inventory
+					UE_LOG(LogApSubsystem, Error, TEXT("AApSubsystem::ReceiveItems(), This is where you should have gotten your item"));
 				} else {
-					//send to portal
 					TSubclassOf<UFGItemDescriptor> itemClass = StaticCastSharedRef<FApItem>(mappingSubsystem->ApItems[itemid])->Class;
 					int stackSize = UFGItemDescriptor::GetStackSize(itemClass);
 					portalSubsystem->Enqueue(itemClass, stackSize);
@@ -349,11 +360,48 @@ void AApSubsystem::ReceiveItems()
 				SManager->GiveAccessToSchematic(StaticCastSharedRef<FApSchematicItem>(mappingSubsystem->ApItems[itemid])->Class, nullptr);
 			} else if (mappingSubsystem->ApItems[itemid]->Type == EItemType::Specail) {
 				//TODO: find out how to award inventroy slots...
+				UE_LOG(LogApSubsystem, Error, TEXT("AApSubsystem::ReceiveItems(), This is where you should have gotten your inventory slots expanded but i dont know how"));
 			}
 		}
 
-		lastReceivedItemIndex++;
+		lastProcessedItemIndex++;
 	}
+}
+
+void AApSubsystem::HandleCheckedLocations() {
+	int64 location;
+
+	//could use a while loop but we now handle only 1 per tick for perform reasons as this opperation is quite slow
+	if (CheckedLocations.Dequeue(location)) {
+		for (TPair<TSubclassOf<UFGSchematic>, TArray<FApNetworkItem>>& itemPerMilestone : locationsPerMilestone) {
+			for (int index = 0; index < itemPerMilestone.Value.Num(); index++) {
+				FApNetworkItem networkItem = itemPerMilestone.Value[index];
+				if (networkItem.location == location) {
+					UFGSchematic* schematic = Cast<UFGSchematic>(itemPerMilestone.Key->GetDefaultObject());
+
+					if (schematic != nullptr && !IsCollected(schematic->mUnlocks[index])) {
+						UFGUnlockInfoOnly* unlockInfo = Cast<UFGUnlockInfoOnly>(schematic->mUnlocks[index]);
+
+						unlockInfo->mUnlockIconSmall = collectedIcon;
+
+						if (networkItem.player != currentPlayerSlot) {
+							unlockInfo->mUnlockName = FText::Format(LOCTEXT("Collected", "Collected: {0}"), unlockInfo->mUnlockName);
+							unlockInfo->mUnlockIconBig = collectedIcon;
+						}
+
+						if (!schematic->mUnlocks.ContainsByPredicate([this](UFGUnlock* unlock) { return !IsCollected(unlock); }))
+							SManager->GiveAccessToSchematic(itemPerMilestone.Key, nullptr);
+					}
+				}
+			}
+		}
+	}
+}
+
+bool AApSubsystem::IsCollected(UFGUnlock* unlock) {
+	UFGUnlockInfoOnly* unlockInfo = Cast<UFGUnlockInfoOnly>(unlock);
+
+	return unlockInfo != nullptr && unlockInfo->mUnlockIconSmall == collectedIcon;
 }
 
 void AApSubsystem::CheckConnectionState() {
@@ -375,68 +423,72 @@ void AApSubsystem::CheckConnectionState() {
 void AApSubsystem::ParseScoutedItemsAndCreateRecipiesAndSchematics() {
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::ParseScoutedItemsAndCreateRecipiesAndSchematics()"));
 
-	TMap<FString, TSubclassOf<UFGSchematic>> schematicsPerMilestone = TMap<FString, TSubclassOf<UFGSchematic>>();
+	TMap<FString, TTuple<bool, TSubclassOf<UFGSchematic>>> schematicsPerMilestone = TMap<FString, TTuple<bool, TSubclassOf<UFGSchematic>>>();
 
-	for (auto& location : scoutedLocations) {
+	for (FApNetworkItem& location : scoutedLocations) {
 		if (location.locationName.StartsWith("Hub")) {
 			FString milestone = location.locationName.Left(location.locationName.Find(","));
 			FString uniqueMilestone = milestone + TEXT("_") + roomSeed;
 
 			if (!schematicsPerMilestone.Contains(milestone)) {
-				TSubclassOf<UFGSchematic> schematic = UApUtils::FindOrCreateClass(TEXT("/Archipelago/"), *uniqueMilestone, UFGSchematic::StaticClass());
+				TTuple<bool, TSubclassOf<UFGSchematic>> schematic = UApUtils::FindOrCreateClass(TEXT("/Archipelago/"), *uniqueMilestone, UFGSchematic::StaticClass());
 				schematicsPerMilestone.Add(milestone, schematic);
 			}
 
-			if (!locationsPerMilestone.Contains(schematicsPerMilestone[milestone])) {
-				locationsPerMilestone.Add(schematicsPerMilestone[milestone], TArray<FApNetworkItem>{ location });
+			if (!locationsPerMilestone.Contains(schematicsPerMilestone[milestone].Value)) {
+				locationsPerMilestone.Add(schematicsPerMilestone[milestone].Value, TArray<FApNetworkItem>{ location });
 			} else {
-				locationsPerMilestone[schematicsPerMilestone[milestone]].Add(location);
+				locationsPerMilestone[schematicsPerMilestone[milestone].Value].Add(location);
 			}
 		}
 	}
 
 	UE_LOG(LogApSubsystem, Display, TEXT("Generating HUB milestones"));
 
-	for (auto& itemPerMilestone : locationsPerMilestone) {
-		FString schematicName;
-		for (auto schematicAndName : schematicsPerMilestone) {
-			if (itemPerMilestone.Key == schematicAndName.Value) {
-				schematicName = schematicAndName.Key;
+	for (TPair<TSubclassOf<UFGSchematic>, TArray<FApNetworkItem>>& itemPerMilestone : locationsPerMilestone) {
+		for (TPair<FString, TTuple<bool, TSubclassOf<UFGSchematic>>>& schematicAndName : schematicsPerMilestone) {
+			if (itemPerMilestone.Key == schematicAndName.Value.Value) {
+				if (!schematicAndName.Value.Key)
+					InitializaHubSchematic(schematicAndName.Key, itemPerMilestone.Key, itemPerMilestone.Value);
+
+				contentRegistry->RegisterSchematic(FName(TEXT("Archipelago")), itemPerMilestone.Key);
+
 				break;
 			}
 		}
-
-		CreateHubSchematic(schematicName, itemPerMilestone.Key, itemPerMilestone.Value);
 	}
 
 	areRecipiesAndSchematicsInitialized = true;
 }
 
 void AApSubsystem::CreateSchematicBoundToItemId(int64 itemid, TSharedRef<FApRecipeItem> apitem) {
-	TArray<FString> recipesToUnlock;
-	for (FApRecipeInfo recipe : apitem->Recipes) {
-		recipesToUnlock.Add(recipe.Class->GetName());
-	}
-
-	FString recipes = FString::Join(recipesToUnlock, TEXT("\", \""));
 	FString name = FString::Printf(TEXT("AP_ItemId_%i"), itemid);
-	// https://raw.githubusercontent.com/budak7273/ContentLib_Documentation/main/JsonSchemas/CL_Schematic.json
-	FString json = FString::Printf(TEXT(R"({
-		"Name": "%s",
-		"Type": "Custom",
-		"Recipes": [ "%s" ]
-	})"), *name, *recipes);
 
-	FContentLib_Schematic schematic = UCLSchematicBPFLib::GenerateCLSchematicFromString(json);
-	TSubclassOf<UFGSchematic> factorySchematic = UApUtils::FindOrCreateClass(TEXT("/Archipelago/"), *name, UFGSchematic::StaticClass());
-	UCLSchematicBPFLib::InitSchematicFromStruct(schematic, factorySchematic, contentLibSubsystem);
+	TTuple<bool, TSubclassOf<UFGSchematic>> foundSchematic = UApUtils::FindOrCreateClass(TEXT("/Archipelago/"), *name, UFGSchematic::StaticClass());
+	if (!foundSchematic.Key) {
+		TArray<FString> recipesToUnlock;
+		for (FApRecipeInfo recipe : apitem->Recipes) {
+			recipesToUnlock.Add(recipe.Class->GetName());
+		}
+
+		FString recipes = FString::Join(recipesToUnlock, TEXT("\", \""));
+		// https://raw.githubusercontent.com/budak7273/ContentLib_Documentation/main/JsonSchemas/CL_Schematic.json
+		FString json = FString::Printf(TEXT(R"({
+			"Name": "%s",
+			"Type": "Custom",
+			"Recipes": [ "%s" ]
+		})"), *name, *recipes);
+
+		FContentLib_Schematic schematic = UCLSchematicBPFLib::GenerateCLSchematicFromString(json);
+		UCLSchematicBPFLib::InitSchematicFromStruct(schematic, foundSchematic.Value, contentLibSubsystem);
+	}
 	
-	contentRegistry->RegisterSchematic(FName(TEXT("Archipelago")), factorySchematic);
+	contentRegistry->RegisterSchematic(FName(TEXT("Archipelago")), foundSchematic.Value);
 	
-	ItemSchematics.Add(itemid, factorySchematic);
+	ItemSchematics.Add(itemid, foundSchematic.Value);
 }
 
-void AApSubsystem::CreateHubSchematic(FString name, TSubclassOf<UFGSchematic> factorySchematic, TArray<FApNetworkItem> items) {
+void AApSubsystem::InitializaHubSchematic(FString name, TSubclassOf<UFGSchematic> factorySchematic, TArray<FApNetworkItem> items) {
 	int delimeterPos;
 	name.FindChar('-', delimeterPos);
 	int32 tier = FCString::Atoi(*name.Mid(delimeterPos - 1, 1));
@@ -469,8 +521,6 @@ void AApSubsystem::CreateHubSchematic(FString name, TSubclassOf<UFGSchematic> fa
 		schematic.InfoCards.Add(CreateUnlockInfoOnly(item));
 
 	UCLSchematicBPFLib::InitSchematicFromStruct(schematic, factorySchematic, contentLibSubsystem);
-
-	contentRegistry->RegisterSchematic(FName(TEXT("Archipelago")), factorySchematic);
 }
 
 FContentLib_UnlockInfoOnly AApSubsystem::CreateUnlockInfoOnly(FApNetworkItem item) {
@@ -597,13 +647,13 @@ void AApSubsystem::UpdateInfoOnlyUnlockWithGenericApInfo(FContentLib_UnlockInfoO
 	infoCard->mUnlockDescription = FText::Format(LOCTEXT("NetworkItemUnlockDescription", "This will unlock {ApPlayerName} {ApItemName} which is considered a {ProgressionType}."), Args);
 
 	if (item->flags == 0b001) {
-		infoCard->BigIcon = infoCard->SmallIcon = TEXT("/Archipelago/Assets/DerivedArt/AP-Purple.AP-Purple");
+		infoCard->BigIcon = infoCard->SmallIcon = TEXT("/Archipelago/Assets/DerivedArt/ApLogo/AP-Purple.AP-Purple");
 	} else if (item->flags == 0b010) {
-		infoCard->BigIcon = infoCard->SmallIcon = TEXT("/Archipelago/Assets/DerivedArt/AP-Blue.AP-Blue");
+		infoCard->BigIcon = infoCard->SmallIcon = TEXT("/Archipelago/Assets/DerivedArt/ApLogo/AP-Blue.AP-Blue");
 	} else if (item->flags == 0b100) {
-		infoCard->BigIcon = infoCard->SmallIcon = TEXT("/Archipelago/Assets/DerivedArt/AP-Red.AP-Red");
+		infoCard->BigIcon = infoCard->SmallIcon = TEXT("/Archipelago/Assets/DerivedArt/ApLogo/AP-Red.AP-Red");
 	} else {
-		infoCard->BigIcon = infoCard->SmallIcon = TEXT("/Archipelago/Assets/DerivedArt/AP-Cyan.AP-Cyan");
+		infoCard->BigIcon = infoCard->SmallIcon = TEXT("/Archipelago/Assets/DerivedArt/ApLogo/AP-Cyan.AP-Cyan");
 	}
 }
 
@@ -834,11 +884,11 @@ void AApSubsystem::PostSaveGame_Implementation(int32 saveVersion, int32 gameVers
 	saveSlotDataHubLayout.Empty();
 }
 
+//TODO fix is now fired when loading a fresh save
 void AApSubsystem::PostLoadGame_Implementation(int32 saveVersion, int32 gameVersion) {
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::PostLoadGame_Implementation(saveVersion: %i, gameVersion: %i)"), saveVersion, gameVersion);
 
-	if (!saveSlotDataHubLayout.IsEmpty() && slotData.numberOfChecksPerMilestone > 0)
-	{
+	if (!saveSlotDataHubLayout.IsEmpty() && slotData.numberOfChecksPerMilestone > 0)	{
 		for (FApSaveableHubLayout hubLayout : saveSlotDataHubLayout) {
 			if ((slotData.hubLayout.Num() - 1) < hubLayout.tier)
 				slotData.hubLayout.Add(TArray<TMap<FString, int>>());

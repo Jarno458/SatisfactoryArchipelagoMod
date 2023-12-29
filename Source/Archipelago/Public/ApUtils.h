@@ -34,7 +34,7 @@ public:
 	static FString FStr(int64 inInt);
 
 	// Wrapper for FClassGenerator::GenerateSimpleClass that returns existing classes instead of crashing by creating new ones
-	static UClass* FindOrCreateClass(const TCHAR* packageName, const TCHAR* className, UClass* parentClass);
+	static TTuple<bool, UClass*> FindOrCreateClass(const TCHAR* packageName, const TCHAR* className, UClass* parentClass);
 
 	static FString GetImagePathForItem(UFGItemDescriptor* item);
 

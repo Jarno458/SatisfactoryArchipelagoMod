@@ -34,6 +34,7 @@
 #include "Reflection/ClassGenerator.h"
 #include "Buildables/FGBuildable.h"
 #include "Buildables/FGBuildableAutomatedWorkBench.h"
+#include "Unlocks/FGUnlockInfoOnly.h"
 
 #include "ApConfigurationStruct.h"
 #include "Data/ApSlotData.h"
@@ -79,8 +80,6 @@ protected:
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;
 	virtual void EndPlay(const EEndPlayReason::Type endPlayReason) override;
-
-	void ReceiveItems();
 
 	// Begin IFGSaveInterface
 	virtual void PreSaveGame_Implementation(int32 saveVersion, int32 gameVersion) override;
@@ -170,8 +169,9 @@ private:
 	UPROPERTY(SaveGame)
 	TArray<FApNetworkItem> scoutedLocations;
 
-	// UPROPERTY(SaveGame)
-	int lastReceivedItemIndex = 0;
+	int currentItemIndex = 0;
+	UPROPERTY(SaveGame)
+	int lastProcessedItemIndex = 0;
 
 	UPROPERTY(SaveGame)
 	FApConfigurationStruct config;
@@ -179,7 +179,10 @@ private:
 	TMap<TSubclassOf<class UFGSchematic>, TArray<FApNetworkItem>> locationsPerMilestone;
 	TMap<int64, TSubclassOf<class UFGSchematic>> ItemSchematics;
 	TQueue<TTuple<int64, bool>> ReceivedItems;
+	TQueue<int64> CheckedLocations;
 	TQueue<TPair<FString, FLinearColor>> ChatMessageQueue;
+
+	UTexture2D* collectedIcon = LoadObject<UTexture2D>(nullptr, TEXT("/Archipelago/Assets/SourceArt/ArchipelagoAssetPack/AP-Black.AP-Black"));
 
 	bool hasScoutedLocations;
 	bool areScoutedLocationsReadyToParse;
@@ -197,6 +200,10 @@ private:
 	void ParseScoutedItemsAndCreateRecipiesAndSchematics();
 	void LoadRoomInfo();
 
+	void ReceiveItems();
+	void HandleCheckedLocations();
+	bool IsCollected(UFGUnlock* unlock);
+
 	void HandleAPMessages();
 	void SendChatMessage(const FString& Message, const FLinearColor& Color);
 
@@ -207,7 +214,7 @@ private:
 	void UpdateInfoOnlyUnlockWithItemBundleInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, FApNetworkItem* item, TSharedRef<FApItem> itemInfo);
 	void UpdateInfoOnlyUnlockWithSchematicInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, FApNetworkItem* item, TSharedRef<FApSchematicItem> itemInfo);
 	void UpdateInfoOnlyUnlockWithGenericApInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, FApNetworkItem* item);
-	void CreateHubSchematic(FString name, TSubclassOf<UFGSchematic> factorySchematic, TArray<FApNetworkItem> apItems);
+	void InitializaHubSchematic(FString name, TSubclassOf<UFGSchematic> factorySchematic, TArray<FApNetworkItem> apItems);
 	void CreateMamSchematic(FString name, TSubclassOf<UFGSchematic> factorySchematic, TArray<FApNetworkItem> apItems);
 	
 	UFUNCTION() //required for event binding
