@@ -127,9 +127,7 @@ void AApSubsystem::ConnectToArchipelago() {
 	AP_SetItemRecvCallback(AApSubsystem::ItemReceivedCallback);
 	AP_SetLocationCheckedCallback(AApSubsystem::LocationCheckedCallback);
 	AP_RegisterSetReplyCallback(AApSubsystem::SetReplyCallback);
-
-	if (scoutedLocations.IsEmpty())
-		AP_SetLocationInfoCallback(AApSubsystem::LocationScoutedCallback);
+	AP_SetLocationInfoCallback(AApSubsystem::LocationScoutedCallback);
 
 	if (!slotData.hasLoadedSlotData)
 		AP_RegisterSlotDataRawCallback("Data", AApSubsystem::ParseSlotData);
@@ -152,7 +150,7 @@ void AApSubsystem::BeginPlay() {
 	portalSubsystem = AApPortalSubsystem::Get(world);
 	mappingSubsystem = AApMappingsSubsystem::Get(world);
 	trapSubsystem = AApTrapSubsystem::Get(world);
-	goalSubsystem = AApGoalSubsystem::Get(world);
+	phaseManager = AFGGamePhaseManager::Get(world);
 
 	RManager->ResearchCompletedDelegate.AddDynamic(this, &AApSubsystem::OnMamResearchCompleted);
 	SManager->PurchasedSchematicDelegate.AddDynamic(this, &AApSubsystem::OnSchematicCompleted);
@@ -181,20 +179,28 @@ void AApSubsystem::OnSchematicCompleted(TSubclassOf<class UFGSchematic> schemati
 		return;
 
 	std::vector<int64> unlockedChecks;
-	std::vector<int64> locationHintsToPublish;
-
-	for (auto& location : locationsPerMilestone[schematic]) {
-		unlockedChecks.emplace_back(location.location);
-
-		if (location.player != currentPlayerSlot)
-			locationHintsToPublish.emplace_back(location.location);
-	}
 
 	//TODO add other location sources such as Mam, Shops etc
-
-	//Would like to autmagically hint out items but ut crashes for some reason
-	//AP_SendLocationScouts(locationHintsToPublish, 2);
+	for (auto& location : locationsPerMilestone[schematic])
+		unlockedChecks.emplace_back(location.location);
+	
 	AP_SendItem(unlockedChecks);
+}
+
+void AApSubsystem::OnAvaiableSchematicsChanged() {
+	std::vector<int64> locationHintsToPublish;
+	int maxAvailableTechTier = ((int)phaseManager->GetGamePhase() + 1) * 2;
+
+	for (TPair<TSubclassOf<UFGSchematic>, TArray<FApNetworkItem>>& itemPerMilestone : locationsPerMilestone) {
+		if (UFGSchematic::GetTechTier(itemPerMilestone.Key) <= maxAvailableTechTier)
+
+		for (FApNetworkItem item : itemPerMilestone.Value) {
+			if (item.player != currentPlayerSlot && (item.flags & 0b011) > 0)
+				locationHintsToPublish.emplace_back(item.location);
+		}
+	}
+
+	AP_SendLocationScouts(locationHintsToPublish, 2);
 }
 
 void AApSubsystem::ItemClearCallback() {
@@ -220,7 +226,6 @@ void AApSubsystem::LocationCheckedCallback(int64 id) {
 	AApSubsystem* self = AApSubsystem::Get();
 
 	self->CheckedLocations.Enqueue(id);
-	// TODO, can be used to sync in coop or handling !collects of other games
 }
 
 void AApSubsystem::SetReplyCallback(AP_SetReply setReply) {
@@ -308,7 +313,6 @@ void AApSubsystem::SetServerData(AP_SetServerDataRequest* setDataRequest) {
 	AP_SetServerData(setDataRequest);
 }
 
-// Called every frame
 void AApSubsystem::Tick(float DeltaTime) {
 	Super::Tick(DeltaTime);
 
@@ -322,12 +326,9 @@ void AApSubsystem::Tick(float DeltaTime) {
 
 	HandleAPMessages();
 
-	if (!hasSentGoal) {
-		hasSentGoal = goalSubsystem->AreGoalsCompleted(&slotData);
-		if (hasSentGoal) {
-			UE_LOG(LogApSubsystem, Display, TEXT("Sending goal completion to server"));
-			AP_StoryComplete();
-		}
+	if (phaseManager->GetGamePhase() > lastGamePhase) {
+		OnAvaiableSchematicsChanged();
+		lastGamePhase = phaseManager->GetGamePhase();
 	}
 }
 
@@ -861,6 +862,10 @@ TArray<FApPlayer> AApSubsystem::GetAllApPlayers() {
 	}
 
 	return players;
+}
+
+void AApSubsystem::MarkGameAsDone() {
+	AP_StoryComplete();
 }
 
 void AApSubsystem::PreSaveGame_Implementation(int32 saveVersion, int32 gameVersion) {

@@ -45,7 +45,6 @@ protected:
 private:
 	AApMappingsSubsystem* mappings;
 	AModSubsystem* giftingSubsystem;
-	AModSubsystem* ap;
 	
 	UPROPERTY(SaveGame)
 	TArray<int64> OutputQueueSave;

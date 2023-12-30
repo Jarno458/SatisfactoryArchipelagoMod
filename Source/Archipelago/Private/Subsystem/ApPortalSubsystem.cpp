@@ -1,5 +1,4 @@
 #include "Subsystem/ApPortalSubsystem.h"
-#include "Subsystem/ApSubsystem.h"
 #include "Subsystem/ApGiftingSubsystem.h"
 
 DEFINE_LOG_CATEGORY(LogApPortalSubsystem);
@@ -34,8 +33,6 @@ void AApPortalSubsystem::BeginPlay() {
 	UWorld* world = GetWorld();
 	giftingSubsystem = AApGiftingSubsystem::Get(world);
 	mappings = AApMappingsSubsystem::Get(world);
-
-	ap = AApSubsystem::Get(world);
 }
 
 void AApPortalSubsystem::Tick(float dt) {

@@ -41,7 +41,6 @@
 #include "Data/ApTypes.h"
 #include "Subsystem/ApPortalSubsystem.h"
 #include "Subsystem/ApMappingsSubsystem.h"
-#include "Subsystem/ApGoalSubsystem.h"
 
 #include "ContentLibSubsystem.h"
 #include "CLSchematicBPFLib.h"
@@ -135,6 +134,8 @@ public:
 	TMap<FApPlayer, FApGiftBoxMetaData> GetAcceptedTraitsPerPlayer();
 	TArray<FApPlayer> GetAllApPlayers();
 
+	void MarkGameAsDone();
+
 private:
 	static std::map<std::string, std::function<void(AP_SetReply)>> callbacks;
 
@@ -147,13 +148,14 @@ private:
 
 	AFGSchematicManager* SManager;
 	AFGResearchManager* RManager;
+	AFGGamePhaseManager* phaseManager;
 
 	UContentLibSubsystem* contentLibSubsystem;
 	UModContentRegistry* contentRegistry;
+
 	AApPortalSubsystem* portalSubsystem;
 	AApMappingsSubsystem* mappingSubsystem;
 	AApTrapSubsystem* trapSubsystem;
-	AApGoalSubsystem* goalSubsystem;
 
 	UPROPERTY(SaveGame)
 	FString roomSeed;
@@ -162,9 +164,6 @@ private:
 	FApSlotData slotData;
 	UPROPERTY(SaveGame)
 	TArray<FApSaveableHubLayout> saveSlotDataHubLayout;
-	
-	UPROPERTY(SaveGame)
-	bool hasSentGoal;
 
 	UPROPERTY(SaveGame)
 	TArray<FApNetworkItem> scoutedLocations;
@@ -172,6 +171,7 @@ private:
 	int currentItemIndex = 0;
 	UPROPERTY(SaveGame)
 	int lastProcessedItemIndex = 0;
+	int lastGamePhase = -1;
 
 	UPROPERTY(SaveGame)
 	FApConfigurationStruct config;
@@ -221,6 +221,7 @@ private:
 	void OnMamResearchCompleted(TSubclassOf<class UFGSchematic> schematic);
 	UFUNCTION() //required for event binding
 	void OnSchematicCompleted(TSubclassOf<class UFGSchematic> schematic);
+	void OnAvaiableSchematicsChanged();
 
 	static void AbortGame(FText reason);
 };

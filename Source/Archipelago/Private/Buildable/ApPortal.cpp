@@ -14,9 +14,7 @@ AApPortal::AApPortal() : Super() {
 
 	mPowerConsumption = 10;
 
-	//TODO implelemt through ui
-	targetPlayer.Name = TEXT("JarnoSF");
-	targetPlayer.Team = 0;
+	targetPlayer = FApPlayer();
 }
 
 void AApPortal::BeginPlay() {
@@ -38,6 +36,8 @@ void AApPortal::BeginPlay() {
 	if (!HasAuthority()) {
 		return;
 	}
+
+	CheckPower(false);
 }
 
 bool AApPortal::CanProduce_Implementation() const {

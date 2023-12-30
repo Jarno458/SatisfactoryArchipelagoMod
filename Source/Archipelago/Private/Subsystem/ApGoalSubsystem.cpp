@@ -1,14 +1,9 @@
 #include "Subsystem/ApGoalSubsystem.h"
 
-#include "FGResourceSinkSubsystem.h"
-
-#include "Subsystem/SubsystemActorManager.h"
-
-#include "Data/ApSlotData.h"
-
-
 AApGoalSubsystem::AApGoalSubsystem() : Super() {
-	PrimaryActorTick.bCanEverTick = false;
+	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bStartWithTickEnabled = true;
+	PrimaryActorTick.TickInterval = 1.0f;
 }
 
 AApGoalSubsystem* AApGoalSubsystem::Get() {
@@ -29,6 +24,25 @@ void AApGoalSubsystem::BeginPlay() {
 
 	phaseManager = AFGGamePhaseManager::Get(world);
 	resourceSinkSubsystem = AFGResourceSinkSubsystem::Get(world);
+
+	ap = AApSubsystem::Get(world);
+}
+
+void AApGoalSubsystem::Tick(float DeltaTime) {
+	Super::Tick(DeltaTime);
+
+	if (hasSentGoal || ap->ConnectionState != EApConnectionState::Connected)
+		return;
+
+	FApSlotData slotData = ap->GetSlotData();
+
+	if (AreGoalsCompleted(&slotData)) {
+		UE_LOG(LogApSubsystem, Display, TEXT("Sending goal completion to server"));
+
+		ap->MarkGameAsDone();
+
+		hasSentGoal = true;
+	}
 }
 
 bool AApGoalSubsystem::AreGoalsCompleted(const FApSlotData* slotData) {
