@@ -13,5 +13,5 @@ void UApGameWorldModule::DispatchLifecycleEvent(ELifecyclePhase phase) {
 
 	UWorld* world = GetWorld();
 	AApMappingsSubsystem::Get(world)->DispatchLifecycleEvent(phase);
-	AApSubsystem::Get(world)->DispatchLifecycleEvent(phase);
+	AApSubsystem::Get(world)->DispatchLifecycleEvent(phase, mSchematics);
 }

@@ -33,7 +33,7 @@ AApSubsystem* AApSubsystem::Get(class UWorld* world) {
 	return SubsystemActorManager->GetSubsystemActor<AApSubsystem>();
 }
 
-void AApSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase) {
+void AApSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase, TArray<TSubclassOf<UFGSchematic>> apHardcodedSchematics) {
 	if (config.IsLoaded() && !config.Enabled) {
 		UE_LOG(LogApSubsystem, Warning, TEXT("Archipelago manually disabled by user config"));
 		return;
@@ -42,6 +42,8 @@ void AApSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase) {
 	if (phase == ELifecyclePhase::CONSTRUCTION) {
 		if (!config.IsLoaded())
 			config = FApConfigurationStruct::GetActiveConfig(GetWorld());
+
+		hardcodedSchematics = apHardcodedSchematics;
 	} else if (phase == ELifecyclePhase::INITIALIZATION) {
 		// TODO_MULTIPLAYER calling HasAuthority crashes multiplayer client? too early?
 		// but we're using SpawnOnServer so why/how is client running this anyways
@@ -55,12 +57,15 @@ void AApSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase) {
 		UE_LOG(LogApSubsystem, Display, TEXT("Initiating Archipelago server connection in background..."));
 		ConnectToArchipelago();
 
-		contentLibSubsystem = GetWorld()->GetGameInstance()->GetSubsystem<UContentLibSubsystem>();
+		UWorld* world = GetWorld();
+		contentLibSubsystem = world->GetGameInstance()->GetSubsystem<UContentLibSubsystem>();
 		fgcheck(contentLibSubsystem)
-		contentRegistry = UModContentRegistry::Get(GetWorld());
+		contentRegistry = UModContentRegistry::Get(world);
 		fgcheck(contentRegistry)
-		mappingSubsystem = AApMappingsSubsystem::Get(GetWorld());
+		mappingSubsystem = AApMappingsSubsystem::Get(world);
 		fgcheck(mappingSubsystem)
+		RManager = AFGResearchManager::Get(world);
+		fgcheck(RManager)
 
 		//TODO: generatic AP Items can be totally hardcoded outside of the initialization phase
 		UE_LOG(LogApSubsystem, Display, TEXT("Generating schematics from AP Item IDs..."));
@@ -144,7 +149,6 @@ void AApSubsystem::BeginPlay() {
 	Super::BeginPlay();
 
 	UWorld* world = GetWorld();
-	RManager = AFGResearchManager::Get(world);
 	SManager = AFGSchematicManager::Get(world);
 
 	portalSubsystem = AApPortalSubsystem::Get(world);
@@ -153,6 +157,7 @@ void AApSubsystem::BeginPlay() {
 	phaseManager = AFGGamePhaseManager::Get(world);
 
 	RManager->ResearchCompletedDelegate.AddDynamic(this, &AApSubsystem::OnMamResearchCompleted);
+	RManager->ResearchTreeUnlockedDelegate.AddDynamic(this, &AApSubsystem::OnMamResearchTreeUnlocked);
 	SManager->PurchasedSchematicDelegate.AddDynamic(this, &AApSubsystem::OnSchematicCompleted);
 }
 
@@ -167,7 +172,13 @@ void AApSubsystem::EndPlay(const EEndPlayReason::Type endPlayReason) {
 void AApSubsystem::OnMamResearchCompleted(TSubclassOf<class UFGSchematic> schematic) {
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubSystem::OnResearchCompleted(schematic)"));
 
+	OnAvaiableSchematicsChanged();
+}
 
+void AApSubsystem::OnMamResearchTreeUnlocked(TSubclassOf<class UFGResearchTree> researchTree) {
+	UE_LOG(LogApSubsystem, Display, TEXT("AApSubSystem::OnMamResearchTreeUnlocked(researchTree)"));
+
+	OnAvaiableSchematicsChanged();
 }
 
 void AApSubsystem::OnSchematicCompleted(TSubclassOf<class UFGSchematic> schematic) {
@@ -175,28 +186,64 @@ void AApSubsystem::OnSchematicCompleted(TSubclassOf<class UFGSchematic> schemati
 
 	ESchematicType type = UFGSchematic::GetType(schematic);
 
-	if (type != ESchematicType::EST_Milestone || !locationsPerMilestone.Contains(schematic))
-		return;
-
 	std::vector<int64> unlockedChecks;
 
-	//TODO add other location sources such as Mam, Shops etc
-	for (auto& location : locationsPerMilestone[schematic])
-		unlockedChecks.emplace_back(location.location);
-	
-	AP_SendItem(unlockedChecks);
+	switch (type) {
+		case ESchematicType::EST_Milestone:
+			if (locationsPerMilestone.Contains(schematic)) {
+				for (auto& location : locationsPerMilestone[schematic])
+					unlockedChecks.emplace_back(location.location);
+			}
+			break;
+		case ESchematicType::EST_MAM:
+			if (locationPerMamNode.Contains(schematic))
+				unlockedChecks.emplace_back(locationPerMamNode[schematic].location);
+			break;
+		case ESchematicType::EST_ResourceSink:
+			if (locationPerShopNode.Contains(schematic))
+				unlockedChecks.emplace_back(locationPerShopNode[schematic].location);
+			break;
+		case ESchematicType::EST_Custom:
+			if (schematic == ItemSchematics[mappingSubsystem->GetAwesomeShopItemId()] 
+				|| schematic == ItemSchematics[mappingSubsystem->GetMamItemId()])
+				OnAvaiableSchematicsChanged();
+			break;
+		default:
+			return;
+	}
+
+	if (unlockedChecks.size() > 0)
+		AP_SendItem(unlockedChecks);
 }
 
 void AApSubsystem::OnAvaiableSchematicsChanged() {
 	std::vector<int64> locationHintsToPublish;
+
 	int maxAvailableTechTier = ((int)phaseManager->GetGamePhase() + 1) * 2;
 
 	for (TPair<TSubclassOf<UFGSchematic>, TArray<FApNetworkItem>>& itemPerMilestone : locationsPerMilestone) {
-		if (UFGSchematic::GetTechTier(itemPerMilestone.Key) <= maxAvailableTechTier)
+		if (UFGSchematic::GetTechTier(itemPerMilestone.Key) <= maxAvailableTechTier) {
+			for (FApNetworkItem item : itemPerMilestone.Value) {
+				if (item.player != currentPlayerSlot && (item.flags & 0b011) > 0)
+					locationHintsToPublish.emplace_back(item.location);
+			}
+		}
+	}
 
-		for (FApNetworkItem item : itemPerMilestone.Value) {
-			if (item.player != currentPlayerSlot && (item.flags & 0b011) > 0)
-				locationHintsToPublish.emplace_back(item.location);
+	if (SManager->IsSchematicPurchased(ItemSchematics[mappingSubsystem->GetMamItemId()])) {
+		for (TPair<TSubclassOf<UFGSchematic>, FApNetworkItem>& itemPerMamNode : locationPerMamNode) {
+			if (itemPerMamNode.Value.player != currentPlayerSlot 
+				&& (itemPerMamNode.Value.flags & 0b011) > 0
+				&& RManager->CanResearchBeInitiated(itemPerMamNode.Key))
+
+				locationHintsToPublish.emplace_back(itemPerMamNode.Value.location);
+		}
+	}
+
+	if (SManager->IsSchematicPurchased(ItemSchematics[mappingSubsystem->GetAwesomeShopItemId()])) {
+		for (TPair<TSubclassOf<UFGSchematic>, FApNetworkItem>& itemPerShopNode : locationPerShopNode) {
+			if (itemPerShopNode.Value.player != currentPlayerSlot && (itemPerShopNode.Value.flags & 0b011) > 0)
+				locationHintsToPublish.emplace_back(itemPerShopNode.Value.location);
 		}
 	}
 
@@ -351,7 +398,7 @@ void AApSubsystem::ReceiveItems()
 			if (mappingSubsystem->ApItems[itemid]->Type == EItemType::Item) {
 				if (isFromServer) {
 					//TODO send directly to inventory
-					UE_LOG(LogApSubsystem, Error, TEXT("AApSubsystem::ReceiveItems(), This is where you should have gotten your item"));
+					UE_LOG(LogApSubsystem, Error, TEXT("AApSubsystem::ReceiveItems(), This is where you should have gotten your item PepeSad"));
 				} else {
 					TSubclassOf<UFGItemDescriptor> itemClass = StaticCastSharedRef<FApItem>(mappingSubsystem->ApItems[itemid])->Class;
 					int stackSize = UFGItemDescriptor::GetStackSize(itemClass);
@@ -381,18 +428,35 @@ void AApSubsystem::HandleCheckedLocations() {
 					UFGSchematic* schematic = Cast<UFGSchematic>(itemPerMilestone.Key->GetDefaultObject());
 
 					if (schematic != nullptr && !IsCollected(schematic->mUnlocks[index])) {
-						UFGUnlockInfoOnly* unlockInfo = Cast<UFGUnlockInfoOnly>(schematic->mUnlocks[index]);
-
-						unlockInfo->mUnlockIconSmall = collectedIcon;
-
-						if (networkItem.player != currentPlayerSlot) {
-							unlockInfo->mUnlockName = FText::Format(LOCTEXT("Collected", "Collected: {0}"), unlockInfo->mUnlockName);
-							unlockInfo->mUnlockIconBig = collectedIcon;
-						}
+						Collect(schematic->mUnlocks[index], networkItem);
 
 						if (!schematic->mUnlocks.ContainsByPredicate([this](UFGUnlock* unlock) { return !IsCollected(unlock); }))
 							SManager->GiveAccessToSchematic(itemPerMilestone.Key, nullptr);
 					}
+				}
+			}
+		}
+		for (TPair<TSubclassOf<UFGSchematic>, FApNetworkItem>& itemPerMamNode : locationPerMamNode) {
+			if (itemPerMamNode.Value.location == location) {
+				UFGSchematic* schematic = Cast<UFGSchematic>(itemPerMamNode.Key->GetDefaultObject());
+
+				if (schematic != nullptr && !IsCollected(schematic->mUnlocks[0])) {
+					Collect(schematic->mUnlocks[0], itemPerMamNode.Value);
+
+					//might to actually tell the mam the node is unlocked
+					SManager->GiveAccessToSchematic(itemPerMamNode.Key, nullptr);
+				}
+			}
+		}
+		for (TPair<TSubclassOf<UFGSchematic>, FApNetworkItem>& itemPerShopNode : locationPerShopNode) {
+			if (itemPerShopNode.Value.location == location) {
+				UFGSchematic* schematic = Cast<UFGSchematic>(itemPerShopNode.Key->GetDefaultObject());
+
+				if (schematic != nullptr && !IsCollected(schematic->mUnlocks[0])) {
+					Collect(schematic->mUnlocks[0], itemPerShopNode.Value);
+
+					// might have to actually tell the stop its purchased
+					SManager->GiveAccessToSchematic(itemPerShopNode.Key, nullptr);
 				}
 			}
 		}
@@ -402,7 +466,21 @@ void AApSubsystem::HandleCheckedLocations() {
 bool AApSubsystem::IsCollected(UFGUnlock* unlock) {
 	UFGUnlockInfoOnly* unlockInfo = Cast<UFGUnlockInfoOnly>(unlock);
 
+	//return unlockInfo != nullptr && unlockInfo->mUnlockIconSmall == collectedIcon;
 	return unlockInfo != nullptr && unlockInfo->mUnlockIconSmall == collectedIcon;
+}
+
+void AApSubsystem::Collect(UFGUnlock* unlock, FApNetworkItem& networkItem) {
+	UFGUnlockInfoOnly* unlockInfo = Cast<UFGUnlockInfoOnly>(unlock);
+
+	if (unlockInfo != nullptr) {
+		unlockInfo->mUnlockIconSmall = collectedIcon;
+
+		if (networkItem.player != currentPlayerSlot) {
+			unlockInfo->mUnlockName = FText::Format(LOCTEXT("Collected", "Collected: {0}"), unlockInfo->mUnlockName);
+			unlockInfo->mUnlockIconBig = collectedIcon;
+		}
+	}
 }
 
 void AApSubsystem::CheckConnectionState() {
@@ -425,6 +503,14 @@ void AApSubsystem::ParseScoutedItemsAndCreateRecipiesAndSchematics() {
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::ParseScoutedItemsAndCreateRecipiesAndSchematics()"));
 
 	TMap<FString, TTuple<bool, TSubclassOf<UFGSchematic>>> schematicsPerMilestone = TMap<FString, TTuple<bool, TSubclassOf<UFGSchematic>>>();
+	TMap<int64, TSubclassOf<UFGSchematic>> schematicsPerLocation = TMap<int64, TSubclassOf<UFGSchematic>>();
+
+	for (TSubclassOf<UFGSchematic> schematic : hardcodedSchematics) {
+		UFGSchematic* schematicCDO = Cast<UFGSchematic>(schematic->GetDefaultObject());
+		if (schematicCDO != nullptr && schematicCDO->mMenuPriority > 1000) {
+			schematicsPerLocation.Add(FMath::RoundToInt(schematicCDO->mMenuPriority), schematic);
+		}
+	}
 
 	for (FApNetworkItem& location : scoutedLocations) {
 		if (location.locationName.StartsWith("Hub")) {
@@ -441,6 +527,14 @@ void AApSubsystem::ParseScoutedItemsAndCreateRecipiesAndSchematics() {
 			} else {
 				locationsPerMilestone[schematicsPerMilestone[milestone].Value].Add(location);
 			}
+		} else if (location.location >= 1338500 && location.location <= 1338571 && schematicsPerLocation.Contains(location.location)) {
+			TSubclassOf<UFGSchematic> schematic = schematicsPerLocation[location.location];
+
+			locationPerMamNode.Add(schematic, location);
+		} else if (location.location >= 1338700 && location.location <= 1338709 && schematicsPerLocation.Contains(location.location)) {
+			TSubclassOf<UFGSchematic> schematic = schematicsPerLocation[location.location];
+
+			locationPerShopNode.Add(schematic, location);
 		}
 	}
 
@@ -459,6 +553,27 @@ void AApSubsystem::ParseScoutedItemsAndCreateRecipiesAndSchematics() {
 		}
 	}
 
+	for (TPair<TSubclassOf<UFGSchematic>, FApNetworkItem>& itemPerMamNode : locationPerMamNode) {
+		InitializaSchematicForItem(itemPerMamNode.Key, itemPerMamNode.Value, false);
+	}
+
+	for (TPair<TSubclassOf<UFGSchematic>, FApNetworkItem>& itemPerMamNode : locationPerShopNode) {
+		InitializaSchematicForItem(itemPerMamNode.Key, itemPerMamNode.Value, true);
+	}
+
+	TArray<TSubclassOf<class UFGResearchTree>> researchTrees;
+	RManager->GetAllResearchTrees(researchTrees);
+
+	for (TSubclassOf<UFGResearchTree> tree : researchTrees) {
+		UFGResearchTree* treeCDO = Cast<UFGResearchTree>(tree->GetDefaultObject());
+		if (treeCDO != nullptr) {
+			FString className = treeCDO->GetName();
+
+			if (!className.Contains("AP_") && !className.EndsWith("HardDrive_C") && !className.EndsWith("XMas_C"))
+				contentRegistry->RemoveResearchTree(tree);
+		}
+	};
+
 	areRecipiesAndSchematicsInitialized = true;
 }
 
@@ -472,15 +587,11 @@ void AApSubsystem::CreateSchematicBoundToItemId(int64 itemid, TSharedRef<FApReci
 			recipesToUnlock.Add(recipe.Class->GetName());
 		}
 
-		FString recipes = FString::Join(recipesToUnlock, TEXT("\", \""));
-		// https://raw.githubusercontent.com/budak7273/ContentLib_Documentation/main/JsonSchemas/CL_Schematic.json
-		FString json = FString::Printf(TEXT(R"({
-			"Name": "%s",
-			"Type": "Custom",
-			"Recipes": [ "%s" ]
-		})"), *name, *recipes);
+		FContentLib_Schematic schematic = FContentLib_Schematic();
+		schematic.Name = name;
+		schematic.Type = "Custom";
+		schematic.Recipes = recipesToUnlock;
 
-		FContentLib_Schematic schematic = UCLSchematicBPFLib::GenerateCLSchematicFromString(json);
 		UCLSchematicBPFLib::InitSchematicFromStruct(schematic, foundSchematic.Value, contentLibSubsystem);
 	}
 	
@@ -495,33 +606,55 @@ void AApSubsystem::InitializaHubSchematic(FString name, TSubclassOf<UFGSchematic
 	int32 tier = FCString::Atoi(*name.Mid(delimeterPos - 1, 1));
 	int32 milestone = FCString::Atoi(*name.Mid(delimeterPos + 1, 1));
 
-	FString costs = "";
-	for (auto& cost : slotData.hubLayout[tier - 1][milestone - 1]) {
-		FString costJson = FString::Printf(TEXT(R"({
-			"Item": "%s",
-			"Amount": %i
-		},)"), *cost.Key, cost.Value);
-
-		costs += costJson;
-	}
-
-	// https://raw.githubusercontent.com/budak7273/ContentLib_Documentation/main/JsonSchemas/CL_Schematic.json
-	FString json = FString::Printf(TEXT(R"({
-		"Name": "%s",
-		"Type": "Milestone",
-		"Time": 200,
-		"Tier": %i,
-		"MenuPriority": %i,
-		"VisualKit": "Kit_AP_Logo",
-		"Cost": [ %s ]
-	})"), *name, tier, milestone, *costs);
-
-	FContentLib_Schematic schematic = UCLSchematicBPFLib::GenerateCLSchematicFromString(json);
+	FContentLib_Schematic schematic = FContentLib_Schematic();
+	schematic.Name = name;
+	schematic.Type = "Milestone";
+	schematic.Time = 200;
+	schematic.Tier = tier;
+	schematic.MenuPriority = items[0].location;
+	schematic.VisualKit = "Kit_AP_Logo";
+	schematic.Cost = slotData.hubLayout[tier - 1][milestone - 1];
 
 	for (auto& item : items)
 		schematic.InfoCards.Add(CreateUnlockInfoOnly(item));
 
 	UCLSchematicBPFLib::InitSchematicFromStruct(schematic, factorySchematic, contentLibSubsystem);
+}
+
+void AApSubsystem::InitializaSchematicForItem(TSubclassOf<UFGSchematic> factorySchematic, FApNetworkItem item, bool updateSchemaName) {
+	FContentLib_UnlockInfoOnly unlockOnlyInfo = CreateUnlockInfoOnly(item);
+
+	FContentLib_Schematic schematic = FContentLib_Schematic();
+	schematic.Description = unlockOnlyInfo.mUnlockDescription.ToString();
+	//schematic.VisualKit = unlockOnlyInfo.BigIcon; using visual kit didnt work here so we manually patch the icons below
+	schematic.InfoCards = TArray<FContentLib_UnlockInfoOnly>{ unlockOnlyInfo };
+
+	if (updateSchemaName)
+		schematic.Name = unlockOnlyInfo.mUnlockName.ToString();
+
+	UCLSchematicBPFLib::InitSchematicFromStruct(schematic, factorySchematic, contentLibSubsystem);
+
+	UFGSchematic* factorySchematicCDO = Cast<UFGSchematic>(factorySchematic->GetDefaultObject());
+	if (factorySchematicCDO != nullptr) {
+		// ContentLib keeps adding new `InfoCards`
+		if (factorySchematicCDO->mUnlocks.Num() > 1) {
+			factorySchematicCDO->mUnlocks.RemoveAt(1, 1, true);
+		}
+
+		UTexture2D* bigText = LoadObject<UTexture2D>(nullptr, *unlockOnlyInfo.BigIcon);
+
+		factorySchematicCDO->mSchematicIcon.SetResourceObject(bigText);
+		factorySchematicCDO->mSmallSchematicIcon = bigText;
+
+		if (!IsCollected(factorySchematicCDO->mUnlocks[0])) {
+			UFGUnlockInfoOnly* unlockInfo = Cast<UFGUnlockInfoOnly>(factorySchematicCDO->mUnlocks[0]);
+
+			if (unlockInfo != nullptr) {
+				unlockInfo->mUnlockIconBig = bigText;
+				unlockInfo->mUnlockIconSmall = bigText;
+			}
+		}
+	}
 }
 
 FContentLib_UnlockInfoOnly AApSubsystem::CreateUnlockInfoOnly(FApNetworkItem item) {
@@ -693,7 +826,7 @@ void AApSubsystem::SendChatMessage(const FString& Message, const FLinearColor& C
 }
 
 void AApSubsystem::ScoutArchipelagoItems() {
-	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::HintUnlockedHubRecipies()"));
+	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::ScoutArchipelagoItems()"));
 
 	std::vector<int64> locations;
 
@@ -702,12 +835,9 @@ void AApSubsystem::ScoutArchipelagoItems() {
 
 	int64 hubBaseId = 1338000;
 
-	for (int tier = 1; tier <= slotData.hubLayout.Num(); tier++)
-	{
-		for (int milestone = 1; milestone <= maxMilestones; milestone++)
-		{
-			for (int slot = 1; slot <= maxSlots; slot++)
-			{
+	for (int tier = 1; tier <= slotData.hubLayout.Num(); tier++) {
+		for (int milestone = 1; milestone <= maxMilestones; milestone++) {
+			for (int slot = 1; slot <= maxSlots; slot++) {
 				if (milestone <= slotData.hubLayout[tier - 1].Num() && slot <= slotData.numberOfChecksPerMilestone)
 					locations.push_back(hubBaseId);
 
@@ -715,6 +845,14 @@ void AApSubsystem::ScoutArchipelagoItems() {
 			}
 		}
 	}
+
+	//mam locations
+	for (int l = 1338500; l <= 1338571; l++)
+		locations.push_back(l);
+
+	//shop locations
+	for (int l = 1338700; l <= 1338709; l++)
+		locations.push_back(l);
 
 	AP_SendLocationScouts(locations, 0);
 

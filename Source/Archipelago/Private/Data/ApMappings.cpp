@@ -337,7 +337,7 @@ const TMap<int64, FString> UApMappings::ItemIdToGameRecipe = {
 	//{1338364, TEXT("")}, //Recipe: Hatcher Remains
 	//{1338365, TEXT("")}, //Recipe: Hog Remains
 	//{1338366, TEXT("")}, //Recipe: Plasma Spitter Remains
-	//{1338367, TEXT("")}, //Recipe: Stinger Remains
+	{1338367, TEXT("Recipe_NobeliskShockwave")},
 	{1338368, TEXT("Recipe_Protein_Crab")},
 	{1338369, TEXT("Recipe_Protein_Hog")},
 	{1338370, TEXT("Recipe_Protein_Spitter")},
@@ -387,7 +387,6 @@ const TMap<int64, FString> UApMappings::ItemIdToGameRecipe = {
 	{1338414, TEXT("Recipe_ObjectScanner")},
 	{1338415, TEXT("Recipe_Parachute")},
 	{1338416, TEXT("Recipe_MedicinalInhalerAlienOrgans")}, //Protein Inhaler
-	{1338403, TEXT("Recipe_NobeliskShockwave")},
 	{1338417, TEXT("Recipe_RebarGun")},
 	{1338418, TEXT("Recipe_SpaceRifleMk1")},
 	{1338419, TEXT("Recipe_Cartridge")},

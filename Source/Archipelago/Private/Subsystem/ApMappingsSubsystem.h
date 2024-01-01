@@ -139,6 +139,9 @@ private:
 
 	bool isInitialized = false;
 
+	int64 mamId;
+	int64 shopId;
+
 public:
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FORCEINLINE bool IsInitialized() const { return isInitialized; };
@@ -147,6 +150,9 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void DispatchLifecycleEvent(ELifecyclePhase phase);
+
+	FORCEINLINE int64 GetMamItemId() const { return mamId; }
+	FORCEINLINE int64 GetAwesomeShopItemId() const { return shopId; }
 
 private:
 	void LoadMappings();

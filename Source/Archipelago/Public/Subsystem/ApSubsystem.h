@@ -107,7 +107,7 @@ public:
 	static AApSubsystem* Get(class UWorld* world);
 
 	UFUNCTION(BlueprintCallable)
-	void DispatchLifecycleEvent(ELifecyclePhase phase);
+	void DispatchLifecycleEvent(ELifecyclePhase phase, TArray<TSubclassOf<UFGSchematic>> apHardcodedSchematics);
 
 	void MonitorDataStoreValue(std::string key, AP_DataType dataType, std::string defaultValue, std::function<void(AP_SetReply)> callback);
 	void SetServerData(AP_SetServerDataRequest* setDataRequest);
@@ -176,7 +176,10 @@ private:
 	UPROPERTY(SaveGame)
 	FApConfigurationStruct config;
 
+	TArray<TSubclassOf<UFGSchematic>> hardcodedSchematics;
 	TMap<TSubclassOf<class UFGSchematic>, TArray<FApNetworkItem>> locationsPerMilestone;
+	TMap<TSubclassOf<class UFGSchematic>, FApNetworkItem> locationPerMamNode;
+	TMap<TSubclassOf<class UFGSchematic>, FApNetworkItem> locationPerShopNode;
 	TMap<int64, TSubclassOf<class UFGSchematic>> ItemSchematics;
 	TQueue<TTuple<int64, bool>> ReceivedItems;
 	TQueue<int64> CheckedLocations;
@@ -203,6 +206,7 @@ private:
 	void ReceiveItems();
 	void HandleCheckedLocations();
 	bool IsCollected(UFGUnlock* unlock);
+	void Collect(UFGUnlock* unlock, FApNetworkItem& networkItem);
 
 	void HandleAPMessages();
 	void SendChatMessage(const FString& Message, const FLinearColor& Color);
@@ -215,10 +219,12 @@ private:
 	void UpdateInfoOnlyUnlockWithSchematicInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, FApNetworkItem* item, TSharedRef<FApSchematicItem> itemInfo);
 	void UpdateInfoOnlyUnlockWithGenericApInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, FApNetworkItem* item);
 	void InitializaHubSchematic(FString name, TSubclassOf<UFGSchematic> factorySchematic, TArray<FApNetworkItem> apItems);
-	void CreateMamSchematic(FString name, TSubclassOf<UFGSchematic> factorySchematic, TArray<FApNetworkItem> apItems);
+	void InitializaSchematicForItem(TSubclassOf<UFGSchematic> factorySchematic, FApNetworkItem item, bool updateSchemaName);
 	
 	UFUNCTION() //required for event binding
 	void OnMamResearchCompleted(TSubclassOf<class UFGSchematic> schematic);
+	UFUNCTION() //required for event binding
+	void OnMamResearchTreeUnlocked(TSubclassOf<class UFGResearchTree> researchTree);
 	UFUNCTION() //required for event binding
 	void OnSchematicCompleted(TSubclassOf<class UFGSchematic> schematic);
 	void OnAvaiableSchematicsChanged();

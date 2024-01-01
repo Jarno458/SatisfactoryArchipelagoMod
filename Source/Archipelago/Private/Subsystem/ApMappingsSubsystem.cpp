@@ -101,6 +101,13 @@ void AApMappingsSubsystem::LoadBuildingMappings(TMap<FName, FAssetData> recipeAs
 			recipeInfo.Recipe = recipe;
 			recipeInfo.Class = recipeClass;
 			recipes.Add(recipeInfo);
+
+			if (recipeShortName.EndsWith("Recipe_Mam")) {
+				mamId = buildingMapping.Key;
+			}
+			if (recipeShortName.EndsWith("Recipe_ResourceSinkShop")) {
+				shopId = buildingMapping.Key;
+			}
 		}
 
 		FApBuildingItem buildingItem;
