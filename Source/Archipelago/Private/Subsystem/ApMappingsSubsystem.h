@@ -20,13 +20,18 @@ enum class EItemType : uint8
 	Specail
 };
 
+UENUM()
+enum class ESpecailItemType : uint8
+{
+	Inventory3,
+	Inventory6,
+	Toolbelt1,
+};
+
 USTRUCT()
 struct ARCHIPELAGO_API FApItemBase
 {
 	GENERATED_BODY()
-
-	//UPROPERTY()
-	//FString Name;
 
 	UPROPERTY()
 	int64 Id;
@@ -102,6 +107,19 @@ struct ARCHIPELAGO_API FApSchematicItem : public FApItemBase
 	TSubclassOf<UFGSchematic> Class;
 };
 
+USTRUCT()
+struct ARCHIPELAGO_API FApSpecailItem : public FApItemBase
+{
+	GENERATED_BODY()
+
+	FApSpecailItem() {
+		Type = EItemType::Specail;
+	}
+
+	UPROPERTY()
+	ESpecailItemType SpecailType;
+};
+
 
 UCLASS()
 class AApMappingsSubsystem : public AModSubsystem, public IFGSaveInterface
@@ -157,6 +175,7 @@ public:
 private:
 	void LoadMappings();
 	void LoadItemMappings(TMap<FName, FAssetData> itemDescriptorAssets);
+	void LoadSpecialItemMappings();
 	void LoadRecipeMappings(TMap<FName, FAssetData> recipeAssets);
 	void LoadBuildingMappings(TMap<FName, FAssetData> recipeAssets);
 	void LoadSchematicMappings();

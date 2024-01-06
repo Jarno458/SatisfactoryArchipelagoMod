@@ -53,6 +53,7 @@ void AApMappingsSubsystem::LoadMappings() {
 	LoadItemMappings(itemDescriptorAssets);
 	LoadRecipeMappings(recipeAssets);
 	LoadBuildingMappings(recipeAssets);
+	LoadSpecialItemMappings();
 	LoadSchematicMappings();
 }
 
@@ -69,6 +70,29 @@ void AApMappingsSubsystem::LoadItemMappings(TMap<FName, FAssetData> itemDescript
 		ApItems.Add(itemMapping.Key, MakeShared<FApItem>(itemInfo));
 
 		ItemClassToItemId.Add(itemClass, itemMapping.Key);
+	}
+}
+
+void AApMappingsSubsystem::LoadSpecialItemMappings() {
+	for (TPair<int64, EApMappingsSpecailItemType> specailItemMapping : UApMappings::ItemIdToSpecailItemType) {
+
+		FApSpecailItem specialItem;
+		specialItem.Id = specailItemMapping.Key;
+
+		switch (specailItemMapping.Value)
+		{
+			case EApMappingsSpecailItemType::Inventory3:
+				specialItem.SpecailType = ESpecailItemType::Inventory3;
+				break;
+			case EApMappingsSpecailItemType::Inventory6:
+				specialItem.SpecailType = ESpecailItemType::Inventory6;
+				break;
+			case EApMappingsSpecailItemType::Toolbelt1:
+				specialItem.SpecailType = ESpecailItemType::Toolbelt1;
+				break;
+		}
+
+		ApItems.Add(specailItemMapping.Key, MakeShared<FApSpecailItem>(specialItem));
 	}
 }
 

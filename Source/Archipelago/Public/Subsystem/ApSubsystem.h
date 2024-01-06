@@ -5,27 +5,30 @@
 #include <string>
 #include <vector>
 #include <numeric>
+#include <set>
 
 #include "CoreMinimal.h"
 
 #include "FGSchematicManager.h"
 #include "FGResearchManager.h"
 #include "FGGamePhaseManager.h"
-#include "FGResourceSinkSubsystem.h"
+//#include "FGResourceSinkSubsystem.h"
+#include "FGPlayerController.h"
+#include "FGCharacterPlayer.h"
 
 #include "GenericPlatform/GenericPlatformProcess.h"
-#include "Patching/BlueprintHookHelper.h"
-#include "Patching/BlueprintHookManager.h"
+//#include "Patching/BlueprintHookHelper.h"
+//#include "Patching/BlueprintHookManager.h"
 #include "Registry/ModContentRegistry.h"
-#include "Kismet/BlueprintLoggingLibrary.h"
+//#include "Kismet/BlueprintLoggingLibrary.h"
 #include "Subsystem/ModSubsystem.h"
 #include "Subsystem/SubsystemActorManager.h"
 #include "Subsystem/ApTrapSubsystem.h"
 #include "Configuration/ModConfiguration.h"
 #include "Configuration/ConfigProperty.h"
 #include "Configuration/ConfigManager.h"
-#include "Kismet/RuntimeBlueprintFunctionLibrary.h"
-#include "Kismet/KismetSystemLibrary.h"
+//#include "Kismet/RuntimeBlueprintFunctionLibrary.h"
+//#include "Kismet/KismetSystemLibrary.h"
 #include "Engine/Engine.h"
 #include "Configuration/Properties/ConfigPropertySection.h"
 #include "Templates/SubclassOf.h"
@@ -42,10 +45,10 @@
 #include "Subsystem/ApPortalSubsystem.h"
 #include "Subsystem/ApMappingsSubsystem.h"
 
-#include "ContentLibSubsystem.h"
+//#include "ContentLibSubsystem.h"
 #include "CLSchematicBPFLib.h"
-#include "CLItemBPFLib.h"
-#include "CLRecipeBPFLib.h"
+//#include "CLItemBPFLib.h"
+//#include "CLRecipeBPFLib.h"
 #include "BPFContentLib.h"
 
 #include "Archipelago.h"
@@ -181,6 +184,7 @@ private:
 	TMap<TSubclassOf<class UFGSchematic>, FApNetworkItem> locationPerMamNode;
 	TMap<TSubclassOf<class UFGSchematic>, FApNetworkItem> locationPerShopNode;
 	TMap<int64, TSubclassOf<class UFGSchematic>> ItemSchematics;
+	TArray<TSubclassOf<class UFGSchematic>> inventorySlotRecipes;
 	TQueue<TTuple<int64, bool>> ReceivedItems;
 	TQueue<int64> CheckedLocations;
 	TQueue<TPair<FString, FLinearColor>> ChatMessageQueue;
@@ -205,6 +209,7 @@ private:
 
 	void ReceiveItems();
 	void HandleCheckedLocations();
+	AFGCharacterPlayer* GetLocalPlayer();
 	bool IsCollected(UFGUnlock* unlock);
 	void Collect(UFGUnlock* unlock, FApNetworkItem& networkItem);
 
@@ -217,6 +222,7 @@ private:
 	void UpdateInfoOnlyUnlockWithRecipeInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, FApNetworkItem* item, TSharedRef<FApRecipeItem> itemInfo);
 	void UpdateInfoOnlyUnlockWithItemBundleInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, FApNetworkItem* item, TSharedRef<FApItem> itemInfo);
 	void UpdateInfoOnlyUnlockWithSchematicInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, FApNetworkItem* item, TSharedRef<FApSchematicItem> itemInfo);
+	void UpdateInfoOnlyUnlockWithSpecailInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, FApNetworkItem* item, TSharedRef<FApSpecailItem> itemInfo);
 	void UpdateInfoOnlyUnlockWithGenericApInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, FApNetworkItem* item);
 	void InitializaHubSchematic(FString name, TSubclassOf<UFGSchematic> factorySchematic, TArray<FApNetworkItem> apItems);
 	void InitializaSchematicForItem(TSubclassOf<UFGSchematic> factorySchematic, FApNetworkItem item, bool updateSchemaName);

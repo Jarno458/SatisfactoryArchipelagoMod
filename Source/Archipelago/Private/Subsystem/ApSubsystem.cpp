@@ -44,6 +44,16 @@ void AApSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase, TArray<TSubclas
 			config = FApConfigurationStruct::GetActiveConfig(GetWorld());
 
 		hardcodedSchematics = apHardcodedSchematics;
+
+		for (TSubclassOf<UFGSchematic>& schematic : hardcodedSchematics) {
+			UFGSchematic* schematicCDO = Cast<UFGSchematic>(schematic->GetDefaultObject());
+			if (schematicCDO == nullptr)
+				continue;
+
+			FString className = schematicCDO->GetName();
+			if (className.Contains("Slots_"))
+				inventorySlotRecipes.Add(schematic);
+		}
 	} else if (phase == ELifecyclePhase::INITIALIZATION) {
 		// TODO_MULTIPLAYER calling HasAuthority crashes multiplayer client? too early?
 		// but we're using SpawnOnServer so why/how is client running this anyways
@@ -69,7 +79,7 @@ void AApSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase, TArray<TSubclas
 
 		//TODO: generatic AP Items can be totally hardcoded outside of the initialization phase
 		UE_LOG(LogApSubsystem, Display, TEXT("Generating schematics from AP Item IDs..."));
-		for (TPair<int64, TSharedRef<FApItemBase>> apitem : mappingSubsystem->ApItems) {
+		for (TPair<int64, TSharedRef<FApItemBase>>& apitem : mappingSubsystem->ApItems) {
 			if (apitem.Value->Type == EItemType::Recipe || apitem.Value->Type == EItemType::Building)
 				CreateSchematicBoundToItemId(apitem.Key, StaticCastSharedRef<FApRecipeItem>(apitem.Value));
 		}
@@ -82,7 +92,7 @@ void AApSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase, TArray<TSubclas
 
 			SManager->GetAllPurchasedSchematics(unlockedSchematics);
 
-			for (TSubclassOf<UFGSchematic> schematic : unlockedSchematics)
+			for (TSubclassOf<UFGSchematic>& schematic : unlockedSchematics)
 				OnSchematicCompleted(schematic);
 		}
 	}
@@ -186,22 +196,22 @@ void AApSubsystem::OnSchematicCompleted(TSubclassOf<class UFGSchematic> schemati
 
 	ESchematicType type = UFGSchematic::GetType(schematic);
 
-	std::vector<int64> unlockedChecks;
+	std::set<int64> unlockedChecks;
 
 	switch (type) {
 		case ESchematicType::EST_Milestone:
 			if (locationsPerMilestone.Contains(schematic)) {
 				for (auto& location : locationsPerMilestone[schematic])
-					unlockedChecks.emplace_back(location.location);
+					unlockedChecks.insert(location.location);
 			}
 			break;
 		case ESchematicType::EST_MAM:
 			if (locationPerMamNode.Contains(schematic))
-				unlockedChecks.emplace_back(locationPerMamNode[schematic].location);
+				unlockedChecks.insert(locationPerMamNode[schematic].location);
 			break;
 		case ESchematicType::EST_ResourceSink:
 			if (locationPerShopNode.Contains(schematic))
-				unlockedChecks.emplace_back(locationPerShopNode[schematic].location);
+				unlockedChecks.insert(locationPerShopNode[schematic].location);
 			break;
 		case ESchematicType::EST_Custom:
 			if (schematic == ItemSchematics[mappingSubsystem->GetAwesomeShopItemId()] 
@@ -217,7 +227,7 @@ void AApSubsystem::OnSchematicCompleted(TSubclassOf<class UFGSchematic> schemati
 }
 
 void AApSubsystem::OnAvaiableSchematicsChanged() {
-	std::vector<int64> locationHintsToPublish;
+	std::set<int64> locationHintsToPublish;
 
 	int maxAvailableTechTier = ((int)phaseManager->GetGamePhase() + 1) * 2;
 
@@ -225,7 +235,7 @@ void AApSubsystem::OnAvaiableSchematicsChanged() {
 		if (UFGSchematic::GetTechTier(itemPerMilestone.Key) <= maxAvailableTechTier) {
 			for (FApNetworkItem item : itemPerMilestone.Value) {
 				if (item.player != currentPlayerSlot && (item.flags & 0b011) > 0)
-					locationHintsToPublish.emplace_back(item.location);
+					locationHintsToPublish.insert(item.location);
 			}
 		}
 	}
@@ -236,14 +246,14 @@ void AApSubsystem::OnAvaiableSchematicsChanged() {
 				&& (itemPerMamNode.Value.flags & 0b011) > 0
 				&& RManager->CanResearchBeInitiated(itemPerMamNode.Key))
 
-				locationHintsToPublish.emplace_back(itemPerMamNode.Value.location);
+				locationHintsToPublish.insert(itemPerMamNode.Value.location);
 		}
 	}
 
 	if (SManager->IsSchematicPurchased(ItemSchematics[mappingSubsystem->GetAwesomeShopItemId()])) {
 		for (TPair<TSubclassOf<UFGSchematic>, FApNetworkItem>& itemPerShopNode : locationPerShopNode) {
 			if (itemPerShopNode.Value.player != currentPlayerSlot && (itemPerShopNode.Value.flags & 0b011) > 0)
-				locationHintsToPublish.emplace_back(itemPerShopNode.Value.location);
+				locationHintsToPublish.insert(itemPerShopNode.Value.location);
 		}
 	}
 
@@ -397,8 +407,16 @@ void AApSubsystem::ReceiveItems()
 		} else if (mappingSubsystem->ApItems.Contains(itemid)) {
 			if (mappingSubsystem->ApItems[itemid]->Type == EItemType::Item) {
 				if (isFromServer) {
-					//TODO send directly to inventory
-					UE_LOG(LogApSubsystem, Error, TEXT("AApSubsystem::ReceiveItems(), This is where you should have gotten your item PepeSad"));
+					AFGCharacterPlayer* player = GetLocalPlayer();
+					fgcheck(player);
+					UFGInventoryComponent* inventory = player->GetInventory();
+					TSubclassOf<UFGItemDescriptor> itemClass = StaticCastSharedRef<FApItem>(mappingSubsystem->ApItems[itemid])->Class;
+					int stackSize = UFGItemDescriptor::GetStackSize(itemClass);
+					FInventoryStack stack = FInventoryStack(stackSize, itemClass);
+
+					int numAdded = inventory->AddStack(stack, true);
+					if(numAdded < stackSize)
+						portalSubsystem->Enqueue(itemClass, stackSize - numAdded);
 				} else {
 					TSubclassOf<UFGItemDescriptor> itemClass = StaticCastSharedRef<FApItem>(mappingSubsystem->ApItems[itemid])->Class;
 					int stackSize = UFGItemDescriptor::GetStackSize(itemClass);
@@ -407,8 +425,28 @@ void AApSubsystem::ReceiveItems()
 			} else if (mappingSubsystem->ApItems[itemid]->Type == EItemType::Schematic) {
 				SManager->GiveAccessToSchematic(StaticCastSharedRef<FApSchematicItem>(mappingSubsystem->ApItems[itemid])->Class, nullptr);
 			} else if (mappingSubsystem->ApItems[itemid]->Type == EItemType::Specail) {
-				//TODO: find out how to award inventroy slots...
-				UE_LOG(LogApSubsystem, Error, TEXT("AApSubsystem::ReceiveItems(), This is where you should have gotten your inventory slots expanded but i dont know how"));
+				ESpecailItemType specialType = StaticCastSharedRef<FApSpecailItem>(mappingSubsystem->ApItems[itemid])->SpecailType;
+				switch (specialType) {
+					case ESpecailItemType::Inventory3:
+					case ESpecailItemType::Inventory6: {
+							int amountToAdd = (specialType == ESpecailItemType::Inventory3) ? 3 : 6;
+
+							AFGCharacterPlayer* player = GetLocalPlayer();
+							fgcheck(player);
+							UFGInventoryComponent* inventory = player->GetInventory();
+							inventory->Resize(inventory->GetSizeLinear() + amountToAdd);
+						}
+						break;
+					case ESpecailItemType::Toolbelt1:
+						for (int i=0; i < inventorySlotRecipes.Num(); i++) {
+							if (SManager->IsSchematicPurchased(inventorySlotRecipes[i], nullptr))
+								continue;
+
+							SManager->GiveAccessToSchematic(inventorySlotRecipes[i], nullptr);
+							break;
+						}
+						break;
+				}
 			}
 		}
 
@@ -463,10 +501,13 @@ void AApSubsystem::HandleCheckedLocations() {
 	}
 }
 
+AFGCharacterPlayer* AApSubsystem::GetLocalPlayer() {
+	AFGPlayerController* playerController = UFGBlueprintFunctionLibrary::GetLocalPlayerController(GetWorld());
+	return Cast<AFGCharacterPlayer>(playerController->GetControlledCharacter());
+}
+
 bool AApSubsystem::IsCollected(UFGUnlock* unlock) {
 	UFGUnlockInfoOnly* unlockInfo = Cast<UFGUnlockInfoOnly>(unlock);
-
-	//return unlockInfo != nullptr && unlockInfo->mUnlockIconSmall == collectedIcon;
 	return unlockInfo != nullptr && unlockInfo->mUnlockIconSmall == collectedIcon;
 }
 
@@ -505,7 +546,7 @@ void AApSubsystem::ParseScoutedItemsAndCreateRecipiesAndSchematics() {
 	TMap<FString, TTuple<bool, TSubclassOf<UFGSchematic>>> schematicsPerMilestone = TMap<FString, TTuple<bool, TSubclassOf<UFGSchematic>>>();
 	TMap<int64, TSubclassOf<UFGSchematic>> schematicsPerLocation = TMap<int64, TSubclassOf<UFGSchematic>>();
 
-	for (TSubclassOf<UFGSchematic> schematic : hardcodedSchematics) {
+	for (TSubclassOf<UFGSchematic>& schematic : hardcodedSchematics) {
 		UFGSchematic* schematicCDO = Cast<UFGSchematic>(schematic->GetDefaultObject());
 		if (schematicCDO != nullptr && schematicCDO->mMenuPriority > 1000) {
 			schematicsPerLocation.Add(FMath::RoundToInt(schematicCDO->mMenuPriority), schematic);
@@ -564,7 +605,7 @@ void AApSubsystem::ParseScoutedItemsAndCreateRecipiesAndSchematics() {
 	TArray<TSubclassOf<class UFGResearchTree>> researchTrees;
 	RManager->GetAllResearchTrees(researchTrees);
 
-	for (TSubclassOf<UFGResearchTree> tree : researchTrees) {
+	for (TSubclassOf<UFGResearchTree>& tree : researchTrees) {
 		UFGResearchTree* treeCDO = Cast<UFGResearchTree>(tree->GetDefaultObject());
 		if (treeCDO != nullptr) {
 			FString className = treeCDO->GetName();
@@ -583,7 +624,7 @@ void AApSubsystem::CreateSchematicBoundToItemId(int64 itemid, TSharedRef<FApReci
 	TTuple<bool, TSubclassOf<UFGSchematic>> foundSchematic = UApUtils::FindOrCreateClass(TEXT("/Archipelago/"), *name, UFGSchematic::StaticClass());
 	if (!foundSchematic.Key) {
 		TArray<FString> recipesToUnlock;
-		for (FApRecipeInfo recipe : apitem->Recipes) {
+		for (FApRecipeInfo& recipe : apitem->Recipes) {
 			recipesToUnlock.Add(recipe.Class->GetName());
 		}
 
@@ -690,7 +731,7 @@ FContentLib_UnlockInfoOnly AApSubsystem::CreateUnlockInfoOnly(FApNetworkItem ite
 			} else if (apItem->Type == EItemType::Schematic) {
 				UpdateInfoOnlyUnlockWithSchematicInfo(&infoCard, Args, &item, StaticCastSharedRef<FApSchematicItem>(apItem));
 			} else if (apItem->Type == EItemType::Specail) {
-				//TODO: implement how we will display them
+				UpdateInfoOnlyUnlockWithSpecailInfo(&infoCard, Args, &item, StaticCastSharedRef<FApSpecailItem>(apItem));
 			}
 		} else {
 			UpdateInfoOnlyUnlockWithGenericApInfo(&infoCard, Args, &item);
@@ -724,7 +765,7 @@ void AApSubsystem::UpdateInfoOnlyUnlockWithRecipeInfo(FContentLib_UnlockInfoOnly
 	TArray<FString> BuildingArray;
 	TArray<TSubclassOf<UObject>> buildings;
 	recipe->GetProducedIn(buildings);
-	for (TSubclassOf<UObject> buildingObject : buildings) {
+	for (TSubclassOf<UObject>& buildingObject : buildings) {
 		if (buildingObject->IsChildOf(AFGBuildable::StaticClass())) {
 			AFGBuildable* building = Cast<AFGBuildable>(buildingObject.GetDefaultObject());
 			if (building != nullptr) {
@@ -762,18 +803,52 @@ void AApSubsystem::UpdateInfoOnlyUnlockWithItemBundleInfo(FContentLib_UnlockInfo
 
 	infoCard->BigIcon = infoCard->SmallIcon = UApUtils::GetImagePathForItem(itemDescriptor);
 	infoCard->CategoryIcon = TEXT("/Game/FactoryGame/Buildable/Factory/TradingPost/UI/RecipeIcons/Recipe_Icon_Item.Recipe_Icon_Item");
-	// TODO move "Item Bundle" to the name of the AP Item for clarity when hinting and similar
-	// No not needed, item names are unique, "Plastic" is just that a stack of plastic, where "Recipe: Plastic" is the recipy to craft it
 	infoCard->mUnlockDescription = FText::Format(LOCTEXT("NetworkItemUnlockPersonalItemDescription", "This will give {ApPlayerName} Item Bundle: {ApItemName}. It can be collected by building an Archipelago Portal."), Args);
 }
 
 void AApSubsystem::UpdateInfoOnlyUnlockWithSchematicInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, FApNetworkItem* item, TSharedRef<FApSchematicItem> itemInfo) {
-	UFGSchematic* schematic = itemInfo->Schematic;
+	UFGRecipe* recipe = nullptr;
+	for (UFGUnlock* unlock : itemInfo->Schematic->mUnlocks) {
+		UFGUnlockRecipe* recipeUnlockInfo = Cast<UFGUnlockRecipe>(unlock);
+		if (recipeUnlockInfo == nullptr)
+			continue;
 
-	//infoCard->BigIcon = infoCard->SmallIcon = UApUtils::GetImagePathForItem(itemDescriptor);
-	//infoCard->CategoryIcon = TEXT("/Game/FactoryGame/Buildable/Factory/TradingPost/UI/RecipeIcons/Recipe_Icon_Item.Recipe_Icon_Item");
-	// TODO move "Item Bundle" to the name of the AP Item for clarity when hinting and similar
-	//infoCard->mUnlockDescription = FText::Format(LOCTEXT("NetworkItemUnlockPersonalItemDescription", "This will give {ApPlayerName} Item Bundle: {ApItemName}. It can be collected by building an Archipelago Portal."), Args);
+		TArray<TSubclassOf<UFGRecipe>> recipes = recipeUnlockInfo->GetRecipesToUnlock();
+		if (recipes.IsEmpty())
+			continue;
+
+		recipe = recipes[0].GetDefaultObject();
+		break;
+	}
+
+	if (recipe != nullptr) {
+		UFGItemDescriptor* itemDescriptor = recipe->GetProducts()[0].ItemClass.GetDefaultObject();
+
+		infoCard->BigIcon = infoCard->SmallIcon = UApUtils::GetImagePathForItem(itemDescriptor);
+		infoCard->CategoryIcon = TEXT("/Game/FactoryGame/Buildable/Factory/TradingPost/UI/RecipeIcons/Recipe_Icon_Building.Recipe_Icon_Building");
+		infoCard->mUnlockDescription = FText::Format(LOCTEXT("NetworkItemUnlockPersonalBuildingDescription", "This will unlock your {ApItemName}"), Args);
+	} else {
+		UpdateInfoOnlyUnlockWithGenericApInfo(infoCard, Args, item);
+	}
+}
+
+void AApSubsystem::UpdateInfoOnlyUnlockWithSpecailInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, FApNetworkItem* item, TSharedRef<FApSpecailItem> itemInfo) {
+	switch (itemInfo->SpecailType) {
+		case ESpecailItemType::Inventory3:
+		case ESpecailItemType::Inventory6: {
+				Args.Add(TEXT("Amount"), itemInfo->SpecailType == ESpecailItemType::Inventory3 ? FText::FromString("3") : FText::FromString("6"));
+
+				infoCard->BigIcon = infoCard->SmallIcon = TEXT("/Game/FactoryGame/Interface/UI/Assets/Shared/ThumbsUp_64.ThumbsUp_64");
+				infoCard->CategoryIcon = TEXT("/Game/FactoryGame/Buildable/Factory/TradingPost/UI/RecipeIcons/Recipe_Icon_Upgrade.Recipe_Icon_Upgrade");
+				infoCard->mUnlockDescription = FText::Format(LOCTEXT("NetworkItemUnlockPersonalInventoryDescription", "This will infrate {ApPlayerName} pocket-dimension by {Amount}."), Args);
+			}
+			break;
+		case ESpecailItemType::Toolbelt1:
+			infoCard->BigIcon = infoCard->SmallIcon = TEXT("/Game/FactoryGame/Interface/UI/Assets/Shared/ThumbsUp_64.ThumbsUp_64");
+			infoCard->CategoryIcon = TEXT("/Game/FactoryGame/Buildable/Factory/TradingPost/UI/RecipeIcons/Recipe_Icon_Upgrade.Recipe_Icon_Upgrade");
+			infoCard->mUnlockDescription = FText::Format(LOCTEXT("NetworkItemUnlockPersonalHandSlotDescription", "This will expand {ApPlayerName} tool-chain by 1."), Args);
+			break;
+	}
 }
 
 void AApSubsystem::UpdateInfoOnlyUnlockWithGenericApInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, FApNetworkItem* item) {
@@ -828,7 +903,7 @@ void AApSubsystem::SendChatMessage(const FString& Message, const FLinearColor& C
 void AApSubsystem::ScoutArchipelagoItems() {
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::ScoutArchipelagoItems()"));
 
-	std::vector<int64> locations;
+	std::set<int64> locations;
 
 	int maxMilestones = 5;
 	int maxSlots = 10;
@@ -839,7 +914,7 @@ void AApSubsystem::ScoutArchipelagoItems() {
 		for (int milestone = 1; milestone <= maxMilestones; milestone++) {
 			for (int slot = 1; slot <= maxSlots; slot++) {
 				if (milestone <= slotData.hubLayout[tier - 1].Num() && slot <= slotData.numberOfChecksPerMilestone)
-					locations.push_back(hubBaseId);
+					locations.insert(hubBaseId);
 
 				hubBaseId++;
 			}
@@ -848,11 +923,11 @@ void AApSubsystem::ScoutArchipelagoItems() {
 
 	//mam locations
 	for (int l = 1338500; l <= 1338571; l++)
-		locations.push_back(l);
+		locations.insert(l);
 
 	//shop locations
 	for (int l = 1338700; l <= 1338709; l++)
-		locations.push_back(l);
+		locations.insert(l);
 
 	AP_SendLocationScouts(locations, 0);
 
