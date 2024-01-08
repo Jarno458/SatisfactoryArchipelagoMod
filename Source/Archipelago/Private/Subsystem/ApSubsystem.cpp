@@ -138,11 +138,15 @@ void AApSubsystem::ConnectToArchipelago() {
 
 	AP_Init(uri.c_str(), "Satisfactory", user.c_str(), password.c_str());
 
+	callbackTarget = this;
+
 	AP_SetItemClearCallback(AApSubsystem::ItemClearCallback);
 	AP_SetItemRecvCallback(AApSubsystem::ItemReceivedCallback);
 	AP_SetLocationCheckedCallback(AApSubsystem::LocationCheckedCallback);
 	AP_RegisterSetReplyCallback(AApSubsystem::SetReplyCallback);
 	AP_SetLocationInfoCallback(AApSubsystem::LocationScoutedCallback);
+	AP_SetDeathLinkRecvCallback(AApSubsystem::DeathLinkReceivedCallback);
+	AP_SetDeathLinkSupported(true);
 
 	if (!slotData.hasLoadedSlotData)
 		AP_RegisterSlotDataRawCallback("Data", AApSubsystem::ParseSlotData);
@@ -260,29 +264,25 @@ void AApSubsystem::OnAvaiableSchematicsChanged() {
 	AP_SendLocationScouts(locationHintsToPublish, 2);
 }
 
+AApSubsystem* AApSubsystem::callbackTarget;
+
 void AApSubsystem::ItemClearCallback() {
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::ItemClearCallback()"));
 
-	AApSubsystem* self = AApSubsystem::Get();
-
-	self->currentItemIndex = 0;
+	callbackTarget->currentItemIndex = 0;
 }
 
 void AApSubsystem::ItemReceivedCallback(int64 item, bool notify, bool isFromServer) {
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::ItemReceivedCallback(%i, \"%s\")"), item, (notify ? TEXT("true") : TEXT("false")));
 
-	AApSubsystem* self = AApSubsystem::Get();
-
 	TTuple<int64, bool> receivedItem = TTuple<int64, bool>(item, isFromServer);
-	self->ReceivedItems.Enqueue(receivedItem);
+	callbackTarget->ReceivedItems.Enqueue(receivedItem);
 }
 
 void AApSubsystem::LocationCheckedCallback(int64 id) {
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::LocationCheckedCallback(%i)"), id);
 
-	AApSubsystem* self = AApSubsystem::Get();
-
-	self->CheckedLocations.Enqueue(id);
+	callbackTarget->CheckedLocations.Enqueue(id);
 }
 
 void AApSubsystem::SetReplyCallback(AP_SetReply setReply) {
@@ -295,12 +295,10 @@ void AApSubsystem::SetReplyCallback(AP_SetReply setReply) {
 void AApSubsystem::LocationScoutedCallback(std::vector<AP_NetworkItem> scoutedLocations) {
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::LocationScoutedCallback(vector[%i])"), scoutedLocations.size());
 
-	AApSubsystem* self = AApSubsystem::Get();
-
-	if (!self->scoutedLocations.IsEmpty())
+	if (!callbackTarget->scoutedLocations.IsEmpty())
 		return;
 
-	self->scoutedLocations = TArray<FApNetworkItem>();
+	callbackTarget->scoutedLocations = TArray<FApNetworkItem>();
 
 	for (AP_NetworkItem apLocation : scoutedLocations) {
 		FApNetworkItem location;
@@ -312,21 +310,35 @@ void AApSubsystem::LocationScoutedCallback(std::vector<AP_NetworkItem> scoutedLo
 		location.locationName = UApUtils::FStr(apLocation.locationName);
 		location.playerName = UApUtils::FStr(apLocation.playerName);
 
-		self->scoutedLocations.Add(location);
+		callbackTarget->scoutedLocations.Add(location);
 	}
 		
-	self->areScoutedLocationsReadyToParse = true;
+	callbackTarget->areScoutedLocationsReadyToParse = true;
 }
 
 void AApSubsystem::ParseSlotData(std::string json) {
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::ParseSlotData(\"%s\")"), *UApUtils::FStr(json));
 	
-	AApSubsystem* self = AApSubsystem::Get();
-	bool success = FApSlotData::ParseSlotData(json, &self->slotData);
+	bool success = FApSlotData::ParseSlotData(json, &callbackTarget->slotData);
 	if (!success) {
 		FText jsonText = UApUtils::FText(json);
-		AbortGame(FText::Format(LOCTEXT("SlotDataInvallid", "Archipelago SlotData Invalid! %s"), jsonText));
+		AbortGame(FText::Format(LOCTEXT("SlotDataInvallid", "Archipelago SlotData Invalid! {0}"), jsonText));
 	}
+}
+
+void AApSubsystem::DeathLinkReceivedCallback(std::string source, std::string cause) {
+	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::DeathLinkReceivedCallback()"));
+
+	FText sourceString = UApUtils::FText(source);
+	FText causeString = UApUtils::FText(cause);
+	FText message;
+	if (causeString.IsEmpty()) 
+		message = FText::Format(LOCTEXT("DeathLinkReceived", "{0} has died, and so have you!"), sourceString);
+	else
+		message = FText::Format(LOCTEXT("DeathLinkReceivedWithCause", "{0} has died because {1}"), sourceString, causeString);
+
+	callbackTarget->ChatMessageQueue.Enqueue(TPair<FString, FLinearColor>(message.ToString(), FLinearColor::Red));
+	callbackTarget->instagib = true;
 }
 
 void AApSubsystem::LoadRoomInfo() {
@@ -380,12 +392,39 @@ void AApSubsystem::Tick(float DeltaTime) {
 		ReceiveItems();
 
 	HandleCheckedLocations();
-
 	HandleAPMessages();
+	HandleDeathLink();
 
 	if (phaseManager->GetGamePhase() > lastGamePhase) {
 		OnAvaiableSchematicsChanged();
 		lastGamePhase = phaseManager->GetGamePhase();
+	}
+}
+
+void AApSubsystem::HandleDeathLink() {
+	AFGCharacterPlayer* player = callbackTarget->GetLocalPlayer();
+	if (player == nullptr)
+		return;
+
+	HandleInstagib(player);
+
+	if (player->IsAliveAndWell()) {
+		awaitingHealty = false;
+	} else {
+		if (!awaitingHealty) {
+			awaitingHealty = true;
+			AP_DeathLinkSend();
+		}
+	}
+}
+
+void AApSubsystem::HandleInstagib(AFGCharacterPlayer* player) {
+	if (instagib) {
+		instagib = false;
+
+		TSubclassOf<UDamageType> const damageType = TSubclassOf<UDamageType>(UDamageType::StaticClass());
+		FDamageEvent instagibDamageEvent = FDamageEvent(damageType);
+		player->TakeDamage(1333337, instagibDamageEvent, player->GetFGPlayerController(), player);
 	}
 }
 

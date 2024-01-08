@@ -12,23 +12,17 @@
 #include "FGSchematicManager.h"
 #include "FGResearchManager.h"
 #include "FGGamePhaseManager.h"
-//#include "FGResourceSinkSubsystem.h"
 #include "FGPlayerController.h"
 #include "FGCharacterPlayer.h"
 
 #include "GenericPlatform/GenericPlatformProcess.h"
-//#include "Patching/BlueprintHookHelper.h"
-//#include "Patching/BlueprintHookManager.h"
 #include "Registry/ModContentRegistry.h"
-//#include "Kismet/BlueprintLoggingLibrary.h"
 #include "Subsystem/ModSubsystem.h"
 #include "Subsystem/SubsystemActorManager.h"
 #include "Subsystem/ApTrapSubsystem.h"
 #include "Configuration/ModConfiguration.h"
 #include "Configuration/ConfigProperty.h"
 #include "Configuration/ConfigManager.h"
-//#include "Kismet/RuntimeBlueprintFunctionLibrary.h"
-//#include "Kismet/KismetSystemLibrary.h"
 #include "Engine/Engine.h"
 #include "Configuration/Properties/ConfigPropertySection.h"
 #include "Templates/SubclassOf.h"
@@ -45,10 +39,7 @@
 #include "Subsystem/ApPortalSubsystem.h"
 #include "Subsystem/ApMappingsSubsystem.h"
 
-//#include "ContentLibSubsystem.h"
 #include "CLSchematicBPFLib.h"
-//#include "CLItemBPFLib.h"
-//#include "CLRecipeBPFLib.h"
 #include "BPFContentLib.h"
 
 #include "Archipelago.h"
@@ -140,6 +131,7 @@ public:
 	void MarkGameAsDone();
 
 private:
+	static AApSubsystem* callbackTarget;
 	static std::map<std::string, std::function<void(AP_SetReply)>> callbacks;
 
 	static void SetReplyCallback(AP_SetReply setReply);
@@ -148,6 +140,7 @@ private:
 	static void LocationCheckedCallback(int64 id);
 	static void LocationScoutedCallback(std::vector<AP_NetworkItem>);
 	static void ParseSlotData(std::string json);
+	static void DeathLinkReceivedCallback(std::string source, std::string cause);
 
 	AFGSchematicManager* SManager;
 	AFGResearchManager* RManager;
@@ -159,6 +152,8 @@ private:
 	AApPortalSubsystem* portalSubsystem;
 	AApMappingsSubsystem* mappingSubsystem;
 	AApTrapSubsystem* trapSubsystem;
+
+	AFGCharacterPlayer* currentPlayer;
 
 	UPROPERTY(SaveGame)
 	FString roomSeed;
@@ -196,6 +191,8 @@ private:
 	bool areRecipiesAndSchematicsInitialized;
 	bool hasLoadedRoomInfo;
 	bool canRecieveChat;
+	bool instagib;
+	bool awaitingHealty;
 
 	bool InitializeTick(FDateTime connectingStartedTime);
 
@@ -212,6 +209,8 @@ private:
 	AFGCharacterPlayer* GetLocalPlayer();
 	bool IsCollected(UFGUnlock* unlock);
 	void Collect(UFGUnlock* unlock, FApNetworkItem& networkItem);
+	void HandleDeathLink();
+	void HandleInstagib(AFGCharacterPlayer* player);
 
 	void HandleAPMessages();
 	void SendChatMessage(const FString& Message, const FLinearColor& Color);
@@ -233,6 +232,7 @@ private:
 	void OnMamResearchTreeUnlocked(TSubclassOf<class UFGResearchTree> researchTree);
 	UFUNCTION() //required for event binding
 	void OnSchematicCompleted(TSubclassOf<class UFGSchematic> schematic);
+
 	void OnAvaiableSchematicsChanged();
 
 	static void AbortGame(FText reason);
