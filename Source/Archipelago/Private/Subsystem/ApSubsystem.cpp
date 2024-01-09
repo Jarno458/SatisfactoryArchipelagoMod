@@ -1120,6 +1120,10 @@ void AApSubsystem::MarkGameAsDone() {
 	AP_StoryComplete();
 }
 
+void AApSubsystem::Say(FString message) {
+	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::Say(%s)"), *message);
+}
+
 void AApSubsystem::PreSaveGame_Implementation(int32 saveVersion, int32 gameVersion) {
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::PreSaveGame_Implementation(saveVersion: %i, gameVersion: %i)"), saveVersion, gameVersion);
 

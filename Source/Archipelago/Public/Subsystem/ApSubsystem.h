@@ -129,6 +129,7 @@ public:
 	TArray<FApPlayer> GetAllApPlayers();
 
 	void MarkGameAsDone();
+	void Say(FString message);
 
 private:
 	static AApSubsystem* callbackTarget;
