@@ -11,11 +11,12 @@ AApEnergyLinkSubsystem::AApEnergyLinkSubsystem()
 	PrimaryActorTick.TickInterval = 1.0f;
 }
 
-void AApEnergyLinkSubsystem::BeginPlay()
-{
+void AApEnergyLinkSubsystem::BeginPlay() {
 	Super::BeginPlay();
-	
+		
 	UE_LOG(LogApEnergyLink, Display, TEXT("AEnergyLinkSubsystem:BeginPlay()"));
+
+	ap = AApSubsystem::Get(GetWorld());
 
 	if (!hooksInitialized) {
 		UE_LOG(LogApEnergyLink, Display, TEXT("Initializing hooks"));
@@ -28,38 +29,34 @@ void AApEnergyLinkSubsystem::BeginPlay()
 			}
 		});
 
-		UE_LOG(LogApEnergyLink, Display, TEXT("Modifying Power Storage asset"));
-		const auto asset = UApUtils::GetBlueprintDataBridge(GetWorld())->PowerStorageBuilding;
-		fgcheck(asset);
-		const auto buildingCDO = Cast<AFGBuildablePowerStorage>(asset->ClassDefaultObject);
-		buildingCDO->mDisplayName = FText::FormatOrdered(LOCTEXT("EnergyLinkName", "{VanillaName} [EnergyLink]"), buildingCDO->mDisplayName);
-		buildingCDO->mDescription = LOCTEXT("EnergyLinkDescription", "TODO accurate Storage, Max Capacity, Max Discharge Rate info. Talk about how to use the building.");
-
 		hooksInitialized = true;
 	}
 }
 
-void AApEnergyLinkSubsystem::Tick(float DeltaTime)
-{
+void AApEnergyLinkSubsystem::Tick(float DeltaTime) {
 	Super::Tick(DeltaTime);
 
-	if (!apInitialized) {
-		ap = AApSubsystem::Get(GetWorld());
+	if (!apInitialized && ap->IsInitialized()) {
+		apInitialized = true;
 
-		//TOOD check if energy link is enabled
+		energyLinkEnabled = ap->GetSlotData().energyLink;
 
-		if (ap->ConnectionState == EApConnectionState::Connected)
-		{
+		if (ap->ConnectionState == EApConnectionState::Connected && energyLinkEnabled) {
+			UE_LOG(LogApEnergyLink, Display, TEXT("Modifying Power Storage asset"));
+			const auto asset = UApUtils::GetBlueprintDataBridge(GetWorld())->PowerStorageBuilding;
+			fgcheck(asset);
+			const auto buildingCDO = Cast<AFGBuildablePowerStorage>(asset->ClassDefaultObject);
+			buildingCDO->mDisplayName = FText::FormatOrdered(LOCTEXT("EnergyLinkName", "{VanillaName} [EnergyLink]"), buildingCDO->mDisplayName);
+			buildingCDO->mDescription = LOCTEXT("EnergyLinkDescription", "TODO accurate Storage, Max Capacity, Max Discharge Rate info. Talk about how to use the building.");
+
 			ap->MonitorDataStoreValue("EnergyLink" + std::to_string(ap->currentPlayerTeam), AP_DataType::Raw, energyLinkDefault, [&](AP_SetReply setReply) {
 				OnEnergyLinkValueChanged(setReply);
 			});
-
-			apInitialized = true;
 		}
 	}
 
-	if (apInitialized)
-		SecondThick();
+	if (apInitialized && energyLinkEnabled)
+		EnergyLinkTick();
 }
 
 void AApEnergyLinkSubsystem::OnEnergyLinkValueChanged(AP_SetReply setReply) {
@@ -74,7 +71,7 @@ void AApEnergyLinkSubsystem::OnEnergyLinkValueChanged(AP_SetReply setReply) {
 	}
 }
 
-void AApEnergyLinkSubsystem::SecondThick() {
+void AApEnergyLinkSubsystem::EnergyLinkTick() {
 	//TODO move to power update tick
 
 	float totalChargePerSecond = 0.0f;

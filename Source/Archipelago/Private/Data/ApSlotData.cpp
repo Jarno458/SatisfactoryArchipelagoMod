@@ -1,17 +1,7 @@
 #include "Data/ApSlotData.h"
-#include "ApUtils.h"
 
-// Possibly switch this over to reading from mod config?
-// #define UNKNOWN_ITEMID_LOG_MESSAGE_TYPE Fatal
-#define UNKNOWN_ITEMID_LOG_MESSAGE_TYPE Error
-
-FApSlotData::FApSlotData() {
-}
-
-bool FApSlotData::ParseSlotData(std::string json, FApSlotData* data) {
+bool FApSlotData::ParseSlotData(FString jsonString, FApSlotData* data) {
 	//TODO use https://docs.unrealengine.com/5.1/en-US/API/Runtime/JsonUtilities/FJsonObjectConverter/JsonObjectStringToUStruct/
-
-	FString jsonString(json.c_str());
 
 	const TSharedRef<TJsonReader<>> reader = TJsonReaderFactory<>::Create(*jsonString);
 
@@ -46,6 +36,12 @@ bool FApSlotData::ParseSlotData(std::string json, FApSlotData* data) {
 	data->numberOfChecksPerMilestone = parsedJson->GetIntegerField("SlotsPerMilestone");
 	data->finalSpaceElevatorTier = options->GetIntegerField("FinalElevatorTier");
 	data->finalResourceSinkPoints = options->GetIntegerField("FinalResourceSinkPoints");
+	data->freeSampleEnabled = options->GetBoolField("FreeSampleEnabled");
+	data->freeSampleEquipment = options->GetIntegerField("FreeSampleEquipment");
+	data->freeSampleBuildings = options->GetIntegerField("FreeSampleBuildings");
+	data->freeSampleParts = options->GetIntegerField("FreeSampleParts");
+	data->freeSampleRadioactive = options->GetBoolField("FreeSampleRadioactive");
+	data->energyLink = options->GetBoolField("EnergyLink");
 	data->hasLoadedSlotData = true;
 
 	return true;

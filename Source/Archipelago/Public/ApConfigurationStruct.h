@@ -28,13 +28,11 @@ public:
     bool ForceOverride{};
 
 	 /* Retrieves active configuration value and returns object of this struct containing it */
-    static FApConfigurationStruct GetActiveConfig(UObject* WorldContext) {
+    static FApConfigurationStruct GetActiveConfig(UWorld* WorldContext) {
         FApConfigurationStruct ConfigStruct{};
         FConfigId ConfigId{"Archipelago", ""};
-        if (const UWorld* World = GEngine->GetWorldFromContextObject(WorldContext, EGetWorldErrorMode::ReturnNull)) {
-            UConfigManager* ConfigManager = World->GetGameInstance()->GetSubsystem<UConfigManager>();
-            ConfigManager->FillConfigurationStruct(ConfigId, FDynamicStructInfo{FApConfigurationStruct::StaticStruct(), &ConfigStruct});
-        }
+        UConfigManager* ConfigManager = WorldContext->GetGameInstance()->GetSubsystem<UConfigManager>();
+        ConfigManager->FillConfigurationStruct(ConfigId, FDynamicStructInfo{FApConfigurationStruct::StaticStruct(), &ConfigStruct});
         return ConfigStruct;
     }
 

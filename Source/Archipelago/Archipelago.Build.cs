@@ -56,6 +56,7 @@ public class Archipelago : ModuleRules
 
         PrivateDependencyModuleNames.AddRange(new string[] { 
             "ContentLib",
+            "FreeSamples",
             "APCpp",
         });
 

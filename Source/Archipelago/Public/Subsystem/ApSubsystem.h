@@ -41,6 +41,7 @@
 
 #include "CLSchematicBPFLib.h"
 #include "BPFContentLib.h"
+#include "Configuration/FreeSamplesConfigurationStruct.h"
 
 #include "Archipelago.h"
 #include "Archipelago_Satisfactory.h"

@@ -35,6 +35,7 @@ public:
 
 private:
 	bool hooksInitialized = false;
+	bool energyLinkEnabled = false;
 
 	long currentServerStorage = 0;
 
@@ -44,7 +45,7 @@ private:
 
 	AApSubsystem* ap = nullptr;
 
-	void SecondThick();
+	void EnergyLinkTick();
 	void SendEnergyToServer(long amount);
 	void OnEnergyLinkValueChanged(AP_SetReply setReply);
 

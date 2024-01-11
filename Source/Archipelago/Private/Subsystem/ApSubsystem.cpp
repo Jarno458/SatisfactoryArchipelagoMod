@@ -94,6 +94,20 @@ void AApSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase, TArray<TSubclas
 
 			for (TSubclassOf<UFGSchematic>& schematic : unlockedSchematics)
 				OnSchematicCompleted(schematic);
+			
+			FConfigId ConfigId{ "FreeSamples", "" };
+
+			FFreeSamplesConfigurationStruct freeSamplesConfig = FFreeSamplesConfigurationStruct::GetActiveConfig(GetWorld());
+			freeSamplesConfig.Global.Enabled = slotData.freeSampleEnabled;
+
+			if (freeSamplesConfig.Global.Enabled) {
+				freeSamplesConfig.Equipment.Quantity = slotData.freeSampleEquipment;
+				freeSamplesConfig.Buildings.Quantity = slotData.freeSampleBuildings;
+				freeSamplesConfig.Parts.Quantity = slotData.freeSampleParts;
+			}
+
+			UConfigManager* ConfigManager = GetWorld()->GetGameInstance()->GetSubsystem<UConfigManager>();
+			ConfigManager->MarkConfigurationDirty(ConfigId);
 		}
 	}
 }
@@ -317,11 +331,13 @@ void AApSubsystem::LocationScoutedCallback(std::vector<AP_NetworkItem> scoutedLo
 }
 
 void AApSubsystem::ParseSlotData(std::string json) {
-	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::ParseSlotData(\"%s\")"), *UApUtils::FStr(json));
+	FString jsonString = UApUtils::FStr(json);
+
+	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::ParseSlotData(\"%s\")"), *jsonString);
 	
-	bool success = FApSlotData::ParseSlotData(json, &callbackTarget->slotData);
+	bool success = FApSlotData::ParseSlotData(jsonString, &callbackTarget->slotData);
 	if (!success) {
-		FText jsonText = UApUtils::FText(json);
+		FText jsonText = FText::FromString(jsonString);
 		AbortGame(FText::Format(LOCTEXT("SlotDataInvallid", "Archipelago SlotData Invalid! {0}"), jsonText));
 	}
 }
@@ -1122,6 +1138,8 @@ void AApSubsystem::MarkGameAsDone() {
 
 void AApSubsystem::Say(FString message) {
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::Say(%s)"), *message);
+
+	AP_Say(TCHAR_TO_UTF8(*message));
 }
 
 void AApSubsystem::PreSaveGame_Implementation(int32 saveVersion, int32 gameVersion) {

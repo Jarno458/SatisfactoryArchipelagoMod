@@ -18,8 +18,6 @@ struct ARCHIPELAGO_API FApSlotData
 {
 	GENERATED_BODY()
 public:
-	FApSlotData();
-
 	bool hasLoadedSlotData;
 
 	UPROPERTY(BlueprintReadOnly, SaveGame)
@@ -33,9 +31,27 @@ public:
 	UPROPERTY(BlueprintReadOnly, SaveGame)
 	int64 finalResourceSinkPoints;
 
+	UPROPERTY(BlueprintReadOnly, SaveGame)
+	bool freeSampleEnabled;
+
+	UPROPERTY(BlueprintReadOnly, SaveGame)
+	int freeSampleEquipment;
+
+	UPROPERTY(BlueprintReadOnly, SaveGame)
+	int freeSampleBuildings;
+
+	UPROPERTY(BlueprintReadOnly, SaveGame)
+	int freeSampleParts;
+
+	UPROPERTY(BlueprintReadOnly, SaveGame)
+	bool freeSampleRadioactive;
+
+	UPROPERTY(BlueprintReadOnly, SaveGame)
+	bool energyLink;
+
 public:
 	// Parse slot data from server. Returns false if invalid.
-	static bool ParseSlotData(std::string json, FApSlotData* data);
+	static bool ParseSlotData(FString jsonString, FApSlotData* data);
 };
 
 USTRUCT(BlueprintType)
