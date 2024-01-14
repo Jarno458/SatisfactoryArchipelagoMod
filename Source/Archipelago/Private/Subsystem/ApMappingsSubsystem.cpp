@@ -260,11 +260,6 @@ void AApMappingsSubsystem::LoadNamesFromAP() {
 	}
 }
 
-void AApMappingsSubsystem::PreSaveGame_Implementation(int32 saveVersion, int32 gameVersion) {
-
-	auto x = ItemIdToName;
-}
-
 void AApMappingsSubsystem::PostLoadGame_Implementation(int32 saveVersion, int32 gameVersion) {
 	if (ItemIdToName.IsEmpty())
 		return;

@@ -2,6 +2,8 @@
 
 #include "CoreMinimal.h"
 
+#include "Net/UnrealNetwork.h"
+
 #include "Buildables/FGBuildableFactory.h"
 
 #include "FGFactoryConnectionComponent.h"
@@ -24,11 +26,12 @@ public:
 	AApPortal();
 
 	virtual void BeginPlay() override;
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	mutable TQueue<FInventoryItem> outputQueue;
 
 	// TODO Replicated, RepNotify
-	UPROPERTY(BlueprintReadWrite, SaveGame)
+	UPROPERTY(BlueprintReadWrite, SaveGame, replicated)
 	FApPlayer targetPlayer;
 
 private:

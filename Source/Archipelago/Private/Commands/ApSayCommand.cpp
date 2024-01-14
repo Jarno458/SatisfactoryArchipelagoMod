@@ -4,9 +4,10 @@
 #pragma optimize("", off)
 
 AApSayCommand::AApSayCommand() {
-	CommandName = TEXT("say");
-	Usage = TEXT("/say <message> - send chat message to AP server");
+	CommandName = TEXT("ap-say");
+	Usage = TEXT("/ap-say <message> - send chat message to AP server");
 	MinNumberOfArguments = 1;
+	Aliases.Add(TEXT("say"));
 }
 
 EExecutionStatus AApSayCommand::ExecuteCommand_Implementation(UCommandSender* Sender, const TArray<FString>& Arguments, const FString& Label) {

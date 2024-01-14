@@ -36,7 +36,6 @@ bool FApSlotData::ParseSlotData(FString jsonString, FApSlotData* data) {
 	data->numberOfChecksPerMilestone = parsedJson->GetIntegerField("SlotsPerMilestone");
 	data->finalSpaceElevatorTier = options->GetIntegerField("FinalElevatorTier");
 	data->finalResourceSinkPoints = options->GetIntegerField("FinalResourceSinkPoints");
-	data->freeSampleEnabled = options->GetBoolField("FreeSampleEnabled");
 	data->freeSampleEquipment = options->GetIntegerField("FreeSampleEquipment");
 	data->freeSampleBuildings = options->GetIntegerField("FreeSampleBuildings");
 	data->freeSampleParts = options->GetIntegerField("FreeSampleParts");

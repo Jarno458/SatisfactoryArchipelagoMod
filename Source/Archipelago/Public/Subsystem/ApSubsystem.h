@@ -22,6 +22,8 @@
 #include "Subsystem/ApTrapSubsystem.h"
 #include "Configuration/ModConfiguration.h"
 #include "Configuration/ConfigProperty.h"
+#include "Configuration/Properties/ConfigPropertyInteger.h"
+#include "Configuration/Properties/ConfigPropertyBool.h"
 #include "Configuration/ConfigManager.h"
 #include "Engine/Engine.h"
 #include "Configuration/Properties/ConfigPropertySection.h"
@@ -205,6 +207,7 @@ private:
 	void ScoutArchipelagoItems();
 	void ParseScoutedItemsAndCreateRecipiesAndSchematics();
 	void LoadRoomInfo();
+	bool UpdateFreeSamplesConfiguration();
 
 	void ReceiveItems();
 	void HandleCheckedLocations();

@@ -17,6 +17,12 @@ AApPortal::AApPortal() : Super() {
 	targetPlayer = FApPlayer();
 }
 
+void AApPortal::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const {
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(AApPortal, targetPlayer);
+}
+
 void AApPortal::BeginPlay() {
 	Super::BeginPlay();
 

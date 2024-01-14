@@ -13,6 +13,8 @@ void UArchipelagoRCO::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 void UArchipelagoRCO::ServerSetPortalTargetPlayer_Implementation(AApPortal* Building, FApPlayer Player) {
 	if (!Building)
 		return;
+
 	UE_LOG(LogApReplication, Display, TEXT("RCO Server Set PortalTarget %s to %s"), *UKismetSystemLibrary::GetDisplayName(Building), *Player.Name);
+
 	Building->targetPlayer = Player;
 }

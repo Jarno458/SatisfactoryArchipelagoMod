@@ -26,7 +26,7 @@
 		{
 			"Name": "SML",
 			"Enabled": true,
-			"SemVersion": "^3.6.1"
+			"SemVersion": "^3.7.0"
 		},
 		{
 			"Name": "ContentLib",

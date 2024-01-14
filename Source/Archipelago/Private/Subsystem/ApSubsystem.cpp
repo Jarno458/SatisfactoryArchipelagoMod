@@ -94,22 +94,63 @@ void AApSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase, TArray<TSubclas
 
 			for (TSubclassOf<UFGSchematic>& schematic : unlockedSchematics)
 				OnSchematicCompleted(schematic);
-			
-			FConfigId ConfigId{ "FreeSamples", "" };
-
-			FFreeSamplesConfigurationStruct freeSamplesConfig = FFreeSamplesConfigurationStruct::GetActiveConfig(GetWorld());
-			freeSamplesConfig.Global.Enabled = slotData.freeSampleEnabled;
-
-			if (freeSamplesConfig.Global.Enabled) {
-				freeSamplesConfig.Equipment.Quantity = slotData.freeSampleEquipment;
-				freeSamplesConfig.Buildings.Quantity = slotData.freeSampleBuildings;
-				freeSamplesConfig.Parts.Quantity = slotData.freeSampleParts;
-			}
-
-			UConfigManager* ConfigManager = GetWorld()->GetGameInstance()->GetSubsystem<UConfigManager>();
-			ConfigManager->MarkConfigurationDirty(ConfigId);
 		}
 	}
+}
+
+bool AApSubsystem::UpdateFreeSamplesConfiguration(){
+	FConfigId FreeSamplesConfigId { "FreeSamples", "" };
+
+	UConfigManager* ConfigManager = GetWorld()->GetGameInstance()->GetSubsystem<UConfigManager>();
+	if (ConfigManager == nullptr) {
+		return false;
+	}
+	UConfigPropertySection* configRoot = ConfigManager->GetConfigurationRootSection(FreeSamplesConfigId);
+	if (configRoot == nullptr) {
+		return false;
+	}
+
+	if (configRoot->SectionProperties.Contains("Equipment")) {
+		UConfigPropertySection* EquipmentSection = Cast<UConfigPropertySection>(configRoot->SectionProperties["Equipment"]);
+		if (EquipmentSection != nullptr && EquipmentSection->SectionProperties.Contains("Quantity")) {
+			UConfigPropertyInteger* quantity = Cast<UConfigPropertyInteger>(EquipmentSection->SectionProperties["Quantity"]);
+			if (quantity != nullptr)
+				quantity->Value = slotData.freeSampleEquipment;
+		}
+	}
+
+	if (configRoot->SectionProperties.Contains("Buildings")) {
+		UConfigPropertySection* BuildingsSection = Cast<UConfigPropertySection>(configRoot->SectionProperties["Buildings"]);
+		if (BuildingsSection != nullptr && BuildingsSection->SectionProperties.Contains("Quantity")) {
+			UConfigPropertyInteger* quantity = Cast<UConfigPropertyInteger>(BuildingsSection->SectionProperties["Quantity"]);
+			if (quantity != nullptr)
+				quantity->Value = slotData.freeSampleBuildings;
+		}
+	}
+
+	if (configRoot->SectionProperties.Contains("Parts")) {
+		UConfigPropertySection* PartsSection = Cast<UConfigPropertySection>(configRoot->SectionProperties["Parts"]);
+		if (PartsSection != nullptr && PartsSection->SectionProperties.Contains("Quantity")) {
+			UConfigPropertyInteger* quantity = Cast<UConfigPropertyInteger>(PartsSection->SectionProperties["Quantity"]);
+			if (quantity != nullptr)
+				quantity->Value = slotData.freeSampleParts;
+		}
+	}
+
+	if (configRoot->SectionProperties.Contains("Exclude")) {
+		UConfigPropertySection* ExcludeSection = Cast<UConfigPropertySection>(configRoot->SectionProperties["Exclude"]);
+		if (ExcludeSection != nullptr && ExcludeSection->SectionProperties.Contains("SkipRadioactive")) {
+			UConfigPropertyBool* excludeRadioActive = Cast<UConfigPropertyBool>(ExcludeSection->SectionProperties["SkipRadioactive"]);
+			if (excludeRadioActive != nullptr)
+				excludeRadioActive->Value = !slotData.freeSampleRadioactive;
+		}
+	}
+
+	ConfigManager->MarkConfigurationDirty(FreeSamplesConfigId);
+	ConfigManager->FlushPendingSaves();
+	ConfigManager->ReloadModConfigurations();
+
+	return true;
 }
 
 bool AApSubsystem::InitializeTick(FDateTime connectingStartedTime) {
@@ -135,12 +176,19 @@ bool AApSubsystem::InitializeTick(FDateTime connectingStartedTime) {
 			mappingSubsystem->InitializeAfterConnectingToAp();
 	}
 
-	if (!areRecipiesAndSchematicsInitialized 
-		&& areScoutedLocationsReadyToParse 
-		&& slotData.hasLoadedSlotData 
-		&& mappingSubsystem->IsInitialized())
-			ParseScoutedItemsAndCreateRecipiesAndSchematics();
-	
+	if (!areRecipiesAndSchematicsInitialized
+		&& areScoutedLocationsReadyToParse
+		&& slotData.hasLoadedSlotData
+		&& mappingSubsystem->IsInitialized()) {
+
+		ParseScoutedItemsAndCreateRecipiesAndSchematics();
+
+		//must be called before BeginPlay() as FreeSamples caches its exclude radioactive flag there
+		if (!UpdateFreeSamplesConfiguration()) {
+			UE_LOG(LogApSubsystem, Error, TEXT("Failed update configuration of Free Samples"));
+		}
+	}
+		
 	return ConnectionState == EApConnectionState::ConnectionFailed 
 		|| (areRecipiesAndSchematicsInitialized && ConnectionState == EApConnectionState::Connected);
 }

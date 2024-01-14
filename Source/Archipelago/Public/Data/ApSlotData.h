@@ -32,9 +32,6 @@ public:
 	int64 finalResourceSinkPoints;
 
 	UPROPERTY(BlueprintReadOnly, SaveGame)
-	bool freeSampleEnabled;
-
-	UPROPERTY(BlueprintReadOnly, SaveGame)
 	int freeSampleEquipment;
 
 	UPROPERTY(BlueprintReadOnly, SaveGame)
