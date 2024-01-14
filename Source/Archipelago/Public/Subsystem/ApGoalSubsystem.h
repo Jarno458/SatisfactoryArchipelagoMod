@@ -27,7 +27,6 @@ public:
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;
 
-	static AApGoalSubsystem* Get();
 	static AApGoalSubsystem* Get(class UWorld* world);
 
 	bool AreGoalsCompleted(const FApSlotData* slotData);

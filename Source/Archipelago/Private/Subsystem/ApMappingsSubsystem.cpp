@@ -9,10 +9,6 @@ DEFINE_LOG_CATEGORY(LogApMappingsSubsystem);
 //TODO REMOVE
 #pragma optimize("", off)
 
-AApMappingsSubsystem* AApMappingsSubsystem::Get() {
-	return Get(GEngine->GameViewport->GetWorld());
-}
-
 AApMappingsSubsystem* AApMappingsSubsystem::Get(class UWorld* world) {
 	USubsystemActorManager* SubsystemActorManager = world->GetSubsystem<USubsystemActorManager>();
 	fgcheck(SubsystemActorManager);

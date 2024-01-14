@@ -131,7 +131,6 @@ public:
 
 	virtual void BeginPlay() override;
 
-	static AApMappingsSubsystem* Get();
 	static AApMappingsSubsystem* Get(class UWorld* world);
 
 protected:

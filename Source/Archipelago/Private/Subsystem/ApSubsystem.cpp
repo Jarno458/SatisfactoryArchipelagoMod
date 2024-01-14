@@ -22,8 +22,10 @@ AApSubsystem::AApSubsystem() {
 	ConnectionStateDescription = LOCTEXT("NotYetAttempted", "A connection has not yet been attempted. Load a save file to attempt to connect.");
 }
 
-AApSubsystem* AApSubsystem::Get() {
-	return Get(GEngine->GameViewport->GetWorld());
+AApSubsystem* AApSubsystem::Get(class UObject* worldContext) {
+	UWorld* world = GEngine->GetWorldFromContextObject(worldContext, EGetWorldErrorMode::Assert);
+
+	return Get(world);
 }
 
 AApSubsystem* AApSubsystem::Get(class UWorld* world) {

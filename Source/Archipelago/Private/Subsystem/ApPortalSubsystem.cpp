@@ -6,10 +6,6 @@ DEFINE_LOG_CATEGORY(LogApPortalSubsystem);
 //TODO REMOVE
 #pragma optimize("", off)
 
-AApPortalSubsystem* AApPortalSubsystem::Get() {
-	return Get(GEngine->GameViewport->GetWorld());
-}
-
 AApPortalSubsystem* AApPortalSubsystem::Get(class UWorld* world) {
 	USubsystemActorManager* SubsystemActorManager = world->GetSubsystem<USubsystemActorManager>();
 	fgcheck(SubsystemActorManager);

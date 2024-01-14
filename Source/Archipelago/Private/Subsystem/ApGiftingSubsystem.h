@@ -28,9 +28,9 @@ public:
 
 	virtual void Tick(float dt) override;
 
-	UFUNCTION(BlueprintCallable, BlueprintPure, meta = (DisplayName = "Get Archipelago Gifting Subsystem"))
-	static AApGiftingSubsystem* Get();
 	static AApGiftingSubsystem* Get(class UWorld* world);
+	UFUNCTION(BlueprintPure, Category = "Schematic", DisplayName = "Get ApGiftingSubsystem", Meta = (DefaultToSelf = "worldContext"))
+	static AApGiftingSubsystem* Get(UObject* worldContext);
 
 	TMap<FApPlayer, FApGiftBoxMetaData> AcceptedGiftTraitsPerPlayer;
 

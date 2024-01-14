@@ -27,8 +27,6 @@ public:
 
 	virtual void Tick(float dt) override;
 
-	UFUNCTION(BlueprintCallable, BlueprintPure, meta = (DisplayName = "Get Portal ApSubsystem"))
-	static AApPortalSubsystem* Get();
 	static AApPortalSubsystem* Get(class UWorld* world);
 
 protected:

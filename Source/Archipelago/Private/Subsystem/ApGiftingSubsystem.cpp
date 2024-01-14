@@ -283,9 +283,10 @@ const TMap<int64, int> AApGiftingSubsystem::HardcodedSinkValues = {
 	{1338107, 400000}, // Desc_QuantumOscillator_C,
 };
 
+AApGiftingSubsystem* AApGiftingSubsystem::Get(UObject* worldContext) {
+	UWorld* world = GEngine->GetWorldFromContextObject(worldContext, EGetWorldErrorMode::Assert);
 
-AApGiftingSubsystem* AApGiftingSubsystem::Get() {
-	return Get(GEngine->GameViewport->GetWorld());
+	return Get(world);
 }
 
 AApGiftingSubsystem* AApGiftingSubsystem::Get(class UWorld* world) {

@@ -137,10 +137,6 @@ AApExplorationSubsystem* AApExplorationSubsystem::Get(UObject* WorldContext) {
 	}
 }
 
-AApExplorationSubsystem* AApExplorationSubsystem::Get() {
-	return Get(GEngine->GameViewport->GetWorld());
-}
-
 void AApExplorationSubsystem::GetDropPodLocationMap(TMap<int, FVector_NetQuantize> in_idToLocation) {
 	for (auto& entry : IdToDropPodLocation) {
 		in_idToLocation.Add((int) entry.Key, entry.Value);

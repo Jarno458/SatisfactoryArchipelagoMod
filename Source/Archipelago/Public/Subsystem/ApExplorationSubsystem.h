@@ -60,9 +60,6 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Archipelago", DisplayName = "GetArchipelagoExplorationSubsystem", Meta = (DefaultToSelf = "WorldContext"))
 	static AApExplorationSubsystem* Get(UObject* WorldContext);
 
-	// Auto world context version
-	static AApExplorationSubsystem* Get();
-
 	// This is a static field so blueprint access needs a getter to convert
 	// TODO still needed?
 	UFUNCTION(BlueprintCallable)

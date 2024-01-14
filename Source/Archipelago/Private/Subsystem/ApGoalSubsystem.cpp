@@ -6,10 +6,6 @@ AApGoalSubsystem::AApGoalSubsystem() : Super() {
 	PrimaryActorTick.TickInterval = 1.0f;
 }
 
-AApGoalSubsystem* AApGoalSubsystem::Get() {
-	return Get(GEngine->GameViewport->GetWorld());
-}
-
 AApGoalSubsystem* AApGoalSubsystem::Get(UWorld* world) {
 	USubsystemActorManager* SubsystemActorManager = world->GetSubsystem<USubsystemActorManager>();
 	fgcheck(SubsystemActorManager);

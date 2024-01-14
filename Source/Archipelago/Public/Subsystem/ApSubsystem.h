@@ -98,10 +98,9 @@ public:
 	UPROPERTY(BlueprintReadOnly, SaveGame)
 	int currentPlayerSlot = 0;
 
-	// Get a copy of the subsystem
-	UFUNCTION(BlueprintCallable, BlueprintPure, meta = (DisplayName = "Get ApSubsystem"))
-	static AApSubsystem* Get();
 	static AApSubsystem* Get(class UWorld* world);
+	UFUNCTION(BlueprintPure, Category = "Schematic", DisplayName = "Get ApSubsystem", Meta = (DefaultToSelf = "worldContext"))
+	static AApSubsystem* Get(UObject* worldContext);
 
 	UFUNCTION(BlueprintCallable)
 	void DispatchLifecycleEvent(ELifecyclePhase phase, TArray<TSubclassOf<UFGSchematic>> apHardcodedSchematics);
