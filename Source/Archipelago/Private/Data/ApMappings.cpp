@@ -590,23 +590,54 @@ const TMap<int64, FString> UApMappings::ItemIdToGameSchematic = {
 	{1338685, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/Customizer_Background/CBG_Concrete_Walls_Basic.CBG_Concrete_Walls_Basic")},
 
 	{1338693, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_HalfFoundations.ResourceSink_HalfFoundations'")},
-	//{1338694, TEXT("Corner Ramp Pack")},
+	{1338694, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_DiagonalRamps.ResourceSink_DiagonalRamps'")},
 	{1338695, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_InvertedRampPack.ResourceSink_InvertedRampPack'")},
 	{1338696, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_InvertedCornerRamps.ResourceSink_InvertedCornerRamps'")},
-	//{1338697, TEXT("Quarter Pipes Pack")},
+	{1338697, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_CurvedFoundationPack.ResourceSink_CurvedFoundationPack'")},
 	{1338698, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_QuarterPipeExtensions.ResourceSink_QuarterPipeExtensions'")},
 	{1338699, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_FrameworkFoundations.ResourceSink_FrameworkFoundations'")},
+	{1338700, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_WallPowerPoles.ResourceSink_WallPowerPoles'")},
+	{1338701, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_WallPowerPolesMK2.ResourceSink_WallPowerPolesMK2'")},
+	{1338702, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_WallPowerPolesMK3.ResourceSink_WallPowerPolesMK3'")},
+	{1338703, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_Catwalks.ResourceSink_Catwalks'")},
+	{1338704, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_Walkways.ResourceSink_Walkways'")},
+	{1338705, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_Stairs.ResourceSink_Stairs'")},
+	{1338706, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_NoIndicator_PipelineMK1.ResourceSink_NoIndicator_PipelineMK1'")},
+	{1338707, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_NoIndicator_PipelineMK2.ResourceSink_NoIndicator_PipelineMK2'")},
+	{1338708, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_FactoryBarrier.ResourceSink_FactoryBarrier'")},
+	{1338709, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_FactoryFence.ResourceSink_FactoryFence'")},
+	{1338710, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_FactoryRailing.ResourceSink_FactoryRailing'")},
+	{1338711, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_FoundationExpansionPack.ResourceSink_FoundationExpansionPack'")},
+	{1338712, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_ConveryWalls_Normal.ResourceSink_ConveryWalls_Normal'")},
+	{1338713, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_Diagonal_Down_Wallset.ResourceSink_Diagonal_Down_Wallset'")},
+	{1338714, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_Diagonal_Up_WallSet.ResourceSink_Diagonal_Up_WallSet'")},
+	{1338715, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_DoorWalls_Normal.ResourceSink_DoorWalls_Normal'")},
+	{1338716, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_Tilted_Walls.ResourceSink_Tilted_Walls'")},
+	{1338717, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_WindowedWalls.ResourceSink_WindowedWalls'")},
+	{1338718, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_FrameWindows.ResourceSink_FrameWindows'")},
+	{1338719, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_GateWalls.ResourceSink_GateWalls'")},
+	{1338720, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_Roofs_Basic.ResourceSink_Roofs_Basic'")},
+	{1338721, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_Roofs_Corners.ResourceSink_Roofs_Corners'")},
 
-	{1338810, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_HyperTubeFloorHole.ResourceSink_HyperTubeFloorHole'")},
+	{1338850, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/Customizer/ResourceSink_Customizer_Asphalt_FoundationMaterial.ResourceSink_Customizer_Asphalt_FoundationMaterial'")},
+	{1338851, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/Customizer/ResourceSink_Customizer_Concrete_FoundationMaterial.ResourceSink_Customizer_Concrete_FoundationMaterial'")},
+	{1338852, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/Customizer/ResourceSink_Customizer_ConcreteWallMaterial.ResourceSink_Customizer_ConcreteWallMaterial'")},
+	{1338853, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/Customizer/ResourceSink_Customizer_GlassRoofMaterial.ResourceSink_Customizer_GlassRoofMaterial'")},
+	{1338854, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/Customizer/ResourceSink_Customizer_GripMetal_FoundationMaterial.ResourceSink_Customizer_GripMetal_FoundationMaterial'")},
+	{1338855, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/Customizer/ResourceSink_Customizer_PolishedConcrete_FoundationMaterial.ResourceSink_Customizer_PolishedConcrete_FoundationMaterial'")},
+	{1338856, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/Customizer/ResourceSink_Customizer_SteelRoofMaterial.ResourceSink_Customizer_SteelRoofMaterial'")},
+	{1338857, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/Customizer/ResourceSink_Customizer_SteelWallMaterial.ResourceSink_Customizer_SteelWallMaterial'")},
+	{1338858, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/Customizer/ResourceSink_Customizer_TarRoofMaterial.ResourceSink_Customizer_TarRoofMaterial'")},
+	{1338859, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/Patterns/ResourceSink_Arrows_FoundationPatterns.ResourceSink_Arrows_FoundationPatterns'")},
+	{1338860, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/Patterns/ResourceSink_DotLines_FoundationPatterns.ResourceSink_DotLines_FoundationPatterns'")},
+	{1338861, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/Patterns/ResourceSink_FullLines_FoundationPatterns.ResourceSink_FullLines_FoundationPatterns'")},
+	{1338862, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/Patterns/ResourceSink_IconsFactory_FoundationPatterns.ResourceSink_IconsFactory_FoundationPatterns'")},
+	{1338863, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/Patterns/ResourceSink_IconsTransport_FoundationPatterns.ResourceSink_IconsTransport_FoundationPatterns'")},
+	{1338864, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/Patterns/ResourceSink_Number_FoundationPatterns.ResourceSink_Number_FoundationPatterns'")},
+	{1338865, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/Patterns/ResourceSink_Pathways_FoundationPatterns.ResourceSink_Pathways_FoundationPatterns'")},
+	{1338866, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/Patterns/ResourceSink_Zones_FoundationPatterns.ResourceSink_Zones_FoundationPatterns'")},
 
-
-
-	//TODO
-	// walls
-	// roofs
-	// wall power
-	// frame foundations
-	// stairs
+	{1338810, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_HyperTubeFloorHole.ResourceSink_HyperTubeFloorHole'")}
 };
 
 const TMap<int64, FName> UApMappings::ItemIdToTrap = {
