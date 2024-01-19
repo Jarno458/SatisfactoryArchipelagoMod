@@ -290,8 +290,51 @@ void AApSubsystem::OnSchematicCompleted(TSubclassOf<class UFGSchematic> schemati
 			return;
 	}
 
-	if (unlockedChecks.size() > 0)
-		AP_SendItem(unlockedChecks);
+	if (unlockedChecks.size() > 0) {
+		if (ConnectionState == EApConnectionState::Connected) {
+			AP_SendItem(unlockedChecks);
+		} else {
+			for (int64 location : unlockedChecks) {
+				switch (type) {
+					case ESchematicType::EST_Milestone:
+						for (TPair<TSubclassOf<UFGSchematic>, TArray<FApNetworkItem>>& itemPerMilestone : locationsPerMilestone) {
+							for (int index = 0; index < itemPerMilestone.Value.Num(); index++) {
+								FApNetworkItem networkItem = itemPerMilestone.Value[index];
+								if (networkItem.location == location) {
+									if (networkItem.player == currentPlayerSlot)
+										ReceivedItems.Enqueue(TTuple<int64, bool>(networkItem.item, false));
+
+									continue;
+								}
+							}
+						}
+						break;
+					case ESchematicType::EST_MAM:
+						for (TPair<TSubclassOf<UFGSchematic>, FApNetworkItem>& itemPerMamNode : locationPerMamNode) {
+							if (itemPerMamNode.Value.location == location) {
+								if (itemPerMamNode.Value.player == currentPlayerSlot)
+									ReceivedItems.Enqueue(TTuple<int64, bool>(itemPerMamNode.Value.item, false));
+
+								continue;
+							}
+						}
+						break;
+					case ESchematicType::EST_ResourceSink:
+						for (TPair<TSubclassOf<UFGSchematic>, FApNetworkItem>& itemPerShopNode : locationPerShopNode) {
+							if (itemPerShopNode.Value.location == location) {
+								if (itemPerShopNode.Value.player == currentPlayerSlot)
+									ReceivedItems.Enqueue(TTuple<int64, bool>(itemPerShopNode.Value.item, false));
+
+								continue;
+							}
+						}
+						break;
+					default:
+						continue;
+				}
+			}
+		}
+	}
 }
 
 void AApSubsystem::OnAvaiableSchematicsChanged() {
@@ -451,11 +494,11 @@ void AApSubsystem::SetServerData(AP_SetServerDataRequest* setDataRequest) {
 void AApSubsystem::Tick(float DeltaTime) {
 	Super::Tick(DeltaTime);
 
-	if (ConnectionState != EApConnectionState::Connected)
-		return;
-
 	if (portalSubsystem->IsInitialized())
 		ReceiveItems();
+
+	if (ConnectionState != EApConnectionState::Connected)
+		return;
 
 	HandleCheckedLocations();
 	HandleAPMessages();
@@ -494,68 +537,73 @@ void AApSubsystem::HandleInstagib(AFGCharacterPlayer* player) {
 	}
 }
 
-void AApSubsystem::ReceiveItems()
-{
+void AApSubsystem::ReceiveItems() {
 	// Consider processing only one queue item per tick for performance reasons
 	TTuple<int64, bool> item;
 	while (ReceivedItems.Dequeue(item)) {
-		if (++currentItemIndex < lastProcessedItemIndex)
+		if (ConnectionState == EApConnectionState::Connected && ++currentItemIndex < lastProcessedItemIndex)
 			continue;
 
-		int64 itemid = item.Key;
-		bool isFromServer = item.Value;
-
-		if (ItemSchematics.Contains(itemid)) {
-			SManager->GiveAccessToSchematic(ItemSchematics[itemid], nullptr);
-		} else if (auto trapName = UApMappings::ItemIdToTrap.Find(itemid)) {
-			trapSubsystem->SpawnTrap(*trapName, nullptr);
-		} else if (mappingSubsystem->ApItems.Contains(itemid)) {
-			if (mappingSubsystem->ApItems[itemid]->Type == EItemType::Item) {
-				if (isFromServer) {
-					AFGCharacterPlayer* player = GetLocalPlayer();
-					fgcheck(player);
-					UFGInventoryComponent* inventory = player->GetInventory();
-					TSubclassOf<UFGItemDescriptor> itemClass = StaticCastSharedRef<FApItem>(mappingSubsystem->ApItems[itemid])->Class;
-					int stackSize = UFGItemDescriptor::GetStackSize(itemClass);
-					FInventoryStack stack = FInventoryStack(stackSize, itemClass);
-
-					int numAdded = inventory->AddStack(stack, true);
-					if(numAdded < stackSize)
-						portalSubsystem->Enqueue(itemClass, stackSize - numAdded);
-				} else {
-					TSubclassOf<UFGItemDescriptor> itemClass = StaticCastSharedRef<FApItem>(mappingSubsystem->ApItems[itemid])->Class;
-					int stackSize = UFGItemDescriptor::GetStackSize(itemClass);
-					portalSubsystem->Enqueue(itemClass, stackSize);
-				}
-			} else if (mappingSubsystem->ApItems[itemid]->Type == EItemType::Schematic) {
-				SManager->GiveAccessToSchematic(StaticCastSharedRef<FApSchematicItem>(mappingSubsystem->ApItems[itemid])->Class, nullptr);
-			} else if (mappingSubsystem->ApItems[itemid]->Type == EItemType::Specail) {
-				ESpecailItemType specialType = StaticCastSharedRef<FApSpecailItem>(mappingSubsystem->ApItems[itemid])->SpecailType;
-				switch (specialType) {
-					case ESpecailItemType::Inventory3:
-					case ESpecailItemType::Inventory6: {
-							int amountToAdd = (specialType == ESpecailItemType::Inventory3) ? 3 : 6;
-
-							AFGCharacterPlayer* player = GetLocalPlayer();
-							fgcheck(player);
-							UFGInventoryComponent* inventory = player->GetInventory();
-							inventory->Resize(inventory->GetSizeLinear() + amountToAdd);
-						}
-						break;
-					case ESpecailItemType::Toolbelt1:
-						for (int i=0; i < inventorySlotRecipes.Num(); i++) {
-							if (SManager->IsSchematicPurchased(inventorySlotRecipes[i], nullptr))
-								continue;
-
-							SManager->GiveAccessToSchematic(inventorySlotRecipes[i], nullptr);
-							break;
-						}
-						break;
-				}
-			}
-		}
+		AwardItem(item.Key, item.Value);
 
 		lastProcessedItemIndex++;
+	}
+}
+
+void AApSubsystem::AwardItem(int64 itemid, bool isFromServer) {
+	if (ItemSchematics.Contains(itemid)) {
+		SManager->GiveAccessToSchematic(ItemSchematics[itemid], nullptr);
+	}
+	else if (auto trapName = UApMappings::ItemIdToTrap.Find(itemid)) {
+		trapSubsystem->SpawnTrap(*trapName, nullptr);
+	}
+	else if (mappingSubsystem->ApItems.Contains(itemid)) {
+		if (mappingSubsystem->ApItems[itemid]->Type == EItemType::Item) {
+			if (isFromServer) {
+				AFGCharacterPlayer* player = GetLocalPlayer();
+				fgcheck(player);
+				UFGInventoryComponent* inventory = player->GetInventory();
+				TSubclassOf<UFGItemDescriptor> itemClass = StaticCastSharedRef<FApItem>(mappingSubsystem->ApItems[itemid])->Class;
+				int stackSize = UFGItemDescriptor::GetStackSize(itemClass);
+				FInventoryStack stack = FInventoryStack(stackSize, itemClass);
+
+				int numAdded = inventory->AddStack(stack, true);
+				if (numAdded < stackSize)
+					portalSubsystem->Enqueue(itemClass, stackSize - numAdded);
+			}
+			else {
+				TSubclassOf<UFGItemDescriptor> itemClass = StaticCastSharedRef<FApItem>(mappingSubsystem->ApItems[itemid])->Class;
+				int stackSize = UFGItemDescriptor::GetStackSize(itemClass);
+				portalSubsystem->Enqueue(itemClass, stackSize);
+			}
+		}
+		else if (mappingSubsystem->ApItems[itemid]->Type == EItemType::Schematic) {
+			SManager->GiveAccessToSchematic(StaticCastSharedRef<FApSchematicItem>(mappingSubsystem->ApItems[itemid])->Class, nullptr);
+		}
+		else if (mappingSubsystem->ApItems[itemid]->Type == EItemType::Specail) {
+			ESpecailItemType specialType = StaticCastSharedRef<FApSpecailItem>(mappingSubsystem->ApItems[itemid])->SpecailType;
+			switch (specialType) {
+			case ESpecailItemType::Inventory3:
+			case ESpecailItemType::Inventory6: {
+				int amountToAdd = (specialType == ESpecailItemType::Inventory3) ? 3 : 6;
+
+				AFGCharacterPlayer* player = GetLocalPlayer();
+				fgcheck(player);
+				UFGInventoryComponent* inventory = player->GetInventory();
+				inventory->Resize(inventory->GetSizeLinear() + amountToAdd);
+			}
+														break;
+			case ESpecailItemType::Toolbelt1:
+				for (int i = 0; i < inventorySlotRecipes.Num(); i++) {
+					if (SManager->IsSchematicPurchased(inventorySlotRecipes[i], nullptr))
+						continue;
+
+					SManager->GiveAccessToSchematic(inventorySlotRecipes[i], nullptr);
+					break;
+				}
+				break;
+			}
+		}
 	}
 }
 
@@ -1043,8 +1091,6 @@ void AApSubsystem::TimeoutConnection() {
 	ConnectionState = EApConnectionState::ConnectionFailed;
 	ConnectionStateDescription = LOCTEXT("AuthFailed", "Authentication failed. Check your connection details and load the save again.");
 	UE_LOG(LogApSubsystem, Error, TEXT("AApSubsystem::TimeoutConnectionIfNotConnected(), Authenticated Failed"));
-
-	SetActorTickEnabled(false);
 }
 
 FString AApSubsystem::GetApItemName(int64 id) {

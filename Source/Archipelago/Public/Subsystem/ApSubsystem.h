@@ -209,6 +209,7 @@ private:
 	bool UpdateFreeSamplesConfiguration();
 
 	void ReceiveItems();
+	void AwardItem(int64 itemId, bool isFromServer);
 	void HandleCheckedLocations();
 	AFGCharacterPlayer* GetLocalPlayer();
 	bool IsCollected(UFGUnlock* unlock);
