@@ -54,7 +54,6 @@ private:
 	bool isInitialized;
 
 public:
-	UPROPERTY(BlueprintReadOnly) //blueprint likely dont need this
 	TSet<const AApPortal*> BuiltPortals;
 
 	FORCEINLINE bool IsInitialized() const { return isInitialized; };

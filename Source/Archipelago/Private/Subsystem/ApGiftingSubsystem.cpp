@@ -302,6 +302,8 @@ AApGiftingSubsystem::AApGiftingSubsystem() : Super() {
 	PrimaryActorTick.bCanEverTick = true;
 	PrimaryActorTick.bStartWithTickEnabled = true;
 	PrimaryActorTick.TickInterval = 0.1f;
+
+	ReplicationPolicy = ESubsystemReplicationPolicy::SpawnOnServer_Replicate;
 }
 
 void AApGiftingSubsystem::BeginPlay() {

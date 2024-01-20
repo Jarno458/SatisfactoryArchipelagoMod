@@ -21,10 +21,12 @@ AApMappingsSubsystem::AApMappingsSubsystem() : Super() {
 
 	PrimaryActorTick.bCanEverTick = false;
 	PrimaryActorTick.bStartWithTickEnabled = false;
+
+	ReplicationPolicy = ESubsystemReplicationPolicy::SpawnLocal;
 }
 
 void AApMappingsSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase) {
-	UE_LOG(LogApMappingsSubsystem, Display, TEXT("AApMappingsSubsystem::DispatchLifecycleEvent()"));
+	UE_LOG(LogApMappingsSubsystem, Display, TEXT("AApMappingsSubsystem(%p)::DispatchLifecycleEvent()"), this);
 
 	if (phase == ELifecyclePhase::CONSTRUCTION) {
 		ap = AApSubsystem::Get(GetWorld());

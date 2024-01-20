@@ -9,6 +9,8 @@ AApEnergyLinkSubsystem::AApEnergyLinkSubsystem()
 {
 	PrimaryActorTick.bCanEverTick = true;
 	PrimaryActorTick.TickInterval = 1.0f;
+
+	ReplicationPolicy = ESubsystemReplicationPolicy::SpawnOnServer;
 }
 
 void AApEnergyLinkSubsystem::BeginPlay() {

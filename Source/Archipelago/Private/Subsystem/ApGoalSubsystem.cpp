@@ -4,6 +4,8 @@ AApGoalSubsystem::AApGoalSubsystem() : Super() {
 	PrimaryActorTick.bCanEverTick = true;
 	PrimaryActorTick.bStartWithTickEnabled = true;
 	PrimaryActorTick.TickInterval = 1.0f;
+
+	ReplicationPolicy = ESubsystemReplicationPolicy::SpawnOnServer;
 }
 
 AApGoalSubsystem* AApGoalSubsystem::Get(UWorld* world) {
