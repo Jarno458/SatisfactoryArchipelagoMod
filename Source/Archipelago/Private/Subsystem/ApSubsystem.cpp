@@ -580,12 +580,12 @@ void AApSubsystem::AwardItem(int64 itemid, bool isFromServer) {
 		else if (mappingSubsystem->ApItems[itemid]->Type == EItemType::Schematic) {
 			SManager->GiveAccessToSchematic(StaticCastSharedRef<FApSchematicItem>(mappingSubsystem->ApItems[itemid])->Class, nullptr);
 		}
-		else if (mappingSubsystem->ApItems[itemid]->Type == EItemType::Specail) {
-			ESpecailItemType specialType = StaticCastSharedRef<FApSpecailItem>(mappingSubsystem->ApItems[itemid])->SpecailType;
+		else if (mappingSubsystem->ApItems[itemid]->Type == EItemType::Special) {
+			ESpecialItemType specialType = StaticCastSharedRef<FApSpecialItem>(mappingSubsystem->ApItems[itemid])->SpecialType;
 			switch (specialType) {
-			case ESpecailItemType::Inventory3:
-			case ESpecailItemType::Inventory6: {
-				int amountToAdd = (specialType == ESpecailItemType::Inventory3) ? 3 : 6;
+			case ESpecialItemType::Inventory3:
+			case ESpecialItemType::Inventory6: {
+				int amountToAdd = (specialType == ESpecialItemType::Inventory3) ? 3 : 6;
 
 				AFGCharacterPlayer* player = GetLocalPlayer();
 				fgcheck(player);
@@ -593,7 +593,7 @@ void AApSubsystem::AwardItem(int64 itemid, bool isFromServer) {
 				inventory->Resize(inventory->GetSizeLinear() + amountToAdd);
 			}
 														break;
-			case ESpecailItemType::Toolbelt1:
+			case ESpecialItemType::Toolbelt1:
 				for (int i = 0; i < inventorySlotRecipes.Num(); i++) {
 					if (SManager->IsSchematicPurchased(inventorySlotRecipes[i], nullptr))
 						continue;
@@ -883,8 +883,8 @@ FContentLib_UnlockInfoOnly AApSubsystem::CreateUnlockInfoOnly(FApNetworkItem ite
 				UpdateInfoOnlyUnlockWithItemBundleInfo(&infoCard, Args, &item, StaticCastSharedRef<FApItem>(apItem));
 			} else if (apItem->Type == EItemType::Schematic) {
 				UpdateInfoOnlyUnlockWithSchematicInfo(&infoCard, Args, &item, StaticCastSharedRef<FApSchematicItem>(apItem));
-			} else if (apItem->Type == EItemType::Specail) {
-				UpdateInfoOnlyUnlockWithSpecailInfo(&infoCard, Args, &item, StaticCastSharedRef<FApSpecailItem>(apItem));
+			} else if (apItem->Type == EItemType::Special) {
+				UpdateInfoOnlyUnlockWithSpecialInfo(&infoCard, Args, &item, StaticCastSharedRef<FApSpecialItem>(apItem));
 			}
 		} else {
 			UpdateInfoOnlyUnlockWithGenericApInfo(&infoCard, Args, &item);
@@ -985,18 +985,18 @@ void AApSubsystem::UpdateInfoOnlyUnlockWithSchematicInfo(FContentLib_UnlockInfoO
 	}
 }
 
-void AApSubsystem::UpdateInfoOnlyUnlockWithSpecailInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, FApNetworkItem* item, TSharedRef<FApSpecailItem> itemInfo) {
-	switch (itemInfo->SpecailType) {
-		case ESpecailItemType::Inventory3:
-		case ESpecailItemType::Inventory6: {
-				Args.Add(TEXT("Amount"), itemInfo->SpecailType == ESpecailItemType::Inventory3 ? FText::FromString("3") : FText::FromString("6"));
+void AApSubsystem::UpdateInfoOnlyUnlockWithSpecialInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, FApNetworkItem* item, TSharedRef<FApSpecialItem> itemInfo) {
+	switch (itemInfo->SpecialType) {
+		case ESpecialItemType::Inventory3:
+		case ESpecialItemType::Inventory6: {
+				Args.Add(TEXT("Amount"), itemInfo->SpecialType == ESpecialItemType::Inventory3 ? FText::FromString("3") : FText::FromString("6"));
 
 				infoCard->BigIcon = infoCard->SmallIcon = TEXT("/Game/FactoryGame/Interface/UI/Assets/Shared/ThumbsUp_64.ThumbsUp_64");
 				infoCard->CategoryIcon = TEXT("/Game/FactoryGame/Buildable/Factory/TradingPost/UI/RecipeIcons/Recipe_Icon_Upgrade.Recipe_Icon_Upgrade");
-				infoCard->mUnlockDescription = FText::Format(LOCTEXT("NetworkItemUnlockPersonalInventoryDescription", "This will infrate {ApPlayerName} pocket-dimension by {Amount}."), Args);
+				infoCard->mUnlockDescription = FText::Format(LOCTEXT("NetworkItemUnlockPersonalInventoryDescription", "This will inflate {ApPlayerName} pocket-dimension by {Amount}."), Args);
 			}
 			break;
-		case ESpecailItemType::Toolbelt1:
+		case ESpecialItemType::Toolbelt1:
 			infoCard->BigIcon = infoCard->SmallIcon = TEXT("/Game/FactoryGame/Interface/UI/Assets/Shared/ThumbsUp_64.ThumbsUp_64");
 			infoCard->CategoryIcon = TEXT("/Game/FactoryGame/Buildable/Factory/TradingPost/UI/RecipeIcons/Recipe_Icon_Upgrade.Recipe_Icon_Upgrade");
 			infoCard->mUnlockDescription = FText::Format(LOCTEXT("NetworkItemUnlockPersonalHandSlotDescription", "This will expand {ApPlayerName} tool-chain by 1."), Args);
