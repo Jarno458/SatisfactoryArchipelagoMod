@@ -6,14 +6,17 @@
 AApHintCommand::AApHintCommand() {
 	CommandName = TEXT("ap-hint");
 	Usage = TEXT("/ap-hint <item-name> - attempt to hint where the specified item is located");
-	MinNumberOfArguments = 1;
 	Aliases.Add(TEXT("hint"));
 }
 
 EExecutionStatus AApHintCommand::ExecuteCommand_Implementation(UCommandSender* Sender, const TArray<FString>& Arguments, const FString& Label) {
-	FString message = FString::Join(Arguments, TEXT(" "));
+	if (Arguments.Num() == 0) {
+		AApSubsystem::Get(GetWorld())->Say("!hint");
+	} else {
+		FString message = FString::Join(Arguments, TEXT(" "));
 
-	AApSubsystem::Get(GetWorld())->Say("!hint " + message);
+		AApSubsystem::Get(GetWorld())->Say("!hint " + message);
+	}
 
 	return EExecutionStatus::COMPLETED;
 }
