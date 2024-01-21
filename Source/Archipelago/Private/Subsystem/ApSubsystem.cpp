@@ -36,6 +36,8 @@ AApSubsystem* AApSubsystem::Get(class UWorld* world) {
 }
 
 void AApSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase, TArray<TSubclassOf<UFGSchematic>> apHardcodedSchematics) {
+	UE_LOG(LogApSubsystem, Warning, TEXT("AApSubsystem(%p)::DispatchLifecycleEvent() loading config with offset: %i"), this, offsetof(AApSubsystem, config));
+
 	if (config.IsLoaded() && !config.Enabled) {
 		UE_LOG(LogApSubsystem, Warning, TEXT("Archipelago manually disabled by user config"));
 		return;
