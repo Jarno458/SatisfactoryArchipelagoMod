@@ -17,11 +17,11 @@ enum class EItemType : uint8
 	Recipe,
 	Building,
 	Schematic,
-	Specail
+	Special
 };
 
 UENUM()
-enum class ESpecailItemType : uint8
+enum class ESpecialItemType : uint8
 {
 	Inventory3,
 	Inventory6,
@@ -108,16 +108,16 @@ struct ARCHIPELAGO_API FApSchematicItem : public FApItemBase
 };
 
 USTRUCT()
-struct ARCHIPELAGO_API FApSpecailItem : public FApItemBase
+struct ARCHIPELAGO_API FApSpecialItem : public FApItemBase
 {
 	GENERATED_BODY()
 
-	FApSpecailItem() {
-		Type = EItemType::Specail;
+	FApSpecialItem() {
+		Type = EItemType::Special;
 	}
 
 	UPROPERTY()
-	ESpecailItemType SpecailType;
+	ESpecialItemType SpecialType;
 };
 
 
