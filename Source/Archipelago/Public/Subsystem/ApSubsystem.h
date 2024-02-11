@@ -210,7 +210,11 @@ private:
 	void ScoutArchipelagoItems();
 	void ParseScoutedItemsAndCreateRecipiesAndSchematics();
 	void LoadRoomInfo();
+	UConfigPropertySection* GetConfigurationRootSection(FConfigId configId);
 	bool UpdateFreeSamplesConfiguration();
+	void SetMamEnhancerConfigurationHooks();
+	UFUNCTION() //required for event binding
+	void LockMamEnhancerSpoilerConfiguration();
 
 	void ReceiveItems();
 	void AwardItem(int64 itemId, bool isFromServer);
