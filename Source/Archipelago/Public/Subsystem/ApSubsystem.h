@@ -14,6 +14,7 @@
 #include "FGGamePhaseManager.h"
 #include "FGPlayerController.h"
 #include "FGCharacterPlayer.h"
+#include "FGWorkBench.h"
 
 #include "GenericPlatform/GenericPlatformProcess.h"
 #include "Registry/ModContentRegistry.h"
@@ -34,6 +35,7 @@
 #include "Buildables/FGBuildable.h"
 #include "Buildables/FGBuildableAutomatedWorkBench.h"
 #include "Unlocks/FGUnlockInfoOnly.h"
+#include "FGUnlockSubsystem.h"
 
 #include "ApConfigurationStruct.h"
 #include "Data/ApSlotData.h"
@@ -148,6 +150,7 @@ private:
 	AFGSchematicManager* SManager;
 	AFGResearchManager* RManager;
 	AFGGamePhaseManager* phaseManager;
+	AFGUnlockSubsystem* unlockSubsystem;
 
 	UContentLibSubsystem* contentLibSubsystem;
 	UModContentRegistry* contentRegistry;
@@ -188,6 +191,7 @@ private:
 	TQueue<TPair<FString, FLinearColor>> ChatMessageQueue;
 
 	UTexture2D* collectedIcon = LoadObject<UTexture2D>(nullptr, TEXT("/Archipelago/Assets/SourceArt/ArchipelagoAssetPack/AP-Black.AP-Black"));
+	UClass* workshopComponent = LoadClass<UObject>(nullptr, TEXT("/Game/FactoryGame/Buildable/-Shared/WorkBench/BP_WorkshopComponent.BP_WorkshopComponent_C"));
 
 	bool hasScoutedLocations;
 	bool areScoutedLocationsReadyToParse;

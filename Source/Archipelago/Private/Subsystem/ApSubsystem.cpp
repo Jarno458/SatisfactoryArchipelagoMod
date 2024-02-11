@@ -16,7 +16,8 @@ AApSubsystem::AApSubsystem() {
 	PrimaryActorTick.bCanEverTick = true;
 	PrimaryActorTick.bStartWithTickEnabled = false;
 	PrimaryActorTick.TickInterval = 0.5f;
-	ReplicationPolicy = ESubsystemReplicationPolicy::SpawnOnServer; // TODO_MULTIPLAYER is this what we want long term?
+
+	ReplicationPolicy = ESubsystemReplicationPolicy::SpawnOnServer;
 
 	ConnectionState = NotYetAttempted;
 	ConnectionStateDescription = LOCTEXT("NotYetAttempted", "A connection has not yet been attempted. Load a save file to attempt to connect.");
@@ -78,6 +79,8 @@ void AApSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase, TArray<TSubclas
 		fgcheck(mappingSubsystem)
 		RManager = AFGResearchManager::Get(world);
 		fgcheck(RManager)
+		unlockSubsystem = AFGUnlockSubsystem::Get(world);
+		fgcheck(unlockSubsystem)
 
 		//TODO: generatic AP Items can be totally hardcoded outside of the initialization phase
 		UE_LOG(LogApSubsystem, Display, TEXT("Generating schematics from AP Item IDs..."));
@@ -522,6 +525,7 @@ void AApSubsystem::HandleDeathLink() {
 	} else {
 		if (!awaitingHealty) {
 			awaitingHealty = true;
+
 			AP_DeathLinkSend();
 		}
 	}
@@ -584,15 +588,9 @@ void AApSubsystem::AwardItem(int64 itemid, bool isFromServer) {
 			ESpecialItemType specialType = StaticCastSharedRef<FApSpecialItem>(mappingSubsystem->ApItems[itemid])->SpecialType;
 			switch (specialType) {
 			case ESpecialItemType::Inventory3:
-			case ESpecialItemType::Inventory6: {
-				int amountToAdd = (specialType == ESpecialItemType::Inventory3) ? 3 : 6;
-
-				AFGCharacterPlayer* player = GetLocalPlayer();
-				fgcheck(player);
-				UFGInventoryComponent* inventory = player->GetInventory();
-				inventory->Resize(inventory->GetSizeLinear() + amountToAdd);
-			}
-														break;
+			case ESpecialItemType::Inventory6: 
+				unlockSubsystem->UnlockInventorySlots((specialType == ESpecialItemType::Inventory3) ? 3 : 6);
+				break;
 			case ESpecialItemType::Toolbelt1:
 				for (int i = 0; i < inventorySlotRecipes.Num(); i++) {
 					if (SManager->IsSchematicPurchased(inventorySlotRecipes[i], nullptr))
@@ -634,7 +632,6 @@ void AApSubsystem::HandleCheckedLocations() {
 				if (schematic != nullptr && !IsCollected(schematic->mUnlocks[0])) {
 					Collect(schematic->mUnlocks[0], itemPerMamNode.Value);
 
-					//might to actually tell the mam the node is unlocked
 					SManager->GiveAccessToSchematic(itemPerMamNode.Key, nullptr);
 				}
 			}
@@ -646,7 +643,6 @@ void AApSubsystem::HandleCheckedLocations() {
 				if (schematic != nullptr && !IsCollected(schematic->mUnlocks[0])) {
 					Collect(schematic->mUnlocks[0], itemPerShopNode.Value);
 
-					// might have to actually tell the stop its purchased
 					SManager->GiveAccessToSchematic(itemPerShopNode.Key, nullptr);
 				}
 			}
@@ -927,6 +923,8 @@ void AApSubsystem::UpdateInfoOnlyUnlockWithRecipeInfo(FContentLib_UnlockInfoOnly
 				else
 					BuildingArray.Add(building->mDisplayName.ToString());
 			}
+		} else if (buildingObject->IsChildOf(workshopComponent)) {
+			BuildingArray.Add("Equipment Workshop");
 		}
 	}
 
