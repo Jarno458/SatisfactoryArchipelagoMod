@@ -856,15 +856,18 @@ void AApSubsystem::CreateSchematicBoundToItemId(int64 itemid, TSharedRef<FApReci
 			recipesToUnlock.Add(recipe.Class->GetName());
 		}
 
+		FString typePrefix = apitem->Type == EItemType::Building ? "Building: " : "Recipe: ";
+		FString recipeName = apitem->Recipes[0].Recipe->GetDisplayName().ToString();
+
 		FContentLib_Schematic schematic = FContentLib_Schematic();
-		schematic.Name = name;
+		schematic.Name = typePrefix + recipeName;
 		schematic.Type = "Custom";
 		schematic.Recipes = recipesToUnlock;
 
 		UCLSchematicBPFLib::InitSchematicFromStruct(schematic, foundSchematic.Value, contentLibSubsystem);
+
+		contentRegistry->RegisterSchematic(FName(TEXT("Archipelago")), foundSchematic.Value);
 	}
-	
-	contentRegistry->RegisterSchematic(FName(TEXT("Archipelago")), foundSchematic.Value);
 	
 	ItemSchematics.Add(itemid, foundSchematic.Value);
 }
