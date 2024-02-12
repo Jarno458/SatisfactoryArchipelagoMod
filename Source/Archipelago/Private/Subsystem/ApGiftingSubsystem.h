@@ -64,6 +64,9 @@ public:
 	bool CanSend(FApPlayer targetPlayer, FInventoryItem item);
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
+	bool CanSend(FApPlayer targetPlayer, TSubclassOf<UFGItemDescriptor> itemClass);
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
 	TArray<FApPlayer> GetPlayersAcceptingGifts();
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)

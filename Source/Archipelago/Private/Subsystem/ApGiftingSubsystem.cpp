@@ -485,14 +485,16 @@ void AApGiftingSubsystem::EnqueueForSending(FApPlayer targetPlayer, FInventorySt
 }
 
 bool AApGiftingSubsystem::CanSend(FApPlayer targetPlayer, FInventoryItem item) {
+	return CanSend(targetPlayer, item.GetItemClass());
+}
+
+bool AApGiftingSubsystem::CanSend(FApPlayer targetPlayer, TSubclassOf<UFGItemDescriptor> itemClass) {
 	if (!AcceptedGiftTraitsPerPlayer.Contains(targetPlayer))
 		return false;
-	
-	TSubclassOf<UFGItemDescriptor> itemClass = item.GetItemClass();
 
 	if (!TraitsPerItem.Contains(itemClass))
 		return false;
-		
+
 	for (TPair<FString, float> trait : TraitsPerItem[itemClass]) {
 		if (DoesPlayerAcceptGiftTrait(targetPlayer, trait.Key))
 			return true;

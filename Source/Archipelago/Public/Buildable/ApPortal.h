@@ -30,8 +30,8 @@ public:
 
 	mutable TQueue<FInventoryItem> outputQueue;
 
-	// TODO Replicated, RepNotify
-	UPROPERTY(BlueprintReadWrite, SaveGame, replicated)
+	// TODO RepNotify
+	UPROPERTY(BlueprintReadWrite, SaveGame, Replicated)
 	FApPlayer targetPlayer;
 
 private:

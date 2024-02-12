@@ -6,6 +6,7 @@
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "ApBlueprintDataBridge.h"
 #include "Module/ApGameInstanceModule.h"
+#include "Data/ApTypes.h"
 
 #include "ApUtils.generated.h"
 
@@ -44,4 +45,7 @@ public:
 	static UApBlueprintDataBridge* GetBlueprintDataBridge(UObject* worldContext);
 
 	static void WriteStringToFile(FString Path, FString text, bool relative);
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	static bool IsApPlayerValid(FApPlayer player);
 };
