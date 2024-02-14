@@ -7,20 +7,20 @@ DEFINE_LOG_CATEGORY(LogApRandomizerSubsystem);
 
 #define LOCTEXT_NAMESPACE "Archipelago"
 
-AApSubsystem::AApSubsystem() {
+AApRandomizerSubsystem::AApRandomizerSubsystem() {
 	PrimaryActorTick.bCanEverTick = true;
 	PrimaryActorTick.bStartWithTickEnabled = false;
 	PrimaryActorTick.TickInterval = 0.5f;
-	ReplicationPolicy = ESubsystemReplicationPolicy::SpawnOnServer; // TODO_MULTIPLAYER is this what we want long term?
+	ReplicationPolicy = ESubsystemReplicationPolicy::SpawnOnServer_Replicate;
 }
 
-AApRandomizerSubsystem* AApSubsystem::Get(class UObject* worldContext) {
+AApRandomizerSubsystem* AApRandomizerSubsystem::Get(class UObject* worldContext) {
 	UWorld* world = GEngine->GetWorldFromContextObject(worldContext, EGetWorldErrorMode::Assert);
 
 	return Get(world);
 }
 
-AApRandomizerSubsystem* AApSubsystem::Get(class UWorld* world) {
+AApRandomizerSubsystem* AApRandomizerSubsystem::Get(class UWorld* world) {
 	USubsystemActorManager* SubsystemActorManager = world->GetSubsystem<USubsystemActorManager>();
 	fgcheck(SubsystemActorManager);
 

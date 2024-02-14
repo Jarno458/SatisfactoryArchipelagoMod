@@ -7,8 +7,8 @@
 
 AApPortal::AApPortal() : Super() {
 	mPowerInfoClass = UFGPowerInfoComponent::StaticClass();
-	mSignificanceRange = 18000;
-	MaxRenderDistance = -1;
+	//mSignificanceRange = 18000;
+	//MaxRenderDistance = -1;
 
 	bReplicates = true;
 
@@ -65,13 +65,11 @@ void AApPortal::Factory_Tick(float dt) {
 }
 
 void AApPortal::Factory_CollectInput_Implementation() {
-	if (input == nullptr || !input->IsConnected())
+	if (input == nullptr || !input->IsConnected() || !targetPlayer.IsValid())
 		return;
 
 	TArray<FInventoryItem> items;
-	TSubclassOf<UFGItemDescriptor> itemClass;
-
-	if (!input->Factory_PeekOutput(items, itemClass) || items.Num() == 0)
+	if (!input->Factory_PeekOutput(items) || items.Num() == 0)
 		return;
 
 	if (!((AApGiftingSubsystem*)giftingSubsystem)->CanSend(targetPlayer, items[0]))
@@ -80,7 +78,7 @@ void AApPortal::Factory_CollectInput_Implementation() {
 	FInventoryItem item;
 	float offset;
 
-	if (!input->Factory_GrabOutput(item, offset, itemClass))
+	if (!input->Factory_GrabOutput(item, offset))
 		return;
 
 	FInventoryStack stack;
