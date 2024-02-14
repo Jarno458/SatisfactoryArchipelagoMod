@@ -8,13 +8,15 @@ Learn more about Archipelago [here](https://archipelago.gg/).
 
 Install this mod via the Satisfactory Mod Manager found on [ficsit.app](https://ficsit.app/mod/Archipelago).
 
-TODO link to the AP docs on this instead
+TODO link to the AP docs on this instead once that is published
 
 ## Get Support
 
 TODO
 
-<https://discord.gg/xkVJ73E>
+Archipelago Discord: <https://discord.gg/8Z65BR2>
+
+Satisfactory Modding Discord: <https://discord.gg/xkVJ73E>
 
 ## Development Setup
 
@@ -28,10 +30,14 @@ You should only need to follow these directions if you want to contribute to dev
 
 You will need [this tutorial](https://docs.ficsit.app/satisfactory-modding/latest/Development/BeginnersGuide/ImportingAnotherMod.html) later to import mods' source to your project.
 
-### ContentLib
+### Mod Dependencies
 
-This mod depends on the [ContentLib Satisfactory mod](https://github.com/Nogg-aholic/ContentLib) for runtime content generation.
-You will need to import it into your project using the tutorial above before this mod can compile.
+This mod depends on a few other Satisfactory mods.
+You will need to import them into your project using the tutorial above before this mod can compile.
+
+- [ContentLib](https://github.com/Nogg-aholic/ContentLib)
+- [MAM Enhancer](https://github.com/Nogg-aholic/MAMTips)
+- [Free Samples](https://github.com/budak7273/FreeSamples)
 
 ### APCpp
 
@@ -53,4 +59,6 @@ To update the used APCpp version, build a STATIC library version then:
 
 ### Archipelago Server
 
-TODO
+You need to have a running Archipelago server to test the mod in-game.
+You can self host one from source by following the directions
+[in the Archipelago repo](https://github.com/ArchipelagoMW/Archipelago/blob/main/docs/running%20from%20source.md).

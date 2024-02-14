@@ -16,7 +16,8 @@ AApSubsystem::AApSubsystem() {
 	PrimaryActorTick.bCanEverTick = true;
 	PrimaryActorTick.bStartWithTickEnabled = false;
 	PrimaryActorTick.TickInterval = 0.5f;
-	ReplicationPolicy = ESubsystemReplicationPolicy::SpawnOnServer; // TODO_MULTIPLAYER is this what we want long term?
+
+	ReplicationPolicy = ESubsystemReplicationPolicy::SpawnOnServer;
 
 	ConnectionState = NotYetAttempted;
 	ConnectionStateDescription = LOCTEXT("NotYetAttempted", "A connection has not yet been attempted. Load a save file to attempt to connect.");
@@ -80,6 +81,8 @@ void AApSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase, TArray<TSubclas
 		fgcheck(mappingSubsystem)
 		RManager = AFGResearchManager::Get(world);
 		fgcheck(RManager)
+		unlockSubsystem = AFGUnlockSubsystem::Get(world);
+		fgcheck(unlockSubsystem)
 
 		//TODO: generatic AP Items can be totally hardcoded outside of the initialization phase
 		UE_LOG(LogApSubsystem, Display, TEXT("Generating schematics from AP Item IDs..."));
@@ -109,6 +112,7 @@ bool AApSubsystem::UpdateFreeSamplesConfiguration(){
 	if (ConfigManager == nullptr) {
 		return false;
 	}
+
 	UConfigPropertySection* configRoot = ConfigManager->GetConfigurationRootSection(FreeSamplesConfigId);
 	if (configRoot == nullptr) {
 		return false;
@@ -155,6 +159,82 @@ bool AApSubsystem::UpdateFreeSamplesConfiguration(){
 	ConfigManager->ReloadModConfigurations();
 
 	return true;
+}
+
+void AApSubsystem::SetMamEnhancerConfigurationHooks() {
+	FConfigId MamEnhancerConfigId{ "MAMTips", "" };
+
+	UConfigManager* ConfigManager = GetWorld()->GetGameInstance()->GetSubsystem<UConfigManager>();
+	if (ConfigManager == nullptr) {
+		return;
+	}
+
+	UConfigPropertySection* configRoot = ConfigManager->GetConfigurationRootSection(MamEnhancerConfigId);
+	if (configRoot == nullptr) {
+		return;
+	}
+
+	if (configRoot->SectionProperties.Contains("ShowHiddenNodesDetails")) {
+		UConfigPropertyBool* showHidenNodeDetails = Cast<UConfigPropertyBool>(configRoot->SectionProperties["ShowHiddenNodesDetails"]);
+		if (showHidenNodeDetails != nullptr)
+			showHidenNodeDetails->OnPropertyValueChanged.AddDynamic(this, &AApSubsystem::LockMamEnhancerSpoilerConfiguration);
+	}
+
+	if (configRoot->SectionProperties.Contains("MakeHiddenPrettyMode")) {
+		UConfigPropertyInteger* hidenDisplayMode = Cast<UConfigPropertyInteger>(configRoot->SectionProperties["MakeHiddenPrettyMode"]);
+		if (hidenDisplayMode != nullptr)
+			hidenDisplayMode->OnPropertyValueChanged.AddDynamic(this, &AApSubsystem::LockMamEnhancerSpoilerConfiguration);
+	}
+
+	LockMamEnhancerSpoilerConfiguration();
+}
+
+
+void AApSubsystem::LockMamEnhancerSpoilerConfiguration() {
+	FConfigId MamEnhancerConfigId{ "MAMTips", "" };
+
+	UConfigManager* ConfigManager = GetWorld()->GetGameInstance()->GetSubsystem<UConfigManager>();
+	if (ConfigManager == nullptr) {
+		return;
+	}
+
+	UConfigPropertySection* configRoot = ConfigManager->GetConfigurationRootSection(MamEnhancerConfigId);
+	if (configRoot == nullptr) {
+		return;
+	}
+
+	bool dirty = false;
+
+	if (configRoot->SectionProperties.Contains("ShowHiddenNodesDetails")) {
+		UConfigPropertyBool* showHidenNodeDetails = Cast<UConfigPropertyBool>(configRoot->SectionProperties["ShowHiddenNodesDetails"]);
+		if (showHidenNodeDetails != nullptr) {
+			if (showHidenNodeDetails->Value) {
+				showHidenNodeDetails->Value = false;
+
+				dirty = true;
+			}
+		}
+	}
+
+	// 1 = Empty Gray Boxes (Base Game)
+	// 2 = Show Question Mark Icons
+	// 5 = Show "Who's That Jace?" Icons (Silly)
+	if (configRoot->SectionProperties.Contains("MakeHiddenPrettyMode")) {
+		UConfigPropertyInteger* hidenDisplayMode = Cast<UConfigPropertyInteger>(configRoot->SectionProperties["MakeHiddenPrettyMode"]);
+		if (hidenDisplayMode != nullptr) {
+			if (hidenDisplayMode->Value != 1 && hidenDisplayMode->Value != 2 && hidenDisplayMode->Value != 5) {
+				hidenDisplayMode->Value = 1;
+
+				dirty = true;
+			}
+		}
+	}
+
+	if (dirty) {
+		ConfigManager->MarkConfigurationDirty(MamEnhancerConfigId);
+		ConfigManager->FlushPendingSaves();
+		ConfigManager->ReloadModConfigurations();
+	}
 }
 
 bool AApSubsystem::InitializeTick(FDateTime connectingStartedTime) {
@@ -239,6 +319,8 @@ void AApSubsystem::BeginPlay() {
 	RManager->ResearchCompletedDelegate.AddDynamic(this, &AApSubsystem::OnMamResearchCompleted);
 	RManager->ResearchTreeUnlockedDelegate.AddDynamic(this, &AApSubsystem::OnMamResearchTreeUnlocked);
 	SManager->PurchasedSchematicDelegate.AddDynamic(this, &AApSubsystem::OnSchematicCompleted);
+
+	SetMamEnhancerConfigurationHooks();
 }
 
 void AApSubsystem::EndPlay(const EEndPlayReason::Type endPlayReason) {
@@ -524,6 +606,7 @@ void AApSubsystem::HandleDeathLink() {
 	} else {
 		if (!awaitingHealty) {
 			awaitingHealty = true;
+
 			AP_DeathLinkSend();
 		}
 	}
@@ -582,20 +665,14 @@ void AApSubsystem::AwardItem(int64 itemid, bool isFromServer) {
 		else if (mappingSubsystem->ApItems[itemid]->Type == EItemType::Schematic) {
 			SManager->GiveAccessToSchematic(StaticCastSharedRef<FApSchematicItem>(mappingSubsystem->ApItems[itemid])->Class, nullptr);
 		}
-		else if (mappingSubsystem->ApItems[itemid]->Type == EItemType::Specail) {
-			ESpecailItemType specialType = StaticCastSharedRef<FApSpecailItem>(mappingSubsystem->ApItems[itemid])->SpecailType;
+		else if (mappingSubsystem->ApItems[itemid]->Type == EItemType::Special) {
+			ESpecialItemType specialType = StaticCastSharedRef<FApSpecialItem>(mappingSubsystem->ApItems[itemid])->SpecialType;
 			switch (specialType) {
-			case ESpecailItemType::Inventory3:
-			case ESpecailItemType::Inventory6: {
-				int amountToAdd = (specialType == ESpecailItemType::Inventory3) ? 3 : 6;
-
-				AFGCharacterPlayer* player = GetLocalPlayer();
-				fgcheck(player);
-				UFGInventoryComponent* inventory = player->GetInventory();
-				inventory->Resize(inventory->GetSizeLinear() + amountToAdd);
-			}
-														break;
-			case ESpecailItemType::Toolbelt1:
+			case ESpecialItemType::Inventory3:
+			case ESpecialItemType::Inventory6: 
+				unlockSubsystem->UnlockInventorySlots((specialType == ESpecialItemType::Inventory3) ? 3 : 6);
+				break;
+			case ESpecialItemType::Toolbelt1:
 				for (int i = 0; i < inventorySlotRecipes.Num(); i++) {
 					if (SManager->IsSchematicPurchased(inventorySlotRecipes[i], nullptr))
 						continue;
@@ -636,7 +713,6 @@ void AApSubsystem::HandleCheckedLocations() {
 				if (schematic != nullptr && !IsCollected(schematic->mUnlocks[0])) {
 					Collect(schematic->mUnlocks[0], itemPerMamNode.Value);
 
-					//might to actually tell the mam the node is unlocked
 					SManager->GiveAccessToSchematic(itemPerMamNode.Key, nullptr);
 				}
 			}
@@ -648,7 +724,6 @@ void AApSubsystem::HandleCheckedLocations() {
 				if (schematic != nullptr && !IsCollected(schematic->mUnlocks[0])) {
 					Collect(schematic->mUnlocks[0], itemPerShopNode.Value);
 
-					// might have to actually tell the stop its purchased
 					SManager->GiveAccessToSchematic(itemPerShopNode.Key, nullptr);
 				}
 			}
@@ -783,15 +858,18 @@ void AApSubsystem::CreateSchematicBoundToItemId(int64 itemid, TSharedRef<FApReci
 			recipesToUnlock.Add(recipe.Class->GetName());
 		}
 
+		FString typePrefix = apitem->Type == EItemType::Building ? "Building: " : "Recipe: ";
+		FString recipeName = apitem->Recipes[0].Recipe->GetDisplayName().ToString();
+
 		FContentLib_Schematic schematic = FContentLib_Schematic();
-		schematic.Name = name;
+		schematic.Name = typePrefix + recipeName;
 		schematic.Type = "Custom";
 		schematic.Recipes = recipesToUnlock;
 
 		UCLSchematicBPFLib::InitSchematicFromStruct(schematic, foundSchematic.Value, contentLibSubsystem);
+
+		contentRegistry->RegisterSchematic(FName(TEXT("Archipelago")), foundSchematic.Value);
 	}
-	
-	contentRegistry->RegisterSchematic(FName(TEXT("Archipelago")), foundSchematic.Value);
 	
 	ItemSchematics.Add(itemid, foundSchematic.Value);
 }
@@ -885,8 +963,8 @@ FContentLib_UnlockInfoOnly AApSubsystem::CreateUnlockInfoOnly(FApNetworkItem ite
 				UpdateInfoOnlyUnlockWithItemBundleInfo(&infoCard, Args, &item, StaticCastSharedRef<FApItem>(apItem));
 			} else if (apItem->Type == EItemType::Schematic) {
 				UpdateInfoOnlyUnlockWithSchematicInfo(&infoCard, Args, &item, StaticCastSharedRef<FApSchematicItem>(apItem));
-			} else if (apItem->Type == EItemType::Specail) {
-				UpdateInfoOnlyUnlockWithSpecailInfo(&infoCard, Args, &item, StaticCastSharedRef<FApSpecailItem>(apItem));
+			} else if (apItem->Type == EItemType::Special) {
+				UpdateInfoOnlyUnlockWithSpecialInfo(&infoCard, Args, &item, StaticCastSharedRef<FApSpecialItem>(apItem));
 			}
 		} else {
 			UpdateInfoOnlyUnlockWithGenericApInfo(&infoCard, Args, &item);
@@ -929,6 +1007,8 @@ void AApSubsystem::UpdateInfoOnlyUnlockWithRecipeInfo(FContentLib_UnlockInfoOnly
 				else
 					BuildingArray.Add(building->mDisplayName.ToString());
 			}
+		} else if (buildingObject->IsChildOf(workshopComponent)) {
+			BuildingArray.Add("Equipment Workshop");
 		}
 	}
 
@@ -958,7 +1038,7 @@ void AApSubsystem::UpdateInfoOnlyUnlockWithItemBundleInfo(FContentLib_UnlockInfo
 
 	infoCard->BigIcon = infoCard->SmallIcon = UApUtils::GetImagePathForItem(itemDescriptor);
 	infoCard->CategoryIcon = TEXT("/Game/FactoryGame/Buildable/Factory/TradingPost/UI/RecipeIcons/Recipe_Icon_Item.Recipe_Icon_Item");
-	infoCard->mUnlockDescription = FText::Format(LOCTEXT("NetworkItemUnlockPersonalItemDescription", "This will give {ApPlayerName} Item Bundle: {ApItemName}. It can be collected by building an Archipelago Portal."), Args);
+	infoCard->mUnlockDescription = FText::Format(LOCTEXT("NetworkItemUnlockPersonalItemDescription", "This will give {ApPlayerName} {ApItemName}. It can be collected by building an Archipelago Portal."), Args);
 }
 
 void AApSubsystem::UpdateInfoOnlyUnlockWithSchematicInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, FApNetworkItem* item, TSharedRef<FApSchematicItem> itemInfo) {
@@ -987,18 +1067,18 @@ void AApSubsystem::UpdateInfoOnlyUnlockWithSchematicInfo(FContentLib_UnlockInfoO
 	}
 }
 
-void AApSubsystem::UpdateInfoOnlyUnlockWithSpecailInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, FApNetworkItem* item, TSharedRef<FApSpecailItem> itemInfo) {
-	switch (itemInfo->SpecailType) {
-		case ESpecailItemType::Inventory3:
-		case ESpecailItemType::Inventory6: {
-				Args.Add(TEXT("Amount"), itemInfo->SpecailType == ESpecailItemType::Inventory3 ? FText::FromString("3") : FText::FromString("6"));
+void AApSubsystem::UpdateInfoOnlyUnlockWithSpecialInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, FApNetworkItem* item, TSharedRef<FApSpecialItem> itemInfo) {
+	switch (itemInfo->SpecialType) {
+		case ESpecialItemType::Inventory3:
+		case ESpecialItemType::Inventory6: {
+				Args.Add(TEXT("Amount"), itemInfo->SpecialType == ESpecialItemType::Inventory3 ? FText::FromString("3") : FText::FromString("6"));
 
 				infoCard->BigIcon = infoCard->SmallIcon = TEXT("/Game/FactoryGame/Interface/UI/Assets/Shared/ThumbsUp_64.ThumbsUp_64");
 				infoCard->CategoryIcon = TEXT("/Game/FactoryGame/Buildable/Factory/TradingPost/UI/RecipeIcons/Recipe_Icon_Upgrade.Recipe_Icon_Upgrade");
-				infoCard->mUnlockDescription = FText::Format(LOCTEXT("NetworkItemUnlockPersonalInventoryDescription", "This will infrate {ApPlayerName} pocket-dimension by {Amount}."), Args);
+				infoCard->mUnlockDescription = FText::Format(LOCTEXT("NetworkItemUnlockPersonalInventoryDescription", "This will inflate {ApPlayerName} pocket-dimension by {Amount}."), Args);
 			}
 			break;
-		case ESpecailItemType::Toolbelt1:
+		case ESpecialItemType::Toolbelt1:
 			infoCard->BigIcon = infoCard->SmallIcon = TEXT("/Game/FactoryGame/Interface/UI/Assets/Shared/ThumbsUp_64.ThumbsUp_64");
 			infoCard->CategoryIcon = TEXT("/Game/FactoryGame/Buildable/Factory/TradingPost/UI/RecipeIcons/Recipe_Icon_Upgrade.Recipe_Icon_Upgrade");
 			infoCard->mUnlockDescription = FText::Format(LOCTEXT("NetworkItemUnlockPersonalHandSlotDescription", "This will expand {ApPlayerName} tool-chain by 1."), Args);

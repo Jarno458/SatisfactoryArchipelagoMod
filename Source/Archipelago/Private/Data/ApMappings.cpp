@@ -166,10 +166,10 @@ const TMap<int64, FString> UApMappings::ItemIdToGameItemDescriptor = {
 
 };
 
-const TMap<int64, EApMappingsSpecailItemType> UApMappings::ItemIdToSpecailItemType = {
-	{1338188, EApMappingsSpecailItemType::Inventory3},
-	{1338189, EApMappingsSpecailItemType::Inventory6},
-	{1338190, EApMappingsSpecailItemType::Toolbelt1}
+const TMap<int64, EApMappingsSpecialItemType> UApMappings::ItemIdToSpecialItemType = {
+	{1338188, EApMappingsSpecialItemType::Inventory3},
+	{1338189, EApMappingsSpecialItemType::Inventory6},
+	{1338190, EApMappingsSpecialItemType::Toolbelt1}
 };
 
 const TMap<int64, FString> UApMappings::ItemIdToGameRecipe = {

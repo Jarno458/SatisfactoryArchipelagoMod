@@ -61,6 +61,10 @@ void AApEnergyLinkSubsystem::Tick(float DeltaTime) {
 		EnergyLinkTick();
 }
 
+const bool AApEnergyLinkSubsystem::IsEnergyLinkEnabled() {
+	return energyLinkEnabled;
+}
+
 void AApEnergyLinkSubsystem::OnEnergyLinkValueChanged(AP_SetReply setReply) {
 	std::string valueStr = (*(std::string*)setReply.value).c_str();
 

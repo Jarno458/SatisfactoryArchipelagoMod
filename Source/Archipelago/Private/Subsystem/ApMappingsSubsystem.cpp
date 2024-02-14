@@ -72,25 +72,25 @@ void AApMappingsSubsystem::LoadItemMappings(TMap<FName, FAssetData> itemDescript
 }
 
 void AApMappingsSubsystem::LoadSpecialItemMappings() {
-	for (TPair<int64, EApMappingsSpecailItemType> specailItemMapping : UApMappings::ItemIdToSpecailItemType) {
+	for (TPair<int64, EApMappingsSpecialItemType> specialItemMapping : UApMappings::ItemIdToSpecialItemType) {
 
-		FApSpecailItem specialItem;
-		specialItem.Id = specailItemMapping.Key;
+		FApSpecialItem specialItem;
+		specialItem.Id = specialItemMapping.Key;
 
-		switch (specailItemMapping.Value)
+		switch (specialItemMapping.Value)
 		{
-			case EApMappingsSpecailItemType::Inventory3:
-				specialItem.SpecailType = ESpecailItemType::Inventory3;
+			case EApMappingsSpecialItemType::Inventory3:
+				specialItem.SpecialType = ESpecialItemType::Inventory3;
 				break;
-			case EApMappingsSpecailItemType::Inventory6:
-				specialItem.SpecailType = ESpecailItemType::Inventory6;
+			case EApMappingsSpecialItemType::Inventory6:
+				specialItem.SpecialType = ESpecialItemType::Inventory6;
 				break;
-			case EApMappingsSpecailItemType::Toolbelt1:
-				specialItem.SpecailType = ESpecailItemType::Toolbelt1;
+			case EApMappingsSpecialItemType::Toolbelt1:
+				specialItem.SpecialType = ESpecialItemType::Toolbelt1;
 				break;
 		}
 
-		ApItems.Add(specailItemMapping.Key, MakeShared<FApSpecailItem>(specialItem));
+		ApItems.Add(specialItemMapping.Key, MakeShared<FApSpecialItem>(specialItem));
 	}
 }
 

@@ -33,6 +33,9 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	const bool IsEnergyLinkEnabled();
+
 private:
 	bool hooksInitialized = false;
 	bool energyLinkEnabled = false;
