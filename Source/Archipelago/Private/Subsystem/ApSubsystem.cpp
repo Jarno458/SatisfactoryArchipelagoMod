@@ -256,14 +256,14 @@ bool AApSubsystem::InitializeTick(FDateTime connectingStartedTime) {
 		if (!areScoutedLocationsReadyToParse && !hasScoutedLocations)
 			ScoutArchipelagoItems();
 
-		if (!mappingSubsystem->IsInitialized())
+		if (!mappingSubsystem->HasLoadedItemNameMappings())
 			mappingSubsystem->InitializeAfterConnectingToAp();
 	}
 
 	if (!areRecipiesAndSchematicsInitialized
 		&& areScoutedLocationsReadyToParse
 		&& slotData.hasLoadedSlotData
-		&& mappingSubsystem->IsInitialized()) {
+		&& mappingSubsystem->HasLoadedItemNameMappings()) {
 
 		ParseScoutedItemsAndCreateRecipiesAndSchematics();
 
@@ -595,6 +595,9 @@ void AApSubsystem::Tick(float DeltaTime) {
 }
 
 void AApSubsystem::HandleDeathLink() {
+	if (IsRunningDedicatedServer())
+		return; // TODO make deathlink work for dedicated servers
+
 	AFGCharacterPlayer* player = callbackTarget->GetLocalPlayer();
 	if (player == nullptr)
 		return;
@@ -644,7 +647,7 @@ void AApSubsystem::AwardItem(int64 itemid, bool isFromServer) {
 	}
 	else if (mappingSubsystem->ApItems.Contains(itemid)) {
 		if (mappingSubsystem->ApItems[itemid]->Type == EItemType::Item) {
-			if (isFromServer) {
+			if (isFromServer && !HasAuthority()) { //TODO fix rewarding starter inventory to newly spawned clients 
 				AFGCharacterPlayer* player = GetLocalPlayer();
 				fgcheck(player);
 				UFGInventoryComponent* inventory = player->GetInventory();
@@ -732,6 +735,9 @@ void AApSubsystem::HandleCheckedLocations() {
 }
 
 AFGCharacterPlayer* AApSubsystem::GetLocalPlayer() {
+	if (IsRunningDedicatedServer())
+		return nullptr;
+
 	AFGPlayerController* playerController = UFGBlueprintFunctionLibrary::GetLocalPlayerController(GetWorld());
 	return Cast<AFGCharacterPlayer>(playerController->GetControlledCharacter());
 }
@@ -1367,11 +1373,15 @@ void AApSubsystem::PostLoadGame_Implementation(int32 saveVersion, int32 gameVers
 }
 
 void AApSubsystem::AbortGame(FText reason) {
-	UWorld* world = GEngine->GameViewport->GetWorld();
-	UApGameInstanceModule* gameInstance = UApUtils::GetGameInstanceModule(world);
-	APlayerController* player = world->GetFirstPlayerController();
+	if (IsRunningDedicatedServer()) {
+		UE_LOG(LogApSubsystem, Error, TEXT("AApSubsystem::AbortGame(%s)"), *reason.ToString());
+	} else {
+		UWorld* world = GEngine->GameViewport->GetWorld();
+		UApGameInstanceModule* gameInstance = UApUtils::GetGameInstanceModule(world);
+		APlayerController* player = world->GetFirstPlayerController();
 
-	gameInstance->YeetToMainMenu(player, reason);
+		gameInstance->YeetToMainMenu(player, reason);
+	}
 }
 
 #pragma optimize("", on)

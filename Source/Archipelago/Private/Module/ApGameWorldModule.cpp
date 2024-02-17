@@ -12,6 +12,12 @@ void UApGameWorldModule::DispatchLifecycleEvent(ELifecyclePhase phase) {
 	UE_LOG(LogApGameWorldModule, Display, TEXT("UApGameWorldModule::DispatchLifecycleEvent"));
 
 	UWorld* world = GetWorld();
-	AApMappingsSubsystem::Get(world)->DispatchLifecycleEvent(phase);
-	AApSubsystem::Get(world)->DispatchLifecycleEvent(phase, mSchematics);
+
+	AApMappingsSubsystem* mappingsSubsystem = AApMappingsSubsystem::Get(world);
+	if (mappingsSubsystem != nullptr)
+		mappingsSubsystem->DispatchLifecycleEvent(phase);
+
+	AApSubsystem* apSubsystem = AApSubsystem::Get(world);
+	if (apSubsystem != nullptr)
+			apSubsystem->DispatchLifecycleEvent(phase, mSchematics);
 }

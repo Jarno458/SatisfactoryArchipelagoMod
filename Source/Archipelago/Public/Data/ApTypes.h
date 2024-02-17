@@ -117,6 +117,22 @@ public:
 	bool AcceptAllTraits;
 	UPROPERTY()
 	TArray<FString> AcceptedTraits;
+
+	//Override the comparison operator
+	bool operator==(const FApGiftBoxMetaData& Other) const
+	{
+		if (AcceptAllTraits == Other.AcceptAllTraits	&& AcceptedTraits.Num() == Other.AcceptedTraits.Num()) {
+			for (int i = 0; i < AcceptedTraits.Num(); i++) {
+				if (!AcceptedTraits[i].Equals(Other.AcceptedTraits[i])) {
+					return false;
+				}
+			}
+
+			return true;
+		}
+
+		return false;
+	}
 };
 
 USTRUCT()
@@ -145,4 +161,17 @@ public:
 
 	UPROPERTY(SaveGame)
 	FString playerName;
+};
+
+USTRUCT()
+struct ARCHIPELAGO_API FApReplicateableGiftBoxMetaData
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY()
+	FApPlayer Player;
+
+	UPROPERTY()
+	FApGiftBoxMetaData Box;
 };

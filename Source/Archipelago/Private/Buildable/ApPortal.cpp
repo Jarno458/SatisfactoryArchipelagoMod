@@ -1,6 +1,7 @@
 #include "Buildable/ApPortal.h"
 #include "Subsystem/ApPortalSubsystem.h"
-#include "Subsystem/ApGiftingSubsystem.h"
+#include "Subsystem/ApServerGiftingSubsystem.h"
+#include "Subsystem/ApReplicatedGiftingSubsystem.h"
 
 //TODO REMOVE
 #pragma optimize("", off)
@@ -28,7 +29,8 @@ void AApPortal::BeginPlay() {
 
 	UWorld* world = GetWorld();
 	portalSubsystem = AApPortalSubsystem::Get(world);
-	giftingSubsystem = AApGiftingSubsystem::Get(world);
+	giftingSubsystem = AApServerGiftingSubsystem::Get(world);
+	mostlyClientSideGiftingSubsystem = AApReplicatedGiftingSubsystem::Get(world);
 
 	mPowerInfo->OnHasPowerChanged.BindUFunction(this, "CheckPower");
 
@@ -72,7 +74,7 @@ void AApPortal::Factory_CollectInput_Implementation() {
 	if (!input->Factory_PeekOutput(items) || items.Num() == 0)
 		return;
 
-	if (!((AApGiftingSubsystem*)giftingSubsystem)->CanSend(targetPlayer, items[0]))
+	if (!((AApReplicatedGiftingSubsystem*)mostlyClientSideGiftingSubsystem)->CanSend(targetPlayer, items[0].GetItemClass()))
 		return; //block input
 	
 	FInventoryItem item;
@@ -85,7 +87,7 @@ void AApPortal::Factory_CollectInput_Implementation() {
 	stack.Item = item;
 	stack.NumItems = 1;
 
-	((AApGiftingSubsystem*)giftingSubsystem)->EnqueueForSending(targetPlayer, stack);
+	((AApServerGiftingSubsystem*)giftingSubsystem)->EnqueueForSending(targetPlayer, stack);
 }
 
 bool AApPortal::Factory_PeekOutput_Implementation(const class UFGFactoryConnectionComponent* connection, TArray<FInventoryItem>& out_items, TSubclassOf<UFGItemDescriptor> type) const {

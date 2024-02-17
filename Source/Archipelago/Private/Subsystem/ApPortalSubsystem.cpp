@@ -1,5 +1,5 @@
 #include "Subsystem/ApPortalSubsystem.h"
-#include "Subsystem/ApGiftingSubsystem.h"
+#include "Subsystem/ApServerGiftingSubsystem.h"
 
 DEFINE_LOG_CATEGORY(LogApPortalSubsystem);
 
@@ -29,7 +29,7 @@ void AApPortalSubsystem::BeginPlay() {
 	UE_LOG(LogApPortalSubsystem, Display, TEXT("AApPortalSubsystem::BeginPlay()"));
 
 	UWorld* world = GetWorld();
-	giftingSubsystem = AApGiftingSubsystem::Get(world);
+	giftingSubsystem = AApServerGiftingSubsystem::Get(world);
 	mappings = AApMappingsSubsystem::Get(world);
 }
 
@@ -73,7 +73,7 @@ void AApPortalSubsystem::Enqueue(TSubclassOf<UFGItemDescriptor> cls, int amount)
 }
 
 void AApPortalSubsystem::Send(FApPlayer targetPlayer, FInventoryStack itemStack) {
-	((AApGiftingSubsystem*)giftingSubsystem)->EnqueueForSending(targetPlayer, itemStack);
+	((AApServerGiftingSubsystem*)giftingSubsystem)->EnqueueForSending(targetPlayer, itemStack);
 }
 
 void AApPortalSubsystem::RegisterPortal(const AApPortal* portal) {

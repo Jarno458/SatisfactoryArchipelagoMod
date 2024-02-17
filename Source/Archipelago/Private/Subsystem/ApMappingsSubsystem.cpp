@@ -1,7 +1,8 @@
 #include "ApMappingsSubsystem.h"
+#include "FGResourceSinkSubsystem.h"
 #include "Subsystem/ApSubsystem.h"
 #include "Data/ApMappings.h"
-
+#include "Data/ApGiftingMappings.h"
 #include "Registry/ModContentRegistry.h"
 
 DEFINE_LOG_CATEGORY(LogApMappingsSubsystem);
@@ -32,6 +33,9 @@ void AApMappingsSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase) {
 		ap = AApSubsystem::Get(GetWorld());
 
 		LoadMappings();
+	} else if (phase == ELifecyclePhase::POST_INITIALIZATION) {
+		//wait until all items are registered
+		LoadTraitMappings();
 	}
 }
 
@@ -181,6 +185,108 @@ TMap<FName, FAssetData> AApMappingsSubsystem::GetBlueprintAssetsIn(IAssetRegistr
 	return assetsMap;
 }
 
+void AApMappingsSubsystem::LoadTraitMappings() {
+	AFGResourceSinkSubsystem* resourceSinkSubsystem = AFGResourceSinkSubsystem::Get(GetWorld());
+	fgcheck(resourceSinkSubsystem)
+
+	TMap<FString, float> defaultSinkPointsPerTrait;
+
+	for (TPair<FString, int64> traitDefault : UApGiftingMappings::TraitDefaultItemIds) {
+		fgcheck(ApItems.Contains(traitDefault.Value) && ApItems[traitDefault.Value]->Type == EItemType::Item);
+
+		TSharedRef<FApItem> itemInfo = StaticCastSharedRef<FApItem>(ApItems[traitDefault.Value]);
+
+		int defaultItemSinkPoints = GetResourceSinkPointsForItem(resourceSinkSubsystem, itemInfo->Class, traitDefault.Value);
+
+		defaultSinkPointsPerTrait.Add(traitDefault.Key, defaultItemSinkPoints);
+	}
+
+	for (TPair<int64, TSharedRef<FApItemBase>>& itemInfoMapping : ApItems) {
+		if (!UApGiftingMappings::TraitsPerItemRatings.Contains(itemInfoMapping.Key))
+			continue;
+
+		fgcheck(itemInfoMapping.Value->Type == EItemType::Item)
+
+		TSharedRef<FApItem> itemInfo = StaticCastSharedRef<FApItem>(itemInfoMapping.Value);
+		TSubclassOf<UFGItemDescriptor> itemClass = itemInfo->Class;
+		int64 itemId = itemInfoMapping.Key;
+
+		int itemValue = GetResourceSinkPointsForItem(resourceSinkSubsystem, itemClass, itemId);
+
+		TMap<FString, float> calucatedTraitsForItem;
+
+		for (TPair<FString, float> traitRelativeRating : UApGiftingMappings::TraitsPerItemRatings[itemInfoMapping.Key]) {
+			FString traitName = traitRelativeRating.Key;
+
+			fgcheck(defaultSinkPointsPerTrait.Contains(traitName));
+			float traitValue = GetTraitValue(itemValue, defaultSinkPointsPerTrait[traitName], traitRelativeRating.Value);
+			calucatedTraitsForItem.Add(traitName, traitValue);
+
+			while (UApGiftingMappings::TraitParents.Contains(traitName)) {
+				traitName = UApGiftingMappings::TraitParents[traitName];
+
+				if (!calucatedTraitsForItem.Contains(traitName)) {
+					fgcheck(defaultSinkPointsPerTrait.Contains(traitName));
+					traitValue = GetTraitValue(itemValue, defaultSinkPointsPerTrait[traitName], traitRelativeRating.Value);
+					calucatedTraitsForItem.Add(traitName, traitValue);
+				}
+			}
+		}
+
+		TraitsPerItem.Add(itemInfo->Class, calucatedTraitsForItem);
+	}
+
+	//PrintTraitValuesPerItem();
+
+	hasLoadedItemNameMappings = true;
+}
+
+int AApMappingsSubsystem::GetResourceSinkPointsForItem(AFGResourceSinkSubsystem* resourceSinkSubsystem, TSubclassOf<UFGItemDescriptor> itemClass, int64 itemId) {
+	if (UApGiftingMappings::HardcodedSinkValues.Contains(itemId))
+		return UApGiftingMappings::HardcodedSinkValues[itemId];
+
+	int value = resourceSinkSubsystem->GetResourceSinkPointsForItem(itemClass);
+
+	if (value == 0) {
+		FString itemName = UFGItemDescriptor::GetItemName(itemClass).ToString();
+		UE_LOG(LogApMappingsSubsystem, Error, TEXT("AApServerGiftingSubsystem::GetResourceSinkPointsForItem(\"%s\", %i) Not sink value for item"), *itemName, itemId);
+		value = 1;
+	}
+
+	return value;
+}
+
+float AApMappingsSubsystem::GetTraitValue(int itemValue, float avarageItemValueForTrait, float itemSpecificTraitMultiplier) {
+	return (FPlatformMath::LogX(10, (double)itemValue + 0.1) / FPlatformMath::LogX(10, (double)avarageItemValueForTrait + 0.1)) * itemSpecificTraitMultiplier;
+}
+
+void AApMappingsSubsystem::PrintTraitValuesPerItem() {
+	TMap<FString, TSortedMap<float, FString>> valuesPerItem;
+
+	for (TPair<TSubclassOf<UFGItemDescriptor>, TMap<FString, float>> traitsPerItem : TraitsPerItem) {
+		for (TPair<FString, float> trait : traitsPerItem.Value) {
+			if (!valuesPerItem.Contains(trait.Key))
+				valuesPerItem.Add(trait.Key, TSortedMap<float, FString>());
+
+			FString itemName = ItemIdToName[ItemClassToItemId[traitsPerItem.Key]];
+
+			valuesPerItem[trait.Key].Add(trait.Value, itemName);
+		}
+	}
+
+	TArray<FString> lines;
+	for (TPair<FString, TSortedMap<float, FString>> traitsPerItem : valuesPerItem) {
+		lines.Add(FString::Printf(TEXT("Trait: \"%s\":"), *traitsPerItem.Key));
+
+		for (TPair<float, FString> valuePerItem : traitsPerItem.Value)
+			lines.Add(FString::Printf(TEXT("  - Item: \"%s\": %.2f"), *valuePerItem.Value, valuePerItem.Key));
+	}
+
+	FString fileText = FString::Join(lines, TEXT("\n"));
+
+	UApUtils::WriteStringToFile(fileText, TEXT("T:\\ItemTraits.txt"), false);
+}
+
 UObject* AApMappingsSubsystem::FindAssetByName(TMap<FName, FAssetData> assets, FString assetName) {
 	assetName.RemoveFromEnd("'");
 
@@ -245,8 +351,6 @@ TMap<FName, FAssetData> AApMappingsSubsystem::GetRecipeAssets(IAssetRegistry& re
 
 void AApMappingsSubsystem::InitializeAfterConnectingToAp() {
 	LoadNamesFromAP();
-
-	isInitialized = true;
 }
 
 void AApMappingsSubsystem::LoadNamesFromAP() {
@@ -256,6 +360,8 @@ void AApMappingsSubsystem::LoadNamesFromAP() {
 		NameToItemId.Add(name, itemMapping.Key);
 		ItemIdToName.Add(itemMapping.Key, name);
 	}
+
+	hasLoadedItemNameMappings = true;
 }
 
 void AApMappingsSubsystem::PostLoadGame_Implementation(int32 saveVersion, int32 gameVersion) {
@@ -265,7 +371,7 @@ void AApMappingsSubsystem::PostLoadGame_Implementation(int32 saveVersion, int32 
 	for (TPair<int64, FString> itemNameMapping : ItemIdToName)
 		NameToItemId.Add(itemNameMapping.Value, itemNameMapping.Key);
 
-	isInitialized = true;
+	hasLoadedItemNameMappings = true;
 }
 
 #pragma optimize("", on)

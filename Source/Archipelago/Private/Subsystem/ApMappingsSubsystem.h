@@ -146,22 +146,26 @@ protected:
 
 public:
 	TMap<TSubclassOf<UFGItemDescriptor>, int64> ItemClassToItemId;
-	UPROPERTY(SaveGame)
-	TMap<int64, FString> ItemIdToName;
 	TMap<FString, int64> NameToItemId;
 	TMap<int64, TSharedRef<FApItemBase>> ApItems;
+	TMap<TSubclassOf<UFGItemDescriptor>, TMap<FString, float>> TraitsPerItem;
+
+	UPROPERTY(SaveGame)
+	TMap<int64, FString> ItemIdToName;
 
 private:
 	AModSubsystem* ap;
 
-	bool isInitialized = false;
+	bool hasLoadedItemNameMappings = false;
+	bool hasLoadedItemTraits = false;
 
 	int64 mamId;
 	int64 shopId;
 
 public:
-	UFUNCTION(BlueprintCallable, BlueprintPure)
-	FORCEINLINE bool IsInitialized() const { return isInitialized; };
+	//UFUNCTION(BlueprintCallable, BlueprintPure)
+	FORCEINLINE bool HasLoadedItemNameMappings() const { return hasLoadedItemNameMappings; };
+	FORCEINLINE bool HasLoadedItemTraits() const { return hasLoadedItemTraits; };
 
 	void InitializeAfterConnectingToAp();
 
@@ -178,8 +182,14 @@ private:
 	void LoadRecipeMappings(TMap<FName, FAssetData> recipeAssets);
 	void LoadBuildingMappings(TMap<FName, FAssetData> recipeAssets);
 	void LoadSchematicMappings();
-	void LoadNamesFromAP();
 
+	void LoadTraitMappings();
+	int GetResourceSinkPointsForItem(AFGResourceSinkSubsystem* resourceSinkSubsystem, TSubclassOf<UFGItemDescriptor> itemClass, int64 itemId);
+	float GetTraitValue(int itemValue, float avarageItemValueForTrait, float itemSpecificTraitMultiplier);
+	void PrintTraitValuesPerItem();
+
+	void LoadNamesFromAP();
+	
 	static TMap<FName, FAssetData> GetItemDescriptorAssets(IAssetRegistry& registery);
 	static TMap<FName, FAssetData> GetRecipeAssets(IAssetRegistry& registery);
 	static TMap<FName, FAssetData> GetBlueprintAssetsIn(IAssetRegistry& registery, FName&& packagePath, TArray<FString> namePrefixes);
