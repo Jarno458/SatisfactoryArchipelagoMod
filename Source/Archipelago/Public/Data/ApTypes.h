@@ -59,11 +59,11 @@ struct ARCHIPELAGO_API FApGiftTrait
 	GENERATED_BODY()
 
 public:
-	UPROPERTY()
+	UPROPERTY(BlueprintReadOnly)
 	FString Trait;
-	UPROPERTY()
+	UPROPERTY(BlueprintReadOnly)
 	float Quality;
-	UPROPERTY()
+	UPROPERTY(BlueprintReadOnly)
 	float Duration;
 };
 
