@@ -1,6 +1,5 @@
 #include "ApReplicatedGiftingSubsystem.h"
 #include "Data/ApGiftingMappings.h"
-//#include "Data/ApMappings.h"
 
 DEFINE_LOG_CATEGORY(LogApReplicatedGiftingSubsystem);
 
@@ -36,6 +35,7 @@ AApReplicatedGiftingSubsystem::AApReplicatedGiftingSubsystem() : Super() {
 
 void AApReplicatedGiftingSubsystem::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
 	DOREPLIFETIME(AApReplicatedGiftingSubsystem, AcceptedGiftTraitsPerPlayerReplicated);
 	DOREPLIFETIME(AApReplicatedGiftingSubsystem, AllPlayers);
 }
@@ -108,7 +108,7 @@ TArray<FString> AApReplicatedGiftingSubsystem::GetAcceptedTraitsPerPlayer(FApPla
 TArray<FString> AApReplicatedGiftingSubsystem::GetTraitNamesPerItem(TSubclassOf<UFGItemDescriptor> itemClass) {
 	TArray<FString> traits;
 
-	if (!mappingSubsystem->TraitsPerItem.Contains(itemClass))
+	if (!mappingSubsystem->HasLoadedItemTraits() || !mappingSubsystem->TraitsPerItem.Contains(itemClass))
 		return traits;
 
 	mappingSubsystem->TraitsPerItem[itemClass].GenerateKeyArray(traits);
@@ -116,7 +116,7 @@ TArray<FString> AApReplicatedGiftingSubsystem::GetTraitNamesPerItem(TSubclassOf<
 }
 
 TArray<FApGiftTrait> AApReplicatedGiftingSubsystem::GetTraitsForItem(TSubclassOf<UFGItemDescriptor> itemClass) {
-	if (!mappingSubsystem->TraitsPerItem.Contains(itemClass))
+	if (!mappingSubsystem->HasLoadedItemTraits() || !mappingSubsystem->TraitsPerItem.Contains(itemClass))
 		return TArray<FApGiftTrait>();
 
 	TMap<FString, FApGiftTrait> Traits;
@@ -181,6 +181,9 @@ void AApReplicatedGiftingSubsystem::UpdateAcceptedGiftTraitsPerPlayerReplicatedV
 }
 
 void AApReplicatedGiftingSubsystem::OnRep_AcceptedGiftTraitsPerPlayerReplicated() {
+	if (HasAuthority())
+		return;
+
 	UE_LOG(LogApReplicatedGiftingSubsystem, Display, TEXT("AApReplicatedGiftingSubsystem::OnRep_AcceptedGiftTraitsPerPlayerReplicated()"));
 
 	TMap<FApPlayer, FApGiftBoxMetaData> replicated;

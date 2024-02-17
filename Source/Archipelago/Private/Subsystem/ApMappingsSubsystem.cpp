@@ -4,6 +4,7 @@
 #include "Data/ApMappings.h"
 #include "Data/ApGiftingMappings.h"
 #include "Registry/ModContentRegistry.h"
+#include "FGGameState.h"
 
 DEFINE_LOG_CATEGORY(LogApMappingsSubsystem);
 
@@ -20,10 +21,10 @@ AApMappingsSubsystem* AApMappingsSubsystem::Get(class UWorld* world) {
 AApMappingsSubsystem::AApMappingsSubsystem() : Super() {
 	UE_LOG(LogApMappingsSubsystem, Display, TEXT("AApMappingsSubsystem::AApMappingsSubsystem()"));
 
+	ReplicationPolicy = ESubsystemReplicationPolicy::SpawnLocal;
+
 	PrimaryActorTick.bCanEverTick = false;
 	PrimaryActorTick.bStartWithTickEnabled = false;
-
-	ReplicationPolicy = ESubsystemReplicationPolicy::SpawnLocal;
 }
 
 void AApMappingsSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase) {
@@ -33,16 +34,32 @@ void AApMappingsSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase) {
 		ap = AApSubsystem::Get(GetWorld());
 
 		LoadMappings();
-	} else if (phase == ELifecyclePhase::POST_INITIALIZATION) {
-		//wait until all items are registered
-		LoadTraitMappings();
+	}
+	else if (phase == ELifecyclePhase::POST_INITIALIZATION) {
+
 	}
 }
 
 void AApMappingsSubsystem::BeginPlay() {
-	Super::BeginPlay();
+	UE_LOG(LogApMappingsSubsystem, Display, TEXT("AApMappingsSubsystem(::BeginPlay()"));
 
-	UE_LOG(LogApMappingsSubsystem, Display, TEXT("AApMappingsSubsystem::BeginPlay()"));
+	AGameStateBase* gameState = GetWorld()->GetGameState();
+
+	if (gameState->HasAuthority()) {
+		LoadTraitMappings();
+	} else {
+		if (AFGGameState* factoryGameState = Cast<AFGGameState>(gameState)) {
+			factoryGameState->mOnClientSubsystemsValid.AddDynamic(this, &AApMappingsSubsystem::OnClientSubsystemsValid);
+
+			if (factoryGameState->AreClientSubsystemsValid()) {
+				LoadTraitMappings();
+			}
+		}
+	}
+}
+
+void AApMappingsSubsystem::OnClientSubsystemsValid() {
+	LoadTraitMappings();
 }
 
 void AApMappingsSubsystem::LoadMappings() {

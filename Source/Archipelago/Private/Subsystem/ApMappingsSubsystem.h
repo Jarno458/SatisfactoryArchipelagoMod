@@ -199,4 +199,7 @@ private:
 	static UFGSchematic* GetSchematicByName(FString name);
 
 	static UObject* FindAssetByName(TMap<FName, FAssetData> assets, FString assetName);
+
+	UFUNCTION() //required for event hookup
+	void OnClientSubsystemsValid();
 };
