@@ -5,7 +5,7 @@
 
 AApAliasCommand::AApAliasCommand() {
 	CommandName = TEXT("ap-alias");
-	Usage = TEXT("/ap-alias <new alias> - send chat message to AP server");
+	Usage = TEXT("/ap-alias <new alias> - Sets your alias, which allows you to use commands with the alias rather than your provided slot name.");
 	Aliases.Add(TEXT("alias"));
 	MinNumberOfArguments = 1;
 }
