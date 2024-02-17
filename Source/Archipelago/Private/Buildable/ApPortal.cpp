@@ -27,6 +27,9 @@ void AApPortal::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetim
 void AApPortal::BeginPlay() {
 	Super::BeginPlay();
 
+	if (!HasAuthority())
+		return;
+
 	UWorld* world = GetWorld();
 	portalSubsystem = AApPortalSubsystem::Get(world);
 	giftingSubsystem = AApServerGiftingSubsystem::Get(world);
@@ -41,10 +44,6 @@ void AApPortal::BeginPlay() {
 			output = connection;
 	}
 
-	if (!HasAuthority()) {
-		return;
-	}
-
 	CheckPower(false);
 }
 
@@ -53,6 +52,9 @@ bool AApPortal::CanProduce_Implementation() const {
 }
 
 void AApPortal::CheckPower(bool newHasPower) const {
+	if (!HasAuthority())
+		return;
+
 	if (Factory_HasPower()) {
 		((AApPortalSubsystem*)portalSubsystem)->RegisterPortal(this);
 	}	else {
@@ -62,6 +64,9 @@ void AApPortal::CheckPower(bool newHasPower) const {
 
 void AApPortal::Factory_Tick(float dt) {
 	Super::Factory_Tick(dt);
+
+	if (!HasAuthority())
+		return;
 
 	camReceiveOutput = CanProduce() && output->IsConnected();
 }

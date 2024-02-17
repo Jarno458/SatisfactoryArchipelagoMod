@@ -24,6 +24,6 @@ public:
 	UPROPERTY(Replicated)
 	bool Dummy;
 
-	UFUNCTION(BlueprintCallable, reliable, Server)
+	UFUNCTION(BlueprintCallable, Reliable, Server)
 	void ServerSetPortalTargetPlayer(AApPortal* Buidling, FApPlayer Player);
 };
