@@ -101,6 +101,8 @@ public:
 	int currentPlayerSlot = 0;
 
 	static AApSubsystem* Get(class UWorld* world);
+
+	// Get subsystem. Server-side only, null on clients
 	UFUNCTION(BlueprintPure, Category = "Schematic", DisplayName = "Get ApSubsystem", Meta = (DefaultToSelf = "worldContext"))
 	static AApSubsystem* Get(UObject* worldContext);
 
