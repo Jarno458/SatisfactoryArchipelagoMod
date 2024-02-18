@@ -32,7 +32,6 @@ void AApPortal::BeginPlay() {
 
 	UWorld* world = GetWorld();
 	portalSubsystem = AApPortalSubsystem::Get(world);
-	giftingSubsystem = AApServerGiftingSubsystem::Get(world);
 	mostlyClientSideGiftingSubsystem = AApReplicatedGiftingSubsystem::Get(world);
 
 	mPowerInfo->OnHasPowerChanged.BindUFunction(this, "CheckPower");
@@ -92,7 +91,7 @@ void AApPortal::Factory_CollectInput_Implementation() {
 	stack.Item = item;
 	stack.NumItems = 1;
 
-	((AApServerGiftingSubsystem*)giftingSubsystem)->EnqueueForSending(targetPlayer, stack);
+	((AApPortalSubsystem*)portalSubsystem)->Send(targetPlayer, stack);
 }
 
 bool AApPortal::Factory_PeekOutput_Implementation(const class UFGFactoryConnectionComponent* connection, TArray<FInventoryItem>& out_items, TSubclassOf<UFGItemDescriptor> type) const {

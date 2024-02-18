@@ -37,7 +37,7 @@ AApSubsystem* AApSubsystem::Get(class UWorld* world) {
 }
 
 void AApSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase, TArray<TSubclassOf<UFGSchematic>> apHardcodedSchematics) {
-	UE_LOG(LogApSubsystem, Warning, TEXT("AApSubsystem(%p)::DispatchLifecycleEvent() loading config with offset: %i"), this, offsetof(AApSubsystem, config));
+	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem()::DispatchLifecycleEvent(%s)"), *UEnum::GetValueAsString(phase));
 
 	if (config.IsLoaded() && !config.Enabled) {
 		UE_LOG(LogApSubsystem, Warning, TEXT("Archipelago manually disabled by user config"));
@@ -91,6 +91,7 @@ void AApSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase, TArray<TSubclas
 				CreateSchematicBoundToItemId(apitem.Key, StaticCastSharedRef<FApRecipeItem>(apitem.Value));
 		}
 
+		UE_LOG(LogApSubsystem, Display, TEXT("Waiting for connection to sucseed..."));
 		FDateTime connectingStartedTime = FDateTime::Now();
 		FGenericPlatformProcess::ConditionalSleep([this, connectingStartedTime]() { return InitializeTick(connectingStartedTime); }, 0.5);
 	} else if (phase == ELifecyclePhase::POST_INITIALIZATION) {
@@ -300,6 +301,7 @@ void AApSubsystem::ConnectToArchipelago() {
 	ConnectionState = EApConnectionState::Connecting;
 	ConnectionStateDescription = LOCTEXT("Connecting", "Connecting...");
 
+	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::Starting AP"));
 	AP_Start();
 }
 

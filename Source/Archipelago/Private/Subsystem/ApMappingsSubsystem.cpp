@@ -255,7 +255,7 @@ void AApMappingsSubsystem::LoadTraitMappings() {
 
 	//PrintTraitValuesPerItem();
 
-	hasLoadedItemNameMappings = true;
+	hasLoadedItemTraits = true;
 }
 
 int AApMappingsSubsystem::GetResourceSinkPointsForItem(AFGResourceSinkSubsystem* resourceSinkSubsystem, TSubclassOf<UFGItemDescriptor> itemClass, int64 itemId) {

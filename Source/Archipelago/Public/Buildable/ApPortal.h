@@ -35,7 +35,6 @@ public:
 
 private:
 	AModSubsystem* portalSubsystem;
-	AModSubsystem* giftingSubsystem;
 	AModSubsystem* mostlyClientSideGiftingSubsystem;
 
 	UFGFactoryConnectionComponent* input = nullptr;
