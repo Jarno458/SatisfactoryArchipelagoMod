@@ -3,8 +3,6 @@
 
 DEFINE_LOG_CATEGORY(LogApSubsystem);
 
-DEFINE_LOG_CATEGORY(LogApChat);
-
 //TODO REMOVE
 #pragma optimize("", off)
 
@@ -1127,20 +1125,10 @@ void AApSubsystem::HandleAPMessages() {
 }
 
 void AApSubsystem::SendChatMessage(const FString& Message, const FLinearColor& Color) {
-	// TODO this does not replicate to multiplayer clients
-	AFGChatManager* ChatManager = AFGChatManager::Get(GetWorld());
-	if (!ChatManager) {
-		UE_LOG(LogApChat, Error, TEXT("Too early to send chat message. Would have been: Archipelago Chat Message: %s"), *Message);
-		return;
-	}
-	FChatMessageStruct MessageStruct;
-	MessageStruct.MessageString = Message;
-	MessageStruct.MessageType = EFGChatMessageType::CMT_SystemMessage;
-	MessageStruct.ServerTimeStamp = GetWorld()->TimeSeconds;
-	MessageStruct.CachedColor = Color;
-	ChatManager->AddChatMessageToReceived(MessageStruct);
-
-	UE_LOG(LogApChat, Display, TEXT("Archipelago Chat Message: %s"), *Message);
+	UE_LOG(LogApSubsystem, Display, TEXT("Archipelago Cpp Chat Message: %s"), *Message);
+	AApMessagingSubsystem* messaging = AApMessagingSubsystem::Get(this);
+	fgcheck(messaging);
+	messaging->DisplayMessage(Message, Color);
 }
 
 void AApSubsystem::ScoutArchipelagoItems() {

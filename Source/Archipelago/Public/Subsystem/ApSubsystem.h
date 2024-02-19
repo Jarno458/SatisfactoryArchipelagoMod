@@ -29,7 +29,6 @@
 #include "Engine/Engine.h"
 #include "Configuration/Properties/ConfigPropertySection.h"
 #include "Templates/SubclassOf.h"
-#include "FGChatManager.h"
 #include "Module/ModModule.h"
 #include "Reflection/ClassGenerator.h"
 #include "Buildables/FGBuildable.h"
@@ -42,6 +41,7 @@
 #include "Data/ApTypes.h"
 #include "Subsystem/ApPortalSubsystem.h"
 #include "Subsystem/ApMappingsSubsystem.h"
+#include "Subsystem/ApMessagingSubsystem.h"
 
 #include "CLSchematicBPFLib.h"
 #include "BPFContentLib.h"
@@ -51,8 +51,6 @@
 #include "Archipelago_Satisfactory.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(LogApSubsystem, Log, All);
-
-DECLARE_LOG_CATEGORY_EXTERN(LogApChat, All, All);
 
 #include "ApSubsystem.generated.h"
 
@@ -228,6 +226,8 @@ private:
 	void HandleInstagib(AFGCharacterPlayer* player);
 
 	void HandleAPMessages();
+
+	// TODO do we want to keep this around or call AApMessagingSubsystem::DisplayMessage directly?
 	void SendChatMessage(const FString& Message, const FLinearColor& Color);
 
 	void CreateSchematicBoundToItemId(int64 item, TSharedRef<FApRecipeItem> recipe);
