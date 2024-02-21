@@ -1,6 +1,5 @@
 #include "Buildable/ApPortal.h"
 #include "Subsystem/ApPortalSubsystem.h"
-#include "Subsystem/ApServerGiftingSubsystem.h"
 #include "Subsystem/ApReplicatedGiftingSubsystem.h"
 
 //TODO REMOVE
@@ -32,7 +31,7 @@ void AApPortal::BeginPlay() {
 
 	UWorld* world = GetWorld();
 	portalSubsystem = AApPortalSubsystem::Get(world);
-	mostlyClientSideGiftingSubsystem = AApReplicatedGiftingSubsystem::Get(world);
+	replicatedGiftingSubsystem = AApReplicatedGiftingSubsystem::Get(world);
 
 	mPowerInfo->OnHasPowerChanged.BindUFunction(this, "CheckPower");
 
@@ -50,7 +49,7 @@ bool AApPortal::CanProduce_Implementation() const {
 	return HasPower();
 }
 
-void AApPortal::CheckPower(bool newHasPower) const {
+void AApPortal::CheckPower(bool newHasPower) {
 	if (!HasAuthority())
 		return;
 
@@ -70,15 +69,35 @@ void AApPortal::Factory_Tick(float dt) {
 	camReceiveOutput = CanProduce() && output->IsConnected();
 }
 
+bool AApPortal::OutputIsEmpty() const {
+	FScopeLock lock(&outputLock);
+	return !nextItemToOutput.IsValid();
+}
+
+void AApPortal::SetOutput(FInventoryItem item) {
+	FScopeLock lock(&outputLock);
+	nextItemToOutput = item;
+}
+
+FInventoryItem AApPortal::StealOutput() {
+	FScopeLock lock(&outputLock);
+	FInventoryItem returnItem = nextItemToOutput;
+	nextItemToOutput = FInventoryItem::NullInventoryItem;
+	return returnItem;
+}
+
 void AApPortal::Factory_CollectInput_Implementation() {
-	if (input == nullptr || !input->IsConnected() || !targetPlayer.IsValid())
-		return;
+	if (((AApReplicatedGiftingSubsystem*)replicatedGiftingSubsystem)->GetState() != EApGiftingSeriveState::Ready 
+		|| input == nullptr 
+		|| !input->IsConnected() 
+		|| !targetPlayer.IsValid())
+			return;
 
 	TArray<FInventoryItem> items;
 	if (!input->Factory_PeekOutput(items) || items.Num() == 0)
 		return;
 
-	if (!((AApReplicatedGiftingSubsystem*)mostlyClientSideGiftingSubsystem)->CanSend(targetPlayer, items[0].GetItemClass()))
+	if (!((AApReplicatedGiftingSubsystem*)replicatedGiftingSubsystem)->CanSend(targetPlayer, items[0].GetItemClass()))
 		return; //block input
 	
 	FInventoryItem item;
@@ -95,20 +114,32 @@ void AApPortal::Factory_CollectInput_Implementation() {
 }
 
 bool AApPortal::Factory_PeekOutput_Implementation(const class UFGFactoryConnectionComponent* connection, TArray<FInventoryItem>& out_items, TSubclassOf<UFGItemDescriptor> type) const {
-	if (!Factory_HasPower() || outputQueue.IsEmpty())
+	if (!Factory_HasPower())
 		return false;
 	
-	FInventoryItem item = *outputQueue.Peek();
-	
-	out_items.Emplace(item);
-	
-	return true;
+	FScopeLock lock(&outputLock);
+	if (nextItemToOutput.IsValid()) {
+		out_items.Emplace(nextItemToOutput);
+		return true;
+	} else {
+		return false;
+	}
 }
 
 bool AApPortal::Factory_GrabOutput_Implementation(class UFGFactoryConnectionComponent* connection, FInventoryItem& out_item, float& out_OffsetBeyond, TSubclassOf<UFGItemDescriptor> type) {
 	out_OffsetBeyond = 0;
 	
-	return Factory_HasPower() && outputQueue.Dequeue(out_item);
+	if (!Factory_HasPower())
+		return false;
+
+	FScopeLock lock(&outputLock);
+	if (nextItemToOutput.IsValid()) {
+		out_item = nextItemToOutput;
+		nextItemToOutput = FInventoryItem::NullInventoryItem;
+		return true;
+	} else {
+		return false;
+	}
 }
 
 #pragma optimize("", on)

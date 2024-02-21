@@ -9,8 +9,10 @@
 #include "FGFactoryConnectionComponent.h"
 #include "FGPowerInfoComponent.h"
 
-//#include "../Subsystem/ApPortalSubsystem.h" set inside cpp to avoid circular dep
+//#include "Subsystem/ApPortalSubsystem.h" set inside cpp to avoid circular dep
+//#include "Subsystem/ApReplicatedGiftingSubsystem.h"
 #include "Data/ApTypes.h"
+
 
 #include "ApPortal.generated.h"
 
@@ -28,14 +30,12 @@ public:
 	virtual void BeginPlay() override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
-	mutable TQueue<FInventoryItem> outputQueue;
-
 	UPROPERTY(BlueprintReadWrite, SaveGame, Replicated)
 	FApPlayer targetPlayer;
 
 private:
 	AModSubsystem* portalSubsystem;
-	AModSubsystem* mostlyClientSideGiftingSubsystem;
+	AModSubsystem* replicatedGiftingSubsystem;
 
 	UFGFactoryConnectionComponent* input = nullptr;
 	UFGFactoryConnectionComponent* output = nullptr;
@@ -44,11 +44,18 @@ private:
 
 	bool camReceiveOutput = false;
 
+	mutable FCriticalSection outputLock;
+	FInventoryItem nextItemToOutput = FInventoryItem::NullInventoryItem;
+
 public:
 	UFUNCTION()
-	void CheckPower(bool newHasPower) const;
+	void CheckPower(bool newHasPower);
 
 	FORCEINLINE bool CanReceiveOutput() const { return camReceiveOutput; };
+
+	bool OutputIsEmpty() const;
+	void SetOutput(FInventoryItem item);
+	FInventoryItem StealOutput();
 
 	virtual bool CanProduce_Implementation() const override;
 

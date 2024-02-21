@@ -36,10 +36,6 @@ void AApPortalSubsystem::BeginPlay() {
 void AApPortalSubsystem::Tick(float dt) {
 	Super::Tick(dt);
 
-	//if (!HasAuthority()) {
-	//	return;
-	//}
-
 	if (!isInitialized) {
 		RebuildQueueFromSave();
 
@@ -53,18 +49,17 @@ void AApPortalSubsystem::ProcessOutputQueue() {
 	if (OutputQueue.IsEmpty())
 		return;
 
-	for (const AApPortal* portal : BuiltPortals) {
-		if (OutputQueue.IsEmpty())
+	for (AApPortal* portal : BuiltPortals) {
+		if (portal == nullptr || OutputQueue.IsEmpty())
 			return;
 
-		if (portal->CanReceiveOutput() && portal->outputQueue.IsEmpty()) {
+		if (portal->CanReceiveOutput() && portal->OutputIsEmpty()) {
 			FInventoryItem item;
 			OutputQueue.Dequeue(item);
-			portal->outputQueue.Enqueue(item);
+			portal->SetOutput(item);
 		}
 	}
 }
-
 
 void AApPortalSubsystem::Enqueue(TSubclassOf<UFGItemDescriptor> cls, int amount) {
 	for (size_t i = 0; i < amount; i++) {
@@ -76,20 +71,21 @@ void AApPortalSubsystem::Send(FApPlayer targetPlayer, FInventoryStack itemStack)
 	((AApServerGiftingSubsystem*)giftingSubsystem)->EnqueueForSending(targetPlayer, itemStack);
 }
 
-void AApPortalSubsystem::RegisterPortal(const AApPortal* portal) {
+void AApPortalSubsystem::RegisterPortal(AApPortal* portal) {
 	bool alreadyExists;
 	BuiltPortals.Add(portal, &alreadyExists);
 }
 
-void AApPortalSubsystem::UnRegisterPortal(const AApPortal* portal) {
+void AApPortalSubsystem::UnRegisterPortal(AApPortal* portal) {
 	BuiltPortals.Remove(portal);
 	
-	//TODO should be added to front of queue
-	FInventoryItem item;
-	while (portal->outputQueue.Dequeue(item))
-		OutputQueue.Enqueue(item);
-}
+	FInventoryItem item = portal->StealOutput();
 
+	if (item.IsValid()) {
+		//TODO should be added to front of queue
+		OutputQueue.Enqueue(item);
+	}
+}
 
 void AApPortalSubsystem::PreSaveGame_Implementation(int32 saveVersion, int32 gameVersion) {
 	StoreQueueForSave();
@@ -102,9 +98,12 @@ void AApPortalSubsystem::PostSaveGame_Implementation(int32 saveVersion, int32 ga
 void AApPortalSubsystem::StoreQueueForSave() {
 	FInventoryItem item;
 
-	for (const AApPortal* portal : BuiltPortals) {
-		while (portal->outputQueue.Dequeue(item)) {
-			OutputQueueSave.Add(mappings->ItemClassToItemId[item.GetItemClass()]);
+	for (AApPortal* portal : BuiltPortals) {
+		while (portal != nullptr) {
+			item = portal->StealOutput();
+
+			if (item.IsValid())
+				OutputQueueSave.Add(mappings->ItemClassToItemId[item.GetItemClass()]);
 		}
 	}
 	while (OutputQueue.Dequeue(item)) {

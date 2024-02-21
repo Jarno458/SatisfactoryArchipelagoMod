@@ -55,7 +55,7 @@ DECLARE_LOG_CATEGORY_EXTERN(LogApSubsystem, Log, All);
 #include "ApSubsystem.generated.h"
 
 UENUM(BlueprintType)
-enum EApConnectionState {
+enum class EApConnectionState : uint8 {
 	NotYetAttempted UMETA(DisplayName = "Not Yet Attempted"),
 	Connecting UMETA(DisplayName = "Connecting"),
 	Connected UMETA(DisplayName = "Connection Successful"),
@@ -111,7 +111,7 @@ public:
 	void SetServerData(AP_SetServerDataRequest* setDataRequest);
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	FORCEINLINE TEnumAsByte<EApConnectionState> GetConnectionState() const { return TEnumAsByte<EApConnectionState>(ConnectionState); };
+	FORCEINLINE EApConnectionState GetConnectionState() const { return ConnectionState; };
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FORCEINLINE FApSlotData GetSlotData() const { return slotData; };

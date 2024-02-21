@@ -11,6 +11,14 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(LogApReplicatedGiftingSubsystem, Log, All);
 
+UENUM(BlueprintType)
+enum class EApGiftingSeriveState : uint8 {
+	Ready UMETA(DisplayName = "Connected Successful"),
+	Initializing UMETA(DisplayName = "Connection Initializing"),
+	Offline UMETA(DisplayName = "Not Connected to AP"),
+	InvalidTarget UMETA(DisplayName = "Invalid Target")
+};
+
 UCLASS()
 class AApReplicatedGiftingSubsystem : public AModSubsystem
 {
@@ -27,24 +35,27 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Schematic", DisplayName = "Get Client Replicated ApGiftingSubsystem", Meta = (DefaultToSelf = "worldContext"))
 	static AApReplicatedGiftingSubsystem* Get(UObject* worldContext);
 
+private:
+	AApSubsystem* ap;
+	AApPortalSubsystem* portalSubsystem;
+	AApMappingsSubsystem* mappingSubsystem;
+
 	UPROPERTY(ReplicatedUsing = OnRep_AcceptedGiftTraitsPerPlayerReplicated)
 	TArray<FApReplicateableGiftBoxMetaData> AcceptedGiftTraitsPerPlayerReplicated;
 
 	UPROPERTY(Replicated)
 	TArray<FApPlayer> AllPlayers;
-	 
+
+	UPROPERTY(Replicated)
+	EApGiftingSeriveState ServiceState;
+
 	TArray<FString> AllTraits;
 	TMap<FApPlayer, FApGiftBoxMetaData> AcceptedGiftTraitsPerPlayer;
 
-private:
-	const float pollInterfall = 10.0f;
-
-	AApSubsystem* ap;
-	AApMappingsSubsystem* mappingSubsystem;
-
-	bool apInitialized;
-
 public:
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	FORCEINLINE EApGiftingSeriveState GetState() const { return ServiceState; };
+
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	bool CanSend(FApPlayer targetPlayer, TSubclassOf<UFGItemDescriptor> itemClass);
 

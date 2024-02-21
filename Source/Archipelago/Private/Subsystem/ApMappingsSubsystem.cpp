@@ -5,6 +5,7 @@
 #include "Data/ApGiftingMappings.h"
 #include "Registry/ModContentRegistry.h"
 #include "FGGameState.h"
+#include "ApUtils.h"
 
 DEFINE_LOG_CATEGORY(LogApMappingsSubsystem);
 
@@ -266,7 +267,7 @@ int AApMappingsSubsystem::GetResourceSinkPointsForItem(AFGResourceSinkSubsystem*
 
 	if (value == 0) {
 		FString itemName = UFGItemDescriptor::GetItemName(itemClass).ToString();
-		UE_LOG(LogApMappingsSubsystem, Error, TEXT("AApServerGiftingSubsystem::GetResourceSinkPointsForItem(\"%s\", %i) Not sink value for item"), *itemName, itemId);
+		UE_LOG(LogApMappingsSubsystem, Error, TEXT("AApMappingsSubsystem::GetResourceSinkPointsForItem(\"%s\", %i) Not sink value for item"), *itemName, itemId);
 		value = 1;
 	}
 

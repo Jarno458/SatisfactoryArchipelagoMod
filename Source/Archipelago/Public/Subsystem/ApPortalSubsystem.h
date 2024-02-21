@@ -54,7 +54,7 @@ private:
 	bool isInitialized;
 
 public:
-	TSet<const AApPortal*> BuiltPortals;
+	TSet<AApPortal*> BuiltPortals;
 
 	FORCEINLINE bool IsInitialized() const { return isInitialized; };
 
@@ -62,8 +62,8 @@ public:
 
 	void Send(FApPlayer targetPlayer, FInventoryStack itemStack);
 
-	void RegisterPortal(const AApPortal* portal);
-	void UnRegisterPortal(const AApPortal* portal);
+	void RegisterPortal(AApPortal* portal);
+	void UnRegisterPortal(AApPortal* portal);
 
 private:
 	void ProcessInputQueue();

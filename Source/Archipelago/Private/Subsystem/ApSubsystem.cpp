@@ -17,7 +17,7 @@ AApSubsystem::AApSubsystem() {
 
 	ReplicationPolicy = ESubsystemReplicationPolicy::SpawnOnServer;
 
-	ConnectionState = NotYetAttempted;
+	ConnectionState = EApConnectionState::NotYetAttempted;
 	ConnectionStateDescription = LOCTEXT("NotYetAttempted", "A connection has not yet been attempted. Load a save file to attempt to connect.");
 }
 

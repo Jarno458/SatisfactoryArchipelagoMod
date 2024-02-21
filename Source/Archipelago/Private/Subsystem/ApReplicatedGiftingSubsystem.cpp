@@ -53,6 +53,7 @@ void AApReplicatedGiftingSubsystem::BeginPlay() {
 
 	if (HasAuthority()) {
 		ap = AApSubsystem::Get(world);
+		portalSubsystem = AApPortalSubsystem::Get(world);
 
 		AllPlayers = ap->GetAllApPlayers();
 	}
@@ -64,12 +65,20 @@ void AApReplicatedGiftingSubsystem::Tick(float dt) {
 	if (!HasAuthority())
 		return;
 
-	if (apInitialized)
-		UpdateAcceptedGifts();
-	else if (ap->ConnectionState == EApConnectionState::Connected) {
-		apInitialized = true;
+	if (ap->ConnectionState != EApConnectionState::Connected) {
+		SetActorTickInterval(0.1f);
 
-		SetActorTickInterval(pollInterfall);
+		ServiceState = EApGiftingSeriveState::Offline;
+	} else {
+		SetActorTickInterval(10.0f);
+
+		if (!mappingSubsystem->HasLoadedItemTraits() || !((AApPortalSubsystem*)portalSubsystem)->IsInitialized()) {
+			ServiceState = EApGiftingSeriveState::Initializing;
+		} else {
+			ServiceState = EApGiftingSeriveState::Ready;
+
+			UpdateAcceptedGifts();
+		}
 	}
 }
 
@@ -77,7 +86,7 @@ bool AApReplicatedGiftingSubsystem::CanSend(FApPlayer targetPlayer, TSubclassOf<
 	if (!AcceptedGiftTraitsPerPlayer.Contains(targetPlayer))
 		return false;
 
-	if (!mappingSubsystem->TraitsPerItem.Contains(itemClass))
+	if (!mappingSubsystem->HasLoadedItemTraits() || !mappingSubsystem->TraitsPerItem.Contains(itemClass))
 		return false;
 
 	for (TPair<FString, float>& trait : mappingSubsystem->TraitsPerItem[itemClass]) {
