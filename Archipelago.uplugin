@@ -1,8 +1,8 @@
 {
 	"FileVersion": 3,
 	"Version": 0,
-	"VersionName": "0.0.11-dedi",
-	"SemVersion": "0.0.11-dedi",
+	"VersionName": "0.0.12-dedi",
+	"SemVersion": "0.0.12-dedi",
 	"FriendlyName": "Archipelago",
 	"Description": "Provides connection to an Archipelago multiworld",
 	"Category": "Modding",
@@ -42,6 +42,11 @@
 			"Name": "MAMTips",
 			"Enabled": true,
 			"SemVersion": "^1.3.1"
+		},
+		{
+			"Name": "FixClientResourceSinkPoints",
+			"Enabled": true,
+			"SemVersion": ">=1.0.0"
 		}
 	]
 }
