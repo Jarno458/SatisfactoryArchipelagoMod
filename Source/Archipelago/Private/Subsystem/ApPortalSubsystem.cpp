@@ -18,7 +18,7 @@ AApPortalSubsystem::AApPortalSubsystem() : Super() {
 
 	PrimaryActorTick.bCanEverTick = true;
 	PrimaryActorTick.bStartWithTickEnabled = true;
-	PrimaryActorTick.TickInterval = 0.05; //needs to thick atleast 13 times per seconds to keep up with a 780 belt
+	PrimaryActorTick.TickInterval = 0.06; //needs to thick atleast 13 times per seconds to keep up with a 780 belt
 
 	ReplicationPolicy = ESubsystemReplicationPolicy::SpawnOnServer;
 }
@@ -46,18 +46,13 @@ void AApPortalSubsystem::Tick(float dt) {
 }
 
 void AApPortalSubsystem::ProcessOutputQueue() {
-	if (OutputQueue.IsEmpty())
-		return;
-
 	for (AApPortal* portal : BuiltPortals) {
-		if (portal == nullptr || OutputQueue.IsEmpty())
+		if (!nextItemToOutput.IsValid())
+			OutputQueue.Dequeue(nextItemToOutput);
+		if (!nextItemToOutput.IsValid())
 			return;
-
-		if (portal->CanReceiveOutput() && portal->OutputIsEmpty()) {
-			FInventoryItem item;
-			OutputQueue.Dequeue(item);
-			portal->SetOutput(item);
-		}
+		if (portal != nullptr && portal->TrySetOutput(nextItemToOutput))
+			nextItemToOutput = FInventoryItem::NullInventoryItem;
 	}
 }
 
@@ -79,7 +74,7 @@ void AApPortalSubsystem::RegisterPortal(AApPortal* portal) {
 void AApPortalSubsystem::UnRegisterPortal(AApPortal* portal) {
 	BuiltPortals.Remove(portal);
 	
-	FInventoryItem item = portal->StealOutput();
+	FInventoryItem item = portal->TryStealOutput();
 
 	if (item.IsValid()) {
 		//TODO should be added to front of queue
@@ -88,24 +83,29 @@ void AApPortalSubsystem::UnRegisterPortal(AApPortal* portal) {
 }
 
 void AApPortalSubsystem::PreSaveGame_Implementation(int32 saveVersion, int32 gameVersion) {
+	SetActorTickEnabled(false);
+
 	StoreQueueForSave();
 }
 
 void AApPortalSubsystem::PostSaveGame_Implementation(int32 saveVersion, int32 gameVersion) {
 	RebuildQueueFromSave();
+
+	SetActorTickEnabled(true);
 }
 
 void AApPortalSubsystem::StoreQueueForSave() {
-	FInventoryItem item;
-
 	for (AApPortal* portal : BuiltPortals) {
-		while (portal != nullptr) {
-			item = portal->StealOutput();
+		if (portal == nullptr)
+			continue;
 
-			if (item.IsValid())
-				OutputQueueSave.Add(mappings->ItemClassToItemId[item.GetItemClass()]);
-		}
+		FInventoryItem item = portal->TryStealOutput();
+
+		if (item.IsValid())
+			OutputQueueSave.Add(mappings->ItemClassToItemId[item.GetItemClass()]);
 	}
+
+	FInventoryItem item;
 	while (OutputQueue.Dequeue(item)) {
 		OutputQueueSave.Add(mappings->ItemClassToItemId[item.GetItemClass()]);
 	}

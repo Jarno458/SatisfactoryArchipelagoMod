@@ -26,7 +26,7 @@ public:
 	}
 
 	// Value constructor
-	FApPlayer(int team, FString name) : Name(name), Team(team)
+	FApPlayer(int team, FString name) : Team(team), Name(name)
 	{}
 
 	// Default constructor
@@ -34,7 +34,7 @@ public:
 	{}
 
 	// Copy constructor
-	FApPlayer(const FApPlayer& Other) : Name(Other.Name), Team(Other.Team)
+	FApPlayer(const FApPlayer& Other) : Team(Other.Team), Name(Other.Name)
 	{}
 
 	FORCEINLINE bool IsValid() {

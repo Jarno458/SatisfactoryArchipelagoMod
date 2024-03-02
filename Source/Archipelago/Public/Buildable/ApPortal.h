@@ -1,8 +1,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
-
 #include "Net/UnrealNetwork.h"
+#include "Misc/ScopeTryLock.h"
 
 #include "Buildables/FGBuildableFactory.h"
 
@@ -13,12 +13,8 @@
 //#include "Subsystem/ApReplicatedGiftingSubsystem.h"
 #include "Data/ApTypes.h"
 
-
 #include "ApPortal.generated.h"
 
-/**
- * 
- */
 UCLASS()
 class ARCHIPELAGO_API AApPortal : public AFGBuildableFactory
 {
@@ -40,10 +36,9 @@ private:
 	UFGFactoryConnectionComponent* input = nullptr;
 	UFGFactoryConnectionComponent* output = nullptr;
 
-	int portalId;
-
 	bool camReceiveOutput = false;
 
+	//mutable as used in  Factory_*Output_Implementation const methods
 	mutable FCriticalSection outputLock;
 	FInventoryItem nextItemToOutput = FInventoryItem::NullInventoryItem;
 
@@ -53,9 +48,8 @@ public:
 
 	FORCEINLINE bool CanReceiveOutput() const { return camReceiveOutput; };
 
-	bool OutputIsEmpty() const;
-	void SetOutput(FInventoryItem item);
-	FInventoryItem StealOutput();
+	bool TrySetOutput(FInventoryItem item);
+	FInventoryItem TryStealOutput();
 
 	virtual bool CanProduce_Implementation() const override;
 

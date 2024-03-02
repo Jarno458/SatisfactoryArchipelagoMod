@@ -7,8 +7,6 @@
 
 AApPortal::AApPortal() : Super() {
 	mPowerInfoClass = UFGPowerInfoComponent::StaticClass();
-	//mSignificanceRange = 18000;
-	//MaxRenderDistance = -1;
 
 	bReplicates = true;
 
@@ -69,18 +67,25 @@ void AApPortal::Factory_Tick(float dt) {
 	camReceiveOutput = CanProduce() && output->IsConnected();
 }
 
-bool AApPortal::OutputIsEmpty() const {
-	FScopeLock lock(&outputLock);
-	return !nextItemToOutput.IsValid();
-}
+bool AApPortal::TrySetOutput(FInventoryItem item) {
+	if (!camReceiveOutput)
+		return false;
 
-void AApPortal::SetOutput(FInventoryItem item) {
-	FScopeLock lock(&outputLock);
+	FScopeTryLock lock(&outputLock);
+
+	if (!lock.IsLocked() || nextItemToOutput.IsValid())
+		return false;
+
 	nextItemToOutput = item;
+	return true;
 }
 
-FInventoryItem AApPortal::StealOutput() {
-	FScopeLock lock(&outputLock);
+FInventoryItem AApPortal::TryStealOutput() {
+	FScopeTryLock lock(&outputLock);
+
+	if (!lock.IsLocked())
+		return FInventoryItem::NullInventoryItem;
+
 	FInventoryItem returnItem = nextItemToOutput;
 	nextItemToOutput = FInventoryItem::NullInventoryItem;
 	return returnItem;
@@ -117,8 +122,8 @@ bool AApPortal::Factory_PeekOutput_Implementation(const class UFGFactoryConnecti
 	if (!Factory_HasPower())
 		return false;
 	
-	FScopeLock lock(&outputLock);
-	if (nextItemToOutput.IsValid()) {
+	FScopeTryLock lock(&outputLock);
+	if (lock.IsLocked() && nextItemToOutput.IsValid()) {
 		out_items.Emplace(nextItemToOutput);
 		return true;
 	} else {
@@ -132,6 +137,7 @@ bool AApPortal::Factory_GrabOutput_Implementation(class UFGFactoryConnectionComp
 	if (!Factory_HasPower())
 		return false;
 
+	//hardlock we need to yield some output here
 	FScopeLock lock(&outputLock);
 	if (nextItemToOutput.IsValid()) {
 		out_item = nextItemToOutput;

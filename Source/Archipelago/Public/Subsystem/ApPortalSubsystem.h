@@ -47,6 +47,7 @@ private:
 	UPROPERTY(SaveGame)
 	TArray<int64> OutputQueueSave;
 
+	FInventoryItem nextItemToOutput;
 	TQueue<FInventoryItem, EQueueMode::Mpsc> OutputQueue;
 	TQueue<FInventoryItem, EQueueMode::Mpsc> StartupQueue;
 
@@ -59,7 +60,7 @@ public:
 	FORCEINLINE bool IsInitialized() const { return isInitialized; };
 
 	void Enqueue(TSubclassOf<UFGItemDescriptor> cls, int amount);
-
+	
 	void Send(FApPlayer targetPlayer, FInventoryStack itemStack);
 
 	void RegisterPortal(AApPortal* portal);

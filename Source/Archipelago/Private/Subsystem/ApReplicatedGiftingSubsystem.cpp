@@ -54,8 +54,6 @@ void AApReplicatedGiftingSubsystem::BeginPlay() {
 	if (HasAuthority()) {
 		ap = AApSubsystem::Get(world);
 		portalSubsystem = AApPortalSubsystem::Get(world);
-
-		AllPlayers = ap->GetAllApPlayers();
 	}
 }
 
@@ -70,6 +68,8 @@ void AApReplicatedGiftingSubsystem::Tick(float dt) {
 
 		ServiceState = EApGiftingSeriveState::Offline;
 	} else {
+		AllPlayers = ap->GetAllApPlayers();
+
 		SetActorTickInterval(10.0f);
 
 		if (!mappingSubsystem->HasLoadedItemTraits() || !((AApPortalSubsystem*)portalSubsystem)->IsInitialized()) {
