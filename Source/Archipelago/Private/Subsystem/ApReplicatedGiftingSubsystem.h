@@ -12,8 +12,8 @@
 DECLARE_LOG_CATEGORY_EXTERN(LogApReplicatedGiftingSubsystem, Log, All);
 
 UENUM(BlueprintType)
-enum class EApGiftingSeriveState : uint8 {
-	Ready UMETA(DisplayName = "Connected Successful"),
+enum class EApGiftingServiceState : uint8 {
+	Ready UMETA(DisplayName = "Connection Successful"),
 	Initializing UMETA(DisplayName = "Connection Initializing"),
 	Offline UMETA(DisplayName = "Not Connected to AP"),
 	InvalidTarget UMETA(DisplayName = "Invalid Target")
@@ -47,14 +47,14 @@ private:
 	TArray<FApPlayer> AllPlayers;
 
 	UPROPERTY(Replicated)
-	EApGiftingSeriveState ServiceState;
+	EApGiftingServiceState ServiceState;
 
 	TArray<FString> AllTraits;
 	TMap<FApPlayer, FApGiftBoxMetaData> AcceptedGiftTraitsPerPlayer;
 
 public:
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	FORCEINLINE EApGiftingSeriveState GetState() const { return ServiceState; };
+	FORCEINLINE EApGiftingServiceState GetState() const { return ServiceState; };
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	bool CanSend(FApPlayer targetPlayer, TSubclassOf<UFGItemDescriptor> itemClass);

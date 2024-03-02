@@ -92,7 +92,7 @@ FInventoryItem AApPortal::TryStealOutput() {
 }
 
 void AApPortal::Factory_CollectInput_Implementation() {
-	if (((AApReplicatedGiftingSubsystem*)replicatedGiftingSubsystem)->GetState() != EApGiftingSeriveState::Ready 
+	if (((AApReplicatedGiftingSubsystem*)replicatedGiftingSubsystem)->GetState() != EApGiftingServiceState::Ready 
 		|| input == nullptr 
 		|| !input->IsConnected() 
 		|| !targetPlayer.IsValid())

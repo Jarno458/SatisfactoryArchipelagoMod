@@ -66,16 +66,16 @@ void AApReplicatedGiftingSubsystem::Tick(float dt) {
 	if (ap->ConnectionState != EApConnectionState::Connected) {
 		SetActorTickInterval(0.1f);
 
-		ServiceState = EApGiftingSeriveState::Offline;
+		ServiceState = EApGiftingServiceState::Offline;
 	} else {
 		AllPlayers = ap->GetAllApPlayers();
 
 		SetActorTickInterval(10.0f);
 
 		if (!mappingSubsystem->HasLoadedItemTraits() || !((AApPortalSubsystem*)portalSubsystem)->IsInitialized()) {
-			ServiceState = EApGiftingSeriveState::Initializing;
+			ServiceState = EApGiftingServiceState::Initializing;
 		} else {
-			ServiceState = EApGiftingSeriveState::Ready;
+			ServiceState = EApGiftingServiceState::Ready;
 
 			UpdateAcceptedGifts();
 		}
