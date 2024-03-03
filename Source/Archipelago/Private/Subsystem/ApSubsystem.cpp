@@ -89,7 +89,7 @@ void AApSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase, TArray<TSubclas
 				CreateSchematicBoundToItemId(apitem.Key, StaticCastSharedRef<FApRecipeItem>(apitem.Value));
 		}
 
-		UE_LOG(LogApSubsystem, Display, TEXT("Waiting for connection to sucseed..."));
+		UE_LOG(LogApSubsystem, Display, TEXT("Waiting for AP Server connection to succeed..."));
 		FDateTime connectingStartedTime = FDateTime::Now();
 		FGenericPlatformProcess::ConditionalSleep([this, connectingStartedTime]() { return InitializeTick(connectingStartedTime); }, 0.5);
 	} else if (phase == ELifecyclePhase::POST_INITIALIZATION) {

@@ -3,6 +3,12 @@
 
 DEFINE_LOG_CATEGORY(LogApChat);
 
+void AApMessagingSubsystem::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const {
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(AApMessagingSubsystem, OnJoinMessages);
+}
+
 AApMessagingSubsystem* AApMessagingSubsystem::Get(class UObject* worldContext) {
 	if (!worldContext) {
 		return nullptr;
