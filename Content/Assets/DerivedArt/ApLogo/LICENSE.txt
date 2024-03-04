@@ -1,2 +1,0 @@
-The files in this folder are derived from work present in the SourceArt folder.
-See the SourceArt folder's LICENSE.txt for the licensing of that content.
