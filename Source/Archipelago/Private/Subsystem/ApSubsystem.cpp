@@ -647,7 +647,7 @@ void AApSubsystem::AwardItem(int64 itemid, bool isFromServer) {
 	}
 	else if (mappingSubsystem->ApItems.Contains(itemid)) {
 		if (mappingSubsystem->ApItems[itemid]->Type == EItemType::Item) {
-			if (isFromServer && !HasAuthority()) { //TODO fix rewarding starter inventory to newly spawned clients 
+			if (isFromServer && !IsRunningDedicatedServer()) { //TODO fix rewarding starter inventory to newly spawned clients 
 				AFGCharacterPlayer* player = GetLocalPlayer();
 				fgcheck(player);
 				UFGInventoryComponent* inventory = player->GetInventory();
