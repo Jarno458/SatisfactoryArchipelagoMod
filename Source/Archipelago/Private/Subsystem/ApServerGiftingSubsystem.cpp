@@ -73,33 +73,44 @@ void AApServerGiftingSubsystem::PullAllGiftsAsync() {
 	UpdatedProcessedIds(gifts);
 
 	for (FApReceiveGift& gift : gifts) {
-		if (ProcessedIds.Contains(gift.Id))
+		UE_LOG(LogApServerGiftingSubsystem, Display, TEXT("AApServerGiftingSubsystem::PullAllGiftsAsync() Received(%s)"), *gift.Id);
+
+		if (ProcessedIds.Contains(gift.Id)) {
+			UE_LOG(LogApServerGiftingSubsystem, Display, TEXT("AApServerGiftingSubsystem::PullAllGiftsAsync() Skipping gift(%s)"), *gift.Id);
 			continue;
+		}
 
 		ProcessedIds.Add(gift.Id);
 
+		TSubclassOf<UFGItemDescriptor> itemClass = nullptr;
+
 		//try match on name
 		if (mappingSubsystem->NameToItemId.Contains(gift.ItemName)) {
-			portalSubSystem->Enqueue(StaticCastSharedRef<FApItem>(mappingSubsystem->ApItems[mappingSubsystem->NameToItemId[gift.ItemName]])->Class, gift.Amount);
+			UE_LOG(LogApServerGiftingSubsystem, Display, TEXT("AApServerGiftingSubsystem::PullAllGiftsAsync() passing gift(%s) to portalSubSystem using itemName %s"), *gift.Id, *gift.ItemName);
+			itemClass = StaticCastSharedRef<FApItem>(mappingSubsystem->ApItems[mappingSubsystem->NameToItemId[gift.ItemName]])->Class;
 		} else if (UApGiftingMappings::HardcodedItemNameToIdMappings.Contains(gift.ItemName)) {
-			portalSubSystem->Enqueue(StaticCastSharedRef<FApItem>(mappingSubsystem->ApItems[UApGiftingMappings::HardcodedItemNameToIdMappings[gift.ItemName]])->Class, gift.Amount);
+			UE_LOG(LogApServerGiftingSubsystem, Display, TEXT("AApServerGiftingSubsystem::PullAllGiftsAsync() passing gift(%s) to portalSubSystem using hardcoded mapping for %s"), *gift.Id, *gift.ItemName);
+			int64 itemId = UApGiftingMappings::HardcodedItemNameToIdMappings[gift.ItemName];
+			itemClass = StaticCastSharedRef<FApItem>(mappingSubsystem->ApItems[itemId])->Class;
 		} else {
-			//if name cant be matched, try match on traits
-			TSubclassOf<UFGItemDescriptor> itemClass = TryGetItemClassByTraits(gift.Traits);
+			UE_LOG(LogApServerGiftingSubsystem, Display, TEXT("AApServerGiftingSubsystem::PullAllGiftsAsync() passing gift(%s) to portalSubSystem by traits as item %s"), *gift.Id, *UFGItemDescriptor::GetItemName(itemClass).ToString());
+			itemClass = TryGetItemClassByTraits(gift.Traits);
+		}
 
-			if (itemClass != nullptr) {
-				portalSubSystem->Enqueue(itemClass, gift.Amount);
-			} else {
-				ap->RejectGift(gift.Id);
-				continue;
-			}
+		if (itemClass != nullptr) {
+			portalSubSystem->Enqueue(itemClass, gift.Amount);
+		}
+		else {
+			UE_LOG(LogApServerGiftingSubsystem, Display, TEXT("AApServerGiftingSubsystem::PullAllGiftsAsync() rejecting gift(%s)"), *gift.Id);
+			ap->RejectGift(gift.Id);
+			continue;
 		}
 
 		ap->AcceptGift(gift.Id);
 	}
 }
 
-void AApServerGiftingSubsystem::UpdatedProcessedIds(TArray<FApReceiveGift> gifts) {
+void AApServerGiftingSubsystem::UpdatedProcessedIds(TArray<FApReceiveGift>& gifts) {
 	TSet<FString> currentGiftIds;
 	for (FApReceiveGift& gift : gifts) {
 		currentGiftIds.Add(gift.Id);
@@ -148,7 +159,7 @@ void AApServerGiftingSubsystem::ProcessInputQueue() {
 		Send(itemsToSend);
 }
 
-void AApServerGiftingSubsystem::Send(TMap<FApPlayer, TMap<TSubclassOf<UFGItemDescriptor>, int>> itemsToSend) {
+void AApServerGiftingSubsystem::Send(TMap<FApPlayer, TMap<TSubclassOf<UFGItemDescriptor>, int>>& itemsToSend) {
 	for (TPair<FApPlayer, TMap<TSubclassOf<UFGItemDescriptor>, int>>& itemsToSendPerPlayer : itemsToSend) {
 		if (itemsToSendPerPlayer.Value.Num() <= 0)
 			continue;
@@ -175,7 +186,7 @@ void AApServerGiftingSubsystem::Send(TMap<FApPlayer, TMap<TSubclassOf<UFGItemDes
 	}
 }
 
-bool AApServerGiftingSubsystem::HasTraitKnownToSatisfactory(TArray<FApGiftTrait> traits) {
+bool AApServerGiftingSubsystem::HasTraitKnownToSatisfactory(TArray<FApGiftTrait>& traits) {
 	for (FApGiftTrait& trait : traits) {
 		if (UApGiftingMappings::TraitDefaultItemIds.Contains(trait.Trait))
 			return true;
@@ -184,7 +195,7 @@ bool AApServerGiftingSubsystem::HasTraitKnownToSatisfactory(TArray<FApGiftTrait>
 	return false;
 }
 
-TSubclassOf<UFGItemDescriptor> AApServerGiftingSubsystem::TryGetItemClassByTraits(TArray<FApGiftTrait> traits) {
+TSubclassOf<UFGItemDescriptor> AApServerGiftingSubsystem::TryGetItemClassByTraits(TArray<FApGiftTrait>& traits) {
 	uint32 hash = GetTraitsHash(traits);
 	if (ItemPerTraitsHashCache.Contains(hash))
 		return ItemPerTraitsHashCache[hash];
@@ -231,7 +242,7 @@ TSubclassOf<UFGItemDescriptor> AApServerGiftingSubsystem::TryGetItemClassByTrait
 	return itemClassWithLowestDifference;
 }
 
-uint32 AApServerGiftingSubsystem::GetTraitsHash(TArray<FApGiftTrait> traits) {
+uint32 AApServerGiftingSubsystem::GetTraitsHash(TArray<FApGiftTrait>& traits) {
 	TSortedMap<FString, uint32> hashesPerTrait;
 
 	for (FApGiftTrait& trait : traits)

@@ -146,6 +146,7 @@ private:
 	static void LocationScoutedCallback(std::vector<AP_NetworkItem>);
 	static void ParseSlotData(std::string json);
 	static void DeathLinkReceivedCallback(std::string source, std::string cause);
+	static void LogFromAPCpp(std::string message);
 
 	AFGSchematicManager* SManager;
 	AFGResearchManager* RManager;

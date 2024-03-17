@@ -59,12 +59,12 @@ public:
 
 	FORCEINLINE bool IsInitialized() const { return isInitialized; };
 
-	void Enqueue(TSubclassOf<UFGItemDescriptor> cls, int amount);
+	void Enqueue(TSubclassOf<UFGItemDescriptor>& cls, int amount);
 	
 	void Send(FApPlayer targetPlayer, FInventoryStack itemStack);
 
 	void RegisterPortal(AApPortal* portal);
-	void UnRegisterPortal(AApPortal* portal);
+	void UnRegisterPortal(AApPortal* portal, FInventoryItem nextItem);
 
 private:
 	void ProcessInputQueue();

@@ -18,7 +18,7 @@ AApPortalSubsystem::AApPortalSubsystem() : Super() {
 
 	PrimaryActorTick.bCanEverTick = true;
 	PrimaryActorTick.bStartWithTickEnabled = true;
-	PrimaryActorTick.TickInterval = 0.06; //needs to thick atleast 13 times per seconds to keep up with a 780 belt
+	PrimaryActorTick.TickInterval = 0.06; //needs to thick atleast 13 times per seconds to keep up with a 780 belt, 0.06 is 16.6666... times per second
 
 	ReplicationPolicy = ESubsystemReplicationPolicy::SpawnOnServer;
 }
@@ -51,13 +51,15 @@ void AApPortalSubsystem::ProcessOutputQueue() {
 			OutputQueue.Dequeue(nextItemToOutput);
 		if (!nextItemToOutput.IsValid())
 			return;
-		if (portal != nullptr && portal->TrySetOutput(nextItemToOutput))
+		if (IsValid(portal) && portal->TrySetOutput(nextItemToOutput))
 			nextItemToOutput = FInventoryItem::NullInventoryItem;
 	}
 }
 
-void AApPortalSubsystem::Enqueue(TSubclassOf<UFGItemDescriptor> cls, int amount) {
-	for (size_t i = 0; i < amount; i++) {
+void AApPortalSubsystem::Enqueue(TSubclassOf<UFGItemDescriptor>& cls, int amount) {
+	UE_LOG(LogApPortalSubsystem, Display, TEXT("AApPortalSubsystem::Enqueue(%s, %i)"), *UFGItemDescriptor::GetItemName(cls).ToString(), amount);
+
+	for (int i = 0; i < amount; i++) {
 		OutputQueue.Enqueue(FInventoryItem(cls));
 	}
 }
@@ -67,18 +69,22 @@ void AApPortalSubsystem::Send(FApPlayer targetPlayer, FInventoryStack itemStack)
 }
 
 void AApPortalSubsystem::RegisterPortal(AApPortal* portal) {
+	if (portal == nullptr)
+		return;
+
 	bool alreadyExists;
 	BuiltPortals.Add(portal, &alreadyExists);
 }
 
-void AApPortalSubsystem::UnRegisterPortal(AApPortal* portal) {
+void AApPortalSubsystem::UnRegisterPortal(AApPortal* portal, FInventoryItem nextItem) {
+	if (portal == nullptr)
+		return;
+
 	BuiltPortals.Remove(portal);
 	
-	FInventoryItem item = portal->TryStealOutput();
-
-	if (item.IsValid()) {
+	if (nextItem.IsValid()) {
 		//TODO should be added to front of queue
-		OutputQueue.Enqueue(item);
+		OutputQueue.Enqueue(nextItem);
 	}
 }
 
@@ -95,16 +101,6 @@ void AApPortalSubsystem::PostSaveGame_Implementation(int32 saveVersion, int32 ga
 }
 
 void AApPortalSubsystem::StoreQueueForSave() {
-	for (AApPortal* portal : BuiltPortals) {
-		if (portal == nullptr)
-			continue;
-
-		FInventoryItem item = portal->TryStealOutput();
-
-		if (item.IsValid())
-			OutputQueueSave.Add(mappings->ItemClassToItemId[item.GetItemClass()]);
-	}
-
 	FInventoryItem item;
 	while (OutputQueue.Dequeue(item)) {
 		OutputQueueSave.Add(mappings->ItemClassToItemId[item.GetItemClass()]);

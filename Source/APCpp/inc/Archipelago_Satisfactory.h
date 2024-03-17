@@ -7,4 +7,3 @@ std::string AP_GetItemName(std::string game, int64_t id);
 
 std::vector<std::pair<int,std::string>> AP_GetAllPlayers();
 
-

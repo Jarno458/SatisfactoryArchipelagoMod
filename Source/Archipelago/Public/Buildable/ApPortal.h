@@ -40,6 +40,8 @@ private:
 
 	//mutable as used in  Factory_*Output_Implementation const methods
 	mutable FCriticalSection outputLock;
+
+	UPROPERTY(SaveGame)
 	FInventoryItem nextItemToOutput = FInventoryItem::NullInventoryItem;
 
 public:
@@ -49,7 +51,7 @@ public:
 	FORCEINLINE bool CanReceiveOutput() const { return camReceiveOutput; };
 
 	bool TrySetOutput(FInventoryItem item);
-	FInventoryItem TryStealOutput();
+	//FInventoryItem TryStealOutput();
 
 	virtual bool CanProduce_Implementation() const override;
 

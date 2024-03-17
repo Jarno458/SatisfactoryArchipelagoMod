@@ -51,10 +51,20 @@ void AApPortal::CheckPower(bool newHasPower) {
 	if (!HasAuthority())
 		return;
 
-	if (Factory_HasPower()) {
+	if (IsValid(this) && Factory_HasPower()) {
 		((AApPortalSubsystem*)portalSubsystem)->RegisterPortal(this);
-	}	else {
-		((AApPortalSubsystem*)portalSubsystem)->UnRegisterPortal(this);
+	} else {
+		if (!IsValid(this)) {
+			((AApPortalSubsystem*)portalSubsystem)->UnRegisterPortal(this, FInventoryItem::NullInventoryItem);
+			return;
+		}
+		
+		FScopeTryLock lock(&outputLock);
+		if (lock.IsLocked()) {
+			((AApPortalSubsystem*)portalSubsystem)->UnRegisterPortal(this, nextItemToOutput);
+		} else {
+			((AApPortalSubsystem*)portalSubsystem)->UnRegisterPortal(this, FInventoryItem::NullInventoryItem);
+		}
 	}
 }
 
@@ -64,11 +74,11 @@ void AApPortal::Factory_Tick(float dt) {
 	if (!HasAuthority())
 		return;
 
-	camReceiveOutput = CanProduce() && output->IsConnected();
+	camReceiveOutput = IsValid(this) && CanProduce() && IsValid(output) && output->IsConnected();
 }
 
 bool AApPortal::TrySetOutput(FInventoryItem item) {
-	if (!camReceiveOutput)
+	if (!IsValid(this) || !camReceiveOutput)
 		return false;
 
 	FScopeTryLock lock(&outputLock);
@@ -80,20 +90,9 @@ bool AApPortal::TrySetOutput(FInventoryItem item) {
 	return true;
 }
 
-FInventoryItem AApPortal::TryStealOutput() {
-	FScopeTryLock lock(&outputLock);
-
-	if (!lock.IsLocked())
-		return FInventoryItem::NullInventoryItem;
-
-	FInventoryItem returnItem = nextItemToOutput;
-	nextItemToOutput = FInventoryItem::NullInventoryItem;
-	return returnItem;
-}
-
 void AApPortal::Factory_CollectInput_Implementation() {
 	if (((AApReplicatedGiftingSubsystem*)replicatedGiftingSubsystem)->GetState() != EApGiftingServiceState::Ready 
-		|| input == nullptr 
+		|| !IsValid(input)
 		|| !input->IsConnected() 
 		|| !targetPlayer.IsValid())
 			return;
@@ -138,12 +137,13 @@ bool AApPortal::Factory_GrabOutput_Implementation(class UFGFactoryConnectionComp
 		return false;
 
 	//hardlock we need to yield some output here
-	FScopeLock lock(&outputLock);
-	if (nextItemToOutput.IsValid()) {
+	FScopeTryLock lock(&outputLock);
+	if (lock.IsLocked() && nextItemToOutput.IsValid()) {
 		out_item = nextItemToOutput;
 		nextItemToOutput = FInventoryItem::NullInventoryItem;
 		return true;
 	} else {
+		out_item = FInventoryItem::NullInventoryItem;
 		return false;
 	}
 }

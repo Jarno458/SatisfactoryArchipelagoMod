@@ -55,13 +55,13 @@ private:
 	void PullAllGiftsAsync();
 	void ProcessInputQueue();
 
-	void Send(TMap<FApPlayer, TMap<TSubclassOf<UFGItemDescriptor>, int>> itemsToSend);
+	void Send(TMap<FApPlayer, TMap<TSubclassOf<UFGItemDescriptor>, int>>& itemsToSend);
 
-	TSubclassOf<UFGItemDescriptor> TryGetItemClassByTraits(TArray<FApGiftTrait> traits);
+	TSubclassOf<UFGItemDescriptor> TryGetItemClassByTraits(TArray<FApGiftTrait>& traits);
 
-	void UpdatedProcessedIds(TArray<FApReceiveGift> gifts);
+	void UpdatedProcessedIds(TArray<FApReceiveGift>& gifts);
 
-	bool HasTraitKnownToSatisfactory(TArray<FApGiftTrait> traits);
+	bool HasTraitKnownToSatisfactory(TArray<FApGiftTrait>& traits);
 
-	uint32 GetTraitsHash(TArray<FApGiftTrait> traits);
+	uint32 GetTraitsHash(TArray<FApGiftTrait>& traits);
 };

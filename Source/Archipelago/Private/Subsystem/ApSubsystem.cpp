@@ -291,6 +291,7 @@ void AApSubsystem::ConnectToArchipelago() {
 	AP_RegisterSetReplyCallback(AApSubsystem::SetReplyCallback);
 	AP_SetLocationInfoCallback(AApSubsystem::LocationScoutedCallback);
 	AP_SetDeathLinkRecvCallback(AApSubsystem::DeathLinkReceivedCallback);
+	AP_SetLoggingCallback(AApSubsystem::LogFromAPCpp);
 	AP_SetDeathLinkSupported(true);
 
 	if (!slotData.hasLoadedSlotData)
@@ -532,6 +533,12 @@ void AApSubsystem::DeathLinkReceivedCallback(std::string source, std::string cau
 
 	callbackTarget->ChatMessageQueue.Enqueue(TPair<FString, FLinearColor>(message.ToString(), FLinearColor::Red));
 	callbackTarget->instagib = true;
+}
+
+void AApSubsystem::LogFromAPCpp(std::string message) {
+	FString mesageToLog = UApUtils::FStr(message);
+
+	UE_LOG(LogApSubsystem, Display, TEXT("LogFromAPCpp: %s"), *mesageToLog);
 }
 
 void AApSubsystem::LoadRoomInfo() {
