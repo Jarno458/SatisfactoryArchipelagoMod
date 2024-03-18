@@ -6,8 +6,10 @@
 #include <vector>
 #include <numeric>
 #include <set>
+#include <atomic>
 
 #include "CoreMinimal.h"
+#include "Templates/Function.h"
 
 #include "FGSchematicManager.h"
 #include "FGResearchManager.h"
@@ -107,8 +109,8 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void DispatchLifecycleEvent(ELifecyclePhase phase, TArray<TSubclassOf<UFGSchematic>> apHardcodedSchematics);
 
-	void MonitorDataStoreValue(std::string key, AP_DataType dataType, std::string defaultValue, std::function<void(AP_SetReply)> callback);
-	void SetServerData(AP_SetServerDataRequest* setDataRequest);
+	void MonitorDataStoreValue(FString keyFString, AP_DataType dataType, FString defaultValueFString, TFunction<void(AP_SetReply)> callback);
+	void SetServerData(AP_SetServerDataRequest& setDataRequest);
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FORCEINLINE EApConnectionState GetConnectionState() const { return ConnectionState; };
@@ -120,7 +122,7 @@ public:
 	FApConfigurationStruct GetConfig() const { return config; };
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	bool IsInitialized() const { return areRecipiesAndSchematicsInitialized; };
+	FORCEINLINE bool IsInitialized() const { return areRecipiesAndSchematicsInitialized; };
 
 	FString GetApItemName(int64 itemId);
 
@@ -137,7 +139,7 @@ public:
 
 private:
 	static AApSubsystem* callbackTarget;
-	static std::map<std::string, std::function<void(AP_SetReply)>> callbacks;
+	TMap<FString, TFunction<void(AP_SetReply)>> dataStoreCallbacks;
 
 	static void SetReplyCallback(AP_SetReply setReply);
 	static void ItemClearCallback();
@@ -194,13 +196,14 @@ private:
 	UTexture2D* collectedIcon = LoadObject<UTexture2D>(nullptr, TEXT("/Archipelago/Assets/SourceArt/ArchipelagoAssetPack/AP-Black.AP-Black"));
 	UClass* workshopComponent = LoadClass<UObject>(nullptr, TEXT("/Game/FactoryGame/Buildable/-Shared/WorkBench/BP_WorkshopComponent.BP_WorkshopComponent_C"));
 
-	bool hasScoutedLocations;
-	bool areScoutedLocationsReadyToParse;
-	bool areRecipiesAndSchematicsInitialized;
-	bool hasLoadedRoomInfo;
-	bool canRecieveChat;
+	std::atomic_bool hasScoutedLocations;
+	std::atomic_bool areScoutedLocationsReadyToParse;
+	std::atomic_bool areRecipiesAndSchematicsInitialized;
+	std::atomic_bool hasLoadedRoomInfo;
+
 	bool instagib;
 	bool awaitingHealty;
+	bool canRecieveChat;
 
 	bool InitializeTick(FDateTime connectingStartedTime);
 
@@ -252,4 +255,9 @@ private:
 	void OnAvaiableSchematicsChanged();
 
 	static void AbortGame(FText reason);
+
+	template<typename RetType>
+	RetType CallOnGameThread(TFunction<RetType()> InFunction);
+	template<>
+	FORCEINLINE void CallOnGameThread(TFunction<void()> InFunction);
 };

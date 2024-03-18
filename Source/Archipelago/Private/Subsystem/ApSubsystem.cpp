@@ -1,5 +1,6 @@
 #include "Subsystem/ApSubsystem.h"
 #include "ApUtils.h"
+#include "Async/Async.h"
 
 DEFINE_LOG_CATEGORY(LogApSubsystem);
 
@@ -7,8 +8,6 @@ DEFINE_LOG_CATEGORY(LogApSubsystem);
 #pragma optimize("", off)
 
 #define LOCTEXT_NAMESPACE "Archipelago"
-
-std::map<std::string, std::function<void(AP_SetReply)>> AApSubsystem::callbacks;
 
 AApSubsystem::AApSubsystem() {
 	PrimaryActorTick.bCanEverTick = true;
@@ -37,6 +36,9 @@ AApSubsystem* AApSubsystem::Get(class UWorld* world) {
 void AApSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase, TArray<TSubclassOf<UFGSchematic>> apHardcodedSchematics) {
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem()::DispatchLifecycleEvent(%s)"), *UEnum::GetValueAsString(phase));
 
+	if (!HasAuthority())
+		UE_LOG(LogApSubsystem, Fatal, TEXT("AApSubsystem()::DispatchLifecycleEvent() Called without authority"));
+
 	if (config.IsLoaded() && !config.Enabled) {
 		UE_LOG(LogApSubsystem, Warning, TEXT("Archipelago manually disabled by user config"));
 		return;
@@ -50,7 +52,7 @@ void AApSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase, TArray<TSubclas
 
 		for (TSubclassOf<UFGSchematic>& schematic : hardcodedSchematics) {
 			UFGSchematic* schematicCDO = Cast<UFGSchematic>(schematic->GetDefaultObject());
-			if (schematicCDO == nullptr)
+			if (!IsValid(schematicCDO))
 				continue;
 
 			FString className = schematicCDO->GetName();
@@ -58,17 +60,13 @@ void AApSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase, TArray<TSubclas
 				inventorySlotRecipes.Add(schematic);
 		}
 	} else if (phase == ELifecyclePhase::INITIALIZATION) {
-		// TODO_MULTIPLAYER calling HasAuthority crashes multiplayer client? too early?
-		// but we're using SpawnOnServer so why/how is client running this anyways
-		if (HasAuthority()) {
-			// Calling SetActorTickEnabled on client crashes regardless of true or false? related to above issue?
-			SetActorTickEnabled(true);
-		} else {
-			UE_LOG(LogApSubsystem, Warning, TEXT("Archipelago Subsystem spawned/replicated on client, this is untested behavior. Keeping tick disabled."));
-		}
+		SetActorTickEnabled(true);
 
 		UE_LOG(LogApSubsystem, Display, TEXT("Initiating Archipelago server connection in background..."));
-		ConnectToArchipelago();
+		bool dummy = CallOnGameThread<bool>([this]() { 
+			ConnectToArchipelago(); 
+			return true;
+		});
 
 		UWorld* world = GetWorld();
 		contentLibSubsystem = world->GetGameInstance()->GetSubsystem<UContentLibSubsystem>();
@@ -91,7 +89,10 @@ void AApSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase, TArray<TSubclas
 
 		UE_LOG(LogApSubsystem, Display, TEXT("Waiting for AP Server connection to succeed..."));
 		FDateTime connectingStartedTime = FDateTime::Now();
-		FGenericPlatformProcess::ConditionalSleep([this, connectingStartedTime]() { return InitializeTick(connectingStartedTime); }, 0.5);
+
+		FGenericPlatformProcess::ConditionalSleep([this, connectingStartedTime]() { 
+			return InitializeTick(connectingStartedTime); 
+		}, 0.5);
 	} else if (phase == ELifecyclePhase::POST_INITIALIZATION) {
 		if (ConnectionState == EApConnectionState::Connected) {
 			TArray<TSubclassOf<UFGSchematic>> unlockedSchematics;
@@ -237,43 +238,45 @@ void AApSubsystem::LockMamEnhancerSpoilerConfiguration() {
 }
 
 bool AApSubsystem::InitializeTick(FDateTime connectingStartedTime) {
-	if (ConnectionState == EApConnectionState::Connecting) {
-		if ((FDateTime::Now() - connectingStartedTime).GetSeconds() > 15)
-			TimeoutConnection();
-		else
-			CheckConnectionState();
-	} 
-	if (ConnectionState == EApConnectionState::Connected) {
-		if (!hasLoadedRoomInfo)
-			LoadRoomInfo();
+	return CallOnGameThread<bool>([this, connectingStartedTime]() {
+		if (ConnectionState == EApConnectionState::Connecting) {
+			if ((FDateTime::Now() - connectingStartedTime).GetSeconds() > 15)
+				TimeoutConnection();
+			else
+				CheckConnectionState();
+		} 
+		if (ConnectionState == EApConnectionState::Connected) {
+			if (!hasLoadedRoomInfo)
+				LoadRoomInfo();
 
-		if (currentPlayerSlot == 0) {
-			currentPlayerTeam = AP_GetCurrentPlayerTeam();
-			currentPlayerSlot = AP_GetPlayerID();
+			if (currentPlayerSlot == 0) {
+				currentPlayerTeam = AP_GetCurrentPlayerTeam();
+				currentPlayerSlot = AP_GetPlayerID();
+			}
+
+			if (!areScoutedLocationsReadyToParse && !hasScoutedLocations)
+				ScoutArchipelagoItems();
+
+			if (!mappingSubsystem->HasLoadedItemNameMappings())
+				mappingSubsystem->InitializeAfterConnectingToAp();
 		}
 
-		if (!areScoutedLocationsReadyToParse && !hasScoutedLocations)
-			ScoutArchipelagoItems();
+		if (!areRecipiesAndSchematicsInitialized
+			&& areScoutedLocationsReadyToParse
+			&& slotData.hasLoadedSlotData
+			&& mappingSubsystem->HasLoadedItemNameMappings()) {
 
-		if (!mappingSubsystem->HasLoadedItemNameMappings())
-			mappingSubsystem->InitializeAfterConnectingToAp();
-	}
+			ParseScoutedItemsAndCreateRecipiesAndSchematics();
 
-	if (!areRecipiesAndSchematicsInitialized
-		&& areScoutedLocationsReadyToParse
-		&& slotData.hasLoadedSlotData
-		&& mappingSubsystem->HasLoadedItemNameMappings()) {
-
-		ParseScoutedItemsAndCreateRecipiesAndSchematics();
-
-		//must be called before BeginPlay() as FreeSamples caches its exclude radioactive flag there
-		if (!UpdateFreeSamplesConfiguration()) {
-			UE_LOG(LogApSubsystem, Error, TEXT("Failed update configuration of Free Samples"));
+			//must be called before BeginPlay() as FreeSamples caches its exclude radioactive flag there
+			if (!UpdateFreeSamplesConfiguration()) {
+				UE_LOG(LogApSubsystem, Error, TEXT("Failed update configuration of Free Samples"));
+			}
 		}
-	}
 		
-	return ConnectionState == EApConnectionState::ConnectionFailed 
-		|| (areRecipiesAndSchematicsInitialized && ConnectionState == EApConnectionState::Connected);
+		return ConnectionState == EApConnectionState::ConnectionFailed 
+			|| (areRecipiesAndSchematicsInitialized && ConnectionState == EApConnectionState::Connected);
+	});
 }
 
 void AApSubsystem::ConnectToArchipelago() {
@@ -329,7 +332,7 @@ void AApSubsystem::EndPlay(const EEndPlayReason::Type endPlayReason) {
 
 	Super::EndPlay(endPlayReason);
 
-	AP_Shutdown();
+	CallOnGameThread<void>([]() { AP_Shutdown(); });
 }
 
 void AApSubsystem::OnMamResearchCompleted(TSubclassOf<class UFGSchematic> schematic) {
@@ -377,7 +380,7 @@ void AApSubsystem::OnSchematicCompleted(TSubclassOf<class UFGSchematic> schemati
 
 	if (unlockedChecks.size() > 0) {
 		if (ConnectionState == EApConnectionState::Connected) {
-			AP_SendItem(unlockedChecks);
+			CallOnGameThread<void>([unlockedChecks]() { AP_SendItem(unlockedChecks); });
 		} else {
 			for (int64 location : unlockedChecks) {
 				switch (type) {
@@ -453,7 +456,7 @@ void AApSubsystem::OnAvaiableSchematicsChanged() {
 		}
 	}
 
-	AP_SendLocationScouts(locationHintsToPublish, 2);
+	CallOnGameThread<void>([locationHintsToPublish]() { AP_SendLocationScouts(locationHintsToPublish, 2); });
 }
 
 AApSubsystem* AApSubsystem::callbackTarget;
@@ -480,8 +483,10 @@ void AApSubsystem::LocationCheckedCallback(int64 id) {
 void AApSubsystem::SetReplyCallback(AP_SetReply setReply) {
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::SetReplyCallback(\"%s\")"), *UApUtils::FStr(setReply.key));
 
-	if (callbacks.count(setReply.key))
-		callbacks[setReply.key](setReply);
+	FString key = UApUtils::FStr(setReply.key);
+
+	if (callbackTarget->dataStoreCallbacks.Contains(key))
+		callbackTarget->dataStoreCallbacks[key](setReply);
 }
 
 void AApSubsystem::LocationScoutedCallback(std::vector<AP_NetworkItem> scoutedLocations) {
@@ -542,6 +547,9 @@ void AApSubsystem::LogFromAPCpp(std::string message) {
 }
 
 void AApSubsystem::LoadRoomInfo() {
+	if (!IsInGameThread())
+		return;
+
 	AP_RoomInfo roomInfo;
 	AP_GetRoomInfo(&roomInfo);
 
@@ -554,32 +562,45 @@ void AApSubsystem::LoadRoomInfo() {
 	hasLoadedRoomInfo = true;
 }
 
-void AApSubsystem::MonitorDataStoreValue(std::string key, AP_DataType dataType, std::string defaultValue, std::function<void(AP_SetReply)> callback) {
-	callbacks[key] = callback;
+void AApSubsystem::MonitorDataStoreValue(FString keyFString, AP_DataType dataType, FString defaultValueFString, TFunction<void(AP_SetReply)> callback) {
+	if (dataStoreCallbacks.Contains(keyFString))
+		dataStoreCallbacks[keyFString] = callback;
+	else
+		dataStoreCallbacks.Add(keyFString, callback);
 
-	std::map<std::string, AP_DataType> keylist = { { key, dataType } };
-	AP_SetNotify(keylist);
+	CallOnGameThread<void>([this, keyFString, dataType, defaultValueFString]() {
+		std::string key = TCHAR_TO_UTF8(*keyFString);
+		std::string defaultValue = TCHAR_TO_UTF8(*defaultValueFString);
 
-	AP_SetServerDataRequest setDefaultAndRecieceUpdate;
-	setDefaultAndRecieceUpdate.key = key;
+		std::map<std::string, AP_DataType> keylist = { { key, dataType } };
 
-	AP_DataStorageOperation setDefault;
-	setDefault.operation = "default";
-	setDefault.value = &defaultValue;
+		AP_SetNotify(keylist);
 
-	std::vector<AP_DataStorageOperation> operations;
-	operations.push_back(setDefault);
+		AP_SetServerDataRequest setDefaultAndRecieceUpdate;
+		setDefaultAndRecieceUpdate.key = key;
 
-	setDefaultAndRecieceUpdate.operations = operations;
-	setDefaultAndRecieceUpdate.default_value = &defaultValue;
-	setDefaultAndRecieceUpdate.type = dataType;
-	setDefaultAndRecieceUpdate.want_reply = true;
+		AP_DataStorageOperation setDefault;
+		setDefault.operation = "default";
+		setDefault.value = &defaultValue;
 
-	AP_SetServerData(&setDefaultAndRecieceUpdate);
+		std::vector<AP_DataStorageOperation> operations;
+		operations.push_back(setDefault);
+
+		setDefaultAndRecieceUpdate.operations = operations;
+		setDefaultAndRecieceUpdate.default_value = &defaultValue;
+		setDefaultAndRecieceUpdate.type = dataType;
+		setDefaultAndRecieceUpdate.want_reply = true;
+
+		SetServerData(setDefaultAndRecieceUpdate);
+	});
 }
 
-void AApSubsystem::SetServerData(AP_SetServerDataRequest* setDataRequest) {
-	AP_SetServerData(setDataRequest);
+//TODO FIX ME
+void AApSubsystem::SetServerData(AP_SetServerDataRequest& setDataRequest) {
+	CallOnGameThread<void>([setDataRequest]() { 
+		AP_SetServerDataRequest copy = setDataRequest;
+		AP_SetServerData(&copy);
+	});
 }
 
 void AApSubsystem::Tick(float DeltaTime) {
@@ -617,7 +638,7 @@ void AApSubsystem::HandleDeathLink() {
 		if (!awaitingHealty) {
 			awaitingHealty = true;
 
-			AP_DeathLinkSend();
+			CallOnGameThread<void>([]() { AP_DeathLinkSend(); });
 		}
 	}
 }
@@ -768,6 +789,9 @@ void AApSubsystem::Collect(UFGUnlock* unlock, FApNetworkItem& networkItem) {
 }
 
 void AApSubsystem::CheckConnectionState() {
+	if (!IsInGameThread())
+		return;
+
 	if (ConnectionState == EApConnectionState::Connecting) {
 		AP_ConnectionStatus status = AP_GetConnectionStatus();
 
@@ -1120,13 +1144,15 @@ void AApSubsystem::HandleAPMessages() {
 		if (ChatMessageQueue.Dequeue(queuedMessage)) {
 			SendChatMessage(queuedMessage.Key, queuedMessage.Value);
 		} else {
-			if (!AP_IsMessagePending())
-				return;
+			CallOnGameThread<void>([this]() {  
+				if (!AP_IsMessagePending())
+					return;
 
-			AP_Message* message = AP_GetLatestMessage();
-			SendChatMessage(UApUtils::FStr(message->text), FLinearColor::White);
+				AP_Message* message = AP_GetLatestMessage();
+				SendChatMessage(UApUtils::FStr(message->text), FLinearColor::White);
 
-			AP_ClearLatestMessage();
+				AP_ClearLatestMessage();
+			});
 		}
 	}
 }
@@ -1167,7 +1193,10 @@ void AApSubsystem::ScoutArchipelagoItems() {
 	for (int l = 1338700; l <= 1338709; l++)
 		locations.insert(l);
 
-	AP_SendLocationScouts(locations, 0);
+	CallOnGameThread<void>([locations]() {
+		UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::ScoutArchipelagoItems() [GameThread] scouting %i locations"), locations.size());
+		AP_SendLocationScouts(locations, 0); 
+	});
 
 	hasScoutedLocations = true;
 }
@@ -1179,25 +1208,28 @@ void AApSubsystem::TimeoutConnection() {
 }
 
 FString AApSubsystem::GetApItemName(int64 id) {
-	return UApUtils::FStr(AP_GetItemName("Satisfactory", id));
+	return UApUtils::FStr(CallOnGameThread<std::string>([id]() { return AP_GetItemName("Satisfactory", id); }));
 }
 
 void AApSubsystem::SetGiftBoxState(bool open) {
-	AP_UseGiftAutoReject(false);
+	AP_RequestStatus result = CallOnGameThread<AP_RequestStatus>([open]() {
+		AP_UseGiftAutoReject(false);
 
-	AP_GiftBoxProperties giftbox;
-	giftbox.AcceptsAnyGift = true;
-	giftbox.DesiredTraits = std::vector<std::string>();
-	giftbox.IsOpen = open;
+		AP_GiftBoxProperties giftbox;
+		giftbox.AcceptsAnyGift = true;
+		giftbox.DesiredTraits = std::vector<std::string>();
+		giftbox.IsOpen = open;
 
-	AP_RequestStatus result = AP_SetGiftBoxProperties(giftbox);
+		 return AP_SetGiftBoxProperties(giftbox);
+	});
 
 	if (result != AP_RequestStatus::Done)
 		UE_LOG(LogApSubsystem, Error, TEXT("AApSubsystem::SetGiftBoxState(\"%s\") Updating giftbox metadata failed"), (open ? TEXT("true") : TEXT("false")));
 }
 
 TMap<FApPlayer, FApGiftBoxMetaData> AApSubsystem::GetAcceptedTraitsPerPlayer() {
-	std::map<std::pair<int, std::string>, AP_GiftBoxProperties> giftboxes = AP_QueryGiftBoxes();
+	std::map<std::pair<int, std::string>, AP_GiftBoxProperties> giftboxes =
+		CallOnGameThread<std::map<std::pair<int, std::string>, AP_GiftBoxProperties>>([]() { return AP_QueryGiftBoxes(); });
 
 	TMap<FApPlayer, FApGiftBoxMetaData> openGiftBoxes;
 
@@ -1241,7 +1273,7 @@ bool AApSubsystem::SendGift(FApSendGift giftToSend) {
 		gift.Traits[i] = trait;
 	}
 
-	AP_RequestStatus result = AP_SendGift(gift);
+	AP_RequestStatus result = CallOnGameThread<AP_RequestStatus>([gift]() { return AP_SendGift(gift); });
 
 	if (result != AP_RequestStatus::Done)
 		UE_LOG(LogApSubsystem, Error, TEXT("AApSubsystem::SendGift({Name: \"%s\", Amount: %i}) Sending gift failed"), *giftToSend.ItemName, giftToSend.Amount);
@@ -1250,7 +1282,7 @@ bool AApSubsystem::SendGift(FApSendGift giftToSend) {
 }
 
 TArray<FApReceiveGift> AApSubsystem::GetGifts() {
-	std::vector<AP_Gift> gifts = AP_CheckGifts();
+	std::vector<AP_Gift> gifts = CallOnGameThread<std::vector<AP_Gift>>([]() { return AP_CheckGifts(); });
 
 	TArray<FApReceiveGift> currentGifts;
 
@@ -1281,7 +1313,7 @@ TArray<FApReceiveGift> AApSubsystem::GetGifts() {
 void AApSubsystem::RejectGift(FString id) {
 	std::string giftId = TCHAR_TO_UTF8(*id);
 
-	AP_RequestStatus result = AP_RejectGift(giftId);
+	AP_RequestStatus result = CallOnGameThread<AP_RequestStatus>([giftId]() { return AP_RejectGift(giftId); });
 
 	if (result != AP_RequestStatus::Done)
 		UE_LOG(LogApSubsystem, Error, TEXT("AApSubsystem::RejectGift(\"%s\") Rejecting gift failed"), *id);
@@ -1291,14 +1323,15 @@ void AApSubsystem::AcceptGift(FString id) {
 	std::string giftId = TCHAR_TO_UTF8(*id);
 	AP_Gift gift;
 
-	AP_RequestStatus result = AP_AcceptGift(giftId, &gift);
+	AP_RequestStatus result = CallOnGameThread<AP_RequestStatus>([giftId, &gift]() { return AP_AcceptGift(giftId, &gift); });
 
 	if (result != AP_RequestStatus::Done)
 		UE_LOG(LogApSubsystem, Error, TEXT("AApSubsystem::AcceptGift(\"%s\") Accepting gift failed"), *id);
 }
 
 TArray<FApPlayer> AApSubsystem::GetAllApPlayers() {
-	std::vector<std::pair<int, std::string>> apPlayers = AP_GetAllPlayers();
+	std::vector<std::pair<int, std::string>> apPlayers =
+		CallOnGameThread<std::vector<std::pair<int, std::string>>>([]() { return AP_GetAllPlayers(); });
 
 	TArray<FApPlayer> players;
 
@@ -1314,7 +1347,7 @@ TArray<FApPlayer> AApSubsystem::GetAllApPlayers() {
 }
 
 void AApSubsystem::MarkGameAsDone() {
-	AP_StoryComplete();
+	CallOnGameThread<void>([]() { AP_StoryComplete(); });
 }
 
 void AApSubsystem::Say(FString message) {
@@ -1366,6 +1399,7 @@ void AApSubsystem::PostLoadGame_Implementation(int32 saveVersion, int32 gameVers
 	FApConfigurationStruct modConfig = FApConfigurationStruct::GetActiveConfig(GetWorld());
 	if (!config.IsLoaded() || modConfig.ForceOverride)
 		config = modConfig;
+
 	config.Debugging = modConfig.Debugging;
 }
 
@@ -1379,6 +1413,29 @@ void AApSubsystem::AbortGame(FText reason) {
 
 		gameInstance->YeetToMainMenu(player, reason);
 	}
+}
+
+template<typename RetType>
+RetType AApSubsystem::CallOnGameThread(TFunction<RetType()> InFunction) {
+	if (IsInGameThread())
+		return InFunction();
+	
+	TSharedRef<TPromise<RetType>> Promise = MakeShared<TPromise<RetType>>();
+
+	AsyncTask(ENamedThreads::GameThread, [Promise, InFunction]() {
+			Promise->SetValue(InFunction());
+	});
+
+	return Promise->GetFuture().Get();
+}
+template<>
+void AApSubsystem::CallOnGameThread(TFunction<void()> InFunction) {
+	if (IsInGameThread())
+		return InFunction();
+
+	AsyncTask(ENamedThreads::GameThread, [InFunction]() {
+		InFunction();
+	});
 }
 
 #pragma optimize("", on)

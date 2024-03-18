@@ -51,7 +51,7 @@ void AApEnergyLinkSubsystem::Tick(float DeltaTime) {
 			buildingCDO->mDisplayName = FText::FormatOrdered(LOCTEXT("EnergyLinkName", "{VanillaName} [EnergyLink]"), buildingCDO->mDisplayName);
 			buildingCDO->mDescription = LOCTEXT("EnergyLinkDescription", "TODO accurate Storage, Max Capacity, Max Discharge Rate info. Talk about how to use the building.");
 
-			ap->MonitorDataStoreValue("EnergyLink" + std::to_string(ap->currentPlayerTeam), AP_DataType::Raw, energyLinkDefault, [&](AP_SetReply setReply) {
+			ap->MonitorDataStoreValue(FString("EnergyLink") + UApUtils::FStr(ap->currentPlayerTeam), AP_DataType::Raw, energyLinkDefault, [&](AP_SetReply setReply) {
 				OnEnergyLinkValueChanged(setReply);
 			});
 		}
@@ -149,7 +149,7 @@ void AApEnergyLinkSubsystem::SendEnergyToServer(long amount) {
 	sendEnergyLinkUpdate.type = AP_DataType::Raw;
 	sendEnergyLinkUpdate.want_reply = true;
 
-	ap->SetServerData(&sendEnergyLinkUpdate);
+	ap->SetServerData(sendEnergyLinkUpdate);
 }
 
 	//Called for UI, percentage from 0.0f to 100.0f of how full specific power storage is

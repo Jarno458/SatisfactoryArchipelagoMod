@@ -53,5 +53,5 @@ private:
 	void OnEnergyLinkValueChanged(AP_SetReply setReply);
 
 	const long maxPowerStorage = 999999;
-	std::string energyLinkDefault = "0";
+	FString energyLinkDefault = "0";
 };

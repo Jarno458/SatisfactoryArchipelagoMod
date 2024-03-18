@@ -14,10 +14,10 @@ void UApGameWorldModule::DispatchLifecycleEvent(ELifecyclePhase phase) {
 	UWorld* world = GetWorld();
 
 	AApMappingsSubsystem* mappingsSubsystem = AApMappingsSubsystem::Get(world);
-	if (mappingsSubsystem != nullptr)
+	if (IsValid(mappingsSubsystem))
 		mappingsSubsystem->DispatchLifecycleEvent(phase);
 
 	AApSubsystem* apSubsystem = AApSubsystem::Get(world);
-	if (apSubsystem != nullptr)
+	if (IsValid(apSubsystem))
 			apSubsystem->DispatchLifecycleEvent(phase, mSchematics);
 }
