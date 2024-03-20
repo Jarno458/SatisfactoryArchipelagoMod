@@ -58,17 +58,25 @@ void AApServerGiftingSubsystem::Tick(float dt) {
 			apInitialized = true;
 
 			SetActorTickInterval(pollInterfall);
+
+			FString giftboxKey = FString::Format(TEXT("GiftBox;{0};{1}"), { ap->currentPlayerTeam, ap->currentPlayerSlot });
+			ap->MonitorDataStoreValue(giftboxKey, AP_DataType::Raw, "{}", [this](AP_SetReply setReply) {
+				//we arent using the setReply here but we probably should
+				PullAllGiftsAsync();
+			});
 		} else {
 			return;
 		}
 	}
 
 	ProcessInputQueue();
-	PullAllGiftsAsync();
 }
 
 void AApServerGiftingSubsystem::PullAllGiftsAsync() {
 	TArray<FApReceiveGift> gifts = ap->GetGifts();
+
+	TSet<FString> giftsToAccept;
+	TSet<FString> giftsToReject;
 
 	UpdatedProcessedIds(gifts);
 
@@ -99,15 +107,18 @@ void AApServerGiftingSubsystem::PullAllGiftsAsync() {
 
 		if (itemClass != nullptr) {
 			portalSubSystem->Enqueue(itemClass, gift.Amount);
-		}
-		else {
+		} else {
 			UE_LOG(LogApServerGiftingSubsystem, Display, TEXT("AApServerGiftingSubsystem::PullAllGiftsAsync() rejecting gift(%s)"), *gift.Id);
-			ap->RejectGift(gift.Id);
+			giftsToReject.Add(gift.Id);
 			continue;
 		}
 
-		ap->AcceptGift(gift.Id);
+		UE_LOG(LogApServerGiftingSubsystem, Display, TEXT("AApServerGiftingSubsystem::PullAllGiftsAsync() accepting gift(%s)"), *gift.Id);
+		giftsToAccept.Add(gift.Id);
 	}
+
+	ap->AcceptGift(giftsToAccept);
+	ap->RejectGift(giftsToReject);
 }
 
 void AApServerGiftingSubsystem::UpdatedProcessedIds(TArray<FApReceiveGift>& gifts) {

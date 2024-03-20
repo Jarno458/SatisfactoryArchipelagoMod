@@ -1310,23 +1310,38 @@ TArray<FApReceiveGift> AApSubsystem::GetGifts() {
 	return currentGifts;
 }
 
-void AApSubsystem::RejectGift(FString id) {
-	std::string giftId = TCHAR_TO_UTF8(*id);
+void AApSubsystem::RejectGift(TSet<FString> ids) {
+	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::RejectGift(count: %i)"), ids.Num());
+	if (ids.Num() == 0)
+		return;
 
-	AP_RequestStatus result = CallOnGameThread<AP_RequestStatus>([giftId]() { return AP_RejectGift(giftId); });
+	std::set<std::string> giftIds;
+	for (FString id : ids) {
+		UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::RejectGift(\"%s\")"), *id);
+		giftIds.insert(TCHAR_TO_UTF8(*id));
+	}
+
+	AP_RequestStatus result = CallOnGameThread<AP_RequestStatus>([giftIds]() { return AP_RejectGift(giftIds); });
 
 	if (result != AP_RequestStatus::Done)
-		UE_LOG(LogApSubsystem, Error, TEXT("AApSubsystem::RejectGift(\"%s\") Rejecting gift failed"), *id);
+		UE_LOG(LogApSubsystem, Error, TEXT("AApSubsystem::RejectGift(count: %i) Rejecting gift failed"), ids.Num());
 }
 
-void AApSubsystem::AcceptGift(FString id) {
-	std::string giftId = TCHAR_TO_UTF8(*id);
-	AP_Gift gift;
+void AApSubsystem::AcceptGift(TSet<FString> ids) {
+	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::AcceptGift(count: %i)"), ids.Num());
+	if (ids.Num() == 0)
+		return;
 
-	AP_RequestStatus result = CallOnGameThread<AP_RequestStatus>([giftId, &gift]() { return AP_AcceptGift(giftId, &gift); });
+	std::set<std::string> giftIds;
+	for (FString id : ids) {
+		UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::AcceptGift(\"%s\")"), *id);
+		giftIds.insert(TCHAR_TO_UTF8(*id));
+	}
+
+	AP_RequestStatus result = CallOnGameThread<AP_RequestStatus>([giftIds]() { return AP_AcceptGift(giftIds); });
 
 	if (result != AP_RequestStatus::Done)
-		UE_LOG(LogApSubsystem, Error, TEXT("AApSubsystem::AcceptGift(\"%s\") Accepting gift failed"), *id);
+		UE_LOG(LogApSubsystem, Error, TEXT("AApSubsystem::AcceptGift(count: %i) Accepting gift failed"), ids.Num());
 }
 
 TArray<FApPlayer> AApSubsystem::GetAllApPlayers() {

@@ -129,8 +129,8 @@ public:
 	void SetGiftBoxState(bool open);
 	bool SendGift(FApSendGift giftToSend);
 	TArray<FApReceiveGift> GetGifts();
-	void RejectGift(FString id);
-	void AcceptGift(FString id);
+	void RejectGift(TSet<FString> ids);
+	void AcceptGift(TSet<FString> ids);
 	TMap<FApPlayer, FApGiftBoxMetaData> GetAcceptedTraitsPerPlayer();
 	TArray<FApPlayer> GetAllApPlayers();
 
