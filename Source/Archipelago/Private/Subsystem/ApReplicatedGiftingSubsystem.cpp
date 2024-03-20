@@ -68,16 +68,26 @@ void AApReplicatedGiftingSubsystem::Tick(float dt) {
 
 		ServiceState = EApGiftingServiceState::Offline;
 	} else {
-		AllPlayers = ap->GetAllApPlayers();
-
-		SetActorTickInterval(10.0f);
+		if (!hasLoadedPlayers) {
+			AllPlayers = ap->GetAllApPlayers();
+			hasLoadedPlayers = true;
+		}
 
 		if (!mappingSubsystem->HasLoadedItemTraits() || !((AApPortalSubsystem*)portalSubsystem)->IsInitialized()) {
 			ServiceState = EApGiftingServiceState::Initializing;
 		} else {
-			ServiceState = EApGiftingServiceState::Ready;
+			SetActorTickEnabled(false);
 
-			UpdateAcceptedGifts();
+			TSet<int> teams;
+			for (FApPlayer player : AllPlayers) {
+				teams.Add(player.Team);
+			}
+			for (int team : teams) {
+				FString giftboxKey = FString::Format(TEXT("GiftBoxes;{0}"), { team });
+				ap->MonitorDataStoreValue(giftboxKey, [this]() { UpdateAcceptedGifts();	});
+			}
+
+			ServiceState = EApGiftingServiceState::Ready;
 		}
 	}
 }
@@ -162,8 +172,7 @@ void AApReplicatedGiftingSubsystem::UpdateAcceptedGifts() {
 	//only edit if required
 	if (AcceptedGiftTraitsPerPlayer.Num() != AcceptedGiftTraitsPerPlayerReplicated.Num()) {
 		UpdateAcceptedGiftTraitsPerPlayerReplicatedValue();
-	}
-	else {
+	} else {
 		for (int i = 0; i < AcceptedGiftTraitsPerPlayerReplicated.Num(); i++) {
 			FApPlayer player = AcceptedGiftTraitsPerPlayerReplicated[i].Player;
 

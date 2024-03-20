@@ -60,10 +60,7 @@ void AApServerGiftingSubsystem::Tick(float dt) {
 			SetActorTickInterval(pollInterfall);
 
 			FString giftboxKey = FString::Format(TEXT("GiftBox;{0};{1}"), { ap->currentPlayerTeam, ap->currentPlayerSlot });
-			ap->MonitorDataStoreValue(giftboxKey, AP_DataType::Raw, "{}", [this](AP_SetReply setReply) {
-				//we arent using the setReply here but we probably should
-				PullAllGiftsAsync();
-			});
+			ap->MonitorDataStoreValue(giftboxKey, [this]() { PullAllGiftsAsync(); });
 		} else {
 			return;
 		}

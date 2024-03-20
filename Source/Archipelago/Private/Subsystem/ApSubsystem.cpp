@@ -562,6 +562,17 @@ void AApSubsystem::LoadRoomInfo() {
 	hasLoadedRoomInfo = true;
 }
 
+void AApSubsystem::MonitorDataStoreValue(FString keyFString, TFunction<void()> callback) {
+	TFunction<void(AP_SetReply)> callbackWrapper = [callback](AP_SetReply setReply) { callback(); };
+
+	if (dataStoreCallbacks.Contains(keyFString))
+		dataStoreCallbacks[keyFString] = callbackWrapper;
+	else
+		dataStoreCallbacks.Add(keyFString, callbackWrapper);
+
+	callback();
+}
+
 void AApSubsystem::MonitorDataStoreValue(FString keyFString, AP_DataType dataType, FString defaultValueFString, TFunction<void(AP_SetReply)> callback) {
 	if (dataStoreCallbacks.Contains(keyFString))
 		dataStoreCallbacks[keyFString] = callback;

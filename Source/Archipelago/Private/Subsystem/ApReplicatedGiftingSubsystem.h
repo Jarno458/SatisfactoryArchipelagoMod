@@ -52,6 +52,8 @@ private:
 	TArray<FString> AllTraits;
 	TMap<FApPlayer, FApGiftBoxMetaData> AcceptedGiftTraitsPerPlayer;
 
+	bool hasLoadedPlayers = false;
+
 public:
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FORCEINLINE EApGiftingServiceState GetState() const { return ServiceState; };
