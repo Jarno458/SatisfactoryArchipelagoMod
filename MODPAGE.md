@@ -17,6 +17,20 @@ you could try to unlock some more nodes in the MAM as it might be hiding there.
 The Archipelago randomizer allows progression from over 60 different games to be mixed,
 this is called a multi-world randomizer.
 
+## Notable Features
+
+### Archipelago Portal
+
+Use Archipelago Portals to send and receive items from other compatible Archipelago games.
+Send your friends your Nuclear Waste, send coffee mugs to Stardew Valley players, and more!
+
+### EnergyLink
+
+Send and receive power from any compatible Archipelago game, such as other Satisfactory worlds, Factorio, or even Stardew Valley.
+
+Simply build a Power Storage building and hook it up to your power grid.
+Remember that Biomass Burners can't charge Power Storage buildings, the same as base game.
+
 ## How to Setup
 
 For simplicity's sake, this guide focuses on setting up a single player experience.
@@ -26,11 +40,26 @@ Before you can start using the mod you will need to generate a randomized game u
 
 <!-- TODO remove me once local gen no longer needed -->
 **Since this mod is still in active development, the convenient Player Options page is not yet available on the Archipelago website for Satisfactory.**
-You will need to manually edit a player settings yaml file by following the guide here:
-<https://archipelago.gg/tutorial/Archipelago/advanced_settings/en>
+
+You will need to download the Archipelago Client and load a custom apworld file to generate a game.
+If you get stuck, ask for help in the [Archipelago Discord](https://discord.gg/archipelago).
+
+1. Download the Archipelago Client installer from the [Archipelago GitHub Releases](https://github.com/ArchipelagoMW/Archipelago/releases/latest)
+2. Run the installer
+3. Open the Archipelago Launcher
+4. Download the apworld file from [here](https://github.com/Jarno458/SatisfactoryArchipelagoMod/releases/tag/v0.1.3)
+5. Press the "Browse Files" button
+6. Place the downloaded apworld file into the `/lib/worlds` folder that the button took you to
+7. Close and reopen the Archipelago Launcher
+8. Press the "Generate Template Settings" button
+9. In the folder that pressing the button took you to, make a copy of the `Satisfactory.yaml` file and open it in a text editor
+10. Edit your a player settings yaml file by following the guide here: <https://archipelago.gg/tutorial/Archipelago/advanced_settings/en>
+11. Move your copy of the file to the `/Players` folder
+12. Return to the Archipelago Launcher and hit the `Generate` button
+13. Use the zip in the `/Output` folder for the next steps below.
 
 <!-- TODO remove me once local gen no longer needed -->
-You will also need to generate a game yourself by [downloading `Satisfactory` branch of the server-side code](https://github.com/Jarno458/Archipelago/tree/Satisfactory) and setting up the python files required to generate a game.
+<!-- You will also need to generate a game yourself by [downloading `Satisfactory` branch of the server-side code](https://github.com/Jarno458/Archipelago/tree/Satisfactory) and setting up the python files required to generate a game. -->
 
 <!-- 
 TODO once player options page is available:
