@@ -12,15 +12,13 @@ TODO link to the AP docs on this instead once that is published
 
 ## Get Support
 
-TODO
-
 Archipelago Discord: <https://discord.gg/8Z65BR2>
 
-Satisfactory Modding Discord: <https://discord.gg/xkVJ73E>
+Satisfactory Modding Discord: <https://discord.ficsit.app>
 
 ## Development Setup
 
-You should only need to follow these directions if you want to contribute to developing the mod.
+You should only need to follow the directions below if you want to contribute to developing the mod.
 
 ### Prerequisites
 
@@ -38,6 +36,7 @@ You will need to import them into your project using the tutorial above before t
 - [ContentLib](https://github.com/Nogg-aholic/ContentLib)
 - [MAM Enhancer](https://github.com/Nogg-aholic/MAMTips)
 - [Free Samples](https://github.com/budak7273/FreeSamples)
+- [FixClientResourceSinkPoints](https://github.com/budak7273/FixClientResourceSinkPoints)
 
 ### APCpp
 
