@@ -697,7 +697,7 @@ void AApSubsystem::AwardItem(int64 itemid, bool isFromServer) {
 				int numAdded = inventory->AddStack(stack, true);
 				if (numAdded < stackSize)
 					portalSubsystem->Enqueue(itemClass, stackSize - numAdded);
-			}
+			} 
 			else {
 				TSubclassOf<UFGItemDescriptor> itemClass = StaticCastSharedRef<FApItem>(mappingSubsystem->ApItems[itemid])->Class;
 				int stackSize = UFGItemDescriptor::GetStackSize(itemClass);

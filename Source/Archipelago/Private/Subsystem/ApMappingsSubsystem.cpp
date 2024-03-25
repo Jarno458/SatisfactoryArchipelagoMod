@@ -67,8 +67,8 @@ void AApMappingsSubsystem::LoadMappings() {
 	FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
 	IAssetRegistry& registery = AssetRegistryModule.Get();
 
-	TMap<FName, FAssetData> itemDescriptorAssets = GetItemDescriptorAssets(registery);
-	TMap<FName, FAssetData> recipeAssets = GetRecipeAssets(registery);
+	const TMap<FName, const FAssetData> itemDescriptorAssets = GetItemDescriptorAssets(registery);
+	const TMap<FName, const FAssetData> recipeAssets = GetRecipeAssets(registery);
 
 	LoadItemMappings(itemDescriptorAssets);
 	LoadRecipeMappings(recipeAssets);
@@ -77,7 +77,7 @@ void AApMappingsSubsystem::LoadMappings() {
 	LoadSchematicMappings();
 }
 
-void AApMappingsSubsystem::LoadItemMappings(TMap<FName, FAssetData> itemDescriptorAssets) {
+void AApMappingsSubsystem::LoadItemMappings(TMap<FName, const FAssetData> itemDescriptorAssets) {
 	for (TPair<int64, FString> itemMapping : UApMappings::ItemIdToGameItemDescriptor) {
 		UFGItemDescriptor* itemDescriptor = GetItemDescriptorByName(itemDescriptorAssets, itemMapping.Value);
 		TSubclassOf<UFGItemDescriptor> itemClass = itemDescriptor->GetClass();
@@ -116,24 +116,29 @@ void AApMappingsSubsystem::LoadSpecialItemMappings() {
 	}
 }
 
-void AApMappingsSubsystem::LoadRecipeMappings(TMap<FName, FAssetData> recipeAssets) {
-	for (TPair<int64, FString> recipeMapping : UApMappings::ItemIdToGameRecipe) {
-		UFGRecipe* recipe = GetRecipeByName(recipeAssets, recipeMapping.Value);
-		TSubclassOf<UFGRecipe> recipeClass = recipe->GetClass();
+void AApMappingsSubsystem::LoadRecipeMappings(TMap<FName, const FAssetData> recipeAssets) {
+	for (TPair<int64, TArray<FString>> recipeMapping : UApMappings::ItemIdToGameRecipe) {
+		TArray<FApRecipeInfo> recipes;
 
-		FApRecipeInfo recipeInfo;
-		recipeInfo.Recipe = recipe;
-		recipeInfo.Class = recipeClass;
+		for (FString recipeName : recipeMapping.Value) {
+			UFGRecipe* recipe = GetRecipeByName(recipeAssets, recipeName);
+			TSubclassOf<UFGRecipe> recipeClass = recipe->GetClass();
 
-		FApRecipeItem recipeItem;
+			FApRecipeInfo recipeInfo;
+			recipeInfo.Recipe = recipe;
+			recipeInfo.Class = recipeClass;
+			recipes.Add(recipeInfo);
+		}
+
+		FApRecipeItem recipeItem; 
 		recipeItem.Id = recipeMapping.Key;
-		recipeItem.Recipes = TArray<FApRecipeInfo>{ recipeInfo };
+		recipeItem.Recipes = recipes;
 
 		ApItems.Add(recipeMapping.Key, MakeShared<FApRecipeItem>(recipeItem));
 	}
 }
 
-void AApMappingsSubsystem::LoadBuildingMappings(TMap<FName, FAssetData> recipeAssets) {
+void AApMappingsSubsystem::LoadBuildingMappings(TMap<FName, const FAssetData> recipeAssets) {
 	for (TPair<int64, TArray<FString>> buildingMapping : UApMappings::ItemIdToGameBuilding) {
 		TArray<FApRecipeInfo> recipes;
 
@@ -176,7 +181,7 @@ void AApMappingsSubsystem::LoadSchematicMappings() {
 	}
 }
 
-TMap<FName, FAssetData> AApMappingsSubsystem::GetBlueprintAssetsIn(IAssetRegistry& registery, FName&& packagePath, TArray<FString> namePrefixes) {
+const TMap<FName, const FAssetData> AApMappingsSubsystem::GetBlueprintAssetsIn(IAssetRegistry& registery, FName&& packagePath, TArray<FString> namePrefixes) {
 	UE_LOG(LogApMappingsSubsystem, Display, TEXT("AApMappingsSubsystem::GetBlueprintAssetsIn(packagePath: %s, namePrefixes: [%i])"), *packagePath.ToString(), namePrefixes.Num());
 
 	FARFilter filter;
@@ -187,8 +192,8 @@ TMap<FName, FAssetData> AApMappingsSubsystem::GetBlueprintAssetsIn(IAssetRegistr
 	TArray<FAssetData> assets;
 	registery.GetAssets(filter, assets);
 
-	TMap<FName, FAssetData> assetsMap;
-	for (auto asset : assets) {
+	TMap<FName, const FAssetData> assetsMap;
+	for (const FAssetData asset : assets) {
 		FString nameString;
 		asset.AssetName.ToString(nameString);
 
@@ -305,7 +310,7 @@ void AApMappingsSubsystem::PrintTraitValuesPerItem() {
 	UApUtils::WriteStringToFile(fileText, TEXT("T:\\ItemTraits.txt"), false);
 }
 
-UObject* AApMappingsSubsystem::FindAssetByName(TMap<FName, FAssetData> assets, FString assetName) {
+UObject* AApMappingsSubsystem::FindAssetByName(const TMap<FName, const FAssetData> assets, FString assetName) {
 	assetName.RemoveFromEnd("'");
 
 	if (!assetName.EndsWith("_C"))
@@ -330,25 +335,25 @@ UObject* AApMappingsSubsystem::FindAssetByName(TMap<FName, FAssetData> assets, F
 }
 
 UFGSchematic* AApMappingsSubsystem::GetSchematicByName(FString name) {
-	UObject* obj = FindAssetByName(TMap<FName, FAssetData>(), name);
+	UObject* obj = FindAssetByName(TMap<FName, const FAssetData>(), name);
 	fgcheck(obj != nullptr);
 	return Cast<UFGSchematic>(obj);
 }
 
-UFGRecipe* AApMappingsSubsystem::GetRecipeByName(TMap<FName, FAssetData> recipeAssets, FString name) {
+UFGRecipe* AApMappingsSubsystem::GetRecipeByName(const TMap<FName, const FAssetData> recipeAssets, FString name) {
 	UObject* obj = FindAssetByName(recipeAssets, name);
 	fgcheck(obj != nullptr);
 	return Cast<UFGRecipe>(obj);
 }
 
-UFGItemDescriptor* AApMappingsSubsystem::GetItemDescriptorByName(TMap<FName, FAssetData> itemDescriptorAssets, FString name) {
+UFGItemDescriptor* AApMappingsSubsystem::GetItemDescriptorByName(const TMap<FName, const FAssetData> itemDescriptorAssets, FString name) {
 	UObject* obj = FindAssetByName(itemDescriptorAssets, name);
 	fgcheck(obj != nullptr);
 	return Cast<UFGItemDescriptor>(obj);
 }
 
-TMap<FName, FAssetData> AApMappingsSubsystem::GetItemDescriptorAssets(IAssetRegistry& registery) {
-	TMap<FName, FAssetData> itemDescriptorAssets;
+const TMap<FName, const FAssetData> AApMappingsSubsystem::GetItemDescriptorAssets(IAssetRegistry& registery) {
+	TMap<FName, const FAssetData> itemDescriptorAssets;
 
 	itemDescriptorAssets.Append(GetBlueprintAssetsIn(registery, "/Game/FactoryGame/Resource", TArray<FString>{ "Desc_", "BP_" }));
 	itemDescriptorAssets.Append(GetBlueprintAssetsIn(registery, "/Game/FactoryGame/Equipment", TArray<FString>{ "Desc_", "BP_" }));
@@ -357,8 +362,8 @@ TMap<FName, FAssetData> AApMappingsSubsystem::GetItemDescriptorAssets(IAssetRegi
 	return itemDescriptorAssets;
 }
 
-TMap<FName, FAssetData> AApMappingsSubsystem::GetRecipeAssets(IAssetRegistry& registery) {
-	TMap<FName, FAssetData> recipeAssets;
+const TMap<FName, const FAssetData> AApMappingsSubsystem::GetRecipeAssets(IAssetRegistry& registery) {
+	TMap<FName, const FAssetData> recipeAssets;
 
 	recipeAssets.Append(GetBlueprintAssetsIn(registery, "/Game/FactoryGame/Recipes", TArray<FString>{ "Recipe_" }));
 	recipeAssets.Append(GetBlueprintAssetsIn(registery, "/Game/FactoryGame/Equipment", TArray<FString>{ "Recipe_" }));

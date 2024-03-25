@@ -177,10 +177,10 @@ public:
 
 private:
 	void LoadMappings();
-	void LoadItemMappings(TMap<FName, FAssetData> itemDescriptorAssets);
+	void LoadItemMappings(TMap<FName, const FAssetData> itemDescriptorAssets);
 	void LoadSpecialItemMappings();
-	void LoadRecipeMappings(TMap<FName, FAssetData> recipeAssets);
-	void LoadBuildingMappings(TMap<FName, FAssetData> recipeAssets);
+	void LoadRecipeMappings(TMap<FName, const FAssetData> recipeAssets);
+	void LoadBuildingMappings(TMap<FName, const FAssetData> recipeAssets);
 	void LoadSchematicMappings();
 
 	void LoadTraitMappings();
@@ -190,15 +190,15 @@ private:
 
 	void LoadNamesFromAP();
 	
-	static TMap<FName, FAssetData> GetItemDescriptorAssets(IAssetRegistry& registery);
-	static TMap<FName, FAssetData> GetRecipeAssets(IAssetRegistry& registery);
-	static TMap<FName, FAssetData> GetBlueprintAssetsIn(IAssetRegistry& registery, FName&& packagePath, TArray<FString> namePrefixes);
+	static const TMap<FName, const FAssetData> GetItemDescriptorAssets(IAssetRegistry& registery);
+	static const TMap<FName, const FAssetData> GetRecipeAssets(IAssetRegistry& registery);
+	static const TMap<FName, const FAssetData> GetBlueprintAssetsIn(IAssetRegistry& registery, FName&& packagePath, TArray<FString> namePrefixes);
 	
-	static UFGRecipe* GetRecipeByName(TMap<FName, FAssetData> recipeAssets, FString name);
-	static UFGItemDescriptor* GetItemDescriptorByName(TMap<FName, FAssetData> itemDescriptorAssets, FString name);
+	static UFGRecipe* GetRecipeByName(const TMap<FName, const FAssetData> recipeAssets, FString name);
+	static UFGItemDescriptor* GetItemDescriptorByName(const TMap<FName, const FAssetData> itemDescriptorAssets, FString name);
 	static UFGSchematic* GetSchematicByName(FString name);
 
-	static UObject* FindAssetByName(TMap<FName, FAssetData> assets, FString assetName);
+	static UObject* FindAssetByName(const TMap<FName, const FAssetData> assets, FString assetName);
 
 	UFUNCTION() //required for event hookup
 	void OnClientSubsystemsValid();

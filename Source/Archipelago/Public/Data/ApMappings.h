@@ -18,10 +18,10 @@ class ARCHIPELAGO_API UApMappings : public UObject
 	GENERATED_BODY()
 
 public:
-	static const TMap<int64, FString> ItemIdToGameItemDescriptor;
-	static const TMap<int64, EApMappingsSpecialItemType> ItemIdToSpecialItemType;
-	static const TMap<int64, FString> ItemIdToGameRecipe;
-	static const TMap<int64, TArray<FString>> ItemIdToGameBuilding;
-	static const TMap<int64, FString> ItemIdToGameSchematic;
-	static const TMap<int64, FName> ItemIdToTrap;
+	static const TMap<int64, const FString> ItemIdToGameItemDescriptor;
+	static const TMap<int64, const EApMappingsSpecialItemType> ItemIdToSpecialItemType;
+	static const TMap<int64, const TArray<FString>> ItemIdToGameRecipe;
+	static const TMap<int64, const TArray<FString>> ItemIdToGameBuilding;
+	static const TMap<int64, const FString> ItemIdToGameSchematic;
+	static const TMap<int64, const FName> ItemIdToTrap;
 };
