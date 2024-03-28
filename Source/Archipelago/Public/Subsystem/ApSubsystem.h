@@ -111,7 +111,7 @@ public:
 
 	void MonitorDataStoreValue(FString keyFString, TFunction<void()> callback);
 	void MonitorDataStoreValue(FString keyFString, AP_DataType dataType, FString defaultValueFString, TFunction<void(AP_SetReply)> callback);
-	void SetServerData(AP_SetServerDataRequest& setDataRequest);
+	void ModdifyEnergyLink(long amount, FString defaultValueFString);
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FORCEINLINE EApConnectionState GetConnectionState() const { return ConnectionState; };

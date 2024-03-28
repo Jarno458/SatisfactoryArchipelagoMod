@@ -127,29 +127,7 @@ void AApEnergyLinkSubsystem::SendEnergyToServer(long amount) {
 	if (!apInitialized)
 		return;
 
-	AP_SetServerDataRequest sendEnergyLinkUpdate;
-	sendEnergyLinkUpdate.key = "EnergyLink" + std::to_string(ap->currentPlayerTeam);
-
-	std::string valueToAdd = std::to_string(amount);
-
-	AP_DataStorageOperation add;
-	add.operation = "add";
-	add.value = &valueToAdd;
-
-	AP_DataStorageOperation lowerBoundry;
-	lowerBoundry.operation = "max";
-	lowerBoundry.value = &energyLinkDefault;
-
-	std::vector<AP_DataStorageOperation> operations;
-	operations.push_back(add);
-	operations.push_back(lowerBoundry);
-
-	sendEnergyLinkUpdate.operations = operations;
-	sendEnergyLinkUpdate.default_value = &energyLinkDefault;
-	sendEnergyLinkUpdate.type = AP_DataType::Raw;
-	sendEnergyLinkUpdate.want_reply = true;
-
-	ap->SetServerData(sendEnergyLinkUpdate);
+	ap->ModdifyEnergyLink(amount, energyLinkDefault);
 }
 
 	//Called for UI, percentage from 0.0f to 100.0f of how full specific power storage is

@@ -602,15 +602,36 @@ void AApSubsystem::MonitorDataStoreValue(FString keyFString, AP_DataType dataTyp
 		setDefaultAndRecieceUpdate.type = dataType;
 		setDefaultAndRecieceUpdate.want_reply = true;
 
-		SetServerData(setDefaultAndRecieceUpdate);
+		AP_SetServerData(&setDefaultAndRecieceUpdate);
 	});
 }
 
-//TODO FIX ME
-void AApSubsystem::SetServerData(AP_SetServerDataRequest& setDataRequest) {
-	CallOnGameThread<void>([setDataRequest]() { 
-		AP_SetServerDataRequest copy = setDataRequest;
-		AP_SetServerData(&copy);
+void AApSubsystem::ModdifyEnergyLink(long amount, FString defaultValueFString) {
+	CallOnGameThread<void>([this, amount, defaultValueFString]() {
+		AP_SetServerDataRequest sendEnergyLinkUpdate;
+		sendEnergyLinkUpdate.key = "EnergyLink" + std::to_string(currentPlayerTeam);
+
+		std::string valueToAdd = std::to_string(amount);
+		std::string defaultValue = TCHAR_TO_UTF8(*defaultValueFString);
+
+		AP_DataStorageOperation add;
+		add.operation = "add";
+		add.value = &valueToAdd;
+
+		AP_DataStorageOperation lowerBoundry;
+		lowerBoundry.operation = "max";
+		lowerBoundry.value = &defaultValue;
+
+		std::vector<AP_DataStorageOperation> operations;
+		operations.push_back(add);
+		operations.push_back(lowerBoundry);
+
+		sendEnergyLinkUpdate.operations = operations;
+		sendEnergyLinkUpdate.default_value = &defaultValue;
+		sendEnergyLinkUpdate.type = AP_DataType::Raw;
+		sendEnergyLinkUpdate.want_reply = true;
+
+		AP_SetServerData(&sendEnergyLinkUpdate);
 	});
 }
 
