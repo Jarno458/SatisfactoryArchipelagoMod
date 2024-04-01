@@ -8,8 +8,10 @@
 #include "Subsystem/SubsystemActorManager.h"
 
 #include "Subsystem/ApSubsystem.h"
-#include "Subsystem/ApEnergyLinkSubsystem.h"
-#include "Subsystem/ApPortalSubsystem.h"
+#include "Subsystem/ApMappingsSubsystem.h"
+#include "Subsystem/ApServerRandomizerSubsystem.h"
+//#include "Subsystem/ApEnergyLinkSubsystem.h"
+//#include "Subsystem/ApPortalSubsystem.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(LogApGameWorldModule, Log, All);
 
