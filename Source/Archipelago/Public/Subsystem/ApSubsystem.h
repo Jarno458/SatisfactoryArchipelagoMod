@@ -145,6 +145,9 @@ public:
 	void CheckLocation(int64 locationId) const;
 	void CheckLocation(const TSet<int64>& locationIds) const;
 
+	void SetItemReceivedCallback(TFunction<void(int64, bool)> onItemReceived);
+	void SetLocationCheckedCallback(TFunction<void(int64)> onLocationChecked);
+
 private:
 	static AApSubsystem* callbackTarget;
 
@@ -237,11 +240,9 @@ private:
 	//UFUNCTION() //required for event binding
 	//void LockMamEnhancerSpoilerConfiguration();
 
-	void SetItemReceivedCallback(TFunction<void(int64,bool)> onItemReceived);
 	void ProcessReceivedItems();
 	//void AwardItem(int64 itemId, bool isFromServer);
 
-	void SetLocationCheckedCallback(TFunction<void(int64)> onLocationChecked);
 	void ProcessCheckedLocations();
 
 	//void HandleCheckedLocations();

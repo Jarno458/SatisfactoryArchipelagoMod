@@ -27,6 +27,27 @@ AApReplicatedRandomizerSubsystem* AApReplicatedRandomizerSubsystem::Get(class UW
 	return SubsystemActorManager->GetSubsystemActor<AApReplicatedRandomizerSubsystem>();
 }
 
+void AApReplicatedRandomizerSubsystem::BeginPlay() {
+	UE_LOG(LogApServerRandomizerSubsystem, Display, TEXT("AApReplicatedRandomizerSubsystem::BeginPlay()"));
+
+	Super::BeginPlay();
+
+	/*UWorld* world = GetWorld();
+	SManager = AFGSchematicManager::Get(world);
+	RManager = AFGResearchManager::Get(world);
+
+	portalSubsystem = AApPortalSubsystem::Get(world);
+	mappingSubsystem = AApMappingsSubsystem::Get(world);
+	trapSubsystem = AApTrapSubsystem::Get(world);
+	phaseManager = AFGGamePhaseManager::Get(world);
+
+	RManager->ResearchCompletedDelegate.AddDynamic(this, &AApServerRandomizerSubsystem::OnMamResearchCompleted);
+	RManager->ResearchTreeUnlockedDelegate.AddDynamic(this, &AApServerRandomizerSubsystem::OnMamResearchTreeUnlocked);
+	SManager->PurchasedSchematicDelegate.AddDynamic(this, &AApServerRandomizerSubsystem::OnSchematicCompleted);
+
+	SetMamEnhancerConfigurationHooks();*/
+}
+
 void AApReplicatedRandomizerSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase, TArray<TSubclassOf<UFGSchematic>> apHardcodedSchematics) {
 	UE_LOG(LogApReplicatedRandomizerSubsystem, Display, TEXT("AApReplicatedRandomizerSubsystem()::DispatchLifecycleEvent(%s)"), *UEnum::GetValueAsString(phase));
 
@@ -62,6 +83,8 @@ void AApReplicatedRandomizerSubsystem::DispatchLifecycleEvent(ELifecyclePhase ph
 		//unlockSubsystem = AFGUnlockSubsystem::Get(world);
 		//fgcheck(unlockSubsystem)
 
+		ap->SetLocationCheckedCallback([this](int64 itemid) { //TOOOOOOODO });
+
 		//TODO: generatic AP Items can be totally hardcoded outside of the initialization phase
 		UE_LOG(LogApSubsystem, Display, TEXT("Generating schematics from AP Item IDs..."));
 		for (TPair<int64, TSharedRef<FApItemBase>>& apitem : mappingSubsystem->ApItems) {
@@ -72,6 +95,15 @@ void AApReplicatedRandomizerSubsystem::DispatchLifecycleEvent(ELifecyclePhase ph
 	else if (phase == ELifecyclePhase::POST_INITIALIZATION) {
 		SetActorTickEnabled(true);
 	}
+}
+
+void AApReplicatedRandomizerSubsystem::Tick(float DeltaTime) {
+	Super::Tick(DeltaTime);
+
+	if (ap->GetConnectionState() != EApConnectionState::Connected)
+		return;
+
+	HandleCheckedLocations();
 }
 
 void AApReplicatedRandomizerSubsystem::CreateSchematicBoundToItemId(int64 itemid, TSharedRef<FApRecipeItem> apitem) {

@@ -70,6 +70,8 @@ void AApServerRandomizerSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase,
 				CreateSchematicBoundToItemId(apitem.Key, StaticCastSharedRef<FApRecipeItem>(apitem.Value));
 		}*/
 
+		ap->SetItemReceivedCallback([this](int64 itemid, bool isFromServer) { ReceiveItem(itemid, isFromServer); });
+
 		FGenericPlatformProcess::ConditionalSleep([this]() { return InitializeTick(); }, 0.5);
 
 		replicatedRandomizerSubsystem->DispatchLifecycleEvent(phase, hardcodedSchematics);
