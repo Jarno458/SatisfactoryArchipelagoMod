@@ -83,7 +83,7 @@ void AApReplicatedRandomizerSubsystem::DispatchLifecycleEvent(ELifecyclePhase ph
 		//unlockSubsystem = AFGUnlockSubsystem::Get(world);
 		//fgcheck(unlockSubsystem)
 
-		ap->SetLocationCheckedCallback([this](int64 itemid) { //TOOOOOOODO });
+		ap->SetLocationCheckedCallback([this](int64 itemid) { CollectLocation(itemid); });
 
 		//TODO: generatic AP Items can be totally hardcoded outside of the initialization phase
 		UE_LOG(LogApSubsystem, Display, TEXT("Generating schematics from AP Item IDs..."));
@@ -373,22 +373,28 @@ void AApReplicatedRandomizerSubsystem::UpdateInfoOnlyUnlockWithGenericApInfo(FCo
 	}
 }
 
+void AApReplicatedRandomizerSubsystem::CollectLocation(int64 itemid) {
+	collectedLocations.Add(itemid);
+	collectedLocationsToProcess.Enqueue(itemid);
+}
+
+
 void AApReplicatedRandomizerSubsystem::HandleCheckedLocations() {
 	int64 location;
 
 	//could use a while loop but we now handle only 1 per tick for perform reasons as this opperation is quite slow
-	if (CheckedLocations.Dequeue(location)) {
+	if (collectedLocationsToProcess.Dequeue(location)) {
 		for (TPair<TSubclassOf<UFGSchematic>, TArray<FApNetworkItem>>& itemPerMilestone : locationsPerMilestone) {
 			for (int index = 0; index < itemPerMilestone.Value.Num(); index++) {
 				FApNetworkItem networkItem = itemPerMilestone.Value[index];
 				if (networkItem.location == location) {
 					UFGSchematic* schematic = Cast<UFGSchematic>(itemPerMilestone.Key->GetDefaultObject());
 
-					if (schematic != nullptr && !IsCollected(schematic->mUnlocks[index])) {
+					if (IsValid(schematic)) {
 						Collect(schematic->mUnlocks[index], networkItem);
 
-						if (!schematic->mUnlocks.ContainsByPredicate([this](UFGUnlock* unlock) { return !IsCollected(unlock); }))
-							SManager->GiveAccessToSchematic(itemPerMilestone.Key, nullptr);
+						//if (!schematic->mUnlocks.ContainsByPredicate([this](UFGUnlock* unlock) { return !IsCollected(unlock);	}))
+						//	SManager->GiveAccessToSchematic(itemPerMilestone.Key, nullptr);
 					}
 				}
 			}
@@ -397,10 +403,10 @@ void AApReplicatedRandomizerSubsystem::HandleCheckedLocations() {
 			if (itemPerMamNode.Value.location == location) {
 				UFGSchematic* schematic = Cast<UFGSchematic>(itemPerMamNode.Key->GetDefaultObject());
 
-				if (schematic != nullptr && !IsCollected(schematic->mUnlocks[0])) {
+				if (IsValid(schematic)) {
 					Collect(schematic->mUnlocks[0], itemPerMamNode.Value);
 
-					SManager->GiveAccessToSchematic(itemPerMamNode.Key, nullptr);
+					//SManager->GiveAccessToSchematic(itemPerMamNode.Key, nullptr);
 				}
 			}
 		}
@@ -408,10 +414,10 @@ void AApReplicatedRandomizerSubsystem::HandleCheckedLocations() {
 			if (itemPerShopNode.Value.location == location) {
 				UFGSchematic* schematic = Cast<UFGSchematic>(itemPerShopNode.Key->GetDefaultObject());
 
-				if (schematic != nullptr && !IsCollected(schematic->mUnlocks[0])) {
+				if (IsValid(schematic)) {
 					Collect(schematic->mUnlocks[0], itemPerShopNode.Value);
 
-					SManager->GiveAccessToSchematic(itemPerShopNode.Key, nullptr);
+					//SManager->GiveAccessToSchematic(itemPerShopNode.Key, nullptr);
 				}
 			}
 		}
@@ -420,13 +426,16 @@ void AApReplicatedRandomizerSubsystem::HandleCheckedLocations() {
 
 bool AApReplicatedRandomizerSubsystem::IsCollected(UFGUnlock* unlock) {
 	UFGUnlockInfoOnly* unlockInfo = Cast<UFGUnlockInfoOnly>(unlock);
-	return unlockInfo != nullptr && unlockInfo->mUnlockIconSmall == collectedIcon;
+	return IsValid(unlockInfo) && unlockInfo->mUnlockIconSmall == collectedIcon;
 }
 
 void AApReplicatedRandomizerSubsystem::Collect(UFGUnlock* unlock, FApNetworkItem& networkItem) {
 	UFGUnlockInfoOnly* unlockInfo = Cast<UFGUnlockInfoOnly>(unlock);
 
-	if (unlockInfo != nullptr) {
+	if (IsValid(unlockInfo)) {
+		if (unlockInfo->mUnlockIconSmall == collectedIcon)
+			return;
+
 		unlockInfo->mUnlockIconSmall = collectedIcon;
 
 		if (networkItem.player != currentPlayerSlot) {

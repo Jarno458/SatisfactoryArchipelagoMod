@@ -102,6 +102,7 @@ private:
 	AApTrapSubsystem* trapSubsystem;
 
 	TQueue<TTuple<int64, bool>> ReceivedItems;
+	TQueue<int64> CheckedLocations;
 
 	TArray<TSubclassOf<UFGSchematic>> hardcodedSchematics;
 	TMap<TSubclassOf<class UFGSchematic>, TArray<FApNetworkItem>> locationsPerMilestone;
@@ -130,8 +131,11 @@ private:
 	void ReceiveItem(int64 itemId, bool isFromServer);
 	void ProcessReceivedItems();
 	void AwardItem(int64 itemId, bool isFromServer);
-	//void HandleCheckedLocations();
+
 	AFGCharacterPlayer* GetLocalPlayer();
+
+	void CollectLocation(int64 itemId);
+	void HandleCheckedLocations();
 	//bool IsCollected(UFGUnlock* unlock);
 	//void Collect(UFGUnlock* unlock, FApNetworkItem& networkItem);
 

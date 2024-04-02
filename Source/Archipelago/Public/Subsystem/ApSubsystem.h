@@ -215,7 +215,7 @@ private:
 	//TMap<int64, TSubclassOf<class UFGSchematic>> ItemSchematics;
 	//TArray<TSubclassOf<class UFGSchematic>> inventorySlotRecipes;
 	TQueue<TTuple<int64, bool>> ReceivedItems;
-	TQueue<int64> CheckedLocations;
+	//TQueue<int64> CheckedLocations;
 	TQueue<TPair<FString, FLinearColor>> ChatMessageQueue;
 
 	//UTexture2D* collectedIcon = LoadObject<UTexture2D>(nullptr, TEXT("/Archipelago/Assets/SourceArt/ArchipelagoAssetPack/AP-Black.AP-Black"));

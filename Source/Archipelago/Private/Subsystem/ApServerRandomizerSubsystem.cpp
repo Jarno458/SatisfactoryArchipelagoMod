@@ -71,6 +71,7 @@ void AApServerRandomizerSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase,
 		}*/
 
 		ap->SetItemReceivedCallback([this](int64 itemid, bool isFromServer) { ReceiveItem(itemid, isFromServer); });
+		ap->SetLocationCheckedCallback([this](int64 itemid) { CollectLocation(itemid); });
 
 		FGenericPlatformProcess::ConditionalSleep([this]() { return InitializeTick(); }, 0.5);
 
@@ -187,7 +188,7 @@ void AApServerRandomizerSubsystem::Tick(float DeltaTime) {
 	if (ap->GetConnectionState() != EApConnectionState::Connected)
 		return;
 
-	//HandleCheckedLocations();
+	HandleCheckedLocations();
 	//HandleAPMessages();
 	//HandleDeathLink();
 
@@ -526,7 +527,62 @@ void AApServerRandomizerSubsystem::AwardItem(int64 itemid, bool isFromServer) {
 	}
 }
 
-//TODO fix is now fired when loading a fresh save
+void AApServerRandomizerSubsystem::CollectLocation(int64 itemId) {
+	CheckedLocations.Enqueue(itemId);
+}
+
+void AApServerRandomizerSubsystem::HandleCheckedLocations() {
+	int64 location;
+
+	//could use a while loop but we now handle only 1 per tick for perform reasons as this opperation is quite slow
+	if (CheckedLocations.Dequeue(location)) {
+		for (TPair<TSubclassOf<UFGSchematic>, TArray<FApNetworkItem>>& itemPerMilestone : locationsPerMilestone) {
+			for (int index = 0; index < itemPerMilestone.Value.Num(); index++) {
+				FApNetworkItem& networkItem = itemPerMilestone.Value[index];
+				if (networkItem.location == location) {
+					//UFGSchematic* schematic = Cast<UFGSchematic>(itemPerMilestone.Key->GetDefaultObject());
+
+					//if (schematic != nullptr && !replicatedRandomizerSubsystem->IsCollected(schematic->mUnlocks[index])) {
+					//	replicatedRandomizerSubsystem->Collect(schematic->mUnlocks[index], networkItem);
+
+					//	if (!schematic->mUnlocks.ContainsByPredicate([this, replicatedRandomizerSubsystem](UFGUnlock* unlock) {
+					//		return !replicatedRandomizerSubsystem->IsCollected(unlock);
+					//	})) {
+					//		SManager->GiveAccessToSchematic(itemPerMilestone.Key, nullptr);
+					//	}
+
+					if (!itemPerMilestones.ContainsByPredicate([this, replicatedRandomizerSubsystem](FApNetworkItem& item) {
+								return !replicatedRandomizerSubsystem->IsCollected(item.location);	})) {
+						SManager->GiveAccessToSchematic(itemPerMilestone.Key, nullptr);
+					}
+				}
+			}
+		}
+		for (TPair<TSubclassOf<UFGSchematic>, FApNetworkItem>& itemPerMamNode : locationPerMamNode) {
+			if (itemPerMamNode.Value.location == location) {
+				//UFGSchematic* schematic = Cast<UFGSchematic>(itemPerMamNode.Key->GetDefaultObject());
+
+				//if (schematic != nullptr && !replicatedRandomizerSubsystem->IsCollected(schematic->mUnlocks[0])) {
+				//	replicatedRandomizerSubsystem->Collect(schematic->mUnlocks[0], itemPerMamNode.Value);
+
+					SManager->GiveAccessToSchematic(itemPerMamNode.Key, nullptr);
+				//}
+			}
+		}
+		for (TPair<TSubclassOf<UFGSchematic>, FApNetworkItem>& itemPerShopNode : locationPerShopNode) {
+			if (itemPerShopNode.Value.location == location) {
+				//UFGSchematic* schematic = Cast<UFGSchematic>(itemPerShopNode.Key->GetDefaultObject());
+
+				//if (schematic != nullptr && !replicatedRandomizerSubsystem->IsCollected(schematic->mUnlocks[0])) {
+				//	replicatedRandomizerSubsystem->Collect(schematic->mUnlocks[0], itemPerShopNode.Value);
+
+					SManager->GiveAccessToSchematic(itemPerShopNode.Key, nullptr);
+				//}
+			}
+		}
+	}
+}
+
 void AApServerRandomizerSubsystem::PostLoadGame_Implementation(int32 saveVersion, int32 gameVersion) {
 	UE_LOG(LogApSubsystem, Display, TEXT("AApServerRandomizerSubsystem::PostLoadGame_Implementation(saveVersion: %i, gameVersion: %i)"), saveVersion, gameVersion);
 	if (!scoutedLocations.IsEmpty())

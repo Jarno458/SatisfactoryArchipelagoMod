@@ -56,6 +56,7 @@ protected:
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;
 	//virtual void EndPlay(const EEndPlayReason::Type endPlayReason) override;
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	// Begin IFGSaveInterface
 	/*virtual void PreSaveGame_Implementation(int32 saveVersion, int32 gameVersion) override {};
@@ -77,7 +78,15 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FORCEINLINE bool IsInitialized() const { return isInitialized; };
 
+
+	FORCEINLINE bool IsCollected(int64 locationId) const { return collectedLocations.Contains(locationId); };
+	bool IsCollected(UFGUnlock* unlock); //TODO remove
+	void Collect(UFGUnlock* unlock, FApNetworkItem& networkItem);
+
 private:
+	UPROPERTY(Replicated)
+	TSet<int64> collectedLocations;
+
 	//AFGSchematicManager* SManager;
 	//AFGResearchManager* RManager;
 	//AFGGamePhaseManager* phaseManager;
@@ -91,6 +100,7 @@ private:
 	AApMappingsSubsystem* mappingSubsystem;
 	//AApTrapSubsystem* trapSubsystem;
 
+	TQueue<int64> collectedLocationsToProcess;
 
 	TArray<TSubclassOf<UFGSchematic>> hardcodedSchematics;
 	TMap<TSubclassOf<class UFGSchematic>, TArray<FApNetworkItem>> locationsPerMilestone;
@@ -125,10 +135,10 @@ private:
 	//void AwardItem(int64 itemId, bool isFromServer);
 	void HandleCheckedLocations();
 	//AFGCharacterPlayer* GetLocalPlayer();
-	bool IsCollected(UFGUnlock* unlock);
-	void Collect(UFGUnlock* unlock, FApNetworkItem& networkItem);
+	//bool IsCollected(UFGUnlock* unlock);
 	//void HandleDeathLink();
 	//void HandleInstagib(AFGCharacterPlayer* player);
+	void CollectLocation(int64 itemId);
 
 	//void HandleAPMessages();
 

@@ -10,6 +10,7 @@
 #include "Subsystem/ApSubsystem.h"
 #include "Subsystem/ApMappingsSubsystem.h"
 #include "Subsystem/ApServerRandomizerSubsystem.h"
+#include "Subsystem/ApReplicatedRandomizerSubsystem.h"
 //#include "Subsystem/ApEnergyLinkSubsystem.h"
 //#include "Subsystem/ApPortalSubsystem.h"
 

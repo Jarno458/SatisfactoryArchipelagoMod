@@ -80,8 +80,6 @@ void AApSubsystem::BeginPlay() {
 }
 
 void AApSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase) {
-	loadingPhase = phase;
-
 	if (!HasAuthority())
 		UE_LOG(LogApSubsystem, Fatal, TEXT("AApSubsystem()::DispatchLifecycleEvent() Called without authority"));
 
