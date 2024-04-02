@@ -1,8 +1,8 @@
 {
 	"FileVersion": 3,
 	"Version": 0,
-	"VersionName": "0.1.5",
-	"SemVersion": "0.1.5",
+	"VersionName": "0.1.6",
+	"SemVersion": "0.1.6",
 	"FriendlyName": "Archipelago",
 	"Description": "Provides connection to an Archipelago multiworld",
 	"Category": "Modding",

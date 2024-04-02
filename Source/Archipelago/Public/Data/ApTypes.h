@@ -78,7 +78,7 @@ public:
 	UPROPERTY()
 	int Amount;
 	UPROPERTY()
-	int ItemValue;
+	int64 ItemValue;
 	UPROPERTY()
 	TArray<FApGiftTrait> Traits;
 };
