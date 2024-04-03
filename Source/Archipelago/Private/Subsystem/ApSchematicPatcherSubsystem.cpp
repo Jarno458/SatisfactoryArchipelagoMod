@@ -1,34 +1,34 @@
-#include "Subsystem/ApReplicatedRandomizerSubsystem.h"
+#include "Subsystem/ApSchematicPatcherSubsystem.h"
 
-DEFINE_LOG_CATEGORY(LogApReplicatedRandomizerSubsystem);
+DEFINE_LOG_CATEGORY(LogApSchematicPatcherSubsystem);
 
 //TODO REMOVE
 #pragma optimize("", off)
 
 #define LOCTEXT_NAMESPACE "Archipelago"
 
-AApReplicatedRandomizerSubsystem::AApReplicatedRandomizerSubsystem() {
+AApSchematicPatcherSubsystem::AApSchematicPatcherSubsystem() {
 	PrimaryActorTick.bCanEverTick = true;
 	PrimaryActorTick.bStartWithTickEnabled = false;
 	PrimaryActorTick.TickInterval = 0.5f;
 	ReplicationPolicy = ESubsystemReplicationPolicy::SpawnOnServer_Replicate;
 }
 
-AApReplicatedRandomizerSubsystem* AApReplicatedRandomizerSubsystem::Get(class UObject* worldContext) {
+AApSchematicPatcherSubsystem* AApSchematicPatcherSubsystem::Get(class UObject* worldContext) {
 	UWorld* world = GEngine->GetWorldFromContextObject(worldContext, EGetWorldErrorMode::Assert);
 
 	return Get(world);
 }
 
-AApReplicatedRandomizerSubsystem* AApReplicatedRandomizerSubsystem::Get(class UWorld* world) {
+AApSchematicPatcherSubsystem* AApSchematicPatcherSubsystem::Get(class UWorld* world) {
 	USubsystemActorManager* SubsystemActorManager = world->GetSubsystem<USubsystemActorManager>();
 	fgcheck(SubsystemActorManager);
 
-	return SubsystemActorManager->GetSubsystemActor<AApReplicatedRandomizerSubsystem>();
+	return SubsystemActorManager->GetSubsystemActor<AApSchematicPatcherSubsystem>();
 }
 
-void AApReplicatedRandomizerSubsystem::BeginPlay() {
-	UE_LOG(LogApServerRandomizerSubsystem, Display, TEXT("AApReplicatedRandomizerSubsystem::BeginPlay()"));
+void AApSchematicPatcherSubsystem::BeginPlay() {
+	UE_LOG(LogApServerRandomizerSubsystem, Display, TEXT("AApSchematicPatcherSubsystem::BeginPlay()"));
 
 	Super::BeginPlay();
 
@@ -48,16 +48,16 @@ void AApReplicatedRandomizerSubsystem::BeginPlay() {
 	SetMamEnhancerConfigurationHooks();*/
 }
 
-void AApReplicatedRandomizerSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase, TArray<TSubclassOf<UFGSchematic>> apHardcodedSchematics) {
-	UE_LOG(LogApReplicatedRandomizerSubsystem, Display, TEXT("AApReplicatedRandomizerSubsystem()::DispatchLifecycleEvent(%s)"), *UEnum::GetValueAsString(phase));
+void AApSchematicPatcherSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase, TArray<TSubclassOf<UFGSchematic>> apHardcodedSchematics) {
+	UE_LOG(LogApSchematicPatcherSubsystem, Display, TEXT("AApSchematicPatcherSubsystem()::DispatchLifecycleEvent(%s)"), *UEnum::GetValueAsString(phase));
 
 	if (!HasAuthority())
-		UE_LOG(LogApReplicatedRandomizerSubsystem, Fatal, TEXT("AApReplicatedRandomizerSubsystem()::DispatchLifecycleEvent() Called without authority"));
+		UE_LOG(LogApSchematicPatcherSubsystem, Fatal, TEXT("AApSchematicPatcherSubsystem()::DispatchLifecycleEvent() Called without authority"));
 
 	if (phase == ELifecyclePhase::CONSTRUCTION) {
 		hardcodedSchematics = apHardcodedSchematics;
 
-		for (TSubclassOf<UFGSchematic>& schematic : hardcodedSchematics) {
+		/*for (TSubclassOf<UFGSchematic>& schematic : hardcodedSchematics) {
 			UFGSchematic* schematicCDO = Cast<UFGSchematic>(schematic->GetDefaultObject());
 			if (!IsValid(schematicCDO))
 				continue;
@@ -65,7 +65,7 @@ void AApReplicatedRandomizerSubsystem::DispatchLifecycleEvent(ELifecyclePhase ph
 			FString className = schematicCDO->GetName();
 			if (className.Contains("Slots_"))
 				inventorySlotRecipes.Add(schematic);
-		}
+		}*/
 	}
 	else if (phase == ELifecyclePhase::INITIALIZATION) {
 		UWorld* world = GetWorld();
@@ -97,7 +97,7 @@ void AApReplicatedRandomizerSubsystem::DispatchLifecycleEvent(ELifecyclePhase ph
 	}
 }
 
-void AApReplicatedRandomizerSubsystem::Tick(float DeltaTime) {
+void AApSchematicPatcherSubsystem::Tick(float DeltaTime) {
 	Super::Tick(DeltaTime);
 
 	if (ap->GetConnectionState() != EApConnectionState::Connected)
@@ -106,7 +106,7 @@ void AApReplicatedRandomizerSubsystem::Tick(float DeltaTime) {
 	HandleCheckedLocations();
 }
 
-void AApReplicatedRandomizerSubsystem::CreateSchematicBoundToItemId(int64 itemid, TSharedRef<FApRecipeItem> apitem) {
+void AApSchematicPatcherSubsystem::CreateSchematicBoundToItemId(int64 itemid, TSharedRef<FApRecipeItem> apitem) {
 	FString name = FString::Printf(TEXT("AP_ItemId_%i"), itemid);
 
 	TTuple<bool, TSubclassOf<UFGSchematic>> foundSchematic = UApUtils::FindOrCreateClass(TEXT("/Archipelago/"), *name, UFGSchematic::StaticClass());
@@ -132,7 +132,7 @@ void AApReplicatedRandomizerSubsystem::CreateSchematicBoundToItemId(int64 itemid
 	ItemSchematics.Add(itemid, foundSchematic.Value);
 }
 
-void AApReplicatedRandomizerSubsystem::InitializaHubSchematic(FString name, TSubclassOf<UFGSchematic> factorySchematic, TArray<FApNetworkItem> items) {
+void AApSchematicPatcherSubsystem::InitializaHubSchematic(FString name, TSubclassOf<UFGSchematic> factorySchematic, TArray<FApNetworkItem> items) {
 	int delimeterPos;
 	name.FindChar('-', delimeterPos);
 	int32 tier = FCString::Atoi(*name.Mid(delimeterPos - 1, 1));
@@ -153,7 +153,7 @@ void AApReplicatedRandomizerSubsystem::InitializaHubSchematic(FString name, TSub
 	UCLSchematicBPFLib::InitSchematicFromStruct(schematic, factorySchematic, contentLibSubsystem);
 }
 
-void AApReplicatedRandomizerSubsystem::InitializaSchematicForItem(TSubclassOf<UFGSchematic> factorySchematic, FApNetworkItem item, bool updateSchemaName) {
+void AApSchematicPatcherSubsystem::InitializaSchematicForItem(TSubclassOf<UFGSchematic> factorySchematic, FApNetworkItem item, bool updateSchemaName) {
 	FContentLib_UnlockInfoOnly unlockOnlyInfo = CreateUnlockInfoOnly(item);
 
 	FContentLib_Schematic schematic = FContentLib_Schematic();
@@ -189,7 +189,7 @@ void AApReplicatedRandomizerSubsystem::InitializaSchematicForItem(TSubclassOf<UF
 	}
 }
 
-FContentLib_UnlockInfoOnly AApReplicatedRandomizerSubsystem::CreateUnlockInfoOnly(FApNetworkItem item) {
+FContentLib_UnlockInfoOnly AApSchematicPatcherSubsystem::CreateUnlockInfoOnly(FApNetworkItem item) {
 	FFormatNamedArguments Args;
 	if (item.flags == 0b001) {
 		Args.Add(TEXT("ProgressionType"), LOCTEXT("NetworkItemProgressionTypeAdvancement", "progression item"));
@@ -249,7 +249,7 @@ FContentLib_UnlockInfoOnly AApReplicatedRandomizerSubsystem::CreateUnlockInfoOnl
 	return infoCard;
 }
 
-void AApReplicatedRandomizerSubsystem::UpdateInfoOnlyUnlockWithBuildingInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, FApNetworkItem* item, TSharedRef<FApBuildingItem> itemInfo) {
+void AApSchematicPatcherSubsystem::UpdateInfoOnlyUnlockWithBuildingInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, FApNetworkItem* item, TSharedRef<FApBuildingItem> itemInfo) {
 	UFGRecipe* recipe = itemInfo->Recipes[0].Recipe;
 	UFGItemDescriptor* itemDescriptor = recipe->GetProducts()[0].ItemClass.GetDefaultObject();
 
@@ -258,7 +258,7 @@ void AApReplicatedRandomizerSubsystem::UpdateInfoOnlyUnlockWithBuildingInfo(FCon
 	infoCard->mUnlockDescription = FText::Format(LOCTEXT("NetworkItemUnlockPersonalBuildingDescription", "This will unlock your {ApItemName}"), Args);
 }
 
-void AApReplicatedRandomizerSubsystem::UpdateInfoOnlyUnlockWithRecipeInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, FApNetworkItem* item, TSharedRef<FApRecipeItem> itemInfo) {
+void AApSchematicPatcherSubsystem::UpdateInfoOnlyUnlockWithRecipeInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, FApNetworkItem* item, TSharedRef<FApRecipeItem> itemInfo) {
 	UFGRecipe* recipe = itemInfo->Recipes[0].Recipe;
 	UFGItemDescriptor* itemDescriptor = recipe->GetProducts()[0].ItemClass.GetDefaultObject();
 
@@ -301,7 +301,7 @@ void AApReplicatedRandomizerSubsystem::UpdateInfoOnlyUnlockWithRecipeInfo(FConte
 	infoCard->mUnlockDescription = FText::Format(LOCTEXT("NetworkItemUnlockPersonalRecipeDescription", "This will unlock {ApPlayerName} {ApItemName} which is considered a {ProgressionType}.\nProduced in: {Building}.\nCosts: {Costs}.\nProduces: {Output}."), Args);
 }
 
-void AApReplicatedRandomizerSubsystem::UpdateInfoOnlyUnlockWithItemBundleInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, FApNetworkItem* item, TSharedRef<FApItem> itemInfo) {
+void AApSchematicPatcherSubsystem::UpdateInfoOnlyUnlockWithItemBundleInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, FApNetworkItem* item, TSharedRef<FApItem> itemInfo) {
 	UFGItemDescriptor* itemDescriptor = itemInfo->Descriptor;
 
 	infoCard->BigIcon = infoCard->SmallIcon = UApUtils::GetImagePathForItem(itemDescriptor);
@@ -309,7 +309,7 @@ void AApReplicatedRandomizerSubsystem::UpdateInfoOnlyUnlockWithItemBundleInfo(FC
 	infoCard->mUnlockDescription = FText::Format(LOCTEXT("NetworkItemUnlockPersonalItemDescription", "This will give {ApPlayerName} {ApItemName}. It can be collected by building an Archipelago Portal."), Args);
 }
 
-void AApReplicatedRandomizerSubsystem::UpdateInfoOnlyUnlockWithSchematicInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, FApNetworkItem* item, TSharedRef<FApSchematicItem> itemInfo) {
+void AApSchematicPatcherSubsystem::UpdateInfoOnlyUnlockWithSchematicInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, FApNetworkItem* item, TSharedRef<FApSchematicItem> itemInfo) {
 	UFGRecipe* recipe = nullptr;
 	for (UFGUnlock* unlock : itemInfo->Schematic->mUnlocks) {
 		UFGUnlockRecipe* recipeUnlockInfo = Cast<UFGUnlockRecipe>(unlock);
@@ -336,7 +336,7 @@ void AApReplicatedRandomizerSubsystem::UpdateInfoOnlyUnlockWithSchematicInfo(FCo
 	}
 }
 
-void AApReplicatedRandomizerSubsystem::UpdateInfoOnlyUnlockWithSpecialInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, FApNetworkItem* item, TSharedRef<FApSpecialItem> itemInfo) {
+void AApSchematicPatcherSubsystem::UpdateInfoOnlyUnlockWithSpecialInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, FApNetworkItem* item, TSharedRef<FApSpecialItem> itemInfo) {
 	switch (itemInfo->SpecialType) {
 	case ESpecialItemType::Inventory3:
 	case ESpecialItemType::Inventory6: {
@@ -355,7 +355,7 @@ void AApReplicatedRandomizerSubsystem::UpdateInfoOnlyUnlockWithSpecialInfo(FCont
 	}
 }
 
-void AApReplicatedRandomizerSubsystem::UpdateInfoOnlyUnlockWithGenericApInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, FApNetworkItem* item) {
+void AApSchematicPatcherSubsystem::UpdateInfoOnlyUnlockWithGenericApInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, FApNetworkItem* item) {
 	infoCard->CategoryIcon = TEXT("/Archipelago/Assets/SourceArt/ArchipelagoAssetPack/ArchipelagoIconWhite128.ArchipelagoIconWhite128");
 	infoCard->mUnlockDescription = FText::Format(LOCTEXT("NetworkItemUnlockDescription", "This will unlock {ApPlayerName} {ApItemName} which is considered a {ProgressionType}."), Args);
 
@@ -373,13 +373,13 @@ void AApReplicatedRandomizerSubsystem::UpdateInfoOnlyUnlockWithGenericApInfo(FCo
 	}
 }
 
-void AApReplicatedRandomizerSubsystem::CollectLocation(int64 itemid) {
+void AApSchematicPatcherSubsystem::CollectLocation(int64 itemid) {
 	collectedLocations.Add(itemid);
 	collectedLocationsToProcess.Enqueue(itemid);
 }
 
 
-void AApReplicatedRandomizerSubsystem::HandleCheckedLocations() {
+void AApSchematicPatcherSubsystem::HandleCheckedLocations() {
 	int64 location;
 
 	//could use a while loop but we now handle only 1 per tick for perform reasons as this opperation is quite slow
@@ -424,12 +424,12 @@ void AApReplicatedRandomizerSubsystem::HandleCheckedLocations() {
 	}
 }
 
-bool AApReplicatedRandomizerSubsystem::IsCollected(UFGUnlock* unlock) {
+bool AApSchematicPatcherSubsystem::IsCollected(UFGUnlock* unlock) {
 	UFGUnlockInfoOnly* unlockInfo = Cast<UFGUnlockInfoOnly>(unlock);
 	return IsValid(unlockInfo) && unlockInfo->mUnlockIconSmall == collectedIcon;
 }
 
-void AApReplicatedRandomizerSubsystem::Collect(UFGUnlock* unlock, FApNetworkItem& networkItem) {
+void AApSchematicPatcherSubsystem::Collect(UFGUnlock* unlock, FApNetworkItem& networkItem) {
 	UFGUnlockInfoOnly* unlockInfo = Cast<UFGUnlockInfoOnly>(unlock);
 
 	if (IsValid(unlockInfo)) {
@@ -444,45 +444,6 @@ void AApReplicatedRandomizerSubsystem::Collect(UFGUnlock* unlock, FApNetworkItem
 		}
 	}
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

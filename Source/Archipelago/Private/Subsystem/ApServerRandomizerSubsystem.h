@@ -33,7 +33,7 @@
 #include "Data/ApTypes.h"
 #include "Subsystem/ApPortalSubsystem.h"
 #include "Subsystem/ApMappingsSubsystem.h"
-#include "Subsystem/ApReplicatedRandomizerSubsystem.h"
+#include "Subsystem/ApSchematicPatcherSubsystem.h"
 
 #include "Subsystem/ApSubsystem.h"
 
@@ -96,7 +96,7 @@ private:
 	//UModContentRegistry* contentRegistry;
 
 	AApSubsystem* ap;
-	AApReplicatedRandomizerSubsystem* replicatedRandomizerSubsystem;
+	AApSchematicPatcherSubsystem* schematicPatcher;
 	AApPortalSubsystem* portalSubsystem;
 	AApMappingsSubsystem* mappingSubsystem;
 	AApTrapSubsystem* trapSubsystem;
@@ -104,12 +104,13 @@ private:
 	TQueue<TTuple<int64, bool>> ReceivedItems;
 	TQueue<int64> CheckedLocations;
 
-	TArray<TSubclassOf<UFGSchematic>> hardcodedSchematics;
+	//TArray<TSubclassOf<UFGSchematic>> hardcodedSchematics;
 	TMap<TSubclassOf<class UFGSchematic>, TArray<FApNetworkItem>> locationsPerMilestone;
 	TMap<TSubclassOf<class UFGSchematic>, FApNetworkItem> locationPerMamNode;
 	TMap<TSubclassOf<class UFGSchematic>, FApNetworkItem> locationPerShopNode;
+
 	TMap<int64, TSubclassOf<class UFGSchematic>> ItemSchematics;
-	TArray<TSubclassOf<class UFGSchematic>> inventorySlotRecipes;
+	//TArray<TSubclassOf<class UFGSchematic>> inventorySlotRecipes;
 
 	std::atomic_bool hasScoutedLocations;
 	std::atomic_bool areScoutedLocationsReadyToParse;

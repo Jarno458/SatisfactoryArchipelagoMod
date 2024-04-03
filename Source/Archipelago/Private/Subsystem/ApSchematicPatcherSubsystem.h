@@ -31,54 +31,76 @@
 #include "ApConfigurationStruct.h"
 #include "Data/ApSlotData.h"
 #include "Data/ApTypes.h"
-#include "Subsystem/ApPortalSubsystem.h"
+#include "Subsystem/ApSubsystem.h"
 #include "Subsystem/ApMappingsSubsystem.h"
 
 #include "CLSchematicBPFLib.h"
 #include "BPFContentLib.h"
 #include "Configuration/FreeSamplesConfigurationStruct.h"
 
-DECLARE_LOG_CATEGORY_EXTERN(LogApRandomizerSubsystem, Log, All);
+DECLARE_LOG_CATEGORY_EXTERN(LogApSchematicPatcherSubsystem, Log, All);
 
-#include "ApRandomizerSubsystem.generated.h"
+#include "ApSchematicPatcherSubsystem.generated.h"
 
 UCLASS()
-class ARCHIPELAGO_API AApRandomizerSubsystem : public AModSubsystem, public IFGSaveInterface
+class ARCHIPELAGO_API AApSchematicPatcherSubsystem : public AModSubsystem//, public IFGSaveInterface
 {
 	GENERATED_BODY()
 
 public:
 	// Sets default values for this actor's properties
-	AApRandomizerSubsystem();
+	AApSchematicPatcherSubsystem ();
 
 protected:
 	// Called when the game starts or when spawned
-	//virtual void BeginPlay() override;
-	//virtual void Tick(float DeltaTime) override;
+	virtual void BeginPlay() override;
+	virtual void Tick(float DeltaTime) override;
 	//virtual void EndPlay(const EEndPlayReason::Type endPlayReason) override;
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	// Begin IFGSaveInterface
-	virtual void PreSaveGame_Implementation(int32 saveVersion, int32 gameVersion) override {};
+	/*virtual void PreSaveGame_Implementation(int32 saveVersion, int32 gameVersion) override {};
 	virtual void PostSaveGame_Implementation(int32 saveVersion, int32 gameVersion) override {};
 	virtual void PreLoadGame_Implementation(int32 saveVersion, int32 gameVersion) override {};
 	virtual void PostLoadGame_Implementation(int32 saveVersion, int32 gameVersion) override {};
 	virtual void GatherDependencies_Implementation(TArray<UObject*>& out_dependentObjects) override {};
 	virtual bool NeedTransform_Implementation() override { return false; };
-	virtual bool ShouldSave_Implementation() const override { return true; };
+	virtual bool ShouldSave_Implementation() const override { return true; };*/
 	// End IFSaveInterface
 
 public:
-	static AApRandomizerSubsystem* Get(class UWorld* world);
-	UFUNCTION(BlueprintPure, Category = "Schematic", DisplayName = "Get Ap Randomizer Subsystem", Meta = (DefaultToSelf = "worldContext"))
-	static AApRandomizerSubsystem* Get(UObject* worldContext);
+	static AApSchematicPatcherSubsystem* Get(class UWorld* world);
+	UFUNCTION(BlueprintPure, Category = "Schematic", DisplayName = "Get Ap Client Replicated Randomizer Subsystem", Meta = (DefaultToSelf = "worldContext"))
+	static AApSchematicPatcherSubsystem* Get(UObject* worldContext);
 
-	UFUNCTION(BlueprintCallable)
 	void DispatchLifecycleEvent(ELifecyclePhase phase, TArray<TSubclassOf<UFGSchematic>> apHardcodedSchematics);
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	FORCEINLINE bool IsInitialized() const { return areRecipiesAndSchematicsInitialized; };
+	FORCEINLINE bool IsInitialized() const { return isInitialized; };
+
+
+	FORCEINLINE bool IsCollected(int64 locationId) const { return collectedLocations.Contains(locationId); };
+	bool IsCollected(UFGUnlock* unlock); //TODO remove
+	void Collect(UFGUnlock* unlock, FApNetworkItem& networkItem);
 
 private:
+	UPROPERTY(Replicated)
+	TSet<int64> collectedLocations;
+
+	//AFGSchematicManager* SManager;
+	//AFGResearchManager* RManager;
+	//AFGGamePhaseManager* phaseManager;
+	//AFGUnlockSubsystem* unlockSubsystem;
+
+	UContentLibSubsystem* contentLibSubsystem;
+	UModContentRegistry* contentRegistry;
+
+	AApSubsystem* ap;
+	//AApPortalSubsystem* portalSubsystem;
+	AApMappingsSubsystem* mappingSubsystem;
+	//AApTrapSubsystem* trapSubsystem;
+
+	TQueue<int64> collectedLocationsToProcess;
 
 	TArray<TSubclassOf<UFGSchematic>> hardcodedSchematics;
 	TMap<TSubclassOf<class UFGSchematic>, TArray<FApNetworkItem>> locationsPerMilestone;
@@ -90,13 +112,14 @@ private:
 	UTexture2D* collectedIcon = LoadObject<UTexture2D>(nullptr, TEXT("/Archipelago/Assets/SourceArt/ArchipelagoAssetPack/AP-Black.AP-Black"));
 	UClass* workshopComponent = LoadClass<UObject>(nullptr, TEXT("/Game/FactoryGame/Buildable/-Shared/WorkBench/BP_WorkshopComponent.BP_WorkshopComponent_C"));
 
-	std::atomic_bool hasScoutedLocations;
-	std::atomic_bool areScoutedLocationsReadyToParse;
-	std::atomic_bool areRecipiesAndSchematicsInitialized;
-	std::atomic_bool hasLoadedRoomInfo;
+	bool isInitialized = false;
 
+	//std::atomic_bool hasScoutedLocations;
+	//std::atomic_bool areScoutedLocationsReadyToParse;
+	//std::atomic_bool areRecipiesAndSchematicsInitialized;
+	//std::atomic_bool hasLoadedRoomInfo;
 
-	void TimeoutConnection();
+	/*void TimeoutConnection();
 
 	void CheckConnectionState();
 	void ScoutArchipelagoItems();
@@ -106,21 +129,21 @@ private:
 	bool UpdateFreeSamplesConfiguration();
 	void SetMamEnhancerConfigurationHooks();
 	UFUNCTION() //required for event binding
-		void LockMamEnhancerSpoilerConfiguration();
+	void LockMamEnhancerSpoilerConfiguration();*/
 
-	void ReceiveItems();
-	void AwardItem(int64 itemId, bool isFromServer);
+	//void ReceiveItems();
+	//void AwardItem(int64 itemId, bool isFromServer);
 	void HandleCheckedLocations();
-	AFGCharacterPlayer* GetLocalPlayer();
-	bool IsCollected(UFGUnlock* unlock);
-	void Collect(UFGUnlock* unlock, FApNetworkItem& networkItem);
-	void HandleDeathLink();
-	void HandleInstagib(AFGCharacterPlayer* player);
+	//AFGCharacterPlayer* GetLocalPlayer();
+	//bool IsCollected(UFGUnlock* unlock);
+	//void HandleDeathLink();
+	//void HandleInstagib(AFGCharacterPlayer* player);
+	void CollectLocation(int64 itemId);
 
-	void HandleAPMessages();
+	//void HandleAPMessages();
 
 	// TODO do we want to keep this around or call AApMessagingSubsystem::DisplayMessage directly?
-	void SendChatMessage(const FString& Message, const FLinearColor& Color);
+	//void SendChatMessage(const FString& Message, const FLinearColor& Color);
 
 	void CreateSchematicBoundToItemId(int64 item, TSharedRef<FApRecipeItem> recipe);
 	FContentLib_UnlockInfoOnly CreateUnlockInfoOnly(FApNetworkItem item);
@@ -133,13 +156,13 @@ private:
 	void InitializaHubSchematic(FString name, TSubclassOf<UFGSchematic> factorySchematic, TArray<FApNetworkItem> apItems);
 	void InitializaSchematicForItem(TSubclassOf<UFGSchematic> factorySchematic, FApNetworkItem item, bool updateSchemaName);
 
+	/*UFUNCTION() //required for event binding
+	void OnMamResearchCompleted(TSubclassOf<class UFGSchematic> schematic);
+	FUNCTION() //required for event binding
+	void OnMamResearchTreeUnlocked(TSubclassOf<class UFGResearchTree> researchTree);
 	UFUNCTION() //required for event binding
-		void OnMamResearchCompleted(TSubclassOf<class UFGSchematic> schematic);
-	UFUNCTION() //required for event binding
-		void OnMamResearchTreeUnlocked(TSubclassOf<class UFGResearchTree> researchTree);
-	UFUNCTION() //required for event binding
-		void OnSchematicCompleted(TSubclassOf<class UFGSchematic> schematic);
+	void OnSchematicCompleted(TSubclassOf<class UFGSchematic> schematic);
 
-	void OnAvaiableSchematicsChanged();
+	void OnAvaiableSchematicsChanged();*/
 };
 

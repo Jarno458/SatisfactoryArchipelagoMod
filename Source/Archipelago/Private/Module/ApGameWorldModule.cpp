@@ -27,9 +27,9 @@ void UApGameWorldModule::DispatchLifecycleEvent(ELifecyclePhase phase) {
 
 	AApServerRandomizerSubsystem* apServerRandomizerSubsystem = AApServerRandomizerSubsystem::Get(world);
 	if (IsValid(apServerRandomizerSubsystem))
-		apServerRandomizerSubsystem->DispatchLifecycleEvent(phase);
+		apServerRandomizerSubsystem->DispatchLifecycleEvent(phase, mSchematics);
 
-	AApReplicatedRandomizerSubsystem* apClientReplicatedRandomizerSubsystem = AApReplicatedRandomizerSubsystem::Get(world);
-	if (IsValid(apClientReplicatedRandomizerSubsystem))
-		apClientReplicatedRandomizerSubsystem->DispatchLifecycleEvent(phase, mSchematics);
+	AApSchematicPatcherSubsystem* apSchematicPatchSubsystem = AApSchematicPatcherSubsystem::Get(world);
+	if (IsValid(apSchematicPatchSubsystem))
+		apSchematicPatchSubsystem->DispatchLifecycleEvent(phase, mSchematics);
 }

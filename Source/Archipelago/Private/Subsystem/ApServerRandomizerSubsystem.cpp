@@ -34,9 +34,9 @@ void AApServerRandomizerSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase,
 		UE_LOG(LogApServerRandomizerSubsystem, Fatal, TEXT("AApServerRandomizerSubsystem()::DispatchLifecycleEvent() Called without authority"));
 
 	if (phase == ELifecyclePhase::CONSTRUCTION) {
-		hardcodedSchematics = apHardcodedSchematics;
+		//hardcodedSchematics = apHardcodedSchematics;
 
-		for (TSubclassOf<UFGSchematic>& schematic : hardcodedSchematics) {
+		/*for (TSubclassOf<UFGSchematic>& schematic : hardcodedSchematics) {
 			UFGSchematic* schematicCDO = Cast<UFGSchematic>(schematic->GetDefaultObject());
 			if (!IsValid(schematicCDO))
 				continue;
@@ -44,7 +44,7 @@ void AApServerRandomizerSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase,
 			FString className = schematicCDO->GetName();
 			if (className.Contains("Slots_"))
 				inventorySlotRecipes.Add(schematic);
-		}
+		}*/
 	}
 	else if (phase == ELifecyclePhase::INITIALIZATION) {
 		UWorld* world = GetWorld();
@@ -54,8 +54,8 @@ void AApServerRandomizerSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase,
 		fgcheck(contentRegistry)*/
 		ap = AApSubsystem::Get(world);
 		fgcheck(ap);
-		replicatedRandomizerSubsystem = AApReplicatedRandomizerSubsystem::Get(world);
-		fgcheck(replicatedRandomizerSubsystem);
+		schematicPatcher = AApSchematicPatcherSubsystem::Get(world);
+		fgcheck(schematicPatcher);
 		mappingSubsystem = AApMappingsSubsystem::Get(world);
 		fgcheck(mappingSubsystem)
 		RManager = AFGResearchManager::Get(world);
@@ -75,7 +75,7 @@ void AApServerRandomizerSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase,
 
 		FGenericPlatformProcess::ConditionalSleep([this]() { return InitializeTick(); }, 0.5);
 
-		replicatedRandomizerSubsystem->DispatchLifecycleEvent(phase, hardcodedSchematics);
+		schematicPatcher->DispatchLifecycleEvent(phase, apHardcodedSchematics);
 	}
 	else if (phase == ELifecyclePhase::POST_INITIALIZATION) {
 		SetActorTickEnabled(true);
@@ -89,7 +89,7 @@ void AApServerRandomizerSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase,
 				OnSchematicCompleted(schematic);
 		}
 
-		replicatedRandomizerSubsystem->DispatchLifecycleEvent(phase, hardcodedSchematics);
+		schematicPatcher->DispatchLifecycleEvent(phase, apHardcodedSchematics);
 	}
 }
 
@@ -364,23 +364,25 @@ void AApServerRandomizerSubsystem::OnSchematicCompleted(TSubclassOf<class UFGSch
 	UE_LOG(LogApServerRandomizerSubsystem, Display, TEXT("AApSubSystem::OnSchematicCompleted(schematic)"));
 
 	ESchematicType type = UFGSchematic::GetType(schematic);
-
-	TSet<int64> unlockedChecks;
+	TSet<FApNetworkItem&> itemsToUnlock;
 
 	switch (type) {
 	case ESchematicType::EST_Milestone:
 		if (locationsPerMilestone.Contains(schematic)) {
 			for (FApNetworkItem& location : locationsPerMilestone[schematic])
-				unlockedChecks.Add(location.location);
+				itemsToUnlock.Add(location);
+				//unlockedChecks.Add(location.location);
 		}
 		break;
 	case ESchematicType::EST_MAM:
 		if (locationPerMamNode.Contains(schematic))
-			unlockedChecks.Add(locationPerMamNode[schematic].location);
+			//unlockedChecks.Add(locationPerMamNode[schematic].location);
+			itemsToUnlock.Add(locationPerMamNode[schematic]);
 		break;
 	case ESchematicType::EST_ResourceSink:
 		if (locationPerShopNode.Contains(schematic))
-			unlockedChecks.Add(locationPerShopNode[schematic].location);
+			//unlockedChecks.Add(locationPerShopNode[schematic].location);
+			itemsToUnlock.Add(locationPerShopNode[schematic]);
 		break;
 	case ESchematicType::EST_Custom:
 		if (schematic == ItemSchematics[mappingSubsystem->GetAwesomeShopItemId()]
@@ -391,10 +393,27 @@ void AApServerRandomizerSubsystem::OnSchematicCompleted(TSubclassOf<class UFGSch
 		return;
 	}
 
-	if (unlockedChecks.Num() > 0) {
+	if (ap->GetConnectionState() == EApConnectionState::Connected) {
+		TSet<int64> unlockedChecks;
+
+		for (FApNetworkItem& item : itemsToUnlock) {
+			unlockedChecks.Add(item.location);
+		}
+
+		if (unlockedChecks.Num() > 0)
+			ap->CheckLocation(unlockedChecks);
+	}	else {
+		for (FApNetworkItem& item : itemsToUnlock) {
+			if (item.player == ap->GetCurrentPlayerSlot())
+				ReceivedItems.Enqueue(TTuple<int64, bool>(item.item, false));
+		}
+	}
+
+	/*if (unlockedChecks.Num() > 0) {
 		if (ap->GetConnectionState() == EApConnectionState::Connected) {
 			ap->CheckLocation(unlockedChecks);
 		}
+		// if not connected to AP, directly award the items
 		else {
 			int currentPlayerSlot = ap->GetCurrentPlayerSlot();
 
@@ -438,7 +457,7 @@ void AApServerRandomizerSubsystem::OnSchematicCompleted(TSubclassOf<class UFGSch
 				}
 			}
 		}
-	}
+	}*/
 }
 
 void AApServerRandomizerSubsystem::OnAvaiableSchematicsChanged() {
@@ -514,13 +533,14 @@ void AApServerRandomizerSubsystem::AwardItem(int64 itemid, bool isFromServer) {
 				unlockSubsystem->UnlockInventorySlots((specialType == ESpecialItemType::Inventory3) ? 3 : 6);
 				break;
 			case ESpecialItemType::Toolbelt1:
-				for (int i = 0; i < inventorySlotRecipes.Num(); i++) {
+				/*for (int i = 0; i < inventorySlotRecipes.Num(); i++) {
 					if (SManager->IsSchematicPurchased(inventorySlotRecipes[i], nullptr))
 						continue;
 
 					SManager->GiveAccessToSchematic(inventorySlotRecipes[i], nullptr);
 					break;
-				}
+				}*/
+				unlockSubsystem->UnlockArmEquipmentSlots(1);
 				break;
 			}
 		}
@@ -536,9 +556,9 @@ void AApServerRandomizerSubsystem::HandleCheckedLocations() {
 
 	//could use a while loop but we now handle only 1 per tick for perform reasons as this opperation is quite slow
 	if (CheckedLocations.Dequeue(location)) {
-		for (TPair<TSubclassOf<UFGSchematic>, TArray<FApNetworkItem>>& itemPerMilestone : locationsPerMilestone) {
-			for (int index = 0; index < itemPerMilestone.Value.Num(); index++) {
-				FApNetworkItem& networkItem = itemPerMilestone.Value[index];
+		for (TPair<TSubclassOf<UFGSchematic>, TArray<FApNetworkItem>>& itemsPerMilestone : locationsPerMilestone) {
+			for (int index = 0; index < itemsPerMilestone.Value.Num(); index++) {
+				FApNetworkItem& networkItem = itemsPerMilestone.Value[index];
 				if (networkItem.location == location) {
 					//UFGSchematic* schematic = Cast<UFGSchematic>(itemPerMilestone.Key->GetDefaultObject());
 
@@ -551,9 +571,9 @@ void AApServerRandomizerSubsystem::HandleCheckedLocations() {
 					//		SManager->GiveAccessToSchematic(itemPerMilestone.Key, nullptr);
 					//	}
 
-					if (!itemPerMilestones.ContainsByPredicate([this, replicatedRandomizerSubsystem](FApNetworkItem& item) {
-								return !replicatedRandomizerSubsystem->IsCollected(item.location);	})) {
-						SManager->GiveAccessToSchematic(itemPerMilestone.Key, nullptr);
+					if (!itemsPerMilestone.ContainsByPredicate([this, schematicPatcher](FApNetworkItem& item) {
+								return !schematicPatcher->IsCollected(item.location);	})) {
+						SManager->GiveAccessToSchematic(itemsPerMilestone.Key, nullptr);
 					}
 				}
 			}
