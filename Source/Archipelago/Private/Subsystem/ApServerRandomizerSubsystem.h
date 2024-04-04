@@ -68,7 +68,7 @@ protected:
 	virtual void PreSaveGame_Implementation(int32 saveVersion, int32 gameVersion) override {};
 	virtual void PostSaveGame_Implementation(int32 saveVersion, int32 gameVersion) override {};
 	virtual void PreLoadGame_Implementation(int32 saveVersion, int32 gameVersion) override {};
-	virtual void PostLoadGame_Implementation(int32 saveVersion, int32 gameVersion) override {};
+	virtual void PostLoadGame_Implementation(int32 saveVersion, int32 gameVersion) override;
 	virtual void GatherDependencies_Implementation(TArray<UObject*>& out_dependentObjects) override {};
 	virtual bool NeedTransform_Implementation() override { return false; };
 	virtual bool ShouldSave_Implementation() const override { return true; };
@@ -93,7 +93,7 @@ private:
 	AFGUnlockSubsystem* unlockSubsystem;
 
 	//UContentLibSubsystem* contentLibSubsystem;
-	//UModContentRegistry* contentRegistry;
+	UModContentRegistry* contentRegistry;
 
 	AApSubsystem* ap;
 	AApSchematicPatcherSubsystem* schematicPatcher;
@@ -104,7 +104,8 @@ private:
 	TQueue<TTuple<int64, bool>> ReceivedItems;
 	TQueue<int64> CheckedLocations;
 
-	//TArray<TSubclassOf<UFGSchematic>> hardcodedSchematics;
+	TArray<TSubclassOf<UFGSchematic>> hardcodedSchematics;
+
 	TMap<TSubclassOf<class UFGSchematic>, TArray<FApNetworkItem>> locationsPerMilestone;
 	TMap<TSubclassOf<class UFGSchematic>, FApNetworkItem> locationPerMamNode;
 	TMap<TSubclassOf<class UFGSchematic>, FApNetworkItem> locationPerShopNode;
@@ -118,11 +119,11 @@ private:
 	std::atomic_bool hasLoadedRoomInfo;
 
 	void ScoutArchipelagoItems();
-	//void ParseScoutedItemsAndCreateRecipiesAndSchematics();
+	void ParseScoutedItemsAndCreateRecipiesAndSchematics();
 	//void LoadRoomInfo();
 	bool InitializeTick();
 
-	UConfigPropertySection* GetConfigurationRootSection(FConfigId configId);
+	//UConfigPropertySection* GetConfigurationRootSection(FConfigId configId);
 
 	bool UpdateFreeSamplesConfiguration();
 	void SetMamEnhancerConfigurationHooks();

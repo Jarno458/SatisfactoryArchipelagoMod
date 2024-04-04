@@ -31,5 +31,5 @@ void UApGameWorldModule::DispatchLifecycleEvent(ELifecyclePhase phase) {
 
 	AApSchematicPatcherSubsystem* apSchematicPatchSubsystem = AApSchematicPatcherSubsystem::Get(world);
 	if (IsValid(apSchematicPatchSubsystem))
-		apSchematicPatchSubsystem->DispatchLifecycleEvent(phase, mSchematics);
+		apSchematicPatchSubsystem->DispatchLifecycleEvent(phase);
 }

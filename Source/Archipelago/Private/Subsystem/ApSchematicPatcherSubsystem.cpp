@@ -28,7 +28,7 @@ AApSchematicPatcherSubsystem* AApSchematicPatcherSubsystem::Get(class UWorld* wo
 }
 
 void AApSchematicPatcherSubsystem::BeginPlay() {
-	UE_LOG(LogApServerRandomizerSubsystem, Display, TEXT("AApSchematicPatcherSubsystem::BeginPlay()"));
+	UE_LOG(LogApSchematicPatcherSubsystem, Display, TEXT("AApSchematicPatcherSubsystem::BeginPlay()"));
 
 	Super::BeginPlay();
 
@@ -48,14 +48,14 @@ void AApSchematicPatcherSubsystem::BeginPlay() {
 	SetMamEnhancerConfigurationHooks();*/
 }
 
-void AApSchematicPatcherSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase, TArray<TSubclassOf<UFGSchematic>> apHardcodedSchematics) {
+void AApSchematicPatcherSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase) {
 	UE_LOG(LogApSchematicPatcherSubsystem, Display, TEXT("AApSchematicPatcherSubsystem()::DispatchLifecycleEvent(%s)"), *UEnum::GetValueAsString(phase));
 
 	if (!HasAuthority())
 		UE_LOG(LogApSchematicPatcherSubsystem, Fatal, TEXT("AApSchematicPatcherSubsystem()::DispatchLifecycleEvent() Called without authority"));
 
 	if (phase == ELifecyclePhase::CONSTRUCTION) {
-		hardcodedSchematics = apHardcodedSchematics;
+		//hardcodedSchematics = apHardcodedSchematics;
 
 		/*for (TSubclassOf<UFGSchematic>& schematic : hardcodedSchematics) {
 			UFGSchematic* schematicCDO = Cast<UFGSchematic>(schematic->GetDefaultObject());
@@ -83,8 +83,6 @@ void AApSchematicPatcherSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase,
 		//unlockSubsystem = AFGUnlockSubsystem::Get(world);
 		//fgcheck(unlockSubsystem)
 
-		ap->SetLocationCheckedCallback([this](int64 itemid) { CollectLocation(itemid); });
-
 		//TODO: generatic AP Items can be totally hardcoded outside of the initialization phase
 		UE_LOG(LogApSubsystem, Display, TEXT("Generating schematics from AP Item IDs..."));
 		for (TPair<int64, TSharedRef<FApItemBase>>& apitem : mappingSubsystem->ApItems) {
@@ -93,7 +91,7 @@ void AApSchematicPatcherSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase,
 		}
 	}
 	else if (phase == ELifecyclePhase::POST_INITIALIZATION) {
-		SetActorTickEnabled(true);
+		//SetActorTickEnabled(true);
 	}
 }
 
@@ -103,7 +101,7 @@ void AApSchematicPatcherSubsystem::Tick(float DeltaTime) {
 	if (ap->GetConnectionState() != EApConnectionState::Connected)
 		return;
 
-	HandleCheckedLocations();
+	//HandleCheckedLocations();
 }
 
 void AApSchematicPatcherSubsystem::CreateSchematicBoundToItemId(int64 itemid, TSharedRef<FApRecipeItem> apitem) {
@@ -145,7 +143,7 @@ void AApSchematicPatcherSubsystem::InitializaHubSchematic(FString name, TSubclas
 	schematic.Tier = tier;
 	schematic.MenuPriority = items[0].location;
 	schematic.VisualKit = "Kit_AP_Logo";
-	schematic.Cost = slotData.hubLayout[tier - 1][milestone - 1];
+	schematic.Cost = ap->GetSlotData().hubLayout[tier - 1][milestone - 1];
 
 	for (auto& item : items)
 		schematic.InfoCards.Add(CreateUnlockInfoOnly(item));
@@ -208,35 +206,35 @@ FContentLib_UnlockInfoOnly AApSchematicPatcherSubsystem::CreateUnlockInfoOnly(FA
 
 	FContentLib_UnlockInfoOnly infoCard;
 
-	if (item.player == currentPlayerSlot) {
+	if (item.player == ap->GetCurrentPlayerSlot()) {
 		Args.Add(TEXT("ApPlayerName"), LOCTEXT("NetworkItemDescriptionYourOwnName", "your"));
 
 		infoCard.mUnlockName = FText::FromString(item.itemName);
 
-		if (item.player == currentPlayerSlot && mappingSubsystem->ApItems.Contains(item.item)) {
+		if (mappingSubsystem->ApItems.Contains(item.item)) {
 			TSharedRef<FApItemBase> apItem = mappingSubsystem->ApItems[item.item];
 
-			if (apItem->Type == EItemType::Building) {
-				UpdateInfoOnlyUnlockWithBuildingInfo(&infoCard, Args, &item, StaticCastSharedRef<FApBuildingItem>(apItem));
+			switch (apItem->Type) {
+				case EItemType::Building:
+					UpdateInfoOnlyUnlockWithBuildingInfo(&infoCard, Args, &item, StaticCastSharedRef<FApBuildingItem>(apItem));
+					break;
+				case EItemType::Recipe:
+					UpdateInfoOnlyUnlockWithRecipeInfo(&infoCard, Args, &item, StaticCastSharedRef<FApRecipeItem>(apItem));
+					break;
+				case EItemType::Item:
+					UpdateInfoOnlyUnlockWithItemBundleInfo(&infoCard, Args, &item, StaticCastSharedRef<FApItem>(apItem));
+					break;
+				case EItemType::Schematic:
+					UpdateInfoOnlyUnlockWithSchematicInfo(&infoCard, Args, &item, StaticCastSharedRef<FApSchematicItem>(apItem));
+					break;
+				case EItemType::Special:
+					UpdateInfoOnlyUnlockWithSpecialInfo(&infoCard, Args, &item, StaticCastSharedRef<FApSpecialItem>(apItem));
+					break;
 			}
-			else if (apItem->Type == EItemType::Recipe) {
-				UpdateInfoOnlyUnlockWithRecipeInfo(&infoCard, Args, &item, StaticCastSharedRef<FApRecipeItem>(apItem));
-			}
-			else if (apItem->Type == EItemType::Item) {
-				UpdateInfoOnlyUnlockWithItemBundleInfo(&infoCard, Args, &item, StaticCastSharedRef<FApItem>(apItem));
-			}
-			else if (apItem->Type == EItemType::Schematic) {
-				UpdateInfoOnlyUnlockWithSchematicInfo(&infoCard, Args, &item, StaticCastSharedRef<FApSchematicItem>(apItem));
-			}
-			else if (apItem->Type == EItemType::Special) {
-				UpdateInfoOnlyUnlockWithSpecialInfo(&infoCard, Args, &item, StaticCastSharedRef<FApSpecialItem>(apItem));
-			}
-		}
-		else {
+		} else {
 			UpdateInfoOnlyUnlockWithGenericApInfo(&infoCard, Args, &item);
 		}
-	}
-	else {
+	}	else {
 		Args.Add(TEXT("ApPlayerName"), FText::FormatNamed(LOCTEXT("NetworkItemPlayerOwnerPossessive", "{remotePlayerName}'s"),
 			TEXT("remotePlayerName"), FText::FromString(item.playerName)
 		));
@@ -373,13 +371,7 @@ void AApSchematicPatcherSubsystem::UpdateInfoOnlyUnlockWithGenericApInfo(FConten
 	}
 }
 
-void AApSchematicPatcherSubsystem::CollectLocation(int64 itemid) {
-	collectedLocations.Add(itemid);
-	collectedLocationsToProcess.Enqueue(itemid);
-}
-
-
-void AApSchematicPatcherSubsystem::HandleCheckedLocations() {
+/*void AApSchematicPatcherSubsystem::HandleCheckedLocations() {
 	int64 location;
 
 	//could use a while loop but we now handle only 1 per tick for perform reasons as this opperation is quite slow
@@ -422,11 +414,15 @@ void AApSchematicPatcherSubsystem::HandleCheckedLocations() {
 			}
 		}
 	}
-}
+}*/
 
 bool AApSchematicPatcherSubsystem::IsCollected(UFGUnlock* unlock) {
 	UFGUnlockInfoOnly* unlockInfo = Cast<UFGUnlockInfoOnly>(unlock);
 	return IsValid(unlockInfo) && unlockInfo->mUnlockIconSmall == collectedIcon;
+}
+
+void AApSchematicPatcherSubsystem::Collect(UFGSchematic* schematic, int unlockIndex, FApNetworkItem& networkItem) {
+	Collect(schematic->mUnlocks[index], networkItem);
 }
 
 void AApSchematicPatcherSubsystem::Collect(UFGUnlock* unlock, FApNetworkItem& networkItem) {
@@ -438,22 +434,12 @@ void AApSchematicPatcherSubsystem::Collect(UFGUnlock* unlock, FApNetworkItem& ne
 
 		unlockInfo->mUnlockIconSmall = collectedIcon;
 
-		if (networkItem.player != currentPlayerSlot) {
+		if (networkItem.player != ap->GetCurrentPlayerSlot()) {
 			unlockInfo->mUnlockName = FText::Format(LOCTEXT("Collected", "Collected: {0}"), unlockInfo->mUnlockName);
 			unlockInfo->mUnlockIconBig = collectedIcon;
 		}
 	}
 }
-
-
-
-
-
-
-
-
-
-
 
 #pragma optimize("", on)
 

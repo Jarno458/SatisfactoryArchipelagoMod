@@ -120,6 +120,9 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FApConfigurationStruct GetConfig() const { return config; };
 
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	FString GetRoomSeed() const { return roomSeed; };
+
 	//UFUNCTION(BlueprintCallable, BlueprintPure)
 	//FORCEINLINE bool IsInitialized() const { return areRecipiesAndSchematicsInitialized; };
 

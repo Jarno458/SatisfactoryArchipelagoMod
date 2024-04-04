@@ -73,7 +73,7 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Schematic", DisplayName = "Get Ap Client Replicated Randomizer Subsystem", Meta = (DefaultToSelf = "worldContext"))
 	static AApSchematicPatcherSubsystem* Get(UObject* worldContext);
 
-	void DispatchLifecycleEvent(ELifecyclePhase phase, TArray<TSubclassOf<UFGSchematic>> apHardcodedSchematics);
+	void DispatchLifecycleEvent(ELifecyclePhase phase);
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FORCEINLINE bool IsInitialized() const { return isInitialized; };
@@ -81,7 +81,10 @@ public:
 
 	FORCEINLINE bool IsCollected(int64 locationId) const { return collectedLocations.Contains(locationId); };
 	bool IsCollected(UFGUnlock* unlock); //TODO remove
-	void Collect(UFGUnlock* unlock, FApNetworkItem& networkItem);
+	void Collect(UFGSchematic* schematic, int unlockIndex, FApNetworkItem& networkItem);
+
+	void InitializaHubSchematic(FString name, TSubclassOf<UFGSchematic> factorySchematic, TArray<FApNetworkItem> apItems);
+	void InitializaSchematicForItem(TSubclassOf<UFGSchematic> factorySchematic, FApNetworkItem item, bool updateSchemaName);
 
 private:
 	UPROPERTY(Replicated)
@@ -133,12 +136,14 @@ private:
 
 	//void ReceiveItems();
 	//void AwardItem(int64 itemId, bool isFromServer);
-	void HandleCheckedLocations();
+	/void HandleCheckedLocations();
 	//AFGCharacterPlayer* GetLocalPlayer();
 	//bool IsCollected(UFGUnlock* unlock);
 	//void HandleDeathLink();
 	//void HandleInstagib(AFGCharacterPlayer* player);
-	void CollectLocation(int64 itemId);
+	//void CollectLocation(int64 itemId);
+
+	void Collect(UFGUnlock* unlock, FApNetworkItem& networkItem);
 
 	//void HandleAPMessages();
 
@@ -153,8 +158,7 @@ private:
 	void UpdateInfoOnlyUnlockWithSchematicInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, FApNetworkItem* item, TSharedRef<FApSchematicItem> itemInfo);
 	void UpdateInfoOnlyUnlockWithSpecialInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, FApNetworkItem* item, TSharedRef<FApSpecialItem> itemInfo);
 	void UpdateInfoOnlyUnlockWithGenericApInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, FApNetworkItem* item);
-	void InitializaHubSchematic(FString name, TSubclassOf<UFGSchematic> factorySchematic, TArray<FApNetworkItem> apItems);
-	void InitializaSchematicForItem(TSubclassOf<UFGSchematic> factorySchematic, FApNetworkItem item, bool updateSchemaName);
+
 
 	/*UFUNCTION() //required for event binding
 	void OnMamResearchCompleted(TSubclassOf<class UFGSchematic> schematic);

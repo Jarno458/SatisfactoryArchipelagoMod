@@ -34,7 +34,7 @@ void AApServerRandomizerSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase,
 		UE_LOG(LogApServerRandomizerSubsystem, Fatal, TEXT("AApServerRandomizerSubsystem()::DispatchLifecycleEvent() Called without authority"));
 
 	if (phase == ELifecyclePhase::CONSTRUCTION) {
-		//hardcodedSchematics = apHardcodedSchematics;
+		hardcodedSchematics = apHardcodedSchematics;
 
 		/*for (TSubclassOf<UFGSchematic>& schematic : hardcodedSchematics) {
 			UFGSchematic* schematicCDO = Cast<UFGSchematic>(schematic->GetDefaultObject());
@@ -49,9 +49,9 @@ void AApServerRandomizerSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase,
 	else if (phase == ELifecyclePhase::INITIALIZATION) {
 		UWorld* world = GetWorld();
 		/*contentLibSubsystem = world->GetGameInstance()->GetSubsystem<UContentLibSubsystem>();
-		fgcheck(contentLibSubsystem)
+		fgcheck(contentLibSubsystem)*/
 		contentRegistry = UModContentRegistry::Get(world);
-		fgcheck(contentRegistry)*/
+		fgcheck(contentRegistry)
 		ap = AApSubsystem::Get(world);
 		fgcheck(ap);
 		schematicPatcher = AApSchematicPatcherSubsystem::Get(world);
@@ -74,8 +74,6 @@ void AApServerRandomizerSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase,
 		ap->SetLocationCheckedCallback([this](int64 itemid) { CollectLocation(itemid); });
 
 		FGenericPlatformProcess::ConditionalSleep([this]() { return InitializeTick(); }, 0.5);
-
-		schematicPatcher->DispatchLifecycleEvent(phase, apHardcodedSchematics);
 	}
 	else if (phase == ELifecyclePhase::POST_INITIALIZATION) {
 		SetActorTickEnabled(true);
@@ -88,8 +86,6 @@ void AApServerRandomizerSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase,
 			for (TSubclassOf<UFGSchematic>& schematic : unlockedSchematics)
 				OnSchematicCompleted(schematic);
 		}
-
-		schematicPatcher->DispatchLifecycleEvent(phase, apHardcodedSchematics);
 	}
 }
 
@@ -153,9 +149,91 @@ void AApServerRandomizerSubsystem::ScoutArchipelagoItems() {
 	for (int l = 1338700; l <= 1338709; l++)
 		locations.Add(l);
 
+	//TODO Scout locations
 	ap->ScoutLocation(locations);
 
 	hasScoutedLocations = true;
+}
+
+void AApServerRandomizerSubsystem::ParseScoutedItemsAndCreateRecipiesAndSchematics() {
+	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::ParseScoutedItemsAndCreateRecipiesAndSchematics()"));
+
+	TMap<FString, TTuple<bool, TSubclassOf<UFGSchematic>>> schematicsPerMilestone = TMap<FString, TTuple<bool, TSubclassOf<UFGSchematic>>>();
+	TMap<int64, TSubclassOf<UFGSchematic>> schematicsPerLocation = TMap<int64, TSubclassOf<UFGSchematic>>();
+
+	for (TSubclassOf<UFGSchematic>& schematic : hardcodedSchematics) {
+		UFGSchematic* schematicCDO = Cast<UFGSchematic>(schematic->GetDefaultObject());
+		if (schematicCDO != nullptr && schematicCDO->mMenuPriority > 1000) {
+			schematicsPerLocation.Add(FMath::RoundToInt(schematicCDO->mMenuPriority), schematic);
+		}
+	}
+
+	for (FApNetworkItem& location : scoutedLocations) {
+		if (location.locationName.StartsWith("Hub")) {
+			FString milestone = location.locationName.Left(location.locationName.Find(","));
+			FString uniqueMilestone = milestone + TEXT("_") + ap->GetRoomSeed();
+
+			if (!schematicsPerMilestone.Contains(milestone)) {
+				TTuple<bool, TSubclassOf<UFGSchematic>> schematic = UApUtils::FindOrCreateClass(TEXT("/Archipelago/"), *uniqueMilestone, UFGSchematic::StaticClass());
+				schematicsPerMilestone.Add(milestone, schematic);
+			}
+
+			if (!locationsPerMilestone.Contains(schematicsPerMilestone[milestone].Value)) {
+				locationsPerMilestone.Add(schematicsPerMilestone[milestone].Value, TArray<FApNetworkItem>{ location });
+			}
+			else {
+				locationsPerMilestone[schematicsPerMilestone[milestone].Value].Add(location);
+			}
+		}
+		else if (location.location >= 1338500 && location.location <= 1338571 && schematicsPerLocation.Contains(location.location)) {
+			TSubclassOf<UFGSchematic> schematic = schematicsPerLocation[location.location];
+
+			locationPerMamNode.Add(schematic, location);
+		}
+		else if (location.location >= 1338700 && location.location <= 1338709 && schematicsPerLocation.Contains(location.location)) {
+			TSubclassOf<UFGSchematic> schematic = schematicsPerLocation[location.location];
+
+			locationPerShopNode.Add(schematic, location);
+		}
+	}
+
+	UE_LOG(LogApSubsystem, Display, TEXT("Generating HUB milestones"));
+
+	for (TPair<TSubclassOf<UFGSchematic>, TArray<FApNetworkItem>>& itemPerMilestone : locationsPerMilestone) {
+		for (TPair<FString, TTuple<bool, TSubclassOf<UFGSchematic>>>& schematicAndName : schematicsPerMilestone) {
+			if (itemPerMilestone.Key == schematicAndName.Value.Value) {
+				if (!schematicAndName.Value.Key)
+					schematicPatcher->InitializaHubSchematic(schematicAndName.Key, itemPerMilestone.Key, itemPerMilestone.Value);
+
+				contentRegistry->RegisterSchematic(FName(TEXT("Archipelago")), itemPerMilestone.Key);
+
+				break;
+			}
+		}
+	}
+
+	for (TPair<TSubclassOf<UFGSchematic>, FApNetworkItem>& itemPerMamNode : locationPerMamNode) {
+		schematicPatcher->InitializaSchematicForItem(itemPerMamNode.Key, itemPerMamNode.Value, false);
+	}
+
+	for (TPair<TSubclassOf<UFGSchematic>, FApNetworkItem>& itemPerMamNode : locationPerShopNode) {
+		schematicPatcher->InitializaSchematicForItem(itemPerMamNode.Key, itemPerMamNode.Value, true);
+	}
+
+	TArray<TSubclassOf<class UFGResearchTree>> researchTrees;
+	RManager->GetAllResearchTrees(researchTrees);
+
+	for (TSubclassOf<UFGResearchTree>& tree : researchTrees) {
+		UFGResearchTree* treeCDO = Cast<UFGResearchTree>(tree->GetDefaultObject());
+		if (treeCDO != nullptr) {
+			FString className = treeCDO->GetName();
+
+			if (!className.Contains("AP_") && !className.EndsWith("HardDrive_C") && !className.EndsWith("XMas_C"))
+				contentRegistry->RemoveResearchTree(tree);
+		}
+	};
+
+	areRecipiesAndSchematicsInitialized = true;
 }
 
 void AApServerRandomizerSubsystem::BeginPlay() {
@@ -571,13 +649,21 @@ void AApServerRandomizerSubsystem::HandleCheckedLocations() {
 					//		SManager->GiveAccessToSchematic(itemPerMilestone.Key, nullptr);
 					//	}
 
-					if (!itemsPerMilestone.ContainsByPredicate([this, schematicPatcher](FApNetworkItem& item) {
+					//////
+					UFGSchematic* schematic = Cast<UFGSchematic>(itemsPerMilestone.Key->GetDefaultObject());
+
+					if (IsValid(schematic)) {
+						schematicPatcher->Collect(schematic, index, networkItem);
+					//////
+
+					if (!itemsPerMilestone.Value.ContainsByPredicate([this](FApNetworkItem& item) {
 								return !schematicPatcher->IsCollected(item.location);	})) {
 						SManager->GiveAccessToSchematic(itemsPerMilestone.Key, nullptr);
 					}
 				}
 			}
 		}
+
 		for (TPair<TSubclassOf<UFGSchematic>, FApNetworkItem>& itemPerMamNode : locationPerMamNode) {
 			if (itemPerMamNode.Value.location == location) {
 				//UFGSchematic* schematic = Cast<UFGSchematic>(itemPerMamNode.Key->GetDefaultObject());
@@ -585,7 +671,14 @@ void AApServerRandomizerSubsystem::HandleCheckedLocations() {
 				//if (schematic != nullptr && !replicatedRandomizerSubsystem->IsCollected(schematic->mUnlocks[0])) {
 				//	replicatedRandomizerSubsystem->Collect(schematic->mUnlocks[0], itemPerMamNode.Value);
 
-					SManager->GiveAccessToSchematic(itemPerMamNode.Key, nullptr);
+				////
+				UFGSchematic* schematic = Cast<UFGSchematic>(itemPerMamNode.Key->GetDefaultObject());
+
+				if (IsValid(schematic)) {
+					schematicPatcher->Collect(schematic, 0, itemPerMamNode.Value);
+				////
+
+				SManager->GiveAccessToSchematic(itemPerMamNode.Key, nullptr);
 				//}
 			}
 		}
@@ -596,7 +689,14 @@ void AApServerRandomizerSubsystem::HandleCheckedLocations() {
 				//if (schematic != nullptr && !replicatedRandomizerSubsystem->IsCollected(schematic->mUnlocks[0])) {
 				//	replicatedRandomizerSubsystem->Collect(schematic->mUnlocks[0], itemPerShopNode.Value);
 
-					SManager->GiveAccessToSchematic(itemPerShopNode.Key, nullptr);
+				////
+				UFGSchematic* schematic = Cast<UFGSchematic>(itemPerShopNode.Key->GetDefaultObject());
+
+				if (IsValid(schematic)) {
+					schematicPatcher->Collect(schematic, 0, itemPerShopNode.Value);
+				////
+
+				SManager->GiveAccessToSchematic(itemPerShopNode.Key, nullptr);
 				//}
 			}
 		}
