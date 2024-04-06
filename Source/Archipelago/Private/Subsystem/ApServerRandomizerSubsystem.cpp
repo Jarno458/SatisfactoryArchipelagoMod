@@ -93,7 +93,7 @@ bool AApServerRandomizerSubsystem::InitializeTick() {
 	EApConnectionState connectionState = ap->GetConnectionState();
 
 	if (connectionState == EApConnectionState::Connected) {
-		if (!areScoutedLocationsReadyToParse && !hasScoutedLocations && ap->GetSlotData().hasLoadedSlotData)
+		if (scoutedLocations.Num() == 0 && ap->GetSlotData().hasLoadedSlotData)
 			ScoutArchipelagoItems();
 
 		if (!mappingSubsystem->HasLoadedItemNameMappings())
@@ -101,7 +101,7 @@ bool AApServerRandomizerSubsystem::InitializeTick() {
 	}
 
 	if (!areRecipiesAndSchematicsInitialized
-		&& areScoutedLocationsReadyToParse
+		&& scoutedLocations.Num() > 0
 		&& ap->GetSlotData().hasLoadedSlotData
 		&& mappingSubsystem->HasLoadedItemNameMappings()) {
 
@@ -150,7 +150,7 @@ void AApServerRandomizerSubsystem::ScoutArchipelagoItems() {
 		locations.Add(l);
 
 	//TODO Scout locations
-	ap->ScoutLocation(locations);
+	scoutedLocations = ap->ScoutLocation(locations);
 
 	hasScoutedLocations = true;
 }
@@ -652,7 +652,7 @@ void AApServerRandomizerSubsystem::HandleCheckedLocations() {
 					//////
 					UFGSchematic* schematic = Cast<UFGSchematic>(itemsPerMilestone.Key->GetDefaultObject());
 
-					if (IsValid(schematic)) {
+					if (IsValid(schematic))
 						schematicPatcher->Collect(schematic, index, networkItem);
 					//////
 
@@ -674,7 +674,7 @@ void AApServerRandomizerSubsystem::HandleCheckedLocations() {
 				////
 				UFGSchematic* schematic = Cast<UFGSchematic>(itemPerMamNode.Key->GetDefaultObject());
 
-				if (IsValid(schematic)) {
+				if (IsValid(schematic))
 					schematicPatcher->Collect(schematic, 0, itemPerMamNode.Value);
 				////
 
@@ -692,7 +692,7 @@ void AApServerRandomizerSubsystem::HandleCheckedLocations() {
 				////
 				UFGSchematic* schematic = Cast<UFGSchematic>(itemPerShopNode.Key->GetDefaultObject());
 
-				if (IsValid(schematic)) {
+				if (IsValid(schematic))
 					schematicPatcher->Collect(schematic, 0, itemPerShopNode.Value);
 				////
 
@@ -703,10 +703,49 @@ void AApServerRandomizerSubsystem::HandleCheckedLocations() {
 	}
 }
 
+/*
 void AApServerRandomizerSubsystem::PostLoadGame_Implementation(int32 saveVersion, int32 gameVersion) {
 	UE_LOG(LogApSubsystem, Display, TEXT("AApServerRandomizerSubsystem::PostLoadGame_Implementation(saveVersion: %i, gameVersion: %i)"), saveVersion, gameVersion);
 	if (!scoutedLocations.IsEmpty())
 		areScoutedLocationsReadyToParse = true;
+}*/
+
+void AApSubsystem::PreSaveGame_Implementation(int32 saveVersion, int32 gameVersion) {
+	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::PreSaveGame_Implementation(saveVersion: %i, gameVersion: %i)"), saveVersion, gameVersion);
+
+	for (int tier = 0; tier < slotData.hubLayout.Num(); tier++) {
+		for (int milestone = 0; milestone < slotData.hubLayout[tier].Num(); milestone++) {
+			FApSaveableHubLayout hubLayout;
+			hubLayout.tier = tier;
+			hubLayout.milestone = milestone;
+			hubLayout.costs = slotData.hubLayout[tier][milestone];
+
+			saveSlotDataHubLayout.Add(hubLayout);
+		}
+	}
+}
+
+void AApSubsystem::PostSaveGame_Implementation(int32 saveVersion, int32 gameVersion) {
+	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::PostSaveGame_Implementation(saveVersion: %i, gameVersion: %i)"), saveVersion, gameVersion);
+
+	saveSlotDataHubLayout.Empty();
+}
+
+//TODO fix is now fired when loading a fresh save
+void AApSubsystem::PostLoadGame_Implementation(int32 saveVersion, int32 gameVersion) {
+	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::PostLoadGame_Implementation(saveVersion: %i, gameVersion: %i)"), saveVersion, gameVersion);
+
+	if (!saveSlotDataHubLayout.IsEmpty() && slotData.numberOfChecksPerMilestone > 0) {
+		for (FApSaveableHubLayout hubLayout : saveSlotDataHubLayout) {
+			if ((slotData.hubLayout.Num() - 1) < hubLayout.tier)
+				slotData.hubLayout.Add(TArray<TMap<FString, int>>());
+
+			if ((slotData.hubLayout[hubLayout.tier].Num() - 1) < hubLayout.milestone)
+				slotData.hubLayout[hubLayout.tier].Add(hubLayout.costs);
+		}
+
+		slotData.hasLoadedSlotData = true;
+	}
 }
 
 AFGCharacterPlayer* AApServerRandomizerSubsystem::GetLocalPlayer() {

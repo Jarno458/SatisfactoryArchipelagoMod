@@ -18,8 +18,8 @@ AApSubsystem::AApSubsystem() {
 
 	ReplicationPolicy = ESubsystemReplicationPolicy::SpawnOnServer;
 
-	ConnectionState = EApConnectionState::NotYetAttempted;
-	ConnectionStateDescription = LOCTEXT("NotYetAttempted", "A connection has not yet been attempted. Load a save file to attempt to connect.");
+	//ConnectionState = EApConnectionState::NotYetAttempted;
+	//ConnectionStateDescription = LOCTEXT("NotYetAttempted", "A connection has not yet been attempted. Load a save file to attempt to connect.");
 }
 
 AApSubsystem* AApSubsystem::Get(class UObject* worldContext) {
@@ -51,13 +51,16 @@ void AApSubsystem::ConnectToArchipelago() {
 	AP_SetLocationInfoCallback(AApSubsystem::LocationScoutedCallback);
 	AP_SetDeathLinkRecvCallback(AApSubsystem::DeathLinkReceivedCallback);
 	AP_SetLoggingCallback(AApSubsystem::LogFromAPCpp);
+	AP_RegisterSlotDataRawCallback("Data", AApSubsystem::ParseSlotData);
 	AP_SetDeathLinkSupported(true);
 
-	if (!slotData.hasLoadedSlotData)
-		AP_RegisterSlotDataRawCallback("Data", AApSubsystem::ParseSlotData);
+	//if (!slotData.hasLoadedSlotData)
 
-	ConnectionState = EApConnectionState::Connecting;
-	ConnectionStateDescription = LOCTEXT("Connecting", "Connecting...");
+
+	connectionInfoSubsystem = AApConnectionInfoSubsystem::Get(GetWorld());
+
+	connectionInfoSubsystem->ConnectionState = EApConnectionState::Connecting;
+	connectionInfoSubsystem->ConnectionStateDescription = LOCTEXT("Connecting", "Connecting...");
 
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::Starting AP"));
 	AP_Start();
@@ -113,25 +116,26 @@ void AApSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase) {
 
 bool AApSubsystem::InitializeTick(FDateTime connectingStartedTime) {
 	return CallOnGameThread<bool>([this, connectingStartedTime]() {
-		if (ConnectionState == EApConnectionState::Connecting) {
+		if (connectionInfoSubsystem->ConnectionState == EApConnectionState::Connecting) {
 			if ((FDateTime::Now() - connectingStartedTime).GetSeconds() > 15)
 				TimeoutConnection();
 			else
 				CheckConnectionState();
 		}
-		if (ConnectionState == EApConnectionState::Connected) {
+		if (connectionInfoSubsystem->ConnectionState == EApConnectionState::Connected) {
 			LoadRoomInfo();
 
 			return true;
 		}
 
-		return ConnectionState == EApConnectionState::ConnectionFailed;
+		return connectionInfoSubsystem->ConnectionState == EApConnectionState::ConnectionFailed;
+	});
 }
 
 void AApSubsystem::Tick(float DeltaTime) {
 	Super::Tick(DeltaTime);
 
-	if (ConnectionState != EApConnectionState::Connected)
+	if (connectionInfoSubsystem->ConnectionState != EApConnectionState::Connected)
 		return;
 
 	//if (portalSubsystem->IsInitialized())
@@ -189,10 +193,7 @@ void AApSubsystem::SetReplyCallback(AP_SetReply setReply) {
 void AApSubsystem::LocationScoutedCallback(std::vector<AP_NetworkItem> scoutedLocations) {
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::LocationScoutedCallback(vector[%i])"), scoutedLocations.size());
 
-	if (!callbackTarget->scoutedLocations.IsEmpty())
-		return;
-
-	callbackTarget->scoutedLocations = TArray<FApNetworkItem>();
+	TMap<int64, const FApNetworkItem> scoutedLocationsResult = TMap<int64, const FApNetworkItem>();
 
 	for (AP_NetworkItem apLocation : scoutedLocations) {
 		FApNetworkItem location;
@@ -204,22 +205,24 @@ void AApSubsystem::LocationScoutedCallback(std::vector<AP_NetworkItem> scoutedLo
 		location.locationName = UApUtils::FStr(apLocation.locationName);
 		location.playerName = UApUtils::FStr(apLocation.playerName);
 
-		callbackTarget->scoutedLocations.Add(location);
+		scoutedLocationsResult.Add(location.location, location);
 	}
-		
-	callbackTarget->areScoutedLocationsReadyToParse = true;
+
+	callbackTarget->location_scouting_promise->SetValue(scoutedLocationsResult);
 }
 
 void AApSubsystem::ParseSlotData(std::string json) {
 	FString jsonString = UApUtils::FStr(json);
 
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::ParseSlotData(\"%s\")"), *jsonString);
-	
-	bool success = FApSlotData::ParseSlotData(jsonString, &callbackTarget->slotData);
+
+	callbackTarget->connectionInfoSubsystem->slotDataJson = jsonString;
+
+	/*bool success = FApSlotData::ParseSlotData(jsonString, &callbackTarget->slotData);
 	if (!success) {
 		FText jsonText = FText::FromString(jsonString);
 		AbortGame(FText::Format(LOCTEXT("SlotDataInvallid", "Archipelago SlotData Invalid! {0}"), jsonText));
-	}
+	}*/
 }
 
 void AApSubsystem::DeathLinkReceivedCallback(std::string source, std::string cause) {
@@ -251,13 +254,13 @@ void AApSubsystem::LoadRoomInfo() {
 	AP_GetRoomInfo(&roomInfo);
 
 	FString seedName = UApUtils::FStr(roomInfo.seed_name);
-	if (roomSeed.IsEmpty())
-		roomSeed = seedName;
-	else if (roomSeed != seedName)
+	if (connectionInfoSubsystem->roomSeed.IsEmpty())
+		connectionInfoSubsystem->roomSeed = seedName;
+	else if (connectionInfoSubsystem->roomSeed != seedName)
 		AbortGame(LOCTEXT("RoomSeedMissmatch", "Room seed does not match seed of save, this save does not belong to the multiworld your connecting to"));
 
-	currentPlayerTeam = AP_GetCurrentPlayerTeam();
-	currentPlayerSlot = AP_GetPlayerID();
+	connectionInfoSubsystem->currentPlayerTeam = AP_GetCurrentPlayerTeam();
+	connectionInfoSubsystem->currentPlayerSlot = AP_GetPlayerID();
 }
 
 void AApSubsystem::MonitorDataStoreValue(FString keyFString, TFunction<void()> callback) {
@@ -307,7 +310,7 @@ void AApSubsystem::MonitorDataStoreValue(FString keyFString, AP_DataType dataTyp
 void AApSubsystem::ModdifyEnergyLink(long amount, FString defaultValueFString) {
 	CallOnGameThread<void>([this, amount, defaultValueFString]() {
 		AP_SetServerDataRequest sendEnergyLinkUpdate;
-		sendEnergyLinkUpdate.key = "EnergyLink" + std::to_string(currentPlayerTeam);
+		sendEnergyLinkUpdate.key = "EnergyLink" + std::to_string(connectionInfoSubsystem->currentPlayerTeam);
 
 		std::string valueToAdd = std::to_string(amount);
 		std::string defaultValue = TCHAR_TO_UTF8(*defaultValueFString);
@@ -384,16 +387,16 @@ void AApSubsystem::CheckConnectionState() {
 	if (!IsInGameThread())
 		return;
 
-	if (ConnectionState == EApConnectionState::Connecting) {
+	if (connectionInfoSubsystem->ConnectionState == EApConnectionState::Connecting) {
 		AP_ConnectionStatus status = AP_GetConnectionStatus();
 
 		if (status == AP_ConnectionStatus::Authenticated) {
-			ConnectionState = EApConnectionState::Connected;
-			ConnectionStateDescription = LOCTEXT("AuthSuccess", "Authentication succeeded.");
+			connectionInfoSubsystem->ConnectionState = EApConnectionState::Connected;
+			connectionInfoSubsystem->ConnectionStateDescription = LOCTEXT("AuthSuccess", "Authentication succeeded.");
 			UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::Tick(), Successfully Authenticated"));
 		} else if (status == AP_ConnectionStatus::ConnectionRefused) {
-			ConnectionState = EApConnectionState::ConnectionFailed;
-			ConnectionStateDescription = LOCTEXT("ConnectionRefused", "Connection refused by server. Check your connection details and load the save again.");
+			connectionInfoSubsystem->ConnectionState = EApConnectionState::ConnectionFailed;
+			connectionInfoSubsystem->ConnectionStateDescription = LOCTEXT("ConnectionRefused", "Connection refused by server. Check your connection details and load the save again.");
 			UE_LOG(LogApSubsystem, Error, TEXT("AApSubsystem::CheckConnectionState(), ConnectionRefused"));
 		}
 	}
@@ -543,8 +546,8 @@ void AApSubsystem::SendChatMessage(const FString& Message, const FLinearColor& C
 }*/
 
 void AApSubsystem::TimeoutConnection() {
-	ConnectionState = EApConnectionState::ConnectionFailed;
-	ConnectionStateDescription = LOCTEXT("AuthFailed", "Authentication failed. Check your connection details and load the save again.");
+	connectionInfoSubsystem->ConnectionState = EApConnectionState::ConnectionFailed;
+	connectionInfoSubsystem->ConnectionStateDescription = LOCTEXT("AuthFailed", "Authentication failed. Check your connection details and load the save again.");
 	UE_LOG(LogApSubsystem, Error, TEXT("AApSubsystem::TimeoutConnectionIfNotConnected(), Authenticated Failed"));
 }
 
@@ -730,11 +733,13 @@ const TMap<int64, const FApNetworkItem> AApSubsystem::ScoutLocation(const TSet<i
 		locationsToScout.insert(locationId);
 	}
 
-	CallOnGameThread<void>([&locationsToScout]() {
+	location_scouting_promise = MakeShared<TPromise<const TMap<int64, const FApNetworkItem>>>();
+
+	CallOnGameThread<void>([this, &locationsToScout]() {
 		AP_SendLocationScouts(locationsToScout, 0);
 	});
 
-	return TMap<int64, const FApNetworkItem>(); //TODO: hook up through callback results
+	return location_scouting_promise->GetFuture().Get();
 }
 
 void AApSubsystem::CreateLocationHint(int64 locationId, bool spam) const {
@@ -777,6 +782,7 @@ void AApSubsystem::CheckLocation(const TSet<int64>& locationIds) const {
 	});
 }
 
+/*
 void AApSubsystem::PreSaveGame_Implementation(int32 saveVersion, int32 gameVersion) {
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::PreSaveGame_Implementation(saveVersion: %i, gameVersion: %i)"), saveVersion, gameVersion);
 
@@ -796,13 +802,13 @@ void AApSubsystem::PostSaveGame_Implementation(int32 saveVersion, int32 gameVers
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::PostSaveGame_Implementation(saveVersion: %i, gameVersion: %i)"), saveVersion, gameVersion);
 
 	saveSlotDataHubLayout.Empty();
-}
+}*/
 
 //TODO fix is now fired when loading a fresh save
 void AApSubsystem::PostLoadGame_Implementation(int32 saveVersion, int32 gameVersion) {
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::PostLoadGame_Implementation(saveVersion: %i, gameVersion: %i)"), saveVersion, gameVersion);
 
-	if (!saveSlotDataHubLayout.IsEmpty() && slotData.numberOfChecksPerMilestone > 0)	{
+	/*if (!saveSlotDataHubLayout.IsEmpty() && slotData.numberOfChecksPerMilestone > 0) {
 		for (FApSaveableHubLayout hubLayout : saveSlotDataHubLayout) {
 			if ((slotData.hubLayout.Num() - 1) < hubLayout.tier)
 				slotData.hubLayout.Add(TArray<TMap<FString, int>>());
@@ -812,10 +818,10 @@ void AApSubsystem::PostLoadGame_Implementation(int32 saveVersion, int32 gameVers
 		}
 
 		slotData.hasLoadedSlotData = true;
-	}
+	}*/
 
-	if (!scoutedLocations.IsEmpty())
-		areScoutedLocationsReadyToParse = true;
+	//if (!scoutedLocations.IsEmpty())
+	//	areScoutedLocationsReadyToParse = true;
 
 	FApConfigurationStruct modConfig = FApConfigurationStruct::GetActiveConfig(GetWorld());
 	if (!config.IsLoaded() || modConfig.ForceOverride)

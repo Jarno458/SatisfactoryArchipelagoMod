@@ -18,7 +18,9 @@ void AApEnergyLinkSubsystem::BeginPlay() {
 		
 	UE_LOG(LogApEnergyLink, Display, TEXT("AEnergyLinkSubsystem:BeginPlay()"));
 
-	ap = AApSubsystem::Get(GetWorld());
+	UWorld* world = GetWorld();
+	ap = AApConnectionInfoSubsystem::Get(world);
+	apConnectionInfo = AApConnectionInfoSubsystem::Get(world);
 
 	if (!hooksInitialized) {
 		UE_LOG(LogApEnergyLink, Display, TEXT("Initializing hooks"));
@@ -43,7 +45,7 @@ void AApEnergyLinkSubsystem::Tick(float DeltaTime) {
 
 		energyLinkEnabled = ap->GetSlotData().energyLink;
 
-		if (ap->ConnectionState == EApConnectionState::Connected && energyLinkEnabled) {
+		if (ap->GetConnectionState() == EApConnectionState::Connected && energyLinkEnabled) {
 			UE_LOG(LogApEnergyLink, Display, TEXT("Modifying Power Storage asset"));
 			const auto asset = UApUtils::GetBlueprintDataBridge(GetWorld())->PowerStorageBuilding;
 			fgcheck(asset);

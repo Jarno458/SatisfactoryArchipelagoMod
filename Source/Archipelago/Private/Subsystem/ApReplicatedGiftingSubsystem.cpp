@@ -38,6 +38,7 @@ void AApReplicatedGiftingSubsystem::GetLifetimeReplicatedProps(TArray<FLifetimeP
 
 	DOREPLIFETIME(AApReplicatedGiftingSubsystem, AcceptedGiftTraitsPerPlayerReplicated);
 	DOREPLIFETIME(AApReplicatedGiftingSubsystem, AllPlayers);
+	DOREPLIFETIME(AApReplicatedGiftingSubsystem, ServiceState);
 }
 
 void AApReplicatedGiftingSubsystem::BeginPlay() {

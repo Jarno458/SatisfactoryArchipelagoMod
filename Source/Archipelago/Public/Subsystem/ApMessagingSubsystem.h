@@ -1,5 +1,3 @@
-
-
 #pragma once
 
 #include "CoreMinimal.h"
@@ -52,5 +50,4 @@ public:
 	// Displays a chat message to the local client, you probably don't want to call this directly 
 	UFUNCTION(BlueprintCallable)
 	void LocalAddChatMessage(const FString& Message, const FLinearColor& Color);
-
 };

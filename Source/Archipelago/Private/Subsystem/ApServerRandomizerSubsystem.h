@@ -8,24 +8,24 @@
 #include "FGPlayerController.h"
 #include "FGCharacterPlayer.h"
 
-#include "GenericPlatform/GenericPlatformProcess.h"
-#include "Registry/ModContentRegistry.h"
+//#include "GenericPlatform/GenericPlatformProcess.h"
+//#include "Registry/ModContentRegistry.h"
 #include "Subsystem/ModSubsystem.h"
 #include "Subsystem/SubsystemActorManager.h"
-#include "Subsystem/ApTrapSubsystem.h"
+//#include "Subsystem/ApTrapSubsystem.h"
 #include "Configuration/ModConfiguration.h"
 #include "Configuration/ConfigProperty.h"
 #include "Configuration/Properties/ConfigPropertyInteger.h"
 #include "Configuration/Properties/ConfigPropertyBool.h"
 #include "Configuration/ConfigManager.h"
-#include "Engine/Engine.h"
+//#include "Engine/Engine.h"
 #include "Configuration/Properties/ConfigPropertySection.h"
 #include "Templates/SubclassOf.h"
 #include "FGChatManager.h"
-#include "Module/ModModule.h"
-#include "Reflection/ClassGenerator.h"
-#include "Buildables/FGBuildable.h"
-#include "Buildables/FGBuildableAutomatedWorkBench.h"
+//#include "Module/ModModule.h"
+//#include "Reflection/ClassGenerator.h"
+//#include "Buildables/FGBuildable.h"
+//#include "Buildables/FGBuildableAutomatedWorkBench.h"
 #include "Unlocks/FGUnlockInfoOnly.h"
 
 #include "ApConfigurationStruct.h"
@@ -54,19 +54,14 @@ public:
 	// Sets default values for this actor's properties
 	AApServerRandomizerSubsystem();
 
-	int currentItemIndex = 0;
-	UPROPERTY(SaveGame)
-	int lastProcessedItemIndex = 0;
-	int lastGamePhase = -1;
-
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;
 
 	// Begin IFGSaveInterface
-	virtual void PreSaveGame_Implementation(int32 saveVersion, int32 gameVersion) override {};
-	virtual void PostSaveGame_Implementation(int32 saveVersion, int32 gameVersion) override {};
+	virtual void PreSaveGame_Implementation(int32 saveVersion, int32 gameVersion) override;
+	virtual void PostSaveGame_Implementation(int32 saveVersion, int32 gameVersion) override;
 	virtual void PreLoadGame_Implementation(int32 saveVersion, int32 gameVersion) override {};
 	virtual void PostLoadGame_Implementation(int32 saveVersion, int32 gameVersion) override;
 	virtual void GatherDependencies_Implementation(TArray<UObject*>& out_dependentObjects) override {};
@@ -79,13 +74,29 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Schematic", DisplayName = "Get Ap Server Side Randomizer Subsystem", Meta = (DefaultToSelf = "worldContext"))
 	static AApServerRandomizerSubsystem* Get(UObject* worldContext);
 
-	UFUNCTION(BlueprintCallable)
 	void DispatchLifecycleEvent(ELifecyclePhase phase, TArray<TSubclassOf<UFGSchematic>> apHardcodedSchematics);
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FORCEINLINE bool IsInitialized() const { return areRecipiesAndSchematicsInitialized; };
 
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	FORCEINLINE const FApSlotData& GetSlotData() const { return slotData; };
+
 private:
+	UPROPERTY(SaveGame)
+	int lastProcessedItemIndex = 0;
+
+	UPROPERTY(SaveGame)
+	TArray<FApNetworkItem> scoutedLocations;
+
+	UPROPERTY(SaveGame)
+	FApSlotData slotData;
+
+	UPROPERTY(SaveGame)
+	TArray<FApSaveableHubLayout> saveSlotDataHubLayout;
+
+	int currentItemIndex = 0;
+	int lastGamePhase = -1;
 
 	AFGSchematicManager* SManager;
 	AFGResearchManager* RManager;
@@ -113,8 +124,8 @@ private:
 	TMap<int64, TSubclassOf<class UFGSchematic>> ItemSchematics;
 	//TArray<TSubclassOf<class UFGSchematic>> inventorySlotRecipes;
 
-	std::atomic_bool hasScoutedLocations;
-	std::atomic_bool areScoutedLocationsReadyToParse;
+	//std::atomic_bool hasScoutedLocations;
+	//std::atomic_bool areScoutedLocationsReadyToParse;
 	std::atomic_bool areRecipiesAndSchematicsInitialized;
 	std::atomic_bool hasLoadedRoomInfo;
 

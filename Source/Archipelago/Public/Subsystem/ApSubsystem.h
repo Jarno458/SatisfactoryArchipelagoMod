@@ -11,12 +11,12 @@
 #include "CoreMinimal.h"
 #include "Templates/Function.h"
 
-#include "FGSchematicManager.h"
-#include "FGResearchManager.h"
-#include "FGGamePhaseManager.h"
+//#include "FGSchematicManager.h"
+//#include "FGResearchManager.h"
+//#include "FGGamePhaseManager.h"
 #include "FGPlayerController.h"
 #include "FGCharacterPlayer.h"
-#include "FGWorkBench.h"
+//#include "FGWorkBench.h"
 
 #include "GenericPlatform/GenericPlatformProcess.h"
 #include "Registry/ModContentRegistry.h"
@@ -24,30 +24,31 @@
 #include "Subsystem/SubsystemActorManager.h"
 #include "Subsystem/ApTrapSubsystem.h"
 #include "Configuration/ModConfiguration.h"
-#include "Configuration/ConfigProperty.h"
-#include "Configuration/Properties/ConfigPropertyInteger.h"
-#include "Configuration/Properties/ConfigPropertyBool.h"
+//#include "Configuration/ConfigProperty.h"
+//#include "Configuration/Properties/ConfigPropertyInteger.h"
+//#include "Configuration/Properties/ConfigPropertyBool.h"
 #include "Configuration/ConfigManager.h"
-#include "Engine/Engine.h"
-#include "Configuration/Properties/ConfigPropertySection.h"
+//#include "Engine/Engine.h"
+//#include "Configuration/Properties/ConfigPropertySection.h"
 #include "Templates/SubclassOf.h"
 #include "Module/ModModule.h"
-#include "Reflection/ClassGenerator.h"
-#include "Buildables/FGBuildable.h"
-#include "Buildables/FGBuildableAutomatedWorkBench.h"
-#include "Unlocks/FGUnlockInfoOnly.h"
-#include "FGUnlockSubsystem.h"
+//#include "Reflection/ClassGenerator.h"
+//#include "Buildables/FGBuildable.h"
+//#include "Buildables/FGBuildableAutomatedWorkBench.h"
+//#include "Unlocks/FGUnlockInfoOnly.h"
+//#include "FGUnlockSubsystem.h"
 
 #include "ApConfigurationStruct.h"
 #include "Data/ApSlotData.h"
 #include "Data/ApTypes.h"
-#include "Subsystem/ApPortalSubsystem.h"
-#include "Subsystem/ApMappingsSubsystem.h"
+#include "Subsystem/ApConnectionInfoSubsystem.h"
+//#include "Subsystem/ApPortalSubsystem.h"
+//#include "Subsystem/ApMappingsSubsystem.h"
 #include "Subsystem/ApMessagingSubsystem.h"
 
-#include "CLSchematicBPFLib.h"
-#include "BPFContentLib.h"
-#include "Configuration/FreeSamplesConfigurationStruct.h"
+//#include "CLSchematicBPFLib.h"
+//#include "BPFContentLib.h"
+//#include "Configuration/FreeSamplesConfigurationStruct.h"
 
 #include "Archipelago.h"
 #include "Archipelago_Satisfactory.h"
@@ -55,14 +56,6 @@
 DECLARE_LOG_CATEGORY_EXTERN(LogApSubsystem, Log, All);
 
 #include "ApSubsystem.generated.h"
-
-UENUM(BlueprintType)
-enum class EApConnectionState : uint8 {
-	NotYetAttempted UMETA(DisplayName = "Not Yet Attempted"),
-	Connecting UMETA(DisplayName = "Connecting"),
-	Connected UMETA(DisplayName = "Connection Successful"),
-	ConnectionFailed UMETA(DisplayName = "Connection Failed")
-};
 
 UCLASS()
 class ARCHIPELAGO_API AApSubsystem : public AModSubsystem, public IFGSaveInterface
@@ -80,8 +73,8 @@ protected:
 	virtual void EndPlay(const EEndPlayReason::Type endPlayReason) override;
 
 	// Begin IFGSaveInterface
-	virtual void PreSaveGame_Implementation(int32 saveVersion, int32 gameVersion) override;
-	virtual void PostSaveGame_Implementation(int32 saveVersion, int32 gameVersion) override;
+	virtual void PreSaveGame_Implementation(int32 saveVersion, int32 gameVersion) override {};
+	virtual void PostSaveGame_Implementation(int32 saveVersion, int32 gameVersion) override {};
 	virtual void PreLoadGame_Implementation(int32 saveVersion, int32 gameVersion) override {};
 	virtual void PostLoadGame_Implementation(int32 saveVersion, int32 gameVersion) override;
 	virtual void GatherDependencies_Implementation(TArray<UObject*>& out_dependentObjects) override {};
@@ -102,7 +95,7 @@ public:
 	void MonitorDataStoreValue(FString keyFString, AP_DataType dataType, FString defaultValueFString, TFunction<void(AP_SetReply)> callback);
 	void ModdifyEnergyLink(long amount, FString defaultValueFString);
 
-	UFUNCTION(BlueprintCallable, BlueprintPure)
+	/*UFUNCTION(BlueprintCallable, BlueprintPure)
 	FORCEINLINE EApConnectionState GetConnectionState() const { return ConnectionState; };
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
@@ -121,7 +114,7 @@ public:
 	FApConfigurationStruct GetConfig() const { return config; };
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	FString GetRoomSeed() const { return roomSeed; };
+	FString GetRoomSeed() const { return roomSeed; };*/
 
 	//UFUNCTION(BlueprintCallable, BlueprintPure)
 	//FORCEINLINE bool IsInitialized() const { return areRecipiesAndSchematicsInitialized; };
@@ -154,18 +147,21 @@ public:
 private:
 	static AApSubsystem* callbackTarget;
 
-	EApConnectionState ConnectionState;
-	UPROPERTY(BlueprintReadOnly)
-	FText ConnectionStateDescription;
+	AApConnectionInfoSubsystem* connectionInfoSubsystem;
 
-	UPROPERTY(BlueprintReadOnly, SaveGame)
-	int currentPlayerTeam = 0;
+	//EApConnectionState ConnectionState;
+	//UPROPERTY(BlueprintReadOnly)
+	//FText ConnectionStateDescription;
 
-	UPROPERTY(BlueprintReadOnly, SaveGame)
-	int currentPlayerSlot = 0;
+	//UPROPERTY(BlueprintReadOnly, SaveGame)
+	//int currentPlayerTeam = 0;
+
+	//UPROPERTY(BlueprintReadOnly, SaveGame)
+	//int currentPlayerSlot = 0;
+
+	TSharedRef<TPromise<const TMap<int64, const FApNetworkItem>>> location_scouting_promise;
 
 	TMap<FString, TFunction<void(AP_SetReply)>> dataStoreCallbacks;
-
 	TArray<TFunction<void(int64, bool)>> itemReceivedCallbacks;
 	TArray<TFunction<void(int64)>> locationCheckedCallbacks;
 
@@ -184,6 +180,7 @@ private:
 	AFGUnlockSubsystem* unlockSubsystem;
 
 	UContentLibSubsystem* contentLibSubsystem;
+	UContentLibSubsystem* contentLibSubsystem;
 	UModContentRegistry* contentRegistry;
 
 	AApPortalSubsystem* portalSubsystem;
@@ -192,16 +189,15 @@ private:
 
 	AFGCharacterPlayer* currentPlayer;*/
 
-	UPROPERTY(SaveGame)
-	FString roomSeed;
+	//UPROPERTY(SaveGame)
+	//FString roomSeed;
+	//UPROPERTY(SaveGame)
+	//FApSlotData slotData;
+	//UPROPERTY(SaveGame)
+	//TArray<FApSaveableHubLayout> saveSlotDataHubLayout;
 
-	UPROPERTY(SaveGame)
-	FApSlotData slotData;
-	UPROPERTY(SaveGame)
-	TArray<FApSaveableHubLayout> saveSlotDataHubLayout;
-
-	UPROPERTY(SaveGame)
-	TArray<FApNetworkItem> scoutedLocations;
+	//UPROPERTY(SaveGame)
+	//TArray<FApNetworkItem> scoutedLocations;
 
 	//int currentItemIndex = 0;
 	//UPROPERTY(SaveGame)
@@ -218,7 +214,7 @@ private:
 	//TMap<int64, TSubclassOf<class UFGSchematic>> ItemSchematics;
 	//TArray<TSubclassOf<class UFGSchematic>> inventorySlotRecipes;
 	TQueue<TTuple<int64, bool>> ReceivedItems;
-	//TQueue<int64> CheckedLocations;
+	TQueue<int64> CheckedLocations;
 	TQueue<TPair<FString, FLinearColor>> ChatMessageQueue;
 
 	//UTexture2D* collectedIcon = LoadObject<UTexture2D>(nullptr, TEXT("/Archipelago/Assets/SourceArt/ArchipelagoAssetPack/AP-Black.AP-Black"));

@@ -4,25 +4,25 @@
 
 #include "FGSchematicManager.h"
 #include "FGResearchManager.h"
-#include "FGGamePhaseManager.h"
-#include "FGPlayerController.h"
-#include "FGCharacterPlayer.h"
+//#include "FGGamePhaseManager.h"
+//#include "FGPlayerController.h"
+//#include "FGCharacterPlayer.h"
 
-#include "GenericPlatform/GenericPlatformProcess.h"
+//#include "GenericPlatform/GenericPlatformProcess.h"
 #include "Registry/ModContentRegistry.h"
 #include "Subsystem/ModSubsystem.h"
 #include "Subsystem/SubsystemActorManager.h"
-#include "Subsystem/ApTrapSubsystem.h"
-#include "Configuration/ModConfiguration.h"
-#include "Configuration/ConfigProperty.h"
-#include "Configuration/Properties/ConfigPropertyInteger.h"
-#include "Configuration/Properties/ConfigPropertyBool.h"
-#include "Configuration/ConfigManager.h"
-#include "Engine/Engine.h"
-#include "Configuration/Properties/ConfigPropertySection.h"
+//#include "Subsystem/ApTrapSubsystem.h"
+//#include "Configuration/ModConfiguration.h"
+//#include "Configuration/ConfigProperty.h"
+//#include "Configuration/Properties/ConfigPropertyInteger.h"
+//#include "Configuration/Properties/ConfigPropertyBool.h"
+//#include "Configuration/ConfigManager.h"
+//#include "Engine/Engine.h"
+//#include "Configuration/Properties/ConfigPropertySection.h"
 #include "Templates/SubclassOf.h"
-#include "FGChatManager.h"
-#include "Module/ModModule.h"
+//#include "FGChatManager.h"
+//#include "Module/ModModule.h"
 #include "Reflection/ClassGenerator.h"
 #include "Buildables/FGBuildable.h"
 #include "Buildables/FGBuildableAutomatedWorkBench.h"
@@ -36,7 +36,7 @@
 
 #include "CLSchematicBPFLib.h"
 #include "BPFContentLib.h"
-#include "Configuration/FreeSamplesConfigurationStruct.h"
+//#include "Configuration/FreeSamplesConfigurationStruct.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(LogApSchematicPatcherSubsystem, Log, All);
 
@@ -87,7 +87,7 @@ public:
 	void InitializaSchematicForItem(TSubclassOf<UFGSchematic> factorySchematic, FApNetworkItem item, bool updateSchemaName);
 
 private:
-	UPROPERTY(Replicated)
+	//UPROPERTY(Replicated)
 	TSet<int64> collectedLocations;
 
 	//AFGSchematicManager* SManager;
