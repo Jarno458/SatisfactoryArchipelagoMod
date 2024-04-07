@@ -1,6 +1,9 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "FGSaveInterface.h"
+#include "Subsystem/ModSubsystem.h"
+#include "Subsystem/SubsystemActorManager.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(LogApConnectionInfoSubsystem, Log, All);
 
@@ -15,10 +18,20 @@ enum class EApConnectionState : uint8 {
 };
 
 UCLASS()
-class ARCHIPELAGO_API AApConnectionInfoSubsystem : public AModSubsystem
+class ARCHIPELAGO_API AApConnectionInfoSubsystem : public AModSubsystem, public IFGSaveInterface
 {
 	GENERATED_BODY()
 
+	// Begin IFGSaveInterface
+	virtual void PreSaveGame_Implementation(int32 saveVersion, int32 gameVersion) override {};
+	virtual void PostSaveGame_Implementation(int32 saveVersion, int32 gameVersion) override {};
+	virtual void PreLoadGame_Implementation(int32 saveVersion, int32 gameVersion) override {};
+	virtual void PostLoadGame_Implementation(int32 saveVersion, int32 gameVersion) override {};
+	virtual void GatherDependencies_Implementation(TArray<UObject*>& out_dependentObjects) override {};
+	virtual bool NeedTransform_Implementation() override { return false; };
+	virtual bool ShouldSave_Implementation() const override { return true; };
+	// End IFSaveInterface
+	
 public:
 	// Sets default values for this actor's properties
 	AApConnectionInfoSubsystem();
@@ -58,9 +71,9 @@ private:
 	int currentPlayerTeam = 0;
 	UPROPERTY(Replicated)
 	int currentPlayerSlot = 0;
-	UPROPERTY(SaveGame, Replicated)
+	UPROPERTY(SaveGame)
 	FString roomSeed;
-	UPROPERTY(SaveGame, Replicated)
+	UPROPERTY(SaveGame)
 	FString slotDataJson;
 
 public:

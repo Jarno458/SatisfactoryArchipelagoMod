@@ -75,6 +75,10 @@ void AApSchematicPatcherSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase)
 		fgcheck(contentRegistry)
 		ap = AApSubsystem::Get(world);
 		fgcheck(ap);
+		connectionInfo = AApConnectionInfoSubsystem::Get(world);
+		fgcheck(connectionInfo);
+		slotDataSubsystem = AApSlotDataSubsystem::Get(world);
+		fgcheck(slotDataSubsystem);
 		mappingSubsystem = AApMappingsSubsystem::Get(world);
 		fgcheck(mappingSubsystem)
 
@@ -98,7 +102,7 @@ void AApSchematicPatcherSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase)
 void AApSchematicPatcherSubsystem::Tick(float DeltaTime) {
 	Super::Tick(DeltaTime);
 
-	if (ap->GetConnectionState() != EApConnectionState::Connected)
+	if (connectionInfo->GetConnectionState() != EApConnectionState::Connected)
 		return;
 
 	//HandleCheckedLocations();
@@ -143,7 +147,7 @@ void AApSchematicPatcherSubsystem::InitializaHubSchematic(FString name, TSubclas
 	schematic.Tier = tier;
 	schematic.MenuPriority = items[0].location;
 	schematic.VisualKit = "Kit_AP_Logo";
-	schematic.Cost = ap->GetSlotData().hubLayout[tier - 1][milestone - 1];
+	schematic.Cost = slotDataSubsystem->GetSlotData().hubLayout[tier - 1][milestone - 1];
 
 	for (auto& item : items)
 		schematic.InfoCards.Add(CreateUnlockInfoOnly(item));
@@ -206,7 +210,7 @@ FContentLib_UnlockInfoOnly AApSchematicPatcherSubsystem::CreateUnlockInfoOnly(FA
 
 	FContentLib_UnlockInfoOnly infoCard;
 
-	if (item.player == ap->GetCurrentPlayerSlot()) {
+	if (item.player == connectionInfo->GetCurrentPlayerSlot()) {
 		Args.Add(TEXT("ApPlayerName"), LOCTEXT("NetworkItemDescriptionYourOwnName", "your"));
 
 		infoCard.mUnlockName = FText::FromString(item.itemName);
@@ -422,7 +426,7 @@ bool AApSchematicPatcherSubsystem::IsCollected(UFGUnlock* unlock) {
 }
 
 void AApSchematicPatcherSubsystem::Collect(UFGSchematic* schematic, int unlockIndex, FApNetworkItem& networkItem) {
-	Collect(schematic->mUnlocks[index], networkItem);
+	Collect(schematic->mUnlocks[unlockIndex], networkItem);
 }
 
 void AApSchematicPatcherSubsystem::Collect(UFGUnlock* unlock, FApNetworkItem& networkItem) {
@@ -434,7 +438,7 @@ void AApSchematicPatcherSubsystem::Collect(UFGUnlock* unlock, FApNetworkItem& ne
 
 		unlockInfo->mUnlockIconSmall = collectedIcon;
 
-		if (networkItem.player != ap->GetCurrentPlayerSlot()) {
+		if (networkItem.player != connectionInfo->GetCurrentPlayerSlot()) {
 			unlockInfo->mUnlockName = FText::Format(LOCTEXT("Collected", "Collected: {0}"), unlockInfo->mUnlockName);
 			unlockInfo->mUnlockIconBig = collectedIcon;
 		}

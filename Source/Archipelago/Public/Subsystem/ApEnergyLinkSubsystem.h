@@ -9,6 +9,8 @@
 #include "Buildables/FGBuildablePowerStorage.h"
 
 #include "Subsystem/ApSubsystem.h"
+#include "Subsystem/ApServerRandomizerSubsystem.h"
+#include "Subsystem/ApSlotDataSubsystem.h"
 #include "Subsystem/ApConnectionInfoSubsystem.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(LogApEnergyLink, Log, All);
@@ -47,8 +49,10 @@ private:
 
 	TArray<AFGBuildablePowerStorage*> PowerStorages;
 
-	ApConnectionInfoSubsystem apConnectionInfo = nullptr
-	ApSubsystem* ap = nullptr;
+	AApSubsystem* ap;
+	AApServerRandomizerSubsystem* randomizerSubsystem;
+	AApSlotDataSubsystem* slotDataSubsystem;
+	AApConnectionInfoSubsystem* apConnectionInfo;
 
 	void EnergyLinkTick();
 	void SendEnergyToServer(long amount);

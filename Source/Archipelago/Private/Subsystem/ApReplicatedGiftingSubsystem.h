@@ -4,7 +4,9 @@
 
 #include "Subsystem/ModSubsystem.h"
 #include "Subsystem/ApSubsystem.h"
+#include "Subsystem/ApConnectionInfoSubsystem.h"
 #include "Subsystem/ApMappingsSubsystem.h"
+#include "Subsystem/ApPortalSubsystem.h"
 #include "ApUtils.h"
 
 #include "ApReplicatedGiftingSubsystem.generated.h"
@@ -37,6 +39,7 @@ public:
 
 private:
 	AApSubsystem* ap;
+	AApConnectionInfoSubsystem* connectionInfoSubsystem;
 	AApPortalSubsystem* portalSubsystem;
 	AApMappingsSubsystem* mappingSubsystem;
 

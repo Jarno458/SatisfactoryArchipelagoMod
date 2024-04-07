@@ -38,6 +38,7 @@ void AApServerGiftingSubsystem::BeginPlay() {
 		UWorld* world = GetWorld();
 
 		ap = AApSubsystem::Get(world);
+		connectionInfoSubsystem = AApConnectionInfoSubsystem::Get(world);
 		mappingSubsystem = AApMappingsSubsystem::Get(world);
 		portalSubSystem = AApPortalSubsystem::Get(world);
 		replicatedGiftingSubsystem = AApReplicatedGiftingSubsystem::Get(world);
@@ -48,7 +49,7 @@ void AApServerGiftingSubsystem::Tick(float dt) {
 	Super::Tick(dt);
 
 	if (!apInitialized) {
-		if (ap->ConnectionState == EApConnectionState::Connected 
+		if (connectionInfoSubsystem->GetConnectionState() == EApConnectionState::Connected
 			&& mappingSubsystem->HasLoadedItemTraits()
 			&& mappingSubsystem->HasLoadedItemNameMappings()
 			&& portalSubSystem->IsInitialized())
@@ -59,7 +60,7 @@ void AApServerGiftingSubsystem::Tick(float dt) {
 
 			SetActorTickInterval(pollInterfall);
 
-			FString giftboxKey = FString::Format(TEXT("GiftBox;{0};{1}"), { ap->currentPlayerTeam, ap->currentPlayerSlot });
+			FString giftboxKey = FString::Format(TEXT("GiftBox;{0};{1}"), { connectionInfoSubsystem->GetCurrentPlayerTeam(), connectionInfoSubsystem->GetCurrentPlayerSlot()});
 			ap->MonitorDataStoreValue(giftboxKey, [this]() { PullAllGiftsAsync(); });
 		} else {
 			return;

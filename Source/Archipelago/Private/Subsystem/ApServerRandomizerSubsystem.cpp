@@ -54,6 +54,10 @@ void AApServerRandomizerSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase,
 		fgcheck(contentRegistry)
 		ap = AApSubsystem::Get(world);
 		fgcheck(ap);
+		connectionInfo = AApConnectionInfoSubsystem::Get(world);
+		fgcheck(connectionInfo);
+		slotDataSubsystem = AApSlotDataSubsystem::Get(world);
+		fgcheck(slotDataSubsystem);
 		schematicPatcher = AApSchematicPatcherSubsystem::Get(world);
 		fgcheck(schematicPatcher);
 		mappingSubsystem = AApMappingsSubsystem::Get(world);
@@ -78,7 +82,7 @@ void AApServerRandomizerSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase,
 	else if (phase == ELifecyclePhase::POST_INITIALIZATION) {
 		SetActorTickEnabled(true);
 
-		if (ap->GetConnectionState() == EApConnectionState::Connected) {
+		if (connectionInfo->GetConnectionState() == EApConnectionState::Connected) {
 			TArray<TSubclassOf<UFGSchematic>> unlockedSchematics;
 
 			SManager->GetAllPurchasedSchematics(unlockedSchematics);
@@ -90,10 +94,13 @@ void AApServerRandomizerSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase,
 }
 
 bool AApServerRandomizerSubsystem::InitializeTick() {
-	EApConnectionState connectionState = ap->GetConnectionState();
+	EApConnectionState connectionState = connectionInfo->GetConnectionState();
 
 	if (connectionState == EApConnectionState::Connected) {
-		if (scoutedLocations.Num() == 0 && ap->GetSlotData().hasLoadedSlotData)
+		if (!slotDataSubsystem->GetSlotData().hasLoadedSlotData)
+			slotDataSubsystem->SetSlotDataJson(connectionInfo->GetSlotDataJson());
+
+		if (scoutedLocations.Num() == 0 && slotDataSubsystem->GetSlotData().hasLoadedSlotData)
 			ScoutArchipelagoItems();
 
 		if (!mappingSubsystem->HasLoadedItemNameMappings())
@@ -102,7 +109,7 @@ bool AApServerRandomizerSubsystem::InitializeTick() {
 
 	if (!areRecipiesAndSchematicsInitialized
 		&& scoutedLocations.Num() > 0
-		&& ap->GetSlotData().hasLoadedSlotData
+		&& slotDataSubsystem->GetSlotData().hasLoadedSlotData
 		&& mappingSubsystem->HasLoadedItemNameMappings()) {
 
 		ParseScoutedItemsAndCreateRecipiesAndSchematics();
@@ -128,7 +135,7 @@ void AApServerRandomizerSubsystem::ScoutArchipelagoItems() {
 
 	int64 hubBaseId = 1338000;
 
-	const FApSlotData slotData = ap->GetSlotData();
+	const FApSlotData slotData = slotDataSubsystem->GetSlotData();
 
 	for (int tier = 1; tier <= slotData.hubLayout.Num(); tier++) {
 		for (int milestone = 1; milestone <= maxMilestones; milestone++) {
@@ -149,10 +156,12 @@ void AApServerRandomizerSubsystem::ScoutArchipelagoItems() {
 	for (int l = 1338700; l <= 1338709; l++)
 		locations.Add(l);
 
-	//TODO Scout locations
-	scoutedLocations = ap->ScoutLocation(locations);
+	const TMap<int64, const FApNetworkItem> scoutResults = ap->ScoutLocation(locations);
 
-	hasScoutedLocations = true;
+	scoutedLocations.Empty();
+	for (const TPair<int64, const FApNetworkItem> scoutResult : scoutResults) {
+		scoutedLocations.Add(scoutResult.Value);
+	}
 }
 
 void AApServerRandomizerSubsystem::ParseScoutedItemsAndCreateRecipiesAndSchematics() {
@@ -168,10 +177,10 @@ void AApServerRandomizerSubsystem::ParseScoutedItemsAndCreateRecipiesAndSchemati
 		}
 	}
 
-	for (FApNetworkItem& location : scoutedLocations) {
+	for (const FApNetworkItem& location : scoutedLocations) {
 		if (location.locationName.StartsWith("Hub")) {
 			FString milestone = location.locationName.Left(location.locationName.Find(","));
-			FString uniqueMilestone = milestone + TEXT("_") + ap->GetRoomSeed();
+			FString uniqueMilestone = milestone + TEXT("_") + connectionInfo->GetRoomSeed();
 
 			if (!schematicsPerMilestone.Contains(milestone)) {
 				TTuple<bool, TSubclassOf<UFGSchematic>> schematic = UApUtils::FindOrCreateClass(TEXT("/Archipelago/"), *uniqueMilestone, UFGSchematic::StaticClass());
@@ -263,7 +272,7 @@ void AApServerRandomizerSubsystem::Tick(float DeltaTime) {
 	if (portalSubsystem->IsInitialized())
 		ProcessReceivedItems();
 
-	if (ap->GetConnectionState() != EApConnectionState::Connected)
+	if (connectionInfo->GetConnectionState() != EApConnectionState::Connected)
 		return;
 
 	HandleCheckedLocations();
@@ -283,7 +292,7 @@ void AApServerRandomizerSubsystem::ReceiveItem(int64 itemid, bool isFromServer) 
 void AApServerRandomizerSubsystem::ProcessReceivedItems() {
 	TTuple<int64, bool> item;
 	while (ReceivedItems.Dequeue(item)) {
-		if (ap->GetConnectionState() == EApConnectionState::Connected && ++currentItemIndex < lastProcessedItemIndex)
+		if (connectionInfo->GetConnectionState() == EApConnectionState::Connected && ++currentItemIndex < lastProcessedItemIndex)
 			continue;
 
 		AwardItem(item.Key, item.Value);
@@ -305,7 +314,7 @@ bool AApServerRandomizerSubsystem::UpdateFreeSamplesConfiguration() {
 		return false;
 	}
 
-	const FApSlotData slotData = ap->GetSlotData();
+	const FApSlotData slotData = slotDataSubsystem->GetSlotData();
 
 	if (configRoot->SectionProperties.Contains("Equipment")) {
 		UConfigPropertySection* EquipmentSection = Cast<UConfigPropertySection>(configRoot->SectionProperties["Equipment"]);
@@ -442,25 +451,25 @@ void AApServerRandomizerSubsystem::OnSchematicCompleted(TSubclassOf<class UFGSch
 	UE_LOG(LogApServerRandomizerSubsystem, Display, TEXT("AApSubSystem::OnSchematicCompleted(schematic)"));
 
 	ESchematicType type = UFGSchematic::GetType(schematic);
-	TSet<FApNetworkItem&> itemsToUnlock;
+	TSet<FApNetworkItem*> itemsToUnlock;
 
 	switch (type) {
 	case ESchematicType::EST_Milestone:
 		if (locationsPerMilestone.Contains(schematic)) {
 			for (FApNetworkItem& location : locationsPerMilestone[schematic])
-				itemsToUnlock.Add(location);
+				itemsToUnlock.Add(&location);
 				//unlockedChecks.Add(location.location);
 		}
 		break;
 	case ESchematicType::EST_MAM:
 		if (locationPerMamNode.Contains(schematic))
 			//unlockedChecks.Add(locationPerMamNode[schematic].location);
-			itemsToUnlock.Add(locationPerMamNode[schematic]);
+			itemsToUnlock.Add(&locationPerMamNode[schematic]);
 		break;
 	case ESchematicType::EST_ResourceSink:
 		if (locationPerShopNode.Contains(schematic))
 			//unlockedChecks.Add(locationPerShopNode[schematic].location);
-			itemsToUnlock.Add(locationPerShopNode[schematic]);
+			itemsToUnlock.Add(&locationPerShopNode[schematic]);
 		break;
 	case ESchematicType::EST_Custom:
 		if (schematic == ItemSchematics[mappingSubsystem->GetAwesomeShopItemId()]
@@ -471,19 +480,19 @@ void AApServerRandomizerSubsystem::OnSchematicCompleted(TSubclassOf<class UFGSch
 		return;
 	}
 
-	if (ap->GetConnectionState() == EApConnectionState::Connected) {
+	if (connectionInfo->GetConnectionState() == EApConnectionState::Connected) {
 		TSet<int64> unlockedChecks;
 
-		for (FApNetworkItem& item : itemsToUnlock) {
-			unlockedChecks.Add(item.location);
+		for (const FApNetworkItem* item : itemsToUnlock) {
+			unlockedChecks.Add(item->location);
 		}
 
 		if (unlockedChecks.Num() > 0)
 			ap->CheckLocation(unlockedChecks);
 	}	else {
-		for (FApNetworkItem& item : itemsToUnlock) {
-			if (item.player == ap->GetCurrentPlayerSlot())
-				ReceivedItems.Enqueue(TTuple<int64, bool>(item.item, false));
+		for (const FApNetworkItem* item : itemsToUnlock) {
+			if (item->player == connectionInfo->GetCurrentPlayerSlot())
+				ReceivedItems.Enqueue(TTuple<int64, bool>(item->item, false));
 		}
 	}
 
@@ -542,7 +551,7 @@ void AApServerRandomizerSubsystem::OnAvaiableSchematicsChanged() {
 	TSet<int64> locationHintsToPublish;
 
 	int maxAvailableTechTier = ((int)phaseManager->GetGamePhase() + 1) * 2;
-	int currentPlayerSlot = ap->GetCurrentPlayerSlot();
+	int currentPlayerSlot = connectionInfo->GetCurrentPlayerSlot();
 
 	for (TPair<TSubclassOf<UFGSchematic>, TArray<FApNetworkItem>>& itemPerMilestone : locationsPerMilestone) {
 		if (UFGSchematic::GetTechTier(itemPerMilestone.Key) <= maxAvailableTechTier) {
@@ -709,44 +718,6 @@ void AApServerRandomizerSubsystem::PostLoadGame_Implementation(int32 saveVersion
 	if (!scoutedLocations.IsEmpty())
 		areScoutedLocationsReadyToParse = true;
 }*/
-
-void AApSubsystem::PreSaveGame_Implementation(int32 saveVersion, int32 gameVersion) {
-	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::PreSaveGame_Implementation(saveVersion: %i, gameVersion: %i)"), saveVersion, gameVersion);
-
-	for (int tier = 0; tier < slotData.hubLayout.Num(); tier++) {
-		for (int milestone = 0; milestone < slotData.hubLayout[tier].Num(); milestone++) {
-			FApSaveableHubLayout hubLayout;
-			hubLayout.tier = tier;
-			hubLayout.milestone = milestone;
-			hubLayout.costs = slotData.hubLayout[tier][milestone];
-
-			saveSlotDataHubLayout.Add(hubLayout);
-		}
-	}
-}
-
-void AApSubsystem::PostSaveGame_Implementation(int32 saveVersion, int32 gameVersion) {
-	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::PostSaveGame_Implementation(saveVersion: %i, gameVersion: %i)"), saveVersion, gameVersion);
-
-	saveSlotDataHubLayout.Empty();
-}
-
-//TODO fix is now fired when loading a fresh save
-void AApSubsystem::PostLoadGame_Implementation(int32 saveVersion, int32 gameVersion) {
-	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::PostLoadGame_Implementation(saveVersion: %i, gameVersion: %i)"), saveVersion, gameVersion);
-
-	if (!saveSlotDataHubLayout.IsEmpty() && slotData.numberOfChecksPerMilestone > 0) {
-		for (FApSaveableHubLayout hubLayout : saveSlotDataHubLayout) {
-			if ((slotData.hubLayout.Num() - 1) < hubLayout.tier)
-				slotData.hubLayout.Add(TArray<TMap<FString, int>>());
-
-			if ((slotData.hubLayout[hubLayout.tier].Num() - 1) < hubLayout.milestone)
-				slotData.hubLayout[hubLayout.tier].Add(hubLayout.costs);
-		}
-
-		slotData.hasLoadedSlotData = true;
-	}
-}
 
 AFGCharacterPlayer* AApServerRandomizerSubsystem::GetLocalPlayer() {
 	if (IsRunningDedicatedServer())

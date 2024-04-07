@@ -132,14 +132,14 @@ public:
 	void MarkGameAsDone();
 	void Say(FString message);
 
-	const FApNetworkItem ScoutLocation(int64 locationId) const;
-	const TMap<int64, const FApNetworkItem> ScoutLocation(const TSet<int64>& locationIds) const;
+	const FApNetworkItem ScoutLocation(int64 locationId);
+	const TMap<int64, const FApNetworkItem> ScoutLocation(const TSet<int64>& locationIds);
 
-	void CreateLocationHint(int64 locationId, bool spam = false) const;
-	void CreateLocationHint(const TSet<int64>& locationIds, bool spam = false) const;
+	void CreateLocationHint(int64 locationId, bool spam = false);
+	void CreateLocationHint(const TSet<int64>& locationIds, bool spam = false);
 
-	void CheckLocation(int64 locationId) const;
-	void CheckLocation(const TSet<int64>& locationIds) const;
+	void CheckLocation(int64 locationId);
+	void CheckLocation(const TSet<int64>& locationIds);
 
 	void SetItemReceivedCallback(TFunction<void(int64, bool)> onItemReceived);
 	void SetLocationCheckedCallback(TFunction<void(int64)> onLocationChecked);

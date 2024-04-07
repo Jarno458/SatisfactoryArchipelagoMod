@@ -7,6 +7,7 @@
 #include "FGGamePhaseManager.h"
 #include "FGPlayerController.h"
 #include "FGCharacterPlayer.h"
+#include "FGUnlockSubsystem.h"
 
 //#include "GenericPlatform/GenericPlatformProcess.h"
 //#include "Registry/ModContentRegistry.h"
@@ -34,8 +35,11 @@
 #include "Subsystem/ApPortalSubsystem.h"
 #include "Subsystem/ApMappingsSubsystem.h"
 #include "Subsystem/ApSchematicPatcherSubsystem.h"
-
+#include "Subsystem/ApConnectionInfoSubsystem.h"
+#include "Subsystem/ApSlotDataSubsystem.h"
 #include "Subsystem/ApSubsystem.h"
+
+#include "ApUtils.h"
 
 //#include "CLSchematicBPFLib.h"
 //#include "BPFContentLib.h"
@@ -60,10 +64,10 @@ protected:
 	virtual void Tick(float DeltaTime) override;
 
 	// Begin IFGSaveInterface
-	virtual void PreSaveGame_Implementation(int32 saveVersion, int32 gameVersion) override;
-	virtual void PostSaveGame_Implementation(int32 saveVersion, int32 gameVersion) override;
+	virtual void PreSaveGame_Implementation(int32 saveVersion, int32 gameVersion) override {};
+	virtual void PostSaveGame_Implementation(int32 saveVersion, int32 gameVersion) override {};
 	virtual void PreLoadGame_Implementation(int32 saveVersion, int32 gameVersion) override {};
-	virtual void PostLoadGame_Implementation(int32 saveVersion, int32 gameVersion) override;
+	virtual void PostLoadGame_Implementation(int32 saveVersion, int32 gameVersion) override {};
 	virtual void GatherDependencies_Implementation(TArray<UObject*>& out_dependentObjects) override {};
 	virtual bool NeedTransform_Implementation() override { return false; };
 	virtual bool ShouldSave_Implementation() const override { return true; };
@@ -79,21 +83,12 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FORCEINLINE bool IsInitialized() const { return areRecipiesAndSchematicsInitialized; };
 
-	UFUNCTION(BlueprintCallable, BlueprintPure)
-	FORCEINLINE const FApSlotData& GetSlotData() const { return slotData; };
-
 private:
 	UPROPERTY(SaveGame)
 	int lastProcessedItemIndex = 0;
 
 	UPROPERTY(SaveGame)
 	TArray<FApNetworkItem> scoutedLocations;
-
-	UPROPERTY(SaveGame)
-	FApSlotData slotData;
-
-	UPROPERTY(SaveGame)
-	TArray<FApSaveableHubLayout> saveSlotDataHubLayout;
 
 	int currentItemIndex = 0;
 	int lastGamePhase = -1;
@@ -107,6 +102,8 @@ private:
 	UModContentRegistry* contentRegistry;
 
 	AApSubsystem* ap;
+	AApConnectionInfoSubsystem* connectionInfo;
+	AApSlotDataSubsystem* slotDataSubsystem;
 	AApSchematicPatcherSubsystem* schematicPatcher;
 	AApPortalSubsystem* portalSubsystem;
 	AApMappingsSubsystem* mappingSubsystem;

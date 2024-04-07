@@ -37,8 +37,6 @@ void AApConnectionInfoSubsystem::GetLifetimeReplicatedProps(TArray<FLifetimeProp
 	DOREPLIFETIME(AApConnectionInfoSubsystem, ConnectionStateDescription);
 	DOREPLIFETIME(AApConnectionInfoSubsystem, currentPlayerTeam);
 	DOREPLIFETIME(AApConnectionInfoSubsystem, currentPlayerSlot);
-	DOREPLIFETIME(AApConnectionInfoSubsystem, roomSeed);
-	DOREPLIFETIME(AApConnectionInfoSubsystem, slotDataJson);
 }
 
 #pragma optimize("", on)

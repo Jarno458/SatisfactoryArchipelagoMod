@@ -715,7 +715,7 @@ void AApSubsystem::Say(FString message) {
 	AP_Say(TCHAR_TO_UTF8(*message));
 }
 
-const FApNetworkItem AApSubsystem::ScoutLocation(int64 locationId) const {
+const FApNetworkItem AApSubsystem::ScoutLocation(int64 locationId) {
 	TSet<int64> locationIds { locationId };
 
 	const TMap<int64, const FApNetworkItem> results = ScoutLocation(locationIds);
@@ -724,7 +724,7 @@ const FApNetworkItem AApSubsystem::ScoutLocation(int64 locationId) const {
 		return results[locationId];
 }
 
-const TMap<int64, const FApNetworkItem> AApSubsystem::ScoutLocation(const TSet<int64>& locationIds) const {
+const TMap<int64, const FApNetworkItem> AApSubsystem::ScoutLocation(const TSet<int64>& locationIds) {
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::ScoutLocation(set: %i)"), locationIds.Num());
 
 	std::set<int64> locationsToScout;
@@ -742,13 +742,13 @@ const TMap<int64, const FApNetworkItem> AApSubsystem::ScoutLocation(const TSet<i
 	return location_scouting_promise->GetFuture().Get();
 }
 
-void AApSubsystem::CreateLocationHint(int64 locationId, bool spam) const {
+void AApSubsystem::CreateLocationHint(int64 locationId, bool spam) {
 	TSet<int64> locationIds { locationId };
 
 	CreateLocationHint(locationIds, spam);
 }
 
-void AApSubsystem::CreateLocationHint(const TSet<int64>& locationIds, bool spam) const {
+void AApSubsystem::CreateLocationHint(const TSet<int64>& locationIds, bool spam) {
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::CreateLocationHint(set: %i, %s)"), locationIds.Num(), spam ? TEXT("true") : TEXT("false"));
 
 	std::set<int64> locationsToHint;
@@ -762,13 +762,13 @@ void AApSubsystem::CreateLocationHint(const TSet<int64>& locationIds, bool spam)
 	});
 }
 
-void AApSubsystem::CheckLocation(int64 locationId) const {
+void AApSubsystem::CheckLocation(int64 locationId) {
 	TSet<int64> locationIds { locationId };
 
 	CheckLocation(locationIds);
 }
 
-void AApSubsystem::CheckLocation(const TSet<int64>& locationIds) const {
+void AApSubsystem::CheckLocation(const TSet<int64>& locationIds) {
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::CheckLocation(set: %i)"), locationIds.Num());
 
 	std::set<int64> locationsToCheck;

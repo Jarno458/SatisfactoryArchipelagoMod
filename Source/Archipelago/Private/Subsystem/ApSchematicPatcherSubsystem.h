@@ -32,7 +32,11 @@
 #include "Data/ApSlotData.h"
 #include "Data/ApTypes.h"
 #include "Subsystem/ApSubsystem.h"
+#include "Subsystem/ApConnectionInfoSubsystem.h"
+#include "Subsystem/ApSlotDataSubsystem.h"
 #include "Subsystem/ApMappingsSubsystem.h"
+
+#include "ApUtils.h"
 
 #include "CLSchematicBPFLib.h"
 #include "BPFContentLib.h"
@@ -99,6 +103,8 @@ private:
 	UModContentRegistry* contentRegistry;
 
 	AApSubsystem* ap;
+	AApConnectionInfoSubsystem* connectionInfo;
+	AApSlotDataSubsystem* slotDataSubsystem;
 	//AApPortalSubsystem* portalSubsystem;
 	AApMappingsSubsystem* mappingSubsystem;
 	//AApTrapSubsystem* trapSubsystem;
@@ -136,7 +142,7 @@ private:
 
 	//void ReceiveItems();
 	//void AwardItem(int64 itemId, bool isFromServer);
-	/void HandleCheckedLocations();
+	void HandleCheckedLocations();
 	//AFGCharacterPlayer* GetLocalPlayer();
 	//bool IsCollected(UFGUnlock* unlock);
 	//void HandleDeathLink();

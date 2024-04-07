@@ -54,6 +54,7 @@ void AApReplicatedGiftingSubsystem::BeginPlay() {
 
 	if (HasAuthority()) {
 		ap = AApSubsystem::Get(world);
+		connectionInfoSubsystem = AApConnectionInfoSubsystem::Get(world);
 		portalSubsystem = AApPortalSubsystem::Get(world);
 	}
 }
@@ -64,7 +65,7 @@ void AApReplicatedGiftingSubsystem::Tick(float dt) {
 	if (!HasAuthority())
 		return;
 
-	if (ap->ConnectionState != EApConnectionState::Connected) {
+	if (connectionInfoSubsystem->GetConnectionState() != EApConnectionState::Connected) {
 		SetActorTickInterval(0.1f);
 
 		ServiceState = EApGiftingServiceState::Offline;
@@ -74,7 +75,7 @@ void AApReplicatedGiftingSubsystem::Tick(float dt) {
 			hasLoadedPlayers = true;
 		}
 
-		if (!mappingSubsystem->HasLoadedItemTraits() || !((AApPortalSubsystem*)portalSubsystem)->IsInitialized()) {
+		if (!mappingSubsystem->HasLoadedItemTraits() || !portalSubsystem->IsInitialized()) {
 			ServiceState = EApGiftingServiceState::Initializing;
 		} else {
 			SetActorTickEnabled(false);

@@ -4,6 +4,7 @@
 
 #include "Subsystem/ModSubsystem.h"
 #include "Subsystem/ApSubsystem.h"
+#include "Subsystem/ApConnectionInfoSubsystem.h"
 #include "Subsystem/ApPortalSubsystem.h"
 #include "Subsystem/ApMappingsSubsystem.h"
 #include "Subsystem/ApReplicatedGiftingSubsystem.h"
@@ -44,6 +45,7 @@ private:
 	TSet<FString> ProcessedIds;
 
 	AApSubsystem* ap;
+	AApConnectionInfoSubsystem* connectionInfoSubsystem;
 	AApPortalSubsystem* portalSubSystem;
 	AApMappingsSubsystem* mappingSubsystem;
 	AApReplicatedGiftingSubsystem* replicatedGiftingSubsystem;
