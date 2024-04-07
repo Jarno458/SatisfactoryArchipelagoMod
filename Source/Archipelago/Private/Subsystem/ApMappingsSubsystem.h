@@ -2,6 +2,8 @@
 
 #include "CoreMinimal.h"
 
+#include "FGSaveInterface.h"
+#include "FGResourceSinkSubsystem.h"
 #include "Subsystem/ModSubsystem.h"
 #include "Resources/FGItemDescriptor.h"
 #include "AssetRegistry/AssetRegistryModule.h"

@@ -74,14 +74,13 @@ protected:
 
 public:
 	static AApSchematicPatcherSubsystem* Get(class UWorld* world);
-	UFUNCTION(BlueprintPure, Category = "Schematic", DisplayName = "Get Ap Client Replicated Randomizer Subsystem", Meta = (DefaultToSelf = "worldContext"))
+	UFUNCTION(BlueprintPure, Category = "Schematic", DisplayName = "Get Ap Schematic Patcher Subsystem", Meta = (DefaultToSelf = "worldContext"))
 	static AApSchematicPatcherSubsystem* Get(UObject* worldContext);
 
 	void DispatchLifecycleEvent(ELifecyclePhase phase);
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FORCEINLINE bool IsInitialized() const { return isInitialized; };
-
 
 	FORCEINLINE bool IsCollected(int64 locationId) const { return collectedLocations.Contains(locationId); };
 	bool IsCollected(UFGUnlock* unlock); //TODO remove

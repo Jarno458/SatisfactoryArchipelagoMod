@@ -108,12 +108,12 @@ public:
 	FORCEINLINE int GetCurrentPlayerSlot() const { return currentPlayerSlot; };
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	FORCEINLINE FApSlotData GetSlotData() const { return slotData; };
+	FORCEINLINE FApSlotData GetSlotData() const { return slotData; };*/
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FApConfigurationStruct GetConfig() const { return config; };
 
-	UFUNCTION(BlueprintCallable, BlueprintPure)
+	/*UFUNCTION(BlueprintCallable, BlueprintPure)
 	FString GetRoomSeed() const { return roomSeed; };*/
 
 	//UFUNCTION(BlueprintCallable, BlueprintPure)

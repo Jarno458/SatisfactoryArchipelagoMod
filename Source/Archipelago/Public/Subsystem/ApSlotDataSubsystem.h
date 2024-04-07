@@ -31,7 +31,7 @@ public:
 public:
 	// Get subsystem. Server-side only, null on clients
 	static AApSlotDataSubsystem* Get(class UWorld* world);
-	UFUNCTION(BlueprintPure, Category = "Schematic", DisplayName = "Get Archipelago Connection Info Subsystem", Meta = (DefaultToSelf = "worldContext"))
+	UFUNCTION(BlueprintPure, Category = "Schematic", DisplayName = "Get Archipelago Slot Data Subsystem", Meta = (DefaultToSelf = "worldContext"))
 	static AApSlotDataSubsystem* Get(UObject* worldContext);
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
