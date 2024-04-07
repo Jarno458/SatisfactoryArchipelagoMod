@@ -56,12 +56,6 @@ void AApSubsystem::ConnectToArchipelago() {
 
 	//if (!slotData.hasLoadedSlotData)
 
-
-	connectionInfoSubsystem = AApConnectionInfoSubsystem::Get(GetWorld());
-
-	connectionInfoSubsystem->ConnectionState = EApConnectionState::Connecting;
-	connectionInfoSubsystem->ConnectionStateDescription = LOCTEXT("Connecting", "Connecting...");
-
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::Starting AP"));
 	AP_Start();
 }
@@ -96,6 +90,12 @@ void AApSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase) {
 			config = FApConfigurationStruct::GetActiveConfig(GetWorld());
 	}
 	else if (phase == ELifecyclePhase::INITIALIZATION) {
+		connectionInfoSubsystem = AApConnectionInfoSubsystem::Get(GetWorld());
+		fgcheck(connectionInfoSubsystem);
+
+		connectionInfoSubsystem->ConnectionState = EApConnectionState::Connecting;
+		connectionInfoSubsystem->ConnectionStateDescription = LOCTEXT("Connecting", "Connecting...");
+
 		UE_LOG(LogApSubsystem, Display, TEXT("Initiating Archipelago server connection in background..."));
 		bool dummy = CallOnGameThread<bool>([this]() {
 			ConnectToArchipelago();

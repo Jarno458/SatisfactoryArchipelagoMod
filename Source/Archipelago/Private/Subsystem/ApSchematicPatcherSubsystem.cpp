@@ -153,6 +153,8 @@ void AApSchematicPatcherSubsystem::InitializaHubSchematic(FString name, TSubclas
 	schematic.Tier = tier;
 	schematic.MenuPriority = items[0].location;
 	schematic.VisualKit = "Kit_AP_Logo";
+
+	//TODO slot data unavailble
 	schematic.Cost = slotDataSubsystem->GetSlotData().hubLayout[tier - 1][milestone - 1];
 
 	for (auto& item : items)
