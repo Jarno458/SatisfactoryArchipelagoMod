@@ -27,6 +27,12 @@ AApSchematicPatcherSubsystem* AApSchematicPatcherSubsystem::Get(class UWorld* wo
 	return SubsystemActorManager->GetSubsystemActor<AApSchematicPatcherSubsystem>();
 }
 
+void AApSchematicPatcherSubsystem::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const {
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	//TODO Replication
+}
+
 void AApSchematicPatcherSubsystem::BeginPlay() {
 	UE_LOG(LogApSchematicPatcherSubsystem, Display, TEXT("AApSchematicPatcherSubsystem::BeginPlay()"));
 

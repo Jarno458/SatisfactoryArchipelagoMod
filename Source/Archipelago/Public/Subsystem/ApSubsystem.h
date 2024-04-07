@@ -132,8 +132,8 @@ public:
 	void MarkGameAsDone();
 	void Say(FString message);
 
-	const FApNetworkItem ScoutLocation(int64 locationId);
-	const TMap<int64, const FApNetworkItem> ScoutLocation(const TSet<int64>& locationIds);
+	FApNetworkItem ScoutLocation(int64 locationId);
+	TMap<int64, FApNetworkItem> ScoutLocation(const TSet<int64>& locationIds);
 
 	void CreateLocationHint(int64 locationId, bool spam = false);
 	void CreateLocationHint(const TSet<int64>& locationIds, bool spam = false);
@@ -159,7 +159,7 @@ private:
 	//UPROPERTY(BlueprintReadOnly, SaveGame)
 	//int currentPlayerSlot = 0;
 
-	TSharedRef<TPromise<const TMap<int64, const FApNetworkItem>>> location_scouting_promise;
+	TSharedRef<TPromise<TMap<int64, FApNetworkItem>>> location_scouting_promise;
 
 	TMap<FString, TFunction<void(AP_SetReply)>> dataStoreCallbacks;
 	TArray<TFunction<void(int64, bool)>> itemReceivedCallbacks;
@@ -245,7 +245,7 @@ private:
 	void ProcessCheckedLocations();
 
 	//void HandleCheckedLocations();
-	AFGCharacterPlayer* GetLocalPlayer();
+	//AFGCharacterPlayer* GetLocalPlayer();
 	//bool IsCollected(UFGUnlock* unlock);
 	//void Collect(UFGUnlock* unlock, FApNetworkItem& networkItem);
 	void HandleDeathLink();

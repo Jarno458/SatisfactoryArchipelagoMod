@@ -193,7 +193,7 @@ void AApSubsystem::SetReplyCallback(AP_SetReply setReply) {
 void AApSubsystem::LocationScoutedCallback(std::vector<AP_NetworkItem> scoutedLocations) {
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::LocationScoutedCallback(vector[%i])"), scoutedLocations.size());
 
-	TMap<int64, const FApNetworkItem> scoutedLocationsResult = TMap<int64, const FApNetworkItem>();
+	TMap<int64, FApNetworkItem> scoutedLocationsResult = TMap<int64, FApNetworkItem>();
 
 	for (AP_NetworkItem apLocation : scoutedLocations) {
 		FApNetworkItem location;
@@ -340,7 +340,11 @@ void AApSubsystem::HandleDeathLink() {
 	if (IsRunningDedicatedServer())
 		return; // TODO make deathlink work for dedicated servers
 
-	AFGCharacterPlayer* player = callbackTarget->GetLocalPlayer();
+	AFGPlayerController* playerController = UFGBlueprintFunctionLibrary::GetLocalPlayerController(GetWorld());
+	if (playerController == nullptr)
+		return;
+
+	AFGCharacterPlayer* player = Cast<AFGCharacterPlayer>(playerController->GetControlledCharacter());
 	if (player == nullptr)
 		return;
 
@@ -366,6 +370,15 @@ void AApSubsystem::HandleInstagib(AFGCharacterPlayer* player) {
 		player->TakeDamage(1333337, instagibDamageEvent, player->GetFGPlayerController(), player);
 	}
 }
+
+void AApSubsystem::SetItemReceivedCallback(TFunction<void(int64, bool)> onItemReceived){
+	itemReceivedCallbacks.Add(onItemReceived);
+}
+
+void AApSubsystem::SetLocationCheckedCallback(TFunction<void(int64)> onLocationChecked) {
+	locationCheckedCallbacks.Add(onLocationChecked);
+}
+
 
 void AApSubsystem::ProcessReceivedItems() {
 	TTuple<int64, bool> item;
@@ -715,16 +728,18 @@ void AApSubsystem::Say(FString message) {
 	AP_Say(TCHAR_TO_UTF8(*message));
 }
 
-const FApNetworkItem AApSubsystem::ScoutLocation(int64 locationId) {
+FApNetworkItem AApSubsystem::ScoutLocation(int64 locationId) {
 	TSet<int64> locationIds { locationId };
 
-	const TMap<int64, const FApNetworkItem> results = ScoutLocation(locationIds);
+	TMap<int64, FApNetworkItem> results = ScoutLocation(locationIds);
 
 	if (results.Contains(locationId))
 		return results[locationId];
+
+	return FApNetworkItem();
 }
 
-const TMap<int64, const FApNetworkItem> AApSubsystem::ScoutLocation(const TSet<int64>& locationIds) {
+TMap<int64, FApNetworkItem> AApSubsystem::ScoutLocation(const TSet<int64>& locationIds) {
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::ScoutLocation(set: %i)"), locationIds.Num());
 
 	std::set<int64> locationsToScout;
@@ -733,7 +748,7 @@ const TMap<int64, const FApNetworkItem> AApSubsystem::ScoutLocation(const TSet<i
 		locationsToScout.insert(locationId);
 	}
 
-	location_scouting_promise = MakeShared<TPromise<const TMap<int64, const FApNetworkItem>>>();
+	location_scouting_promise = MakeShared<TPromise<TMap<int64, FApNetworkItem>>>();
 
 	CallOnGameThread<void>([this, &locationsToScout]() {
 		AP_SendLocationScouts(locationsToScout, 0);

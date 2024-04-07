@@ -156,7 +156,7 @@ void AApServerRandomizerSubsystem::ScoutArchipelagoItems() {
 	for (int l = 1338700; l <= 1338709; l++)
 		locations.Add(l);
 
-	const TMap<int64, const FApNetworkItem> scoutResults = ap->ScoutLocation(locations);
+	TMap<int64, FApNetworkItem> scoutResults = ap->ScoutLocation(locations);
 
 	scoutedLocations.Empty();
 	for (const TPair<int64, const FApNetworkItem> scoutResult : scoutResults) {
