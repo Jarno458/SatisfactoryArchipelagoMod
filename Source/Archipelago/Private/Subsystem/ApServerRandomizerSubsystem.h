@@ -117,8 +117,8 @@ private:
 	TMap<TSubclassOf<class UFGSchematic>, TArray<FApNetworkItem>> locationsPerMilestone;
 	TMap<TSubclassOf<class UFGSchematic>, FApNetworkItem> locationPerMamNode;
 	TMap<TSubclassOf<class UFGSchematic>, FApNetworkItem> locationPerShopNode;
-
 	TMap<int64, TSubclassOf<class UFGSchematic>> ItemSchematics;
+
 	//TArray<TSubclassOf<class UFGSchematic>> inventorySlotRecipes;
 
 	//std::atomic_bool hasScoutedLocations;

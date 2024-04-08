@@ -68,11 +68,15 @@ void AApServerRandomizerSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase,
 		fgcheck(unlockSubsystem)
 
 		//TODO: generatic AP Items can be totally hardcoded outside of the initialization phase
-		/*UE_LOG(LogApSubsystem, Display, TEXT("Generating schematics from AP Item IDs..."));
+		UE_LOG(LogApServerRandomizerSubsystem, Display, TEXT("Generating schematics from AP Item IDs..."));
 		for (TPair<int64, TSharedRef<FApItemBase>>& apitem : mappingSubsystem->ApItems) {
-			if (apitem.Value->Type == EItemType::Recipe || apitem.Value->Type == EItemType::Building)
-				CreateSchematicBoundToItemId(apitem.Key, StaticCastSharedRef<FApRecipeItem>(apitem.Value));
-		}*/
+			if (apitem.Value->Type == EItemType::Recipe || apitem.Value->Type == EItemType::Building) {
+				TSubclassOf<UFGSchematic> schematic =
+					schematicPatcher->CreateSchematicBoundToItemId(apitem.Key, StaticCastSharedRef<FApRecipeItem>(apitem.Value));
+
+				ItemSchematics.Add(apitem.Key, schematic);
+			}
+		}
 
 		ap->SetItemReceivedCallback([this](int64 itemid, bool isFromServer) { ReceiveItem(itemid, isFromServer); });
 		ap->SetLocationCheckedCallback([this](int64 itemid) { CollectLocation(itemid); });

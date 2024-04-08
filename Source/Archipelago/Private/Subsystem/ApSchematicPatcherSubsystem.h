@@ -77,7 +77,7 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Schematic", DisplayName = "Get Ap Schematic Patcher Subsystem", Meta = (DefaultToSelf = "worldContext"))
 	static AApSchematicPatcherSubsystem* Get(UObject* worldContext);
 
-	void DispatchLifecycleEvent(ELifecyclePhase phase);
+	//void DispatchLifecycleEvent(ELifecyclePhase phase);
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FORCEINLINE bool IsInitialized() const { return isInitialized; };
@@ -86,6 +86,7 @@ public:
 	bool IsCollected(UFGUnlock* unlock); //TODO remove
 	void Collect(UFGSchematic* schematic, int unlockIndex, FApNetworkItem& networkItem);
 
+	TSubclassOf<UFGSchematic> CreateSchematicBoundToItemId(int64 item, TSharedRef<FApRecipeItem> recipe);
 	void InitializaHubSchematic(FString name, TSubclassOf<UFGSchematic> factorySchematic, TArray<FApNetworkItem> apItems);
 	void InitializaSchematicForItem(TSubclassOf<UFGSchematic> factorySchematic, FApNetworkItem item, bool updateSchemaName);
 
@@ -110,12 +111,12 @@ private:
 
 	TQueue<int64> collectedLocationsToProcess;
 
-	TArray<TSubclassOf<UFGSchematic>> hardcodedSchematics;
-	TMap<TSubclassOf<class UFGSchematic>, TArray<FApNetworkItem>> locationsPerMilestone;
-	TMap<TSubclassOf<class UFGSchematic>, FApNetworkItem> locationPerMamNode;
-	TMap<TSubclassOf<class UFGSchematic>, FApNetworkItem> locationPerShopNode;
-	TMap<int64, TSubclassOf<class UFGSchematic>> ItemSchematics;
-	TArray<TSubclassOf<class UFGSchematic>> inventorySlotRecipes;
+	//TArray<TSubclassOf<UFGSchematic>> hardcodedSchematics;
+	//TMap<TSubclassOf<class UFGSchematic>, TArray<FApNetworkItem>> locationsPerMilestone;
+	//TMap<TSubclassOf<class UFGSchematic>, FApNetworkItem> locationPerMamNode;
+	//TMap<TSubclassOf<class UFGSchematic>, FApNetworkItem> locationPerShopNode;
+	//TMap<int64, TSubclassOf<class UFGSchematic>> ItemSchematics;
+	//TArray<TSubclassOf<class UFGSchematic>> inventorySlotRecipes;
 
 	UTexture2D* collectedIcon = LoadObject<UTexture2D>(nullptr, TEXT("/Archipelago/Assets/SourceArt/ArchipelagoAssetPack/AP-Black.AP-Black"));
 	UClass* workshopComponent = LoadClass<UObject>(nullptr, TEXT("/Game/FactoryGame/Buildable/-Shared/WorkBench/BP_WorkshopComponent.BP_WorkshopComponent_C"));
@@ -152,10 +153,11 @@ private:
 
 	//void HandleAPMessages();
 
+	void Initialize();
+
 	// TODO do we want to keep this around or call AApMessagingSubsystem::DisplayMessage directly?
 	//void SendChatMessage(const FString& Message, const FLinearColor& Color);
 
-	void CreateSchematicBoundToItemId(int64 item, TSharedRef<FApRecipeItem> recipe);
 	FContentLib_UnlockInfoOnly CreateUnlockInfoOnly(FApNetworkItem item);
 	void UpdateInfoOnlyUnlockWithBuildingInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, FApNetworkItem* item, TSharedRef<FApBuildingItem> itemInfo);
 	void UpdateInfoOnlyUnlockWithRecipeInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, FApNetworkItem* item, TSharedRef<FApRecipeItem> itemInfo);

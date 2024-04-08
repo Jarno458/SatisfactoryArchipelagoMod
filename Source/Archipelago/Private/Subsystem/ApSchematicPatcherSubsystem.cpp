@@ -54,6 +54,28 @@ void AApSchematicPatcherSubsystem::BeginPlay() {
 	SetMamEnhancerConfigurationHooks();*/
 }
 
+void AApSchematicPatcherSubsystem::Initialize() {
+	if (isInitialized)
+		return;
+
+	isInitialized = true;
+
+	UWorld* world = GetWorld();
+	contentLibSubsystem = world->GetGameInstance()->GetSubsystem<UContentLibSubsystem>();
+	fgcheck(contentLibSubsystem)
+	contentRegistry = UModContentRegistry::Get(world);
+	fgcheck(contentRegistry)
+	ap = AApSubsystem::Get(world);
+	fgcheck(ap);
+	connectionInfo = AApConnectionInfoSubsystem::Get(world);
+	fgcheck(connectionInfo);
+	slotDataSubsystem = AApSlotDataSubsystem::Get(world);
+	fgcheck(slotDataSubsystem);
+	mappingSubsystem = AApMappingsSubsystem::Get(world);
+	fgcheck(mappingSubsystem)
+}
+
+/*
 void AApSchematicPatcherSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase) {
 	UE_LOG(LogApSchematicPatcherSubsystem, Display, TEXT("AApSchematicPatcherSubsystem()::DispatchLifecycleEvent(%s)"), *UEnum::GetValueAsString(phase));
 
@@ -72,38 +94,21 @@ void AApSchematicPatcherSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase)
 			if (className.Contains("Slots_"))
 				inventorySlotRecipes.Add(schematic);
 		}*/
-	}
+	/*}
 	else if (phase == ELifecyclePhase::INITIALIZATION) {
-		UWorld* world = GetWorld();
-		contentLibSubsystem = world->GetGameInstance()->GetSubsystem<UContentLibSubsystem>();
-		fgcheck(contentLibSubsystem)
-		contentRegistry = UModContentRegistry::Get(world);
-		fgcheck(contentRegistry)
-		ap = AApSubsystem::Get(world);
-		fgcheck(ap);
-		connectionInfo = AApConnectionInfoSubsystem::Get(world);
-		fgcheck(connectionInfo);
-		slotDataSubsystem = AApSlotDataSubsystem::Get(world);
-		fgcheck(slotDataSubsystem);
-		mappingSubsystem = AApMappingsSubsystem::Get(world);
-		fgcheck(mappingSubsystem)
+
 
 		//RManager = AFGResearchManager::Get(world);
 		//fgcheck(RManager)
 		//unlockSubsystem = AFGUnlockSubsystem::Get(world);
 		//fgcheck(unlockSubsystem)
 
-		//TODO: generatic AP Items can be totally hardcoded outside of the initialization phase
-		UE_LOG(LogApSubsystem, Display, TEXT("Generating schematics from AP Item IDs..."));
-		for (TPair<int64, TSharedRef<FApItemBase>>& apitem : mappingSubsystem->ApItems) {
-			if (apitem.Value->Type == EItemType::Recipe || apitem.Value->Type == EItemType::Building)
-				CreateSchematicBoundToItemId(apitem.Key, StaticCastSharedRef<FApRecipeItem>(apitem.Value));
-		}
+
 	}
 	else if (phase == ELifecyclePhase::POST_INITIALIZATION) {
 		//SetActorTickEnabled(true);
 	}
-}
+}*/
 
 void AApSchematicPatcherSubsystem::Tick(float DeltaTime) {
 	Super::Tick(DeltaTime);
@@ -114,7 +119,9 @@ void AApSchematicPatcherSubsystem::Tick(float DeltaTime) {
 	//HandleCheckedLocations();
 }
 
-void AApSchematicPatcherSubsystem::CreateSchematicBoundToItemId(int64 itemid, TSharedRef<FApRecipeItem> apitem) {
+TSubclassOf<UFGSchematic> AApSchematicPatcherSubsystem::CreateSchematicBoundToItemId(int64 itemid, TSharedRef<FApRecipeItem> apitem) {
+	Initialize();
+
 	FString name = FString::Printf(TEXT("AP_ItemId_%i"), itemid);
 
 	TTuple<bool, TSubclassOf<UFGSchematic>> foundSchematic = UApUtils::FindOrCreateClass(TEXT("/Archipelago/"), *name, UFGSchematic::StaticClass());
@@ -137,10 +144,13 @@ void AApSchematicPatcherSubsystem::CreateSchematicBoundToItemId(int64 itemid, TS
 		contentRegistry->RegisterSchematic(FName(TEXT("Archipelago")), foundSchematic.Value);
 	}
 
-	ItemSchematics.Add(itemid, foundSchematic.Value);
+	return foundSchematic.Value;
+	//ItemSchematics.Add(itemid, foundSchematic.Value);
 }
 
 void AApSchematicPatcherSubsystem::InitializaHubSchematic(FString name, TSubclassOf<UFGSchematic> factorySchematic, TArray<FApNetworkItem> items) {
+	Initialize();
+
 	int delimeterPos;
 	name.FindChar('-', delimeterPos);
 	int32 tier = FCString::Atoi(*name.Mid(delimeterPos - 1, 1));
@@ -153,8 +163,6 @@ void AApSchematicPatcherSubsystem::InitializaHubSchematic(FString name, TSubclas
 	schematic.Tier = tier;
 	schematic.MenuPriority = items[0].location;
 	schematic.VisualKit = "Kit_AP_Logo";
-
-	//TODO slot data unavailble
 	schematic.Cost = slotDataSubsystem->GetSlotData().hubLayout[tier - 1][milestone - 1];
 
 	for (auto& item : items)
@@ -164,6 +172,8 @@ void AApSchematicPatcherSubsystem::InitializaHubSchematic(FString name, TSubclas
 }
 
 void AApSchematicPatcherSubsystem::InitializaSchematicForItem(TSubclassOf<UFGSchematic> factorySchematic, FApNetworkItem item, bool updateSchemaName) {
+	Initialize();
+
 	FContentLib_UnlockInfoOnly unlockOnlyInfo = CreateUnlockInfoOnly(item);
 
 	FContentLib_Schematic schematic = FContentLib_Schematic();
