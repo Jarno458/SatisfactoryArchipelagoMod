@@ -159,7 +159,7 @@ private:
 	//UPROPERTY(BlueprintReadOnly, SaveGame)
 	//int currentPlayerSlot = 0;
 
-	TSharedPtr<TPromise<TMap<int64, FApNetworkItem>>> location_scouting_promise = nullptr;
+	TSharedPtr<TPromise<TMap<int64, FApNetworkItem>>> locationScoutingPromise = nullptr;
 
 	TMap<FString, TFunction<void(AP_SetReply)>> dataStoreCallbacks;
 	TArray<TFunction<void(int64, bool)>> itemReceivedCallbacks;

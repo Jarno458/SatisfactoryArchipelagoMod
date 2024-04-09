@@ -208,7 +208,8 @@ void AApSubsystem::LocationScoutedCallback(std::vector<AP_NetworkItem> scoutedLo
 		scoutedLocationsResult.Add(location.location, location);
 	}
 
-	callbackTarget->location_scouting_promise->SetValue(scoutedLocationsResult);
+	if (callbackTarget->locationScoutingPromise != nullptr)
+		callbackTarget->locationScoutingPromise->SetValue(scoutedLocationsResult);
 }
 
 void AApSubsystem::ParseSlotData(std::string json) {
@@ -748,13 +749,17 @@ TMap<int64, FApNetworkItem> AApSubsystem::ScoutLocation(const TSet<int64>& locat
 		locationsToScout.insert(locationId);
 	}
 
-	location_scouting_promise = MakeShared<TPromise<TMap<int64, FApNetworkItem>>>();
+	locationScoutingPromise = MakeShared<TPromise<TMap<int64, FApNetworkItem>>>();
 
 	CallOnGameThread<void>([this, &locationsToScout]() {
 		AP_SendLocationScouts(locationsToScout, 0);
 	});
 
-	return location_scouting_promise->GetFuture().Get();
+	TMap<int64, FApNetworkItem> result = locationScoutingPromise->GetFuture().Get();
+
+	locationScoutingPromise = nullptr;
+
+	return result;
 }
 
 void AApSubsystem::CreateLocationHint(int64 locationId, bool spam) {
