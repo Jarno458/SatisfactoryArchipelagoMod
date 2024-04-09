@@ -17,9 +17,6 @@ AApSubsystem::AApSubsystem() {
 	PrimaryActorTick.TickInterval = 0.5f;
 
 	ReplicationPolicy = ESubsystemReplicationPolicy::SpawnOnServer;
-
-	//ConnectionState = EApConnectionState::NotYetAttempted;
-	//ConnectionStateDescription = LOCTEXT("NotYetAttempted", "A connection has not yet been attempted. Load a save file to attempt to connect.");
 }
 
 AApSubsystem* AApSubsystem::Get(class UObject* worldContext) {
@@ -54,8 +51,6 @@ void AApSubsystem::ConnectToArchipelago() {
 	AP_RegisterSlotDataRawCallback("Data", AApSubsystem::ParseSlotData);
 	AP_SetDeathLinkSupported(true);
 
-	//if (!slotData.hasLoadedSlotData)
-
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::Starting AP"));
 	AP_Start();
 }
@@ -64,16 +59,6 @@ void AApSubsystem::BeginPlay() {
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::BeginPlay()"));
 
 	Super::BeginPlay();
-
-	/*UWorld* world = GetWorld();
-	SManager = AFGSchematicManager::Get(world);
-
-	portalSubsystem = AApPortalSubsystem::Get(world);
-	mappingSubsystem = AApMappingsSubsystem::Get(world);
-	trapSubsystem = AApTrapSubsystem::Get(world);
-	phaseManager = AFGGamePhaseManager::Get(world);
-
-	SetMamEnhancerConfigurationHooks();*/
 }
 
 void AApSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase) {
@@ -138,19 +123,11 @@ void AApSubsystem::Tick(float DeltaTime) {
 	if (connectionInfoSubsystem->ConnectionState != EApConnectionState::Connected)
 		return;
 
-	//if (portalSubsystem->IsInitialized())
-	//	ReceiveItems();
 	ProcessReceivedItems();
 	ProcessCheckedLocations();
+	ProcessDeadlinks();
 
-	//HandleCheckedLocations();
 	HandleAPMessages();
-	HandleDeathLink();
-
-	//if (phaseManager->GetGamePhase() > lastGamePhase) {
-	//	OnAvaiableSchematicsChanged();
-	//	lastGamePhase = phaseManager->GetGamePhase();
-	//}
 }
 
 void AApSubsystem::EndPlay(const EEndPlayReason::Type endPlayReason) {
@@ -163,9 +140,6 @@ void AApSubsystem::EndPlay(const EEndPlayReason::Type endPlayReason) {
 
 void AApSubsystem::ItemClearCallback() {
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::ItemClearCallback()"));
-
-	//YOLO we dont really need this right?
-	//callbackTarget->currentItemIndex = 0;
 }
 
 void AApSubsystem::ItemReceivedCallback(int64 item, bool notify, bool isFromServer) {
@@ -179,6 +153,20 @@ void AApSubsystem::LocationCheckedCallback(int64 id) {
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::LocationCheckedCallback(%i)"), id);
 
 	callbackTarget->CheckedLocations.Enqueue(id);
+}
+
+void AApSubsystem::DeathLinkReceivedCallback(std::string source, std::string cause) {
+	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::DeathLinkReceivedCallback()"));
+
+	FText sourceString = UApUtils::FText(source);
+	FText causeString = UApUtils::FText(cause);
+	FText message;
+	if (causeString.IsEmpty())
+		message = FText::Format(LOCTEXT("DeathLinkReceived", "{0} has died, and so have you!"), sourceString);
+	else
+		message = FText::Format(LOCTEXT("DeathLinkReceivedWithCause", "{0} has died because {1}"), sourceString, causeString);
+
+	callbackTarget->PendingDeathlinks.Enqueue(message);
 }
 
 void AApSubsystem::SetReplyCallback(AP_SetReply setReply) {
@@ -218,27 +206,6 @@ void AApSubsystem::ParseSlotData(std::string json) {
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::ParseSlotData(\"%s\")"), *jsonString);
 
 	callbackTarget->connectionInfoSubsystem->slotDataJson = jsonString;
-
-	/*bool success = FApSlotData::ParseSlotData(jsonString, &callbackTarget->slotData);
-	if (!success) {
-		FText jsonText = FText::FromString(jsonString);
-		AbortGame(FText::Format(LOCTEXT("SlotDataInvallid", "Archipelago SlotData Invalid! {0}"), jsonText));
-	}*/
-}
-
-void AApSubsystem::DeathLinkReceivedCallback(std::string source, std::string cause) {
-	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::DeathLinkReceivedCallback()"));
-
-	FText sourceString = UApUtils::FText(source);
-	FText causeString = UApUtils::FText(cause);
-	FText message;
-	if (causeString.IsEmpty()) 
-		message = FText::Format(LOCTEXT("DeathLinkReceived", "{0} has died, and so have you!"), sourceString);
-	else
-		message = FText::Format(LOCTEXT("DeathLinkReceivedWithCause", "{0} has died because {1}"), sourceString, causeString);
-
-	callbackTarget->ChatMessageQueue.Enqueue(TPair<FString, FLinearColor>(message.ToString(), FLinearColor::Red));
-	callbackTarget->instagib = true;
 }
 
 void AApSubsystem::LogFromAPCpp(std::string message) {
@@ -337,41 +304,6 @@ void AApSubsystem::ModdifyEnergyLink(long amount, FString defaultValueFString) {
 	});
 }
 
-void AApSubsystem::HandleDeathLink() {
-	if (IsRunningDedicatedServer())
-		return; // TODO make deathlink work for dedicated servers
-
-	AFGPlayerController* playerController = UFGBlueprintFunctionLibrary::GetLocalPlayerController(GetWorld());
-	if (playerController == nullptr)
-		return;
-
-	AFGCharacterPlayer* player = Cast<AFGCharacterPlayer>(playerController->GetControlledCharacter());
-	if (player == nullptr)
-		return;
-
-	HandleInstagib(player);
-
-	if (player->IsAliveAndWell()) {
-		awaitingHealty = false;
-	} else {
-		if (!awaitingHealty) {
-			awaitingHealty = true;
-
-			CallOnGameThread<void>([]() { AP_DeathLinkSend(); });
-		}
-	}
-}
-
-void AApSubsystem::HandleInstagib(AFGCharacterPlayer* player) {
-	if (instagib) {
-		instagib = false;
-
-		TSubclassOf<UDamageType> const damageType = TSubclassOf<UDamageType>(UDamageType::StaticClass());
-		FDamageEvent instagibDamageEvent = FDamageEvent(damageType);
-		player->TakeDamage(1333337, instagibDamageEvent, player->GetFGPlayerController(), player);
-	}
-}
-
 void AApSubsystem::SetItemReceivedCallback(TFunction<void(int64, bool)> onItemReceived){
 	itemReceivedCallbacks.Add(onItemReceived);
 }
@@ -380,6 +312,9 @@ void AApSubsystem::SetLocationCheckedCallback(TFunction<void(int64)> onLocationC
 	locationCheckedCallbacks.Add(onLocationChecked);
 }
 
+void AApSubsystem::SetDeathLinkReceivedCallback(TFunction<void(FText)> onDeathLinkReceived) {
+	deathLinkReceivedCallbacks.Add(onDeathLinkReceived);
+}
 
 void AApSubsystem::ProcessReceivedItems() {
 	TTuple<int64, bool> item;
@@ -395,6 +330,18 @@ void AApSubsystem::ProcessCheckedLocations() {
 		for (TFunction<void(int64)> callback : locationCheckedCallbacks)
 			callback(locationId);
 	}
+}
+
+void AApSubsystem::ProcessDeadlinks() {
+	FText deadlinkMessage;
+	while (PendingDeathlinks.Dequeue(deadlinkMessage)) {
+		for (TFunction<void(FText)> callback : deathLinkReceivedCallbacks)
+			callback(deadlinkMessage);
+	}
+}
+
+void AApSubsystem::TriggerDeathLink() {
+	CallOnGameThread<void>([]() { AP_DeathLinkSend(); });
 }
 
 void AApSubsystem::CheckConnectionState() {
@@ -416,85 +363,9 @@ void AApSubsystem::CheckConnectionState() {
 	}
 }
 
-/*void AApSubsystem::ParseScoutedItemsAndCreateRecipiesAndSchematics() {
-	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::ParseScoutedItemsAndCreateRecipiesAndSchematics()"));
-
-	TMap<FString, TTuple<bool, TSubclassOf<UFGSchematic>>> schematicsPerMilestone = TMap<FString, TTuple<bool, TSubclassOf<UFGSchematic>>>();
-	TMap<int64, TSubclassOf<UFGSchematic>> schematicsPerLocation = TMap<int64, TSubclassOf<UFGSchematic>>();
-
-	for (TSubclassOf<UFGSchematic>& schematic : hardcodedSchematics) {
-		UFGSchematic* schematicCDO = Cast<UFGSchematic>(schematic->GetDefaultObject());
-		if (schematicCDO != nullptr && schematicCDO->mMenuPriority > 1000) {
-			schematicsPerLocation.Add(FMath::RoundToInt(schematicCDO->mMenuPriority), schematic);
-		}
-	}
-
-	for (FApNetworkItem& location : scoutedLocations) {
-		if (location.locationName.StartsWith("Hub")) {
-			FString milestone = location.locationName.Left(location.locationName.Find(","));
-			FString uniqueMilestone = milestone + TEXT("_") + roomSeed;
-
-			if (!schematicsPerMilestone.Contains(milestone)) {
-				TTuple<bool, TSubclassOf<UFGSchematic>> schematic = UApUtils::FindOrCreateClass(TEXT("/Archipelago/"), *uniqueMilestone, UFGSchematic::StaticClass());
-				schematicsPerMilestone.Add(milestone, schematic);
-			}
-
-			if (!locationsPerMilestone.Contains(schematicsPerMilestone[milestone].Value)) {
-				locationsPerMilestone.Add(schematicsPerMilestone[milestone].Value, TArray<FApNetworkItem>{ location });
-			} else {
-				locationsPerMilestone[schematicsPerMilestone[milestone].Value].Add(location);
-			}
-		} else if (location.location >= 1338500 && location.location <= 1338571 && schematicsPerLocation.Contains(location.location)) {
-			TSubclassOf<UFGSchematic> schematic = schematicsPerLocation[location.location];
-
-			locationPerMamNode.Add(schematic, location);
-		} else if (location.location >= 1338700 && location.location <= 1338709 && schematicsPerLocation.Contains(location.location)) {
-			TSubclassOf<UFGSchematic> schematic = schematicsPerLocation[location.location];
-
-			locationPerShopNode.Add(schematic, location);
-		}
-	}
-
-	UE_LOG(LogApSubsystem, Display, TEXT("Generating HUB milestones"));
-
-	for (TPair<TSubclassOf<UFGSchematic>, TArray<FApNetworkItem>>& itemPerMilestone : locationsPerMilestone) {
-		for (TPair<FString, TTuple<bool, TSubclassOf<UFGSchematic>>>& schematicAndName : schematicsPerMilestone) {
-			if (itemPerMilestone.Key == schematicAndName.Value.Value) {
-				if (!schematicAndName.Value.Key)
-					InitializaHubSchematic(schematicAndName.Key, itemPerMilestone.Key, itemPerMilestone.Value);
-
-				contentRegistry->RegisterSchematic(FName(TEXT("Archipelago")), itemPerMilestone.Key);
-
-				break;
-			}
-		}
-	}
-
-	for (TPair<TSubclassOf<UFGSchematic>, FApNetworkItem>& itemPerMamNode : locationPerMamNode) {
-		InitializaSchematicForItem(itemPerMamNode.Key, itemPerMamNode.Value, false);
-	}
-
-	for (TPair<TSubclassOf<UFGSchematic>, FApNetworkItem>& itemPerMamNode : locationPerShopNode) {
-		InitializaSchematicForItem(itemPerMamNode.Key, itemPerMamNode.Value, true);
-	}
-
-	TArray<TSubclassOf<class UFGResearchTree>> researchTrees;
-	RManager->GetAllResearchTrees(researchTrees);
-
-	for (TSubclassOf<UFGResearchTree>& tree : researchTrees) {
-		UFGResearchTree* treeCDO = Cast<UFGResearchTree>(tree->GetDefaultObject());
-		if (treeCDO != nullptr) {
-			FString className = treeCDO->GetName();
-
-			if (!className.Contains("AP_") && !className.EndsWith("HardDrive_C") && !className.EndsWith("XMas_C"))
-				contentRegistry->RemoveResearchTree(tree);
-		}
-	};
-
-	areRecipiesAndSchematicsInitialized = true;
+void AApSubsystem::AddChatMessage(FText message, FLinearColor color) {
+	ChatMessageQueue.Enqueue(TPair<FString, FLinearColor>(message.ToString(), color));
 }
-
-*/
 
 void AApSubsystem::HandleAPMessages() {
 	for (int i = 0; i < 10; i++) {
@@ -521,43 +392,6 @@ void AApSubsystem::SendChatMessage(const FString& Message, const FLinearColor& C
 	fgcheck(messaging);
 	messaging->DisplayMessage(Message, Color);
 }
-
-/*void AApSubsystem::ScoutArchipelagoItems() {
-	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::ScoutArchipelagoItems()"));
-
-	std::set<int64> locations;
-
-	int maxMilestones = 5;
-	int maxSlots = 10;
-
-	int64 hubBaseId = 1338000;
-
-	for (int tier = 1; tier <= slotData.hubLayout.Num(); tier++) {
-		for (int milestone = 1; milestone <= maxMilestones; milestone++) {
-			for (int slot = 1; slot <= maxSlots; slot++) {
-				if (milestone <= slotData.hubLayout[tier - 1].Num() && slot <= slotData.numberOfChecksPerMilestone)
-					locations.insert(hubBaseId);
-
-				hubBaseId++;
-			}
-		}
-	}
-
-	//mam locations
-	for (int l = 1338500; l <= 1338571; l++)
-		locations.insert(l);
-
-	//shop locations
-	for (int l = 1338700; l <= 1338709; l++)
-		locations.insert(l);
-
-	CallOnGameThread<void>([locations]() {
-		UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::ScoutArchipelagoItems() [GameThread] scouting %i locations"), locations.size());
-		AP_SendLocationScouts(locations, 0); 
-	});
-
-	hasScoutedLocations = true;
-}*/
 
 void AApSubsystem::TimeoutConnection() {
 	connectionInfoSubsystem->ConnectionState = EApConnectionState::ConnectionFailed;
@@ -802,46 +636,9 @@ void AApSubsystem::CheckLocation(const TSet<int64>& locationIds) {
 	});
 }
 
-/*
-void AApSubsystem::PreSaveGame_Implementation(int32 saveVersion, int32 gameVersion) {
-	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::PreSaveGame_Implementation(saveVersion: %i, gameVersion: %i)"), saveVersion, gameVersion);
-
-	for (int tier = 0; tier < slotData.hubLayout.Num(); tier++) {
-		for (int milestone = 0; milestone < slotData.hubLayout[tier].Num(); milestone++) {
-			FApSaveableHubLayout hubLayout;
-			hubLayout.tier = tier;
-			hubLayout.milestone = milestone;
-			hubLayout.costs = slotData.hubLayout[tier][milestone];
-
-			saveSlotDataHubLayout.Add(hubLayout);
-		}
-	}
-}	
-
-void AApSubsystem::PostSaveGame_Implementation(int32 saveVersion, int32 gameVersion) {
-	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::PostSaveGame_Implementation(saveVersion: %i, gameVersion: %i)"), saveVersion, gameVersion);
-
-	saveSlotDataHubLayout.Empty();
-}*/
-
 //TODO fix is now fired when loading a fresh save
 void AApSubsystem::PostLoadGame_Implementation(int32 saveVersion, int32 gameVersion) {
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::PostLoadGame_Implementation(saveVersion: %i, gameVersion: %i)"), saveVersion, gameVersion);
-
-	/*if (!saveSlotDataHubLayout.IsEmpty() && slotData.numberOfChecksPerMilestone > 0) {
-		for (FApSaveableHubLayout hubLayout : saveSlotDataHubLayout) {
-			if ((slotData.hubLayout.Num() - 1) < hubLayout.tier)
-				slotData.hubLayout.Add(TArray<TMap<FString, int>>());
-
-			if ((slotData.hubLayout[hubLayout.tier].Num() - 1) < hubLayout.milestone)
-				slotData.hubLayout[hubLayout.tier].Add(hubLayout.costs);
-		}
-
-		slotData.hasLoadedSlotData = true;
-	}*/
-
-	//if (!scoutedLocations.IsEmpty())
-	//	areScoutedLocationsReadyToParse = true;
 
 	FApConfigurationStruct modConfig = FApConfigurationStruct::GetActiveConfig(GetWorld());
 	if (!config.IsLoaded() || modConfig.ForceOverride)

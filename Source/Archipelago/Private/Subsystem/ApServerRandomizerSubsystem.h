@@ -9,24 +9,16 @@
 #include "FGCharacterPlayer.h"
 #include "FGUnlockSubsystem.h"
 
-//#include "GenericPlatform/GenericPlatformProcess.h"
-//#include "Registry/ModContentRegistry.h"
 #include "Subsystem/ModSubsystem.h"
 #include "Subsystem/SubsystemActorManager.h"
-//#include "Subsystem/ApTrapSubsystem.h"
 #include "Configuration/ModConfiguration.h"
 #include "Configuration/ConfigProperty.h"
 #include "Configuration/Properties/ConfigPropertyInteger.h"
 #include "Configuration/Properties/ConfigPropertyBool.h"
 #include "Configuration/ConfigManager.h"
-//#include "Engine/Engine.h"
 #include "Configuration/Properties/ConfigPropertySection.h"
 #include "Templates/SubclassOf.h"
 #include "FGChatManager.h"
-//#include "Module/ModModule.h"
-//#include "Reflection/ClassGenerator.h"
-//#include "Buildables/FGBuildable.h"
-//#include "Buildables/FGBuildableAutomatedWorkBench.h"
 #include "Unlocks/FGUnlockInfoOnly.h"
 
 #include "ApConfigurationStruct.h"
@@ -41,8 +33,6 @@
 
 #include "ApUtils.h"
 
-//#include "CLSchematicBPFLib.h"
-//#include "BPFContentLib.h"
 #include "Configuration/FreeSamplesConfigurationStruct.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(LogApServerRandomizerSubsystem, Log, All);
@@ -98,7 +88,6 @@ private:
 	AFGGamePhaseManager* phaseManager;
 	AFGUnlockSubsystem* unlockSubsystem;
 
-	//UContentLibSubsystem* contentLibSubsystem;
 	UModContentRegistry* contentRegistry;
 
 	AApSubsystem* ap;
@@ -119,19 +108,12 @@ private:
 	TMap<TSubclassOf<class UFGSchematic>, FApNetworkItem> locationPerShopNode;
 	TMap<int64, TSubclassOf<class UFGSchematic>> ItemSchematics;
 
-	//TArray<TSubclassOf<class UFGSchematic>> inventorySlotRecipes;
-
-	//std::atomic_bool hasScoutedLocations;
-	//std::atomic_bool areScoutedLocationsReadyToParse;
 	std::atomic_bool areRecipiesAndSchematicsInitialized;
 	std::atomic_bool hasLoadedRoomInfo;
 
 	void ScoutArchipelagoItems();
 	void ParseScoutedItemsAndCreateRecipiesAndSchematics();
-	//void LoadRoomInfo();
 	bool InitializeTick();
-
-	//UConfigPropertySection* GetConfigurationRootSection(FConfigId configId);
 
 	bool UpdateFreeSamplesConfiguration();
 	void SetMamEnhancerConfigurationHooks();
@@ -146,16 +128,12 @@ private:
 
 	void CollectLocation(int64 itemId);
 	void HandleCheckedLocations();
-	//bool IsCollected(UFGUnlock* unlock);
-	//void Collect(UFGUnlock* unlock, FApNetworkItem& networkItem);
 
-	//void HandleDeathLink();
-	//void HandleInstagib(AFGCharacterPlayer* player);
-
-	//void HandleAPMessages();
-
-	// TODO do we want to keep this around or call AApMessagingSubsystem::DisplayMessage directly?
-	//void SendChatMessage(const FString& Message, const FLinearColor& Color);
+	std::atomic_bool instagib;
+	std::atomic_bool awaitingHealty;
+	void OnDeathLinkReceived(FText message);
+	void HandleDeathLink();
+	void HandleInstagib(AFGCharacterPlayer* player);
 
 	UFUNCTION() //required for event binding
 	void OnMamResearchCompleted(TSubclassOf<class UFGSchematic> schematic);

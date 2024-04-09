@@ -11,12 +11,8 @@
 #include "CoreMinimal.h"
 #include "Templates/Function.h"
 
-//#include "FGSchematicManager.h"
-//#include "FGResearchManager.h"
-//#include "FGGamePhaseManager.h"
 #include "FGPlayerController.h"
 #include "FGCharacterPlayer.h"
-//#include "FGWorkBench.h"
 
 #include "GenericPlatform/GenericPlatformProcess.h"
 #include "Registry/ModContentRegistry.h"
@@ -24,31 +20,14 @@
 #include "Subsystem/SubsystemActorManager.h"
 #include "Subsystem/ApTrapSubsystem.h"
 #include "Configuration/ModConfiguration.h"
-//#include "Configuration/ConfigProperty.h"
-//#include "Configuration/Properties/ConfigPropertyInteger.h"
-//#include "Configuration/Properties/ConfigPropertyBool.h"
 #include "Configuration/ConfigManager.h"
-//#include "Engine/Engine.h"
-//#include "Configuration/Properties/ConfigPropertySection.h"
 #include "Templates/SubclassOf.h"
 #include "Module/ModModule.h"
-//#include "Reflection/ClassGenerator.h"
-//#include "Buildables/FGBuildable.h"
-//#include "Buildables/FGBuildableAutomatedWorkBench.h"
-//#include "Unlocks/FGUnlockInfoOnly.h"
-//#include "FGUnlockSubsystem.h"
-
 #include "ApConfigurationStruct.h"
 #include "Data/ApSlotData.h"
 #include "Data/ApTypes.h"
 #include "Subsystem/ApConnectionInfoSubsystem.h"
-//#include "Subsystem/ApPortalSubsystem.h"
-//#include "Subsystem/ApMappingsSubsystem.h"
 #include "Subsystem/ApMessagingSubsystem.h"
-
-//#include "CLSchematicBPFLib.h"
-//#include "BPFContentLib.h"
-//#include "Configuration/FreeSamplesConfigurationStruct.h"
 
 #include "Archipelago.h"
 #include "Archipelago_Satisfactory.h"
@@ -88,36 +67,14 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Schematic", DisplayName = "Get ApSubsystem", Meta = (DefaultToSelf = "worldContext"))
 	static AApSubsystem* Get(UObject* worldContext);
 
-	//UFUNCTION(BlueprintCallable)
 	void DispatchLifecycleEvent(ELifecyclePhase phase);
 
 	void MonitorDataStoreValue(FString keyFString, TFunction<void()> callback);
 	void MonitorDataStoreValue(FString keyFString, AP_DataType dataType, FString defaultValueFString, TFunction<void(AP_SetReply)> callback);
 	void ModdifyEnergyLink(long amount, FString defaultValueFString);
 
-	/*UFUNCTION(BlueprintCallable, BlueprintPure)
-	FORCEINLINE EApConnectionState GetConnectionState() const { return ConnectionState; };
-
-	UFUNCTION(BlueprintCallable, BlueprintPure)
-	FORCEINLINE FText GetConnectionStateDescription() const { return ConnectionStateDescription; };
-
-	UFUNCTION(BlueprintCallable, BlueprintPure)
-	FORCEINLINE int GetCurrentPlayerTeam() const { return currentPlayerTeam; };
-
-	UFUNCTION(BlueprintCallable, BlueprintPure)
-	FORCEINLINE int GetCurrentPlayerSlot() const { return currentPlayerSlot; };
-
-	UFUNCTION(BlueprintCallable, BlueprintPure)
-	FORCEINLINE FApSlotData GetSlotData() const { return slotData; };*/
-
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FApConfigurationStruct GetConfig() const { return config; };
-
-	/*UFUNCTION(BlueprintCallable, BlueprintPure)
-	FString GetRoomSeed() const { return roomSeed; };*/
-
-	//UFUNCTION(BlueprintCallable, BlueprintPure)
-	//FORCEINLINE bool IsInitialized() const { return areRecipiesAndSchematicsInitialized; };
 
 	FString GetApItemName(int64 itemId);
 
@@ -143,27 +100,22 @@ public:
 
 	void SetItemReceivedCallback(TFunction<void(int64, bool)> onItemReceived);
 	void SetLocationCheckedCallback(TFunction<void(int64)> onLocationChecked);
+	void SetDeathLinkReceivedCallback(TFunction<void(FText)> onDeathLinkReceived);
 
+	void AddChatMessage(FText, FLinearColor);
+
+	void TriggerDeathLink();
 private:
 	static AApSubsystem* callbackTarget;
 
 	AApConnectionInfoSubsystem* connectionInfoSubsystem;
-
-	//EApConnectionState ConnectionState;
-	//UPROPERTY(BlueprintReadOnly)
-	//FText ConnectionStateDescription;
-
-	//UPROPERTY(BlueprintReadOnly, SaveGame)
-	//int currentPlayerTeam = 0;
-
-	//UPROPERTY(BlueprintReadOnly, SaveGame)
-	//int currentPlayerSlot = 0;
 
 	TSharedPtr<TPromise<TMap<int64, FApNetworkItem>>> locationScoutingPromise = nullptr;
 
 	TMap<FString, TFunction<void(AP_SetReply)>> dataStoreCallbacks;
 	TArray<TFunction<void(int64, bool)>> itemReceivedCallbacks;
 	TArray<TFunction<void(int64)>> locationCheckedCallbacks;
+	TArray<TFunction<void(FText)>> deathLinkReceivedCallbacks;
 
 	static void SetReplyCallback(AP_SetReply setReply);
 	static void ItemClearCallback();
@@ -174,54 +126,14 @@ private:
 	static void DeathLinkReceivedCallback(std::string source, std::string cause);
 	static void LogFromAPCpp(std::string message);
 
-	/*AFGSchematicManager* SManager;
-	AFGResearchManager* RManager;
-	AFGGamePhaseManager* phaseManager;
-	AFGUnlockSubsystem* unlockSubsystem;
-
-	UContentLibSubsystem* contentLibSubsystem;
-	UContentLibSubsystem* contentLibSubsystem;
-	UModContentRegistry* contentRegistry;
-
-	AApPortalSubsystem* portalSubsystem;
-	AApMappingsSubsystem* mappingSubsystem;
-	AApTrapSubsystem* trapSubsystem;
-
-	AFGCharacterPlayer* currentPlayer;*/
-
-	//UPROPERTY(SaveGame)
-	//FString roomSeed;
-	//UPROPERTY(SaveGame)
-	//FApSlotData slotData;
-	//UPROPERTY(SaveGame)
-	//TArray<FApSaveableHubLayout> saveSlotDataHubLayout;
-
-	//UPROPERTY(SaveGame)
-	//TArray<FApNetworkItem> scoutedLocations;
-
-	//int currentItemIndex = 0;
-	//UPROPERTY(SaveGame)
-	//int lastProcessedItemIndex = 0;
-	//int lastGamePhase = -1;
-
 	UPROPERTY(SaveGame)
 	FApConfigurationStruct config;
 
-	//TArray<TSubclassOf<UFGSchematic>> hardcodedSchematics;
-	//TMap<TSubclassOf<class UFGSchematic>, TArray<FApNetworkItem>> locationsPerMilestone;
-	//TMap<TSubclassOf<class UFGSchematic>, FApNetworkItem> locationPerMamNode;
-	//TMap<TSubclassOf<class UFGSchematic>, FApNetworkItem> locationPerShopNode;
-	//TMap<int64, TSubclassOf<class UFGSchematic>> ItemSchematics;
-	//TArray<TSubclassOf<class UFGSchematic>> inventorySlotRecipes;
 	TQueue<TTuple<int64, bool>> ReceivedItems;
 	TQueue<int64> CheckedLocations;
+	TQueue<FText> PendingDeathlinks;
 	TQueue<TPair<FString, FLinearColor>> ChatMessageQueue;
 
-	//UTexture2D* collectedIcon = LoadObject<UTexture2D>(nullptr, TEXT("/Archipelago/Assets/SourceArt/ArchipelagoAssetPack/AP-Black.AP-Black"));
-	//UClass* workshopComponent = LoadClass<UObject>(nullptr, TEXT("/Game/FactoryGame/Buildable/-Shared/WorkBench/BP_WorkshopComponent.BP_WorkshopComponent_C"));
-
-	bool instagib;
-	bool awaitingHealty;
 	bool canRecieveChat;
 
 	bool InitializeTick(FDateTime connectingStartedTime);
@@ -233,48 +145,15 @@ private:
 	void ScoutArchipelagoItems();
 	void ParseScoutedItemsAndCreateRecipiesAndSchematics();
 	void LoadRoomInfo();
-	//UConfigPropertySection* GetConfigurationRootSection(FConfigId configId);
-	//bool UpdateFreeSamplesConfiguration();
-	//void SetMamEnhancerConfigurationHooks();
-	//UFUNCTION() //required for event binding
-	//void LockMamEnhancerSpoilerConfiguration();
 
 	void ProcessReceivedItems();
-	//void AwardItem(int64 itemId, bool isFromServer);
-
 	void ProcessCheckedLocations();
-
-	//void HandleCheckedLocations();
-	//AFGCharacterPlayer* GetLocalPlayer();
-	//bool IsCollected(UFGUnlock* unlock);
-	//void Collect(UFGUnlock* unlock, FApNetworkItem& networkItem);
-	void HandleDeathLink();
-	void HandleInstagib(AFGCharacterPlayer* player);
+	void ProcessDeadlinks();
 
 	void HandleAPMessages();
 
 	// TODO do we want to keep this around or call AApMessagingSubsystem::DisplayMessage directly?
 	void SendChatMessage(const FString& Message, const FLinearColor& Color);
-
-	/*void CreateSchematicBoundToItemId(int64 item, TSharedRef<FApRecipeItem> recipe);
-	FContentLib_UnlockInfoOnly CreateUnlockInfoOnly(FApNetworkItem item);
-	void UpdateInfoOnlyUnlockWithBuildingInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, FApNetworkItem* item, TSharedRef<FApBuildingItem> itemInfo);
-	void UpdateInfoOnlyUnlockWithRecipeInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, FApNetworkItem* item, TSharedRef<FApRecipeItem> itemInfo);
-	void UpdateInfoOnlyUnlockWithItemBundleInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, FApNetworkItem* item, TSharedRef<FApItem> itemInfo);
-	void UpdateInfoOnlyUnlockWithSchematicInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, FApNetworkItem* item, TSharedRef<FApSchematicItem> itemInfo);
-	void UpdateInfoOnlyUnlockWithSpecialInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, FApNetworkItem* item, TSharedRef<FApSpecialItem> itemInfo);
-	void UpdateInfoOnlyUnlockWithGenericApInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, FApNetworkItem* item);
-	void InitializaHubSchematic(FString name, TSubclassOf<UFGSchematic> factorySchematic, TArray<FApNetworkItem> apItems);
-	void InitializaSchematicForItem(TSubclassOf<UFGSchematic> factorySchematic, FApNetworkItem item, bool updateSchemaName);
-	
-	UFUNCTION() //required for event binding
-	void OnMamResearchCompleted(TSubclassOf<class UFGSchematic> schematic);
-	UFUNCTION() //required for event binding
-	void OnMamResearchTreeUnlocked(TSubclassOf<class UFGResearchTree> researchTree);
-	UFUNCTION() //required for event binding
-	void OnSchematicCompleted(TSubclassOf<class UFGSchematic> schematic);
-
-	void OnAvaiableSchematicsChanged();*/
 
 	static void AbortGame(FText reason);
 

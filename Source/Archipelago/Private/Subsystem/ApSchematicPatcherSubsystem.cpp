@@ -37,21 +37,6 @@ void AApSchematicPatcherSubsystem::BeginPlay() {
 	UE_LOG(LogApSchematicPatcherSubsystem, Display, TEXT("AApSchematicPatcherSubsystem::BeginPlay()"));
 
 	Super::BeginPlay();
-
-	/*UWorld* world = GetWorld();
-	SManager = AFGSchematicManager::Get(world);
-	RManager = AFGResearchManager::Get(world);
-
-	portalSubsystem = AApPortalSubsystem::Get(world);
-	mappingSubsystem = AApMappingsSubsystem::Get(world);
-	trapSubsystem = AApTrapSubsystem::Get(world);
-	phaseManager = AFGGamePhaseManager::Get(world);
-
-	RManager->ResearchCompletedDelegate.AddDynamic(this, &AApServerRandomizerSubsystem::OnMamResearchCompleted);
-	RManager->ResearchTreeUnlockedDelegate.AddDynamic(this, &AApServerRandomizerSubsystem::OnMamResearchTreeUnlocked);
-	SManager->PurchasedSchematicDelegate.AddDynamic(this, &AApServerRandomizerSubsystem::OnSchematicCompleted);
-
-	SetMamEnhancerConfigurationHooks();*/
 }
 
 void AApSchematicPatcherSubsystem::Initialize() {
@@ -75,48 +60,11 @@ void AApSchematicPatcherSubsystem::Initialize() {
 	fgcheck(mappingSubsystem)
 }
 
-/*
-void AApSchematicPatcherSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase) {
-	UE_LOG(LogApSchematicPatcherSubsystem, Display, TEXT("AApSchematicPatcherSubsystem()::DispatchLifecycleEvent(%s)"), *UEnum::GetValueAsString(phase));
-
-	if (!HasAuthority())
-		UE_LOG(LogApSchematicPatcherSubsystem, Fatal, TEXT("AApSchematicPatcherSubsystem()::DispatchLifecycleEvent() Called without authority"));
-
-	if (phase == ELifecyclePhase::CONSTRUCTION) {
-		//hardcodedSchematics = apHardcodedSchematics;
-
-		/*for (TSubclassOf<UFGSchematic>& schematic : hardcodedSchematics) {
-			UFGSchematic* schematicCDO = Cast<UFGSchematic>(schematic->GetDefaultObject());
-			if (!IsValid(schematicCDO))
-				continue;
-
-			FString className = schematicCDO->GetName();
-			if (className.Contains("Slots_"))
-				inventorySlotRecipes.Add(schematic);
-		}*/
-	/*}
-	else if (phase == ELifecyclePhase::INITIALIZATION) {
-
-
-		//RManager = AFGResearchManager::Get(world);
-		//fgcheck(RManager)
-		//unlockSubsystem = AFGUnlockSubsystem::Get(world);
-		//fgcheck(unlockSubsystem)
-
-
-	}
-	else if (phase == ELifecyclePhase::POST_INITIALIZATION) {
-		//SetActorTickEnabled(true);
-	}
-}*/
-
 void AApSchematicPatcherSubsystem::Tick(float DeltaTime) {
 	Super::Tick(DeltaTime);
 
 	if (connectionInfo->GetConnectionState() != EApConnectionState::Connected)
 		return;
-
-	//HandleCheckedLocations();
 }
 
 TSubclassOf<UFGSchematic> AApSchematicPatcherSubsystem::CreateSchematicBoundToItemId(int64 itemid, TSharedRef<FApRecipeItem> apitem) {
@@ -145,7 +93,6 @@ TSubclassOf<UFGSchematic> AApSchematicPatcherSubsystem::CreateSchematicBoundToIt
 	}
 
 	return foundSchematic.Value;
-	//ItemSchematics.Add(itemid, foundSchematic.Value);
 }
 
 void AApSchematicPatcherSubsystem::InitializaHubSchematic(FString name, TSubclassOf<UFGSchematic> factorySchematic, TArray<FApNetworkItem> items) {
@@ -392,51 +339,6 @@ void AApSchematicPatcherSubsystem::UpdateInfoOnlyUnlockWithGenericApInfo(FConten
 		infoCard->BigIcon = infoCard->SmallIcon = TEXT("/Archipelago/Assets/DerivedArt/ApLogo/AP-Cyan.AP-Cyan");
 	}
 }
-
-/*void AApSchematicPatcherSubsystem::HandleCheckedLocations() {
-	int64 location;
-
-	//could use a while loop but we now handle only 1 per tick for perform reasons as this opperation is quite slow
-	if (collectedLocationsToProcess.Dequeue(location)) {
-		for (TPair<TSubclassOf<UFGSchematic>, TArray<FApNetworkItem>>& itemPerMilestone : locationsPerMilestone) {
-			for (int index = 0; index < itemPerMilestone.Value.Num(); index++) {
-				FApNetworkItem networkItem = itemPerMilestone.Value[index];
-				if (networkItem.location == location) {
-					UFGSchematic* schematic = Cast<UFGSchematic>(itemPerMilestone.Key->GetDefaultObject());
-
-					if (IsValid(schematic)) {
-						Collect(schematic->mUnlocks[index], networkItem);
-
-						//if (!schematic->mUnlocks.ContainsByPredicate([this](UFGUnlock* unlock) { return !IsCollected(unlock);	}))
-						//	SManager->GiveAccessToSchematic(itemPerMilestone.Key, nullptr);
-					}
-				}
-			}
-		}
-		for (TPair<TSubclassOf<UFGSchematic>, FApNetworkItem>& itemPerMamNode : locationPerMamNode) {
-			if (itemPerMamNode.Value.location == location) {
-				UFGSchematic* schematic = Cast<UFGSchematic>(itemPerMamNode.Key->GetDefaultObject());
-
-				if (IsValid(schematic)) {
-					Collect(schematic->mUnlocks[0], itemPerMamNode.Value);
-
-					//SManager->GiveAccessToSchematic(itemPerMamNode.Key, nullptr);
-				}
-			}
-		}
-		for (TPair<TSubclassOf<UFGSchematic>, FApNetworkItem>& itemPerShopNode : locationPerShopNode) {
-			if (itemPerShopNode.Value.location == location) {
-				UFGSchematic* schematic = Cast<UFGSchematic>(itemPerShopNode.Key->GetDefaultObject());
-
-				if (IsValid(schematic)) {
-					Collect(schematic->mUnlocks[0], itemPerShopNode.Value);
-
-					//SManager->GiveAccessToSchematic(itemPerShopNode.Key, nullptr);
-				}
-			}
-		}
-	}
-}*/
 
 bool AApSchematicPatcherSubsystem::IsCollected(UFGUnlock* unlock) {
 	UFGUnlockInfoOnly* unlockInfo = Cast<UFGUnlockInfoOnly>(unlock);
