@@ -10,6 +10,7 @@
 #include "Subsystem/ApSubsystem.h"
 #include "Subsystem/ApEnergyLinkSubsystem.h"
 #include "Subsystem/ApPortalSubsystem.h"
+#include "Subsystem/ApHardDriveGachaSubsystem.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(LogApGameWorldModule, Log, All);
 

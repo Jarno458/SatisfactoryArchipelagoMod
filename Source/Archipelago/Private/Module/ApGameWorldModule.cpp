@@ -20,4 +20,8 @@ void UApGameWorldModule::DispatchLifecycleEvent(ELifecyclePhase phase) {
 	AApSubsystem* apSubsystem = AApSubsystem::Get(world);
 	if (IsValid(apSubsystem))
 			apSubsystem->DispatchLifecycleEvent(phase, mSchematics);
+
+	AApHardDriveGachaSubsystem* apHardDriveGacha = AApHardDriveGachaSubsystem::Get(world);
+	if (IsValid(apHardDriveGacha))
+		apHardDriveGacha->DispatchLifecycleEvent(phase, mSchematics);
 }
