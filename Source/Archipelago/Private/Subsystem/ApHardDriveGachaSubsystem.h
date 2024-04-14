@@ -29,23 +29,27 @@ public:
 
 	static AApHardDriveGachaSubsystem* Get(class UWorld* world);
 
-	void DispatchLifecycleEvent(ELifecyclePhase phase, TArray<TSubclassOf<UFGSchematic>> apHardcodedSchematics);
+	void Initialize(TArray<TSubclassOf<UFGSchematic>> apSchematics);
 
 	UPROPERTY()
 	UFGHardDriveSettings* HardDriveSettings;
 
 private:
+	bool isEnabled = false;
 	bool hooksInitialized = false;
 
-	TArray<TSubclassOf<class UFGSchematic>> apUnlocks;
+	TArray<TSubclassOf<class UFGSchematic>> apHardDriveSchematics;
 	TArray<TSubclassOf<class UFGSchematic>> schematicsToOffer;
 
 	AApSubsystem* ap;
 	UModContentRegistry* contentRegistry;
+	AFGSchematicManager* SManager;
 
 	void GetValidSchematicRewardDrops(TCallScope<void(*)(const UFGHardDriveSettings*, class AFGSchematicManager*, TArray<TSubclassOf<class UFGSchematic>>&)>& Scope, const UFGHardDriveSettings* self, class AFGSchematicManager* schematicManager, TArray<TSubclassOf<class UFGSchematic>>& out_validSchematics);
 	TArray<TSubclassOf<class UFGSchematic>> GetFinalSchematicRewards(TCallScope<TArray<TSubclassOf<class UFGSchematic>>(*)(const UFGHardDriveSettings*, const TArray<TSubclassOf<class UFGSchematic>>& allValidSchematicDrops)>& Scope, const UFGHardDriveSettings* self, const TArray<TSubclassOf<class UFGSchematic>>& allValidSchematicDrops);
 
+	UFUNCTION() //required for event binding
+	void OnSchematicCompleted(TSubclassOf<class UFGSchematic> schematic);
 };
 
 #pragma optimize("", on)

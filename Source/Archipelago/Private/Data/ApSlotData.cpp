@@ -40,7 +40,13 @@ bool FApSlotData::ParseSlotData(FString jsonString, FApSlotData* data) {
 	data->freeSampleBuildings = options->GetIntegerField("FreeSampleBuildings");
 	data->freeSampleParts = options->GetIntegerField("FreeSampleParts");
 	data->freeSampleRadioactive = options->GetBoolField("FreeSampleRadioactive");
-	data->energyLink = options->GetBoolField("EnergyLink");
+
+	if (!options->TryGetBoolField("EnergyLink", data->energyLink))
+		data->energyLink = false;
+
+	if (!options->TryGetBoolField("EnableHardDriveGacha", data->enableHardDriveGacha))
+		data->enableHardDriveGacha = false;
+
 	data->hasLoadedSlotData = true;
 
 	return true;

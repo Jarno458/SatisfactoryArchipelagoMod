@@ -18,7 +18,15 @@ void AApEnergyLinkSubsystem::BeginPlay() {
 		
 	UE_LOG(LogApEnergyLink, Display, TEXT("AEnergyLinkSubsystem:BeginPlay()"));
 
-	ap = AApSubsystem::Get(GetWorld());
+	UWorld* world = GetWorld();
+	ap = AApSubsystem::Get(world);
+	fgcheck(ap);
+	slotDataSubsystem = AApSlotDataSubsystem::Get(world);
+	fgcheck(slotDataSubsystem);
+	randomizerSubsystem = AApServerRandomizerSubsystem::Get(world);
+	fgcheck(randomizerSubsystem);
+	apConnectionInfo = AApConnectionInfoSubsystem::Get(world);
+	fgcheck(apConnectionInfo);
 
 	if (!hooksInitialized) {
 		UE_LOG(LogApEnergyLink, Display, TEXT("Initializing hooks"));
@@ -38,20 +46,26 @@ void AApEnergyLinkSubsystem::BeginPlay() {
 void AApEnergyLinkSubsystem::Tick(float DeltaTime) {
 	Super::Tick(DeltaTime);
 
-	if (!apInitialized && ap->IsInitialized()) {
+	if (!apInitialized && randomizerSubsystem->IsInitialized()) {
 		apInitialized = true;
 
-		energyLinkEnabled = ap->GetSlotData().energyLink;
+		FApSlotData slotData = slotDataSubsystem->GetSlotData();
 
-		if (ap->ConnectionState == EApConnectionState::Connected && energyLinkEnabled) {
+		if (!slotData.hasLoadedSlotData)
+			return;
+
+		energyLinkEnabled = slotDataSubsystem->GetSlotData().energyLink;
+
+		if (apConnectionInfo->GetConnectionState() == EApConnectionState::Connected && energyLinkEnabled) {
 			UE_LOG(LogApEnergyLink, Display, TEXT("Modifying Power Storage asset"));
 			const auto asset = UApUtils::GetBlueprintDataBridge(GetWorld())->PowerStorageBuilding;
 			fgcheck(asset);
 			const auto buildingCDO = Cast<AFGBuildablePowerStorage>(asset->ClassDefaultObject);
+
 			buildingCDO->mDisplayName = FText::FormatOrdered(LOCTEXT("EnergyLinkName", "{VanillaName} [EnergyLink]"), buildingCDO->mDisplayName);
 			buildingCDO->mDescription = LOCTEXT("EnergyLinkDescription", "TODO accurate Storage, Max Capacity, Max Discharge Rate info. Talk about how to use the building.");
 
-			ap->MonitorDataStoreValue(FString("EnergyLink") + UApUtils::FStr(ap->currentPlayerTeam), AP_DataType::Raw, energyLinkDefault, [&](AP_SetReply setReply) {
+			ap->MonitorDataStoreValue(FString("EnergyLink") + UApUtils::FStr(apConnectionInfo->GetCurrentPlayerTeam()), AP_DataType::Raw, energyLinkDefault, [&](AP_SetReply setReply) {
 				OnEnergyLinkValueChanged(setReply);
 			});
 		}

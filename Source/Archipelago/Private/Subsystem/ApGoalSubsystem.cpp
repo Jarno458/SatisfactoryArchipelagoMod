@@ -24,15 +24,17 @@ void AApGoalSubsystem::BeginPlay() {
 	resourceSinkSubsystem = AFGResourceSinkSubsystem::Get(world);
 
 	ap = AApSubsystem::Get(world);
+	connectionInfoSubsystem = AApConnectionInfoSubsystem::Get(world);
+	slotDataSubsystem = AApSlotDataSubsystem::Get(world);
 }
 
 void AApGoalSubsystem::Tick(float DeltaTime) {
 	Super::Tick(DeltaTime);
 
-	if (hasSentGoal || ap->ConnectionState != EApConnectionState::Connected)
+	if (hasSentGoal || connectionInfoSubsystem->GetConnectionState() != EApConnectionState::Connected)
 		return;
 
-	FApSlotData slotData = ap->GetSlotData();
+	FApSlotData slotData = slotDataSubsystem->GetSlotData();
 
 	if (AreGoalsCompleted(&slotData)) {
 		UE_LOG(LogApSubsystem, Display, TEXT("Sending goal completion to server"));

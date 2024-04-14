@@ -6,8 +6,9 @@
 #include "Subsystem/ModSubsystem.h"
 #include "Subsystem/SubsystemActorManager.h"
 #include "Subsystem/ApSubsystem.h"
+#include "Subsystem/ApConnectionInfoSubsystem.h"
+#include "Subsystem/ApSlotDataSubsystem.h"
 #include "Data/ApSlotData.h"
-
 
 #include "ApGoalSubsystem.generated.h"
 
@@ -16,10 +17,13 @@ class ARCHIPELAGO_API AApGoalSubsystem : public AModSubsystem
 {
 	GENERATED_BODY()
 
+private:
 	AFGGamePhaseManager* phaseManager;
 	AFGResourceSinkSubsystem* resourceSinkSubsystem;
 
 	AApSubsystem* ap;
+	AApConnectionInfoSubsystem* connectionInfoSubsystem;
+	AApSlotDataSubsystem* slotDataSubsystem;
 
 public:
 	AApGoalSubsystem();

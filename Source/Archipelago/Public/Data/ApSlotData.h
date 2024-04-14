@@ -46,6 +46,9 @@ public:
 	UPROPERTY(BlueprintReadOnly, SaveGame)
 	bool energyLink;
 
+	UPROPERTY(BlueprintReadOnly, SaveGame)
+	bool enableHardDriveGacha;
+
 public:
 	// Parse slot data from server. Returns false if invalid.
 	static bool ParseSlotData(FString jsonString, FApSlotData* data);

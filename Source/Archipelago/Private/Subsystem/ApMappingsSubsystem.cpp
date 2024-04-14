@@ -1,5 +1,4 @@
 #include "ApMappingsSubsystem.h"
-#include "FGResourceSinkSubsystem.h"
 #include "Subsystem/ApSubsystem.h"
 #include "Data/ApMappings.h"
 #include "Data/ApGiftingMappings.h"

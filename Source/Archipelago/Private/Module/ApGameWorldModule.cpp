@@ -9,9 +9,13 @@ UApGameWorldModule::UApGameWorldModule() {
 void UApGameWorldModule::DispatchLifecycleEvent(ELifecyclePhase phase) {
 	Super::DispatchLifecycleEvent(phase);
 
-	UE_LOG(LogApGameWorldModule, Display, TEXT("UApGameWorldModule::DispatchLifecycleEvent"));
+	UE_LOG(LogApGameWorldModule, Display, TEXT("UApGameWorldModule()::DispatchLifecycleEvent(%s)"), *UEnum::GetValueAsString(phase));
 
 	UWorld* world = GetWorld();
+	if (!IsValid(world))	{
+		UE_LOG(LogApGameWorldModule, Error, TEXT("UApGameWorldModule()::DispatchLifecycleEvent() Failed to obtain world*"));
+		return;
+	}
 
 	AApMappingsSubsystem* mappingsSubsystem = AApMappingsSubsystem::Get(world);
 	if (IsValid(mappingsSubsystem))
@@ -19,9 +23,9 @@ void UApGameWorldModule::DispatchLifecycleEvent(ELifecyclePhase phase) {
 
 	AApSubsystem* apSubsystem = AApSubsystem::Get(world);
 	if (IsValid(apSubsystem))
-			apSubsystem->DispatchLifecycleEvent(phase, mSchematics);
+		apSubsystem->DispatchLifecycleEvent(phase);
 
-	AApHardDriveGachaSubsystem* apHardDriveGacha = AApHardDriveGachaSubsystem::Get(world);
-	if (IsValid(apHardDriveGacha))
-		apHardDriveGacha->DispatchLifecycleEvent(phase, mSchematics);
+	AApServerRandomizerSubsystem* apServerRandomizerSubsystem = AApServerRandomizerSubsystem::Get(world);
+	if (IsValid(apServerRandomizerSubsystem))
+		apServerRandomizerSubsystem->DispatchLifecycleEvent(phase, mSchematics);
 }
