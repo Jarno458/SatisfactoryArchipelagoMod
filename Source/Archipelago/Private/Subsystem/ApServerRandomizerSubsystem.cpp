@@ -27,7 +27,7 @@ AApServerRandomizerSubsystem* AApServerRandomizerSubsystem::Get(class UWorld* wo
 	return SubsystemActorManager->GetSubsystemActor<AApServerRandomizerSubsystem>();
 }
 
-void AApServerRandomizerSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase, TArray<TSubclassOf<UFGSchematic>> apHardcodedSchematics) {
+void AApServerRandomizerSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase, const TArray<TSubclassOf<UFGSchematic>>& apHardcodedSchematics) {
 	UE_LOG(LogApServerRandomizerSubsystem, Display, TEXT("AApServerRandomizerSubsystem()::DispatchLifecycleEvent(%s)"), *UEnum::GetValueAsString(phase));
 
 	if (!HasAuthority())
@@ -117,30 +117,6 @@ bool AApServerRandomizerSubsystem::InitializeTick() {
 		|| (connectionState == EApConnectionState::Connected && areRecipiesAndSchematicsInitialized);
 }
 
-void AApServerRandomizerSubsystem::FinalizeInitialization() {
-	//must be called before BeginPlay() and after connecting to AP as FreeSamples caches its exclude radioactive flag there
-	if (!UpdateFreeSamplesConfiguration()) {
-		UE_LOG(LogApServerRandomizerSubsystem, Error, TEXT("AApServerRandomizerSubsystem::FinalizeInitialization() Failed to update configuration of Free Samples"));
-	}
-
-	TArray<TSubclassOf<class UFGResearchTree>> researchTrees;
-	RManager->GetAllResearchTrees(researchTrees);
-
-	for (TSubclassOf<UFGResearchTree>& tree : researchTrees) {
-		UFGResearchTree* treeCDO = Cast<UFGResearchTree>(tree->GetDefaultObject());
-		if (treeCDO != nullptr) {
-			FString className = treeCDO->GetName();
-
-			if (!className.Contains("AP_") && !className.EndsWith("HardDrive_C") && !className.EndsWith("XMas_C"))
-				contentRegistry->RemoveResearchTree(tree);
-		}
-	};
-
-	TArray<TSubclassOf<class UFGSchematic>> hardDriveSchematics;
-	locationPerHardDrive.GetKeys(hardDriveSchematics);
-	hardDriveGachaSubsystem->Initialize(hardDriveSchematics);
-}
-
 void AApServerRandomizerSubsystem::ScoutArchipelagoItems() {
 	UE_LOG(LogApServerRandomizerSubsystem, Display, TEXT("AApServerRandomizerSubsystem::ScoutArchipelagoItems()"));
 
@@ -170,8 +146,8 @@ void AApServerRandomizerSubsystem::ScoutArchipelagoItems() {
 
 	//hardrive locations
 	if (slotData.enableHardDriveGacha) {
-		for (int l = 1338600; l <= 1338699; l++)
-			locations.Add(l);
+		//for (int l = 1338600; l <= 1338699; l++)
+		//	locations.Add(l);
 	}
 
 	//shop locations
@@ -193,9 +169,11 @@ void AApServerRandomizerSubsystem::ParseScoutedItemsAndCreateRecipiesAndSchemati
 	TMap<int64, TSubclassOf<UFGSchematic>> schematicsPerLocation = TMap<int64, TSubclassOf<UFGSchematic>>();
 
 	for (TSubclassOf<UFGSchematic>& schematic : hardcodedSchematics) {
-		UFGSchematic* schematicCDO = Cast<UFGSchematic>(schematic->GetDefaultObject());
-		if (schematicCDO != nullptr && schematicCDO->mMenuPriority > 1000) {
-			schematicsPerLocation.Add(FMath::RoundToInt(schematicCDO->mMenuPriority), schematic);
+		//UFGSchematic* schematicCDO = Cast<UFGSchematic>(schematic->GetDefaultObject());
+		//UFGSchematic* schematicCDO = Cast<UFGSchematic>(schematic);
+		int locationId = FMath::RoundToInt(UFGSchematic::GetMenuPriority(schematic));
+		if (locationId > 1338000) {
+			schematicsPerLocation.Add(locationId, schematic);
 		}
 	}
 
@@ -250,6 +228,30 @@ void AApServerRandomizerSubsystem::ParseScoutedItemsAndCreateRecipiesAndSchemati
 		schematicPatcher->InitializaSchematicForItem(itemPerMamNode.Key, itemPerMamNode.Value, true);
 
 	areRecipiesAndSchematicsInitialized = true;
+}
+
+void AApServerRandomizerSubsystem::FinalizeInitialization() {
+	//must be called before BeginPlay() and after connecting to AP as FreeSamples caches its exclude radioactive flag there
+	if (!UpdateFreeSamplesConfiguration()) {
+		UE_LOG(LogApServerRandomizerSubsystem, Error, TEXT("AApServerRandomizerSubsystem::FinalizeInitialization() Failed to update configuration of Free Samples"));
+	}
+
+	TArray<TSubclassOf<class UFGResearchTree>> researchTrees;
+	RManager->GetAllResearchTrees(researchTrees);
+
+	for (TSubclassOf<UFGResearchTree>& tree : researchTrees) {
+		UFGResearchTree* treeCDO = Cast<UFGResearchTree>(tree->GetDefaultObject());
+		if (treeCDO != nullptr) {
+			FString className = treeCDO->GetName();
+
+			if (!className.Contains("AP_") && !className.EndsWith("HardDrive_C") && !className.EndsWith("XMas_C"))
+				contentRegistry->RemoveResearchTree(tree);
+		}
+	};
+
+	TArray<TSubclassOf<class UFGSchematic>> hardDriveSchematics;
+	locationPerHardDrive.GetKeys(hardDriveSchematics);
+	hardDriveGachaSubsystem->Initialize(hardDriveSchematics);
 }
 
 void AApServerRandomizerSubsystem::BeginPlay() {

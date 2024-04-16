@@ -25,10 +25,13 @@ AApHardDriveGachaSubsystem* AApHardDriveGachaSubsystem::Get(UWorld* world) {
 	return SubsystemActorManager->GetSubsystemActor<AApHardDriveGachaSubsystem>();
 }
 
-void AApHardDriveGachaSubsystem::Initialize(TArray<TSubclassOf<UFGSchematic>> apSchematics) {
+void AApHardDriveGachaSubsystem::Initialize(const TArray<TSubclassOf<UFGSchematic>>& apSchematics) {
 	UE_LOG(LogApHardDriveGachaSubsystem, Display, TEXT("AApSubsystem()::Initialize()"));
 
 	apHardDriveSchematics = apSchematics;
+
+	//we cannot trust the order of this array to be in order of check priority, so we re-sort it
+	UFGSchematic::SortByMenuPriority(apHardDriveSchematics);
 }
 
 void AApHardDriveGachaSubsystem::BeginPlay() {
@@ -40,7 +43,7 @@ void AApHardDriveGachaSubsystem::BeginPlay() {
 	AApSlotDataSubsystem* slotDataSubsystem = AApSlotDataSubsystem::Get(world);
 	fgcheck(slotDataSubsystem);
 
-	if (slotDataSubsystem->GetSlotData().hasLoadedSlotData && !slotDataSubsystem->GetSlotData().enableHardDriveGacha) {
+	if (!slotDataSubsystem->GetSlotData().hasLoadedSlotData || !slotDataSubsystem->GetSlotData().enableHardDriveGacha) {
 		UE_LOG(LogApHardDriveGachaSubsystem, Display, TEXT("AApHardDriveGachaSubsystem::BeginPlay() Hard Drive Gacha disabled"));
 		return;
 	}
@@ -85,17 +88,18 @@ void AApHardDriveGachaSubsystem::GetValidSchematicRewardDrops(
 	for (TSubclassOf<class UFGSchematic> schematic : resultSchematics) {
 		FGameObjectRegistration registration;
 		if (contentRegistry->GetSchematicRegistrationInfo(schematic, registration) 
-			&& !registration.HasAnyFlags(EGameObjectRegistrationFlags::BuiltIn)
-			&& !apHardDriveSchematics.Contains(schematic))
+					&& !registration.HasAnyFlags(EGameObjectRegistrationFlags::BuiltIn)
+					&& !(UFGSchematic::GetMenuPriority(schematic) >= 1338600 && UFGSchematic::GetMenuPriority(schematic) <= 1338699))
 			modSchematics.Add(schematic);
 	}
 
 	schematicsToOffer.Empty();
 
-	//TODO devide in buckets
-	schematicsToOffer.Add(apHardDriveSchematics[0]);
-	schematicsToOffer.Add(apHardDriveSchematics[1]);
-	schematicsToOffer.Add(apHardDriveSchematics[2]);
+	int numSchematicsLeft = apHardDriveSchematics.Num();
+
+	if (numSchematicsLeft >= 1) schematicsToOffer.Add(GetRandomSchematic(0, bucketSize));
+	if (numSchematicsLeft >= 2) schematicsToOffer.Add(GetRandomSchematic(bucketSize, bucketSize * 2));
+	if (numSchematicsLeft >= 3) schematicsToOffer.Add(GetRandomSchematic(bucketSize * 2, bucketSize * 3));
 
 	if (modSchematics.Num() > 0)	{
 		UFGGlobalSettings::GetHardDriveSettingsCDO()->mUniqueItemCount = 4;
@@ -107,6 +111,29 @@ void AApHardDriveGachaSubsystem::GetValidSchematicRewardDrops(
 	}
 
 	out_validSchematics = schematicsToOffer;
+}
+
+TSubclassOf<class UFGSchematic> AApHardDriveGachaSubsystem::GetRandomSchematic(int lowerBound, int upperBound) {
+	int size = upperBound - lowerBound;
+	int numSchematicsLeft = apHardDriveSchematics.Num();
+
+	if (numSchematicsLeft - schematicsToOffer.Num() <= 0)
+		return nullptr;
+
+	if (lowerBound > numSchematicsLeft - size)
+		lowerBound = numSchematicsLeft - size;
+	if (lowerBound	< 0)
+		lowerBound = 0;
+	if (upperBound > numSchematicsLeft)
+		upperBound = numSchematicsLeft;
+
+	TSubclassOf<class UFGSchematic> schematic;
+	do {
+		int index = FMath::RandRange(lowerBound, upperBound - 1);
+		schematic = apHardDriveSchematics[index];
+	} while (schematicsToOffer.Contains(schematic));
+
+	return schematic;
 }
 
 TArray<TSubclassOf<class UFGSchematic>> AApHardDriveGachaSubsystem::GetFinalSchematicRewards(

@@ -29,7 +29,9 @@ public:
 
 	static AApHardDriveGachaSubsystem* Get(class UWorld* world);
 
-	void Initialize(TArray<TSubclassOf<UFGSchematic>> apSchematics);
+	const int bucketSize = 4;
+
+	void Initialize(const TArray<TSubclassOf<UFGSchematic>>& apSchematics);
 
 	UPROPERTY()
 	UFGHardDriveSettings* HardDriveSettings;
@@ -47,6 +49,9 @@ private:
 
 	void GetValidSchematicRewardDrops(TCallScope<void(*)(const UFGHardDriveSettings*, class AFGSchematicManager*, TArray<TSubclassOf<class UFGSchematic>>&)>& Scope, const UFGHardDriveSettings* self, class AFGSchematicManager* schematicManager, TArray<TSubclassOf<class UFGSchematic>>& out_validSchematics);
 	TArray<TSubclassOf<class UFGSchematic>> GetFinalSchematicRewards(TCallScope<TArray<TSubclassOf<class UFGSchematic>>(*)(const UFGHardDriveSettings*, const TArray<TSubclassOf<class UFGSchematic>>& allValidSchematicDrops)>& Scope, const UFGHardDriveSettings* self, const TArray<TSubclassOf<class UFGSchematic>>& allValidSchematicDrops);
+
+	TSubclassOf<class UFGSchematic> GetRandomSchematic(int lowerBound, int upperBound);
+
 
 	UFUNCTION() //required for event binding
 	void OnSchematicCompleted(TSubclassOf<class UFGSchematic> schematic);
