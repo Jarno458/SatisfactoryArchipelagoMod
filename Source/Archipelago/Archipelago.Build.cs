@@ -61,7 +61,7 @@ public class Archipelago : ModuleRules
         });
 
         if (Target.Type == TargetRules.TargetType.Editor) {
-            PublicDependencyModuleNames.AddRange(new string[] {/*"OnlineBlueprintSupport",*/ "AnimGraph"});
+            PublicDependencyModuleNames.AddRange(new string[] {/*"OnlineBlueprintSupport",*/ "AnimGraph", "UnrealEd" });
         }
         PublicDependencyModuleNames.AddRange(new string[] {"FactoryGame", "SML"});
     }
