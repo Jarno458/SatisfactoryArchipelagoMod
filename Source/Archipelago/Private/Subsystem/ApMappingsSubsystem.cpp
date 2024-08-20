@@ -4,12 +4,17 @@
 #include "Data/ApGiftingMappings.h"
 #include "Registry/ModContentRegistry.h"
 #include "FGGameState.h"
+#include "Logging/StructuredLog.h"
 #include "ApUtils.h"
 
 DEFINE_LOG_CATEGORY(LogApMappingsSubsystem);
 
 //TODO REMOVE
 #pragma optimize("", off)
+
+int64 AApMappingsSubsystem::shopId = 0;
+int64 AApMappingsSubsystem::mamId = 0;
+TMap<TSubclassOf<UFGItemDescriptor>, int64> AApMappingsSubsystem::ItemClassToItemId;
 
 AApMappingsSubsystem* AApMappingsSubsystem::Get(class UWorld* world) {
 	USubsystemActorManager* SubsystemActorManager = world->GetSubsystem<USubsystemActorManager>();
@@ -33,7 +38,8 @@ void AApMappingsSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase) {
 	if (phase == ELifecyclePhase::CONSTRUCTION) {
 		ap = AApSubsystem::Get(GetWorld());
 
-		LoadMappings();
+		ApItems.Empty();
+		LoadMappings(ApItems);
 	}
 	else if (phase == ELifecyclePhase::POST_INITIALIZATION) {
 
@@ -62,21 +68,28 @@ void AApMappingsSubsystem::OnClientSubsystemsValid() {
 	LoadTraitMappings();
 }
 
-void AApMappingsSubsystem::LoadMappings() {
+void AApMappingsSubsystem::LoadMappings(TMap<int64, TSharedRef<FApItemBase>>& itemMap) {
 	FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
 	IAssetRegistry& registery = AssetRegistryModule.Get();
 
-	const TMap<FName, const FAssetData> itemDescriptorAssets = GetItemDescriptorAssets(registery);
-	const TMap<FName, const FAssetData> recipeAssets = GetRecipeAssets(registery);
+	UE_LOG(LogApMappingsSubsystem, Display, TEXT("AApMappingsSubsystem::LoadMappings() checking if IAssetRegistry is ready"));
+	registery.ScanPathsSynchronous(TArray<FString> { "/Game/FactoryGame/" }, true);
+	registery.WaitForCompletion();
+	UE_LOG(LogApMappingsSubsystem, Display, TEXT("AApMappingsSubsystem::LoadMappings() IAssetRegistry is ready"));
 
-	LoadItemMappings(itemDescriptorAssets);
-	LoadRecipeMappings(recipeAssets);
-	LoadBuildingMappings(recipeAssets);
-	LoadSpecialItemMappings();
-	LoadSchematicMappings();
+	TMap<FName, const FAssetData> itemDescriptorAssets = GetItemDescriptorAssets(registery);
+	TMap<FName, const FAssetData> recipeAssets = GetRecipeAssets(registery);
+
+	LoadItemMappings(itemMap, itemDescriptorAssets);
+	LoadRecipeMappings(itemMap, recipeAssets);
+	LoadBuildingMappings(itemMap, recipeAssets);
+	LoadSpecialItemMappings(itemMap);
+	LoadSchematicMappings(itemMap);
 }
 
-void AApMappingsSubsystem::LoadItemMappings(TMap<FName, const FAssetData> itemDescriptorAssets) {
+void AApMappingsSubsystem::LoadItemMappings(TMap<int64, TSharedRef<FApItemBase>>& itemMap, TMap<FName, const FAssetData>& itemDescriptorAssets) {
+	ItemClassToItemId.Empty();
+
 	for (TPair<int64, FString> itemMapping : UApMappings::ItemIdToGameItemDescriptor) {
 		UFGItemDescriptor* itemDescriptor = GetItemDescriptorByName(itemDescriptorAssets, itemMapping.Value);
 		TSubclassOf<UFGItemDescriptor> itemClass = itemDescriptor->GetClass();
@@ -86,13 +99,13 @@ void AApMappingsSubsystem::LoadItemMappings(TMap<FName, const FAssetData> itemDe
 		itemInfo.Descriptor = itemDescriptor;
 		itemInfo.Class = itemClass; 
 
-		ApItems.Add(itemMapping.Key, MakeShared<FApItem>(itemInfo));
+		itemMap.Add(itemMapping.Key, MakeShared<FApItem>(itemInfo));
 
 		ItemClassToItemId.Add(itemClass, itemMapping.Key);
 	}
 }
 
-void AApMappingsSubsystem::LoadSpecialItemMappings() {
+void AApMappingsSubsystem::LoadSpecialItemMappings(TMap<int64, TSharedRef<FApItemBase>>& itemMap) {
 	for (TPair<int64, EApMappingsSpecialItemType> specialItemMapping : UApMappings::ItemIdToSpecialItemType) {
 
 		FApSpecialItem specialItem;
@@ -111,11 +124,11 @@ void AApMappingsSubsystem::LoadSpecialItemMappings() {
 				break;
 		}
 
-		ApItems.Add(specialItemMapping.Key, MakeShared<FApSpecialItem>(specialItem));
+		itemMap.Add(specialItemMapping.Key, MakeShared<FApSpecialItem>(specialItem));
 	}
 }
 
-void AApMappingsSubsystem::LoadRecipeMappings(TMap<FName, const FAssetData> recipeAssets) {
+void AApMappingsSubsystem::LoadRecipeMappings(TMap<int64, TSharedRef<FApItemBase>>& itemMap, TMap<FName, const FAssetData>& recipeAssets) {
 	for (TPair<int64, TArray<FString>> recipeMapping : UApMappings::ItemIdToGameRecipe) {
 		TArray<FApRecipeInfo> recipes;
 
@@ -133,11 +146,11 @@ void AApMappingsSubsystem::LoadRecipeMappings(TMap<FName, const FAssetData> reci
 		recipeItem.Id = recipeMapping.Key;
 		recipeItem.Recipes = recipes;
 
-		ApItems.Add(recipeMapping.Key, MakeShared<FApRecipeItem>(recipeItem));
+		itemMap.Add(recipeMapping.Key, MakeShared<FApRecipeItem>(recipeItem));
 	}
 }
 
-void AApMappingsSubsystem::LoadBuildingMappings(TMap<FName, const FAssetData> recipeAssets) {
+void AApMappingsSubsystem::LoadBuildingMappings(TMap<int64, TSharedRef<FApItemBase>>& itemMap, TMap<FName, const FAssetData>& recipeAssets) {
 	for (TPair<int64, TArray<FString>> buildingMapping : UApMappings::ItemIdToGameBuilding) {
 		TArray<FApRecipeInfo> recipes;
 
@@ -162,11 +175,11 @@ void AApMappingsSubsystem::LoadBuildingMappings(TMap<FName, const FAssetData> re
 		buildingItem.Id = buildingMapping.Key;
 		buildingItem.Recipes = recipes;
 
-		ApItems.Add(buildingMapping.Key, MakeShared<FApBuildingItem>(buildingItem));
+		itemMap.Add(buildingMapping.Key, MakeShared<FApBuildingItem>(buildingItem));
 	}
 }
 
-void AApMappingsSubsystem::LoadSchematicMappings() {
+void AApMappingsSubsystem::LoadSchematicMappings(TMap<int64, TSharedRef<FApItemBase>>& itemMap) {
 	for (TPair<int64, FString> schmaticMapping : UApMappings::ItemIdToGameSchematic) {
 		UFGSchematic* schematic = GetSchematicByName(schmaticMapping.Value);
 		TSubclassOf<UFGSchematic> schematicClass = schematic->GetClass();
@@ -176,7 +189,7 @@ void AApMappingsSubsystem::LoadSchematicMappings() {
 		schematicInfo.Schematic = schematic;
 		schematicInfo.Class = schematicClass;
 
-		ApItems.Add(schmaticMapping.Key, MakeShared<FApSchematicItem>(schematicInfo));
+		itemMap.Add(schmaticMapping.Key, MakeShared<FApSchematicItem>(schematicInfo));
 	}
 }
 
@@ -203,6 +216,8 @@ const TMap<FName, const FAssetData> AApMappingsSubsystem::GetBlueprintAssetsIn(I
 			}
 		}
 	}
+
+	UE_LOG(LogApMappingsSubsystem, Display, TEXT("AApMappingsSubsystem::GetBlueprintAssetsIn() found %i assets"), assetsMap.Num());
 
 	return assetsMap;
 }
@@ -310,6 +325,8 @@ void AApMappingsSubsystem::PrintTraitValuesPerItem() {
 }
 
 UObject* AApMappingsSubsystem::FindAssetByName(const TMap<FName, const FAssetData> assets, FString assetName) {
+	UE_LOG(LogApMappingsSubsystem, Display, TEXT("AApMappingsSubsystem::FindAssetByName(assets[%i], \"%s\")"), assets.Num(), *assetName);
+
 	assetName.RemoveFromEnd("'");
 
 	if (!assetName.EndsWith("_C"))
@@ -327,6 +344,7 @@ UObject* AApMappingsSubsystem::FindAssetByName(const TMap<FName, const FAssetDat
 		fgcheck(blueprint != nullptr);
 		return blueprint->GetDefaultObject();
 	} else {
+
 		FName key = FName(*assetName);
 		fgcheck(assets.Contains(key));
 		return Cast<UBlueprintGeneratedClass>(assets[key].GetAsset())->GetDefaultObject();

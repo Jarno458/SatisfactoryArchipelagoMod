@@ -7,6 +7,7 @@
 #include "Logging/StructuredLog.h"
 
 #include "ApMappings.h"
+#include "Subsystem/ApMappingsSubsystem.h"
 
 #include "ApEditorScripts.generated.h"
 
@@ -23,6 +24,6 @@ public:
 	static void GenerateApItemSchematicBlueprints();
 
 private:
-	static void CreateApItemSchematicBlueprints(int64 itemId, FString recipeName);
+	static void CreateApItemSchematicBlueprintsForRecipe(int64 itemId, TSharedRef<FApRecipeItem> recipeItem);
 #endif
 };

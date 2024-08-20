@@ -9,7 +9,7 @@
 
 #include "FGSchematic.h"
 #include "Unlocks/FGUnlockRecipe.h"
-#include "Subsystem/ApMappingsSubsystem.h"
+
 
 #include "ApUtils.h"
 
@@ -19,34 +19,36 @@ DEFINE_LOG_CATEGORY(LogApEditorScripts);
 void UApEditorScripts::GenerateApItemSchematicBlueprints() {
 	UE_LOGFMT(LogApEditorScripts, Log, "UApEditorScripts::GenerateApItemSchematicBlueprints()");
 
-	//AApMappingsSubsystem* mappingSubsystem = AApMappingsSubsystem::Get();
-	//mappingSubsystem->DispatchLifecycleEvent();
+	TMap<int64, TSharedRef<FApItemBase>> itemMap;
+	AApMappingsSubsystem::LoadMappings(itemMap);
 
-	for (TPair<int64, TArray<FString>> recipeMapping : UApMappings::ItemIdToGameRecipe) {
-		TArray<FApRecipeInfo> recipes;
+	for (TPair<int64, TSharedRef<FApItemBase>>& itemInfoMapping : itemMap) {
+		switch (itemInfoMapping.Value->Type)
+		{
+			case EItemType::Item:
+				break;
 
-		/*for (FString recipeName : recipeMapping.Value) {
-			UFGRecipe* recipe = GetRecipeByName(recipeAssets, recipeName);
-			TSubclassOf<UFGRecipe> recipeClass = recipe->GetClass();
+			case EItemType::Recipe:
+			case EItemType::Building:
+				CreateApItemSchematicBlueprintsForRecipe(itemInfoMapping.Key, StaticCastSharedRef<FApRecipeItem>(itemInfoMapping.Value));
+				break;
 
-			FApRecipeInfo recipeInfo;
-			recipeInfo.Recipe = recipe;
-			recipeInfo.Class = recipeClass;
-			recipes.Add(recipeInfo);
+			case EItemType::Schematic:
+				break;
+
+			case EItemType::Special:
+				break;
 		}
-
-		CreateApItemSchematicBlueprints();*/
 	}
 
 	UE_LOGFMT(LogApEditorScripts, Log, "UApEditorScripts::GenerateApItemSchematicBlueprints() Done");
 }
 
-void UApEditorScripts::CreateApItemSchematicBlueprints(int64 itemId, FString recipeName) {
-	FString itemIdString = UApUtils::FStr(itemId);
+void UApEditorScripts::CreateApItemSchematicBlueprintsForRecipe(int64 itemId, TSharedRef<FApRecipeItem> recipeItem) {
+	FName bpName(TEXT("AP_") + UApUtils::FStr(itemId));
+	FString packagePath(TEXT("/Archipelago/Schematics/AP_ItemSchematics/") + bpName.ToString());
 
-	UPackage* Package = CreatePackage(nullptr, *(TEXT("/Archipelago/Schematics/AP_ItemSchematics/") + itemIdString));
-	FName bpName(TEXT("AP_") + itemIdString);
-
+	UPackage* Package = CreatePackage(*packagePath);
 	UBlueprint* BP = FKismetEditorUtilities::CreateBlueprint(UFGSchematic::StaticClass(), Package, bpName, BPTYPE_Normal, UBlueprint::StaticClass(), UBlueprintGeneratedClass::StaticClass());
 
 	FString PathName = BP->GetPathName();
@@ -57,23 +59,27 @@ void UApEditorScripts::CreateApItemSchematicBlueprints(int64 itemId, FString rec
 		PathName.Append("_C");
 	}
 
-	UClass* InnerBPClass = LoadObject<UClass>(NULL, *PathName);
-
-	UObject* bpObject = InnerBPClass->GetDefaultObject();
-	UFGSchematic* schematic = Cast<UFGSchematic>(bpObject);
+	TSubclassOf<UFGSchematic> InnerBPClass = LoadClass<UFGSchematic>(NULL, *PathName);
+	UFGSchematic* schematic = Cast<UFGSchematic>(InnerBPClass->GetDefaultObject());
 
 	UE_LOGFMT(LogTemp, Log, "Schematic", schematic->mDisplayName.ToString());
 
+	FString typePrefix = recipeItem->Type == EItemType::Building ? "Building: " : "Recipe: ";
+	FString recipeName = recipeItem->Recipes[0].Recipe->GetDisplayName().ToString();
+
+	schematic->mDisplayName = FText::FromString(typePrefix + recipeName);
 	schematic->mType = ESchematicType::EST_Custom;
 	schematic->mMenuPriority = itemId;
 	schematic->mTechTier = 0;
 	schematic->mTimeToComplete = 0;
 
-	//TODO add recipe unlock
-	//UFGUnlockRecipe recipeUnlock();
-	//recipeUnlock->AddRecipe();
+	UFGUnlockRecipe recipeUnlock;
 
-	//schematic->mUnlocks.Add(recipeUnlock);
+	for (FApRecipeInfo& recipeInfo : recipeItem->Recipes) {
+		recipeUnlock.AddRecipe(recipeInfo.Class);
+	}
+
+	schematic->mUnlocks.Add(&recipeUnlock);
 
 	BP->MarkPackageDirty();
 }

@@ -147,7 +147,7 @@ protected:
 	// End IFSaveInterface
 
 public:
-	TMap<TSubclassOf<UFGItemDescriptor>, int64> ItemClassToItemId;
+	static TMap<TSubclassOf<UFGItemDescriptor>, int64> ItemClassToItemId;
 	TMap<FString, int64> NameToItemId;
 	TMap<int64, TSharedRef<FApItemBase>> ApItems;
 	TMap<TSubclassOf<UFGItemDescriptor>, TMap<FString, float>> TraitsPerItem;
@@ -161,8 +161,8 @@ private:
 	bool hasLoadedItemNameMappings = false;
 	bool hasLoadedItemTraits = false;
 
-	int64 mamId;
-	int64 shopId;
+	static int64 mamId;
+	static int64 shopId;
 
 public:
 	//UFUNCTION(BlueprintCallable, BlueprintPure)
@@ -177,13 +177,14 @@ public:
 	FORCEINLINE int64 GetMamItemId() const { return mamId; }
 	FORCEINLINE int64 GetAwesomeShopItemId() const { return shopId; }
 
+	static void LoadMappings(TMap<int64, TSharedRef<FApItemBase>>& itemMap);
+
 private:
-	void LoadMappings();
-	void LoadItemMappings(TMap<FName, const FAssetData> itemDescriptorAssets);
-	void LoadSpecialItemMappings();
-	void LoadRecipeMappings(TMap<FName, const FAssetData> recipeAssets);
-	void LoadBuildingMappings(TMap<FName, const FAssetData> recipeAssets);
-	void LoadSchematicMappings();
+	static void LoadItemMappings(TMap<int64, TSharedRef<FApItemBase>>& itemMap, TMap<FName, const FAssetData>& itemDescriptorAssets);
+	static void LoadSpecialItemMappings(TMap<int64, TSharedRef<FApItemBase>>& itemMap);
+	static void LoadRecipeMappings(TMap<int64, TSharedRef<FApItemBase>>& itemMap, TMap<FName, const FAssetData>& recipeAssets);
+	static void LoadBuildingMappings(TMap<int64, TSharedRef<FApItemBase>>& itemMap, TMap<FName, const FAssetData>& recipeAssets);
+	static void LoadSchematicMappings(TMap<int64, TSharedRef<FApItemBase>>& itemMap);
 
 	void LoadTraitMappings();
 	int GetResourceSinkPointsForItem(AFGResourceSinkSubsystem* resourceSinkSubsystem, TSubclassOf<UFGItemDescriptor> itemClass, int64 itemId);
