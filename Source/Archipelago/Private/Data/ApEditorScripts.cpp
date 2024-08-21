@@ -9,6 +9,7 @@
 
 #include "FGSchematic.h"
 #include "Unlocks/FGUnlockRecipe.h"
+#include "BPFContentLib.h"
 
 
 #include "ApUtils.h"
@@ -20,23 +21,17 @@ void UApEditorScripts::GenerateApItemSchematicBlueprints() {
 	UE_LOGFMT(LogApEditorScripts, Log, "UApEditorScripts::GenerateApItemSchematicBlueprints()");
 
 	TMap<int64, TSharedRef<FApItemBase>> itemMap;
-	AApMappingsSubsystem::LoadMappings(itemMap);
+	AApMappingsSubsystem::LoadRecipeMappings(itemMap);
 
 	for (TPair<int64, TSharedRef<FApItemBase>>& itemInfoMapping : itemMap) {
 		switch (itemInfoMapping.Value->Type)
 		{
-			case EItemType::Item:
-				break;
-
 			case EItemType::Recipe:
 			case EItemType::Building:
 				CreateApItemSchematicBlueprintsForRecipe(itemInfoMapping.Key, StaticCastSharedRef<FApRecipeItem>(itemInfoMapping.Value));
 				break;
 
-			case EItemType::Schematic:
-				break;
-
-			case EItemType::Special:
+			default:
 				break;
 		}
 	}
@@ -60,12 +55,19 @@ void UApEditorScripts::CreateApItemSchematicBlueprintsForRecipe(int64 itemId, TS
 	}
 
 	TSubclassOf<UFGSchematic> InnerBPClass = LoadClass<UFGSchematic>(NULL, *PathName);
+	fgcheck(InnerBPClass != nullptr)
 	UFGSchematic* schematic = Cast<UFGSchematic>(InnerBPClass->GetDefaultObject());
 
-	UE_LOGFMT(LogTemp, Log, "Schematic", schematic->mDisplayName.ToString());
-
 	FString typePrefix = recipeItem->Type == EItemType::Building ? "Building: " : "Recipe: ";
+
+	UE_LOGFMT(LogApEditorScripts, Log, "build typePrefix: {0}", typePrefix);
+
 	FString recipeName = recipeItem->Recipes[0].Recipe->GetDisplayName().ToString();
+
+	FString recipeName2 = Cast<UFGRecipe>(recipeItem->Recipes[0].Class->GetDefaultObject())->GetDisplayName().ToString();
+
+	UE_LOGFMT(LogApEditorScripts, Log, "build recipeName: {0}", recipeName);
+	UE_LOGFMT(LogApEditorScripts, Log, "build recipeName2: {0}", recipeName);
 
 	schematic->mDisplayName = FText::FromString(typePrefix + recipeName);
 	schematic->mType = ESchematicType::EST_Custom;
@@ -73,13 +75,9 @@ void UApEditorScripts::CreateApItemSchematicBlueprintsForRecipe(int64 itemId, TS
 	schematic->mTechTier = 0;
 	schematic->mTimeToComplete = 0;
 
-	UFGUnlockRecipe recipeUnlock;
-
 	for (FApRecipeInfo& recipeInfo : recipeItem->Recipes) {
-		recipeUnlock.AddRecipe(recipeInfo.Class);
+		UBPFContentLib::AddRecipeToUnlock(InnerBPClass, nullptr, recipeInfo.Class);
 	}
-
-	schematic->mUnlocks.Add(&recipeUnlock);
 
 	BP->MarkPackageDirty();
 }

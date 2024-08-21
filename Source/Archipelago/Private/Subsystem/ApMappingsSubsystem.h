@@ -178,6 +178,7 @@ public:
 	FORCEINLINE int64 GetAwesomeShopItemId() const { return shopId; }
 
 	static void LoadMappings(TMap<int64, TSharedRef<FApItemBase>>& itemMap);
+	static void LoadRecipeMappings(TMap<int64, TSharedRef<FApItemBase>>& itemMap);
 
 private:
 	static void LoadItemMappings(TMap<int64, TSharedRef<FApItemBase>>& itemMap, TMap<FName, const FAssetData>& itemDescriptorAssets);
@@ -195,7 +196,7 @@ private:
 	
 	static const TMap<FName, const FAssetData> GetItemDescriptorAssets(IAssetRegistry& registery);
 	static const TMap<FName, const FAssetData> GetRecipeAssets(IAssetRegistry& registery);
-	static const TMap<FName, const FAssetData> GetBlueprintAssetsIn(IAssetRegistry& registery, FName&& packagePath, TArray<FString> namePrefixes);
+	static const TMap<FName, const FAssetData> GetBlueprintAssetsIn(IAssetRegistry& registery, FName&& packagePath, TArray<FString> namePrefixes, bool searchSubFolders = true);
 	
 	static UFGRecipe* GetRecipeByName(const TMap<FName, const FAssetData> recipeAssets, FString name);
 	static UFGItemDescriptor* GetItemDescriptorByName(const TMap<FName, const FAssetData> itemDescriptorAssets, FString name);

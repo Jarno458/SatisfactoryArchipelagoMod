@@ -72,10 +72,7 @@ void AApMappingsSubsystem::LoadMappings(TMap<int64, TSharedRef<FApItemBase>>& it
 	FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
 	IAssetRegistry& registery = AssetRegistryModule.Get();
 
-	UE_LOG(LogApMappingsSubsystem, Display, TEXT("AApMappingsSubsystem::LoadMappings() checking if IAssetRegistry is ready"));
-	registery.ScanPathsSynchronous(TArray<FString> { "/Game/FactoryGame/" }, true);
 	registery.WaitForCompletion();
-	UE_LOG(LogApMappingsSubsystem, Display, TEXT("AApMappingsSubsystem::LoadMappings() IAssetRegistry is ready"));
 
 	TMap<FName, const FAssetData> itemDescriptorAssets = GetItemDescriptorAssets(registery);
 	TMap<FName, const FAssetData> recipeAssets = GetRecipeAssets(registery);
@@ -85,6 +82,18 @@ void AApMappingsSubsystem::LoadMappings(TMap<int64, TSharedRef<FApItemBase>>& it
 	LoadBuildingMappings(itemMap, recipeAssets);
 	LoadSpecialItemMappings(itemMap);
 	LoadSchematicMappings(itemMap);
+}
+
+void AApMappingsSubsystem::LoadRecipeMappings(TMap<int64, TSharedRef<FApItemBase>>& itemMap) {
+	FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+	IAssetRegistry& registery = AssetRegistryModule.Get();
+
+	registery.WaitForCompletion();
+
+	TMap<FName, const FAssetData> recipeAssets = GetRecipeAssets(registery);
+
+	LoadRecipeMappings(itemMap, recipeAssets);
+	LoadBuildingMappings(itemMap, recipeAssets);
 }
 
 void AApMappingsSubsystem::LoadItemMappings(TMap<int64, TSharedRef<FApItemBase>>& itemMap, TMap<FName, const FAssetData>& itemDescriptorAssets) {
@@ -193,26 +202,32 @@ void AApMappingsSubsystem::LoadSchematicMappings(TMap<int64, TSharedRef<FApItemB
 	}
 }
 
-const TMap<FName, const FAssetData> AApMappingsSubsystem::GetBlueprintAssetsIn(IAssetRegistry& registery, FName&& packagePath, TArray<FString> namePrefixes) {
+const TMap<FName, const FAssetData> AApMappingsSubsystem::GetBlueprintAssetsIn(IAssetRegistry& registery, FName&& packagePath, TArray<FString> namePrefixes, bool searchSubFolders) {
 	UE_LOG(LogApMappingsSubsystem, Display, TEXT("AApMappingsSubsystem::GetBlueprintAssetsIn(packagePath: %s, namePrefixes: [%i])"), *packagePath.ToString(), namePrefixes.Num());
 
 	FARFilter filter;
+
+#if WITH_EDITOR
+	filter.ClassPaths.Add(FTopLevelAssetPath(UBlueprint::StaticClass()));
+	filter.TagsAndValues.Add(FBlueprintTags::GeneratedClassPath, TOptional<FString>());
+	filter.TagsAndValues.Add(FBlueprintTags::IsDataOnly, TOptional<FString>(TEXT("True")));
+#else
 	filter.ClassPaths.Add(FTopLevelAssetPath("/Script/Engine", "BlueprintGeneratedClass"));
+#endif
 	filter.PackagePaths.Add(packagePath);
-	filter.bRecursivePaths = true;
+	filter.bRecursivePaths = searchSubFolders;
 
 	TArray<FAssetData> assets;
 	registery.GetAssets(filter, assets);
 
 	TMap<FName, const FAssetData> assetsMap;
 	for (const FAssetData asset : assets) {
-		FString nameString;
-		asset.AssetName.ToString(nameString);
+		FString nameString = asset.AssetName.ToString();
 
 		for (FString prefix : namePrefixes) {
 			if (nameString.StartsWith(prefix)) {
 				assetsMap.Add(asset.AssetName, asset);
-				UE_LOG(LogApMappingsSubsystem, VeryVerbose, TEXT("AApMappingsSubsystem::GetBlueprintAssetsIn() Adding asset %s that matches prefix %s"), *asset.AssetName.ToString(), *prefix);
+				UE_LOG(LogApMappingsSubsystem, Display, TEXT("AApMappingsSubsystem::GetBlueprintAssetsIn() Adding asset %s that matches prefix %s"), *nameString, *prefix);
 			}
 		}
 	}
@@ -329,6 +344,77 @@ UObject* AApMappingsSubsystem::FindAssetByName(const TMap<FName, const FAssetDat
 
 	assetName.RemoveFromEnd("'");
 
+#if !WITH_EDITOR
+	if (!assetName.EndsWith("_C"))
+		assetName = assetName.Append("_C");
+#else
+	if (assetName.EndsWith("_C"))
+		assetName = assetName.Mid(0, assetName.Len() - 2);
+#endif
+
+	if (assetName.Contains("/")) {
+#if !WITH_EDITOR
+		UE_LOG(LogApMappingsSubsystem, Error, TEXT("AApMappingsSubsystem::FindAssetByName() cant load asset of name %s"), *assetName);
+
+		//working examples while ingame
+		//auto s = LoadObject<UBlueprintGeneratedClass>(NULL, TEXT("/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_Ladders.ResourceSink_Ladders_C"));
+		//auto a = registery.GetAssetByObjectPath(TEXT("/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_Ladders.ResourceSink_Ladders_C"));
+		//auto c = LoadClass<UObject>(nullptr, TEXT("/Game/FactoryGame/Resource/RawResources/OreIron/Desc_OreIron.Desc_OreIron_C"));
+		//TSubclassOf<UFGSchematic> d = LoadClass<UFGSchematic>(nullptr, TEXT("/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_Ladders.ResourceSink_Ladders_C"));
+		assetName.RemoveFromStart("/Script/Engine.Blueprint'");
+
+		UBlueprintGeneratedClass* blueprint = LoadObject<UBlueprintGeneratedClass>(NULL, *assetName);
+		fgcheck(blueprint != nullptr);
+		return blueprint->GetDefaultObject();
+#else
+		int32 dotPos;
+		if (!assetName.FindLastChar('.', dotPos)) {
+			UE_LOG(LogApMappingsSubsystem, Fatal, TEXT("AApMappingsSubsystem::FindAssetByName() failed to find . seperator in %s"), *assetName);
+		}
+		assetName = assetName.Mid(dotPos + 1, assetName.Len() - dotPos);
+
+		UE_LOG(LogApMappingsSubsystem, Display, TEXT("AApMappingsSubsystem::FindAssetByName() transformed into %s"), *assetName);
+#endif
+	}
+
+	FName key = FName(*assetName);
+	fgcheck(assets.Contains(key));
+
+	FAssetData assetData = assets[key];
+
+	//Based of BlueprintAssetHelperLibrary.cpp in SML
+	//Retrieve GeneratedClass tag containing a text path to generated class
+	FString generatedClassExportedPath;
+	if (!assetData.GetTagValue(FBlueprintTags::GeneratedClassPath, generatedClassExportedPath)) {
+		UE_LOG(LogApMappingsSubsystem, Fatal, TEXT("AApMappingsSubsystem::FindAssetByName() Failed to load GeneratedClassPath for asset %s"), *assetName);
+	}
+
+	//Make sure export path represents a valid path and convert it to pure objectt path
+	FString generatedClassPath;
+	if (!FPackageName::ParseExportTextPath(generatedClassExportedPath, NULL, &generatedClassPath)) {
+		UE_LOG(LogApMappingsSubsystem, Fatal, TEXT("AApMappingsSubsystem::FindAssetByName() Failed to parse GeneratedClassPath for path %s"), *generatedClassExportedPath);
+	}
+
+	//Load UBlueprintGeneratedClass for provided object and make sure it has been loaded
+	UClass* classObject = LoadObject<UClass>(NULL, *generatedClassPath);
+	if (classObject == NULL) {
+		UE_LOG(LogApMappingsSubsystem, Fatal, TEXT("AApMappingsSubsystem::FindAssetByName() Failed to create UBlueprintGeneratedClass for path %s"), *generatedClassPath);
+	}
+
+	return Cast<UBlueprintGeneratedClass>(classObject)->GetDefaultObject();
+
+		//return Cast<UBlueprintGeneratedClass>(assets[key].GetAsset())->GetDefaultObject();
+		/*FName key = FName(*assetName);
+		fgcheck(assets.Contains(key));
+		UObject* asset = assets[key].GetAsset();
+
+		UE_LOG(LogApMappingsSubsystem, Display, TEXT("AApMappingsSubsystem::FindAssetByName() found asset of class %s"), *asset->GetClass()->GetName());
+
+		return Cast<UBlueprint>(asset)->GetClass()->GetDefaultObject();*/
+	
+/*#else
+	assetName.RemoveFromEnd("'");
+
 	if (!assetName.EndsWith("_C"))
 		assetName = assetName.Append("_C");
 
@@ -343,12 +429,13 @@ UObject* AApMappingsSubsystem::FindAssetByName(const TMap<FName, const FAssetDat
 		UBlueprintGeneratedClass* blueprint = LoadObject<UBlueprintGeneratedClass>(NULL, *assetName);
 		fgcheck(blueprint != nullptr);
 		return blueprint->GetDefaultObject();
-	} else {
-
+	}
+	else {
 		FName key = FName(*assetName);
 		fgcheck(assets.Contains(key));
 		return Cast<UBlueprintGeneratedClass>(assets[key].GetAsset())->GetDefaultObject();
 	}
+#endif*/
 }
 
 UFGSchematic* AApMappingsSubsystem::GetSchematicByName(FString name) {
@@ -366,7 +453,12 @@ UFGRecipe* AApMappingsSubsystem::GetRecipeByName(const TMap<FName, const FAssetD
 UFGItemDescriptor* AApMappingsSubsystem::GetItemDescriptorByName(const TMap<FName, const FAssetData> itemDescriptorAssets, FString name) {
 	UObject* obj = FindAssetByName(itemDescriptorAssets, name);
 	fgcheck(obj != nullptr);
-	return Cast<UFGItemDescriptor>(obj);
+	UE_LOG(LogApMappingsSubsystem, Display, TEXT("AApMappingsSubsystem::GetItemDescriptorByName() *obj->GetClass()->GetName() %s"), *obj->GetClass()->GetName())
+	UE_LOG(LogApMappingsSubsystem, Display, TEXT("AApMappingsSubsystem::GetItemDescriptorByName() *obj->GetClass()->GetDefaultObjectName() %s"), *obj->GetClass()->GetDefaultObjectName().ToString())
+
+	UFGItemDescriptor* itemDesc = Cast<UFGItemDescriptor>(obj);
+	fgcheck(itemDesc != nullptr);
+	return itemDesc;
 }
 
 const TMap<FName, const FAssetData> AApMappingsSubsystem::GetItemDescriptorAssets(IAssetRegistry& registery) {
@@ -382,6 +474,7 @@ const TMap<FName, const FAssetData> AApMappingsSubsystem::GetItemDescriptorAsset
 const TMap<FName, const FAssetData> AApMappingsSubsystem::GetRecipeAssets(IAssetRegistry& registery) {
 	TMap<FName, const FAssetData> recipeAssets;
 
+	recipeAssets.Append(GetBlueprintAssetsIn(registery, "/Game/FactoryGame", TArray<FString>{ "Recipe_" }, false));
 	recipeAssets.Append(GetBlueprintAssetsIn(registery, "/Game/FactoryGame/Recipes", TArray<FString>{ "Recipe_" }));
 	recipeAssets.Append(GetBlueprintAssetsIn(registery, "/Game/FactoryGame/Equipment", TArray<FString>{ "Recipe_" }));
 	recipeAssets.Append(GetBlueprintAssetsIn(registery, "/Game/FactoryGame/Buildable/Factory", TArray<FString>{ "Recipe_" }));

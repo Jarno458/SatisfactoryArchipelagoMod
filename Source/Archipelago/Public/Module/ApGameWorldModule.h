@@ -11,8 +11,6 @@
 #include "Subsystem/ApMappingsSubsystem.h"
 #include "Subsystem/ApServerRandomizerSubsystem.h"
 #include "Subsystem/ApSchematicPatcherSubsystem.h"
-//#include "Subsystem/ApEnergyLinkSubsystem.h"
-//#include "Subsystem/ApPortalSubsystem.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(LogApGameWorldModule, Log, All);
 
@@ -27,6 +25,9 @@ class ARCHIPELAGO_API UApGameWorldModule : public UGameWorldModule
 	GENERATED_BODY()
 	
 public:	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	TArray<TSubclassOf<class UFGSchematic>> mAdditionalSchematics;
+
 	// Sets default values for this actor's properties
 	UApGameWorldModule();
 
