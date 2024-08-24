@@ -3,11 +3,17 @@
 #include "CoreMinimal.h"
 
 #include "Kismet/BlueprintFunctionLibrary.h"
+
+#if WITH_EDITOR 
 #include "Engine/UserDefinedStruct.h"
 #include "Logging/StructuredLog.h"
+#include "FGSchematic.h"
+#include "FGRecipe.h"
 
 #include "ApMappings.h"
 #include "Subsystem/ApMappingsSubsystem.h"
+#include "Module/ApGameWorldModule.h"
+#endif
 
 #include "ApEditorScripts.generated.h"
 
@@ -24,6 +30,13 @@ public:
 	static void GenerateApItemSchematicBlueprints();
 
 private:
-	static void CreateApItemSchematicBlueprintsForRecipe(int64 itemId, TSharedRef<FApRecipeItem> recipeItem);
+	static TSubclassOf<UFGSchematic> CreateApItemSchematicBlueprintsForRecipe(int64 itemId, TSharedRef<FApRecipeItem> recipeItem);
+
+	static UApGameWorldModule* GetWorldModule();
+
+	static void RemoveEmptySchematics(UApGameWorldModule* worldModule);
+	static void RemoveSchematicsContaining(UApGameWorldModule* worldModule, FString name);
+
+	static FString GetRecipeName(UFGRecipe* recipe);
 #endif
 };

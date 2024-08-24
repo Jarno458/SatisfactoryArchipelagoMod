@@ -48,8 +48,8 @@ void AApSchematicPatcherSubsystem::Initialize() {
 	UWorld* world = GetWorld();
 	contentLibSubsystem = world->GetGameInstance()->GetSubsystem<UContentLibSubsystem>();
 	fgcheck(contentLibSubsystem)
-	contentRegistry = UModContentRegistry::Get(world);
-	fgcheck(contentRegistry)
+	//contentRegistry = UModContentRegistry::Get(world);
+	//fgcheck(contentRegistry)
 	ap = AApSubsystem::Get(world);
 	fgcheck(ap);
 	connectionInfo = AApConnectionInfoSubsystem::Get(world);
@@ -67,6 +67,7 @@ void AApSchematicPatcherSubsystem::Tick(float DeltaTime) {
 		return;
 }
 
+/*
 TSubclassOf<UFGSchematic> AApSchematicPatcherSubsystem::CreateSchematicBoundToItemId(int64 itemid, TSharedRef<FApRecipeItem> apitem) {
 	Initialize();
 
@@ -94,6 +95,7 @@ TSubclassOf<UFGSchematic> AApSchematicPatcherSubsystem::CreateSchematicBoundToIt
 
 	return foundSchematic.Value;
 }
+*/
 
 void AApSchematicPatcherSubsystem::InitializaHubSchematic(FString name, TSubclassOf<UFGSchematic> factorySchematic, TArray<FApNetworkItem> items) {
 	Initialize();

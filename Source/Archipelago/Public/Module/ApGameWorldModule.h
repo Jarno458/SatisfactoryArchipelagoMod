@@ -25,8 +25,12 @@ class ARCHIPELAGO_API UApGameWorldModule : public UGameWorldModule
 	GENERATED_BODY()
 	
 public:	
+	/**
+	* Used for recipes that are used by the ApServerRandomizerSubsystem but need to explicitly go through content registration
+	* Such as MAM tree nodes that are registered indirectly
+	*/
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
-	TArray<TSubclassOf<class UFGSchematic>> mAdditionalSchematics;
+	TArray<TSubclassOf<class UFGSchematic>> mTreeNodeSchematics;
 
 	// Sets default values for this actor's properties
 	UApGameWorldModule();

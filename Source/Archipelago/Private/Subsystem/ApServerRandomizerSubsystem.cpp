@@ -58,6 +58,7 @@ void AApServerRandomizerSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase,
 		hardDriveGachaSubsystem = AApHardDriveGachaSubsystem::Get(world);
 		fgcheck(hardDriveGachaSubsystem)
 
+		/* Moved to Editor Scripts Generation
 		//TODO: generatic AP Items can be totally hardcoded outside of the initialization phase
 		UE_LOG(LogApServerRandomizerSubsystem, Display, TEXT("Generating schematics from AP Item IDs..."));
 		for (TPair<int64, TSharedRef<FApItemBase>>& apitem : mappingSubsystem->ApItems) {
@@ -68,6 +69,7 @@ void AApServerRandomizerSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase,
 				ItemSchematics.Add(apitem.Key, schematic);
 			}
 		}
+		*/
 
 		ap->SetItemReceivedCallback([this](int64 itemid, bool isFromServer) { ReceiveItem(itemid, isFromServer); });
 		ap->SetLocationCheckedCallback([this](int64 itemid) { CollectLocation(itemid); });
@@ -169,11 +171,16 @@ void AApServerRandomizerSubsystem::ParseScoutedItemsAndCreateRecipiesAndSchemati
 	TMap<int64, TSubclassOf<UFGSchematic>> schematicsPerLocation = TMap<int64, TSubclassOf<UFGSchematic>>();
 
 	for (TSubclassOf<UFGSchematic>& schematic : hardcodedSchematics) {
-		//UFGSchematic* schematicCDO = Cast<UFGSchematic>(schematic->GetDefaultObject());
-		//UFGSchematic* schematicCDO = Cast<UFGSchematic>(schematic);
+		//The magic, we store AP id's inside the menu priority, and we set techtier to -1 for item send by the server
 		int locationId = FMath::RoundToInt(UFGSchematic::GetMenuPriority(schematic));
 		if (locationId > 1338000) {
-			schematicsPerLocation.Add(locationId, schematic);
+			bool isItemSchematic = UFGSchematic::GetTechTier(schematic) == -1;
+
+			if (isItemSchematic) {
+				ItemSchematics.Add(locationId, schematic);
+			} else {
+				schematicsPerLocation.Add(locationId, schematic);
+			}
 		}
 	}
 

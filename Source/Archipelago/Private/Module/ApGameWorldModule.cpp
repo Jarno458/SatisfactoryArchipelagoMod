@@ -18,7 +18,7 @@ void UApGameWorldModule::DispatchLifecycleEvent(ELifecyclePhase phase) {
 	}
 
 	if (phase == ELifecyclePhase::CONSTRUCTION) {
-		mAdditionalSchematics.Append(mSchematics);
+		mTreeNodeSchematics.Append(mSchematics);
 	}
 
 	AApMappingsSubsystem* mappingsSubsystem = AApMappingsSubsystem::Get(world);
@@ -31,5 +31,5 @@ void UApGameWorldModule::DispatchLifecycleEvent(ELifecyclePhase phase) {
 
 	AApServerRandomizerSubsystem* apServerRandomizerSubsystem = AApServerRandomizerSubsystem::Get(world);
 	if (IsValid(apServerRandomizerSubsystem))
-		apServerRandomizerSubsystem->DispatchLifecycleEvent(phase, mAdditionalSchematics);
+		apServerRandomizerSubsystem->DispatchLifecycleEvent(phase, mTreeNodeSchematics);
 }

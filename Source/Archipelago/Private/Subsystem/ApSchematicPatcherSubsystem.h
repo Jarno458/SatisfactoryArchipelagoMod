@@ -56,7 +56,7 @@ public:
 	bool IsCollected(UFGUnlock* unlock); //TODO remove
 	void Collect(UFGSchematic* schematic, int unlockIndex, FApNetworkItem& networkItem);
 
-	TSubclassOf<UFGSchematic> CreateSchematicBoundToItemId(int64 item, TSharedRef<FApRecipeItem> recipe);
+	//TSubclassOf<UFGSchematic> CreateSchematicBoundToItemId(int64 item, TSharedRef<FApRecipeItem> recipe);
 	void InitializaHubSchematic(FString name, TSubclassOf<UFGSchematic> factorySchematic, TArray<FApNetworkItem> apItems);
 	void InitializaSchematicForItem(TSubclassOf<UFGSchematic> factorySchematic, FApNetworkItem item, bool updateSchemaName);
 
@@ -65,7 +65,7 @@ private:
 	TSet<int64> collectedLocations;
 
 	UContentLibSubsystem* contentLibSubsystem;
-	UModContentRegistry* contentRegistry;
+	//UModContentRegistry* contentRegistry;
 
 	AApSubsystem* ap;
 	AApConnectionInfoSubsystem* connectionInfo;
