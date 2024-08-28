@@ -167,7 +167,7 @@ void AApServerRandomizerSubsystem::ScoutArchipelagoItems() {
 void AApServerRandomizerSubsystem::ParseScoutedItemsAndCreateRecipiesAndSchematics() {
 	UE_LOG(LogApServerRandomizerSubsystem, Display, TEXT("AApSubsystem::ParseScoutedItemsAndCreateRecipiesAndSchematics()"));
 
-	TMap<FString, TTuple<bool, TSubclassOf<UFGSchematic>>> schematicsPerMilestone = TMap<FString, TTuple<bool, TSubclassOf<UFGSchematic>>>();
+	TMap<FString, TSubclassOf<UFGSchematic>> schematicsPerMilestone = TMap<FString, TSubclassOf<UFGSchematic>>();
 	TMap<int64, TSubclassOf<UFGSchematic>> schematicsPerLocation = TMap<int64, TSubclassOf<UFGSchematic>>();
 
 	for (TSubclassOf<UFGSchematic>& schematic : hardcodedSchematics) {
@@ -187,18 +187,20 @@ void AApServerRandomizerSubsystem::ParseScoutedItemsAndCreateRecipiesAndSchemati
 	for (const FApNetworkItem& location : scoutedLocations) {
 		if (location.locationName.StartsWith("Hub")) {
 			FString milestone = location.locationName.Left(location.locationName.Find(","));
-			FString uniqueMilestone = milestone + TEXT("_") + connectionInfo->GetRoomSeed();
 
 			if (!schematicsPerMilestone.Contains(milestone)) {
-				TTuple<bool, TSubclassOf<UFGSchematic>> schematic = UApUtils::FindOrCreateClass(TEXT("/Archipelago/"), *uniqueMilestone, UFGSchematic::StaticClass());
+				//TODO locationsPerMilestone must remain filled
+				TSubclassOf<UFGSchematic> schematic = FindObject<UClass>(FindPackage(nullptr, TEXT("/Archipelago/")), *milestone, false);
+
+				//TTuple<bool, TSubclassOf<UFGSchematic>> schematic = UApUtils::FindClass(TEXT("/Archipelago/"), *milestone, UFGSchematic::StaticClass());
 				schematicsPerMilestone.Add(milestone, schematic);
 			}
 
-			if (!locationsPerMilestone.Contains(schematicsPerMilestone[milestone].Value)) {
-				locationsPerMilestone.Add(schematicsPerMilestone[milestone].Value, TArray<FApNetworkItem>{ location });
+			if (!locationsPerMilestone.Contains(schematicsPerMilestone[milestone])) {
+				locationsPerMilestone.Add(schematicsPerMilestone[milestone], TArray<FApNetworkItem>{ location });
 			}
 			else {
-				locationsPerMilestone[schematicsPerMilestone[milestone].Value].Add(location);
+				locationsPerMilestone[schematicsPerMilestone[milestone]].Add(location);
 			}
 		}
 		else if (location.location >= 1338500 && location.location <= 1338571 && schematicsPerLocation.Contains(location.location)) {
@@ -215,12 +217,12 @@ void AApServerRandomizerSubsystem::ParseScoutedItemsAndCreateRecipiesAndSchemati
 	UE_LOG(LogApServerRandomizerSubsystem, Display, TEXT("Generating HUB milestones"));
 
 	for (TPair<TSubclassOf<UFGSchematic>, TArray<FApNetworkItem>>& itemPerMilestone : locationsPerMilestone) {
-		for (TPair<FString, TTuple<bool, TSubclassOf<UFGSchematic>>>& schematicAndName : schematicsPerMilestone) {
-			if (itemPerMilestone.Key == schematicAndName.Value.Value) {
-				if (!schematicAndName.Value.Key)
-					schematicPatcher->InitializaHubSchematic(schematicAndName.Key, itemPerMilestone.Key, itemPerMilestone.Value);
+		for (TPair<FString, TSubclassOf<UFGSchematic>>& schematicAndName : schematicsPerMilestone) {
+			if (itemPerMilestone.Key == schematicAndName.Value) {
+				//if (!schematicAndName.Value.Key)
+				schematicPatcher->InitializaHubSchematic(schematicAndName.Key, itemPerMilestone.Key, itemPerMilestone.Value);
 
-				contentRegistry->RegisterSchematic(FName(TEXT("Archipelago")), itemPerMilestone.Key);
+				//contentRegistry->RegisterSchematic(FName(TEXT("Archipelago")), itemPerMilestone.Key);
 
 				break;
 			}

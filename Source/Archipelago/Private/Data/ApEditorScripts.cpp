@@ -46,6 +46,59 @@ void UApEditorScripts::GenerateApItemSchematicBlueprints() {
 	UE_LOGFMT(LogApEditorScripts, Log, "UApEditorScripts::GenerateApItemSchematicBlueprints() Done");
 }
 
+void UApEditorScripts::GenerateApHubSchematicBlueprints() {
+	UE_LOGFMT(LogApEditorScripts, Log, "UApEditorScripts::GenerateApHubchematicBlueprints() Done");
+
+	UApGameWorldModule* worldModule = GetWorldModule();
+	RemoveEmptySchematics(worldModule);
+	RemoveSchematicsContaining(worldModule, "AP_HubSchematics");
+
+	int menuPrio = 0;
+
+	for (int tier = 1; tier <= 9; tier++) {
+		for (int milestone = 1; milestone <= 5; milestone++) {
+			FName bpName(TEXT("AP_HUB_") + FString::FromInt(tier) + TEXT("_") + FString::FromInt(milestone));
+			FString packagePath(TEXT("/Archipelago/Schematics/AP_HubSchematics/") + bpName.ToString());
+
+			UPackage* Package = CreatePackage(*packagePath);
+			UBlueprint* BP = FKismetEditorUtilities::CreateBlueprint(UFGSchematic::StaticClass(), Package, bpName, BPTYPE_Normal, UBlueprint::StaticClass(), UBlueprintGeneratedClass::StaticClass());
+
+			FString PathName = BP->GetPathName();
+
+			UE_LOGFMT(LogApEditorScripts, Log, "Created new BP at path {0}", PathName);
+
+			if (!PathName.EndsWith("_C")) {
+				PathName.Append("_C");
+			}
+
+			TSubclassOf<UFGSchematic> InnerBPClass = LoadClass<UFGSchematic>(NULL, *PathName);
+			fgcheck(InnerBPClass != nullptr)
+			UFGSchematic* schematic = Cast<UFGSchematic>(InnerBPClass->GetDefaultObject());
+			fgcheck(schematic != nullptr)
+			UTexture2D* apIcon = LoadObject<UTexture2D>(nullptr, TEXT("/Archipelago/Assets/SourceArt/ArchipelagoAssetPack/ArchipelagoIcon128.ArchipelagoIcon128.ArchipelagoIcon128.ArchipelagoIcon128"));
+			fgcheck(apIcon != nullptr)
+
+			FString displayName(TEXT("Hub ") + FString::FromInt(tier) + TEXT("-") + FString::FromInt(milestone));
+
+			schematic->mDisplayName = FText::FromString(displayName);
+			schematic->mType = ESchematicType::EST_Milestone;
+			schematic->mTimeToComplete = 200;
+			schematic->mMenuPriority = ++menuPrio;
+			schematic->mTechTier = tier;
+			schematic->mSchematicIcon.SetResourceObject(apIcon);
+			schematic->mSmallSchematicIcon = apIcon;
+
+			worldModule->mSchematics.Add(InnerBPClass);
+
+			BP->MarkPackageDirty();
+		}
+	}
+
+	worldModule->MarkPackageDirty();
+
+	UE_LOGFMT(LogApEditorScripts, Log, "UApEditorScripts::GenerateApHubchematicBlueprints() Done");
+}
+
 TSubclassOf<UFGSchematic> UApEditorScripts::CreateApItemSchematicBlueprintsForRecipe(int64 itemId, TSharedRef<FApRecipeItem> recipeItem) {
 	FName bpName(TEXT("AP_") + UApUtils::FStr(itemId));
 	FString packagePath(TEXT("/Archipelago/Schematics/AP_ItemSchematics/") + bpName.ToString());

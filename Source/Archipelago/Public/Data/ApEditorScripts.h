@@ -28,6 +28,8 @@ class ARCHIPELAGO_API UApEditorScripts : public UBlueprintFunctionLibrary
 public:
 	UFUNCTION(BlueprintCallable)
 	static void GenerateApItemSchematicBlueprints();
+	UFUNCTION(BlueprintCallable)
+	static void GenerateApHubSchematicBlueprints();
 
 private:
 	static TSubclassOf<UFGSchematic> CreateApItemSchematicBlueprintsForRecipe(int64 itemId, TSharedRef<FApRecipeItem> recipeItem);
