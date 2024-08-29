@@ -107,11 +107,11 @@ void AApSchematicPatcherSubsystem::InitializaHubSchematic(FString name, TSubclas
 
 	FContentLib_Schematic schematic = FContentLib_Schematic();
 	schematic.Name = name;
-	schematic.Type = "Milestone";
-	schematic.Time = 200;
-	schematic.Tier = tier;
-	schematic.MenuPriority = items[0].location;
-	schematic.VisualKit = "Kit_AP_Logo";
+	//schematic.Type = "Milestone";
+	//schematic.Time = 200;
+	//schematic.Tier = tier;
+	//schematic.MenuPriority = items[0].location;
+	//schematic.VisualKit = "Kit_AP_Logo";
 	schematic.Cost = slotDataSubsystem->GetSlotData().hubLayout[tier - 1][milestone - 1];
 
 	for (auto& item : items)

@@ -186,21 +186,29 @@ void AApServerRandomizerSubsystem::ParseScoutedItemsAndCreateRecipiesAndSchemati
 
 	for (const FApNetworkItem& location : scoutedLocations) {
 		if (location.locationName.StartsWith("Hub")) {
-			FString milestone = location.locationName.Left(location.locationName.Find(","));
 
-			if (!schematicsPerMilestone.Contains(milestone)) {
-				//TODO locationsPerMilestone must remain filled
-				TSubclassOf<UFGSchematic> schematic = FindObject<UClass>(FindPackage(nullptr, TEXT("/Archipelago/")), *milestone, false);
+			//location.locationName = "Hub 1-1, Item 1"
+			FString milestoneName = location.locationName.Left(location.locationName.Find(","));
+
+			if (!schematicsPerMilestone.Contains(milestoneName)) {
+				int delimeterPos;
+				milestoneName.FindChar('-', delimeterPos);
+				FString tier = milestoneName.Mid(delimeterPos - 1, 1);
+				FString milestone = milestoneName.Mid(delimeterPos + 1, 1);
+				FString bpName = FString::Format(TEXT("/Archipelago/Schematics/AP_HubSchematics/AP_HUB_{0}_{1}.AP_HUB_{0}_{1}_C"), { tier, milestone });
+
+				TSubclassOf<UFGSchematic> schematic = LoadClass<UFGSchematic>(nullptr, *bpName);
+				fgcheck(schematic != nullptr)
 
 				//TTuple<bool, TSubclassOf<UFGSchematic>> schematic = UApUtils::FindClass(TEXT("/Archipelago/"), *milestone, UFGSchematic::StaticClass());
-				schematicsPerMilestone.Add(milestone, schematic);
+				schematicsPerMilestone.Add(milestoneName, schematic);
 			}
 
-			if (!locationsPerMilestone.Contains(schematicsPerMilestone[milestone])) {
-				locationsPerMilestone.Add(schematicsPerMilestone[milestone], TArray<FApNetworkItem>{ location });
+			if (!locationsPerMilestone.Contains(schematicsPerMilestone[milestoneName])) {
+				locationsPerMilestone.Add(schematicsPerMilestone[milestoneName], TArray<FApNetworkItem>{ location });
 			}
 			else {
-				locationsPerMilestone[schematicsPerMilestone[milestone]].Add(location);
+				locationsPerMilestone[schematicsPerMilestone[milestoneName]].Add(location);
 			}
 		}
 		else if (location.location >= 1338500 && location.location <= 1338571 && schematicsPerLocation.Contains(location.location)) {

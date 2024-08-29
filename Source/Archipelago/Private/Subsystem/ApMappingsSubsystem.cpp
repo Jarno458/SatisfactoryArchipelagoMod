@@ -382,6 +382,7 @@ UObject* AApMappingsSubsystem::FindAssetByName(const TMap<FName, const FAssetDat
 
 	FAssetData assetData = assets[key];
 
+#if WITH_EDITOR
 	//Based of BlueprintAssetHelperLibrary.cpp in SML
 	//Retrieve GeneratedClass tag containing a text path to generated class
 	FString generatedClassExportedPath;
@@ -402,40 +403,9 @@ UObject* AApMappingsSubsystem::FindAssetByName(const TMap<FName, const FAssetDat
 	}
 
 	return Cast<UBlueprintGeneratedClass>(classObject)->GetDefaultObject();
-
-		//return Cast<UBlueprintGeneratedClass>(assets[key].GetAsset())->GetDefaultObject();
-		/*FName key = FName(*assetName);
-		fgcheck(assets.Contains(key));
-		UObject* asset = assets[key].GetAsset();
-
-		UE_LOG(LogApMappingsSubsystem, Display, TEXT("AApMappingsSubsystem::FindAssetByName() found asset of class %s"), *asset->GetClass()->GetName());
-
-		return Cast<UBlueprint>(asset)->GetClass()->GetDefaultObject();*/
-	
-/*#else
-	assetName.RemoveFromEnd("'");
-
-	if (!assetName.EndsWith("_C"))
-		assetName = assetName.Append("_C");
-
-	if (assetName.Contains("/")) {
-		//working examples
-		//auto s = LoadObject<UBlueprintGeneratedClass>(NULL, TEXT("/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_Ladders.ResourceSink_Ladders_C"));
-		//auto a = registery.GetAssetByObjectPath(TEXT("/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_Ladders.ResourceSink_Ladders_C"));
-		//auto c = LoadClass<UObject>(nullptr, TEXT("/Game/FactoryGame/Resource/RawResources/OreIron/Desc_OreIron.Desc_OreIron_C"));
-		//TSubclassOf<UFGSchematic> d = LoadClass<UFGSchematic>(nullptr, TEXT("/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_Ladders.ResourceSink_Ladders_C"));
-		assetName.RemoveFromStart("/Script/Engine.Blueprint'");
-
-		UBlueprintGeneratedClass* blueprint = LoadObject<UBlueprintGeneratedClass>(NULL, *assetName);
-		fgcheck(blueprint != nullptr);
-		return blueprint->GetDefaultObject();
-	}
-	else {
-		FName key = FName(*assetName);
-		fgcheck(assets.Contains(key));
-		return Cast<UBlueprintGeneratedClass>(assets[key].GetAsset())->GetDefaultObject();
-	}
-#endif*/
+#else
+	return Cast<UBlueprintGeneratedClass>(assets[key].GetAsset())->GetDefaultObject();
+#endif
 }
 
 UFGSchematic* AApMappingsSubsystem::GetSchematicByName(FString name) {
