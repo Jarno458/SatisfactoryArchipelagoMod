@@ -17,8 +17,10 @@ void UApGameWorldModule::DispatchLifecycleEvent(ELifecyclePhase phase) {
 		return;
 	}
 
+	TArray<TSubclassOf<UFGSchematic>> hardcodedSchematics;
 	if (phase == ELifecyclePhase::CONSTRUCTION) {
-		mTreeNodeSchematics.Append(mSchematics);
+		hardcodedSchematics.Append(mSchematics);
+		hardcodedSchematics.Append(mTreeNodeSchematics);
 	}
 
 	AApMappingsSubsystem* mappingsSubsystem = AApMappingsSubsystem::Get(world);
@@ -31,5 +33,5 @@ void UApGameWorldModule::DispatchLifecycleEvent(ELifecyclePhase phase) {
 
 	AApServerRandomizerSubsystem* apServerRandomizerSubsystem = AApServerRandomizerSubsystem::Get(world);
 	if (IsValid(apServerRandomizerSubsystem))
-		apServerRandomizerSubsystem->DispatchLifecycleEvent(phase, mTreeNodeSchematics);
+		apServerRandomizerSubsystem->DispatchLifecycleEvent(phase, hardcodedSchematics);
 }

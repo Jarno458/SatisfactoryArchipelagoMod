@@ -119,10 +119,12 @@ private:
 	bool InitializeTick();
 	void FinalizeInitialization();
 
+	//TODO move to client
 	bool UpdateFreeSamplesConfiguration();
 	void SetMamEnhancerConfigurationHooks();
 	UFUNCTION() //required for event binding
 	void LockMamEnhancerSpoilerConfiguration();
+	//
 
 	void ReceiveItem(int64 itemId, bool isFromServer);
 	void ProcessReceivedItems();

@@ -1,4 +1,7 @@
 #include "Subsystem/ApSchematicPatcherSubsystem.h"
+#include "FGGameState.h"
+#include "Module/WorldModuleManager.h"
+#include "Module/ApGameWorldModule.h"
 
 DEFINE_LOG_CATEGORY(LogApSchematicPatcherSubsystem);
 
@@ -9,7 +12,7 @@ DEFINE_LOG_CATEGORY(LogApSchematicPatcherSubsystem);
 
 AApSchematicPatcherSubsystem::AApSchematicPatcherSubsystem() {
 	PrimaryActorTick.bCanEverTick = true;
-	PrimaryActorTick.bStartWithTickEnabled = false;
+	PrimaryActorTick.bStartWithTickEnabled = true;
 	PrimaryActorTick.TickInterval = 0.5f;
 	ReplicationPolicy = ESubsystemReplicationPolicy::SpawnOnServer_Replicate;
 }
@@ -30,83 +33,207 @@ AApSchematicPatcherSubsystem* AApSchematicPatcherSubsystem::Get(class UWorld* wo
 void AApSchematicPatcherSubsystem::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-	//TODO Replication
+	DOREPLIFETIME(AApSchematicPatcherSubsystem, replicatedItemInfos);
+	DOREPLIFETIME(AApSchematicPatcherSubsystem, replicatedMilestones);
+	DOREPLIFETIME(AApSchematicPatcherSubsystem, collectedLocations);
 }
 
 void AApSchematicPatcherSubsystem::BeginPlay() {
+	Super::BeginPlay();
+
 	UE_LOG(LogApSchematicPatcherSubsystem, Display, TEXT("AApSchematicPatcherSubsystem::BeginPlay()"));
 
-	Super::BeginPlay();
+	AGameStateBase* gameState = GetWorld()->GetGameState();
+
+	if (gameState->HasAuthority()) {
+		Initialize();
+	}
+	else {
+		if (AFGGameState* factoryGameState = Cast<AFGGameState>(gameState)) {
+			factoryGameState->mOnClientSubsystemsValid.AddDynamic(this, &AApSchematicPatcherSubsystem::OnClientSubsystemsValid);
+
+			if (factoryGameState->AreClientSubsystemsValid()) {
+				Initialize();
+			}
+		}
+	}
+}
+
+void AApSchematicPatcherSubsystem::OnClientSubsystemsValid() {
+	Initialize();
 }
 
 void AApSchematicPatcherSubsystem::Initialize() {
 	if (isInitialized)
 		return;
 
-	isInitialized = true;
-
 	UWorld* world = GetWorld();
 	contentLibSubsystem = world->GetGameInstance()->GetSubsystem<UContentLibSubsystem>();
 	fgcheck(contentLibSubsystem)
-	//contentRegistry = UModContentRegistry::Get(world);
-	//fgcheck(contentRegistry)
-	ap = AApSubsystem::Get(world);
-	fgcheck(ap);
 	connectionInfo = AApConnectionInfoSubsystem::Get(world);
 	fgcheck(connectionInfo);
-	slotDataSubsystem = AApSlotDataSubsystem::Get(world);
+	slotDataSubsystem = AApSlotDataSubsystem::Get(world);  //FAIL slot data is not replicated
 	fgcheck(slotDataSubsystem);
 	mappingSubsystem = AApMappingsSubsystem::Get(world);
 	fgcheck(mappingSubsystem)
+
+	isInitialized = true;
 }
 
 void AApSchematicPatcherSubsystem::Tick(float DeltaTime) {
 	Super::Tick(DeltaTime);
 
-	if (connectionInfo->GetConnectionState() != EApConnectionState::Connected)
+	if (!isInitialized
+		|| hasPatchedSchematics
+		|| connectionInfo->GetConnectionState() != EApConnectionState::Connected 
+		|| !receivedItemInfos
+		|| !receivedMilestones
+		//|| !slotDataSubsystem->GetSlotData().hasLoadedSlotData
+		)
+			return;
+
+	InitializeSchematicsBasedOnScoutedData();
+
+	hasPatchedSchematics = true;
+
+	//maybe? dont think we need to thick anymore
+	SetActorTickEnabled(false);
+}
+
+void AApSchematicPatcherSubsystem::Server_SetItemInfoPerSchematicId(int currentPlayerId, const TArray<FApNetworkItem>& itemInfo) {
+	if (!HasAuthority())
 		return;
+
+	replicatedItemInfos = MakeReplicateable(currentPlayerId, itemInfo);
+
+	OnRep_ItemInfosReplicated();
+}
+
+TArray<FApReplicatedItemInfo> AApSchematicPatcherSubsystem::MakeReplicateable(int currentPlayerId, const TArray<FApNetworkItem>& itemInfo) {
+	TArray<FApReplicatedItemInfo> itemsToReplicate;
+	for (const FApNetworkItem& itemInfoToReplicate : itemInfo) {
+		FApReplicatedItemInfo replicatedItem;
+
+		replicatedItem.flags = itemInfoToReplicate.flags;
+		replicatedItem.item = 0;
+		replicatedItem.location = itemInfoToReplicate.location - ID_OFFSET;
+		replicatedItem.itemName = itemInfoToReplicate.itemName;
+		replicatedItem.playerName = itemInfoToReplicate.playerName;
+
+		if (itemInfoToReplicate.player == currentPlayerId) {
+			replicatedItem.flags &= IS_LOCAL_PLAYER;
+
+			if (itemInfoToReplicate.item >= ID_OFFSET)
+				replicatedItem.item = itemInfoToReplicate.item - ID_OFFSET;
+		}
+	}
+
+	return itemsToReplicate;
+}
+
+void AApSchematicPatcherSubsystem::Server_SetItemInfoPerMilestone(int currentPlayerId, const TMap<int, TMap<int, TArray<FApNetworkItem>>>& itemsPerMilestone) {
+	if (!HasAuthority())
+		return;
+
+	TArray<FApReplicatedMilestoneInfo> milestonesToReplicate;
+		for (const TPair<int, TMap<int, TArray<FApNetworkItem>>>& itemsPerMilestonePerTier : itemsPerMilestone) {
+		for (const TPair<int, TArray<FApNetworkItem>>& itemsPerMilestoneToReplicate : itemsPerMilestonePerTier.Value) {
+			FApReplicatedMilestoneInfo replicatedMilestone;
+			replicatedMilestone.tier = itemsPerMilestonePerTier.Key;
+			replicatedMilestone.milestone = itemsPerMilestoneToReplicate.Key;
+			replicatedMilestone.items = MakeReplicateable(currentPlayerId, itemsPerMilestoneToReplicate.Value);
+		}
+	}
+
+	replicatedMilestones = milestonesToReplicate;
+
+	OnRep_MilestonesReplicated();
+}
+
+
+void AApSchematicPatcherSubsystem::OnRep_ItemInfosReplicated() {
+	receivedItemInfos = true;
+}
+
+void AApSchematicPatcherSubsystem::OnRep_MilestonesReplicated() {
+	receivedMilestones = true;
+}
+
+void AApSchematicPatcherSubsystem::OnRep_CollectedLocationsReplicated() {
+	//TODO Update collected locations
+}
+
+void AApSchematicPatcherSubsystem::InitializeSchematicsBasedOnScoutedData() {
+	UWorld* world = GetWorld();
+	fgcheck(world != nullptr);
+	UWorldModuleManager* wordModuleManager = world->GetSubsystem<UWorldModuleManager>();
+	fgcheck(wordModuleManager != nullptr);
+	UApGameWorldModule* apWorldModule = Cast<UApGameWorldModule>(wordModuleManager->FindModule(FName("Archipelago")));
+	fgcheck(apWorldModule != nullptr);
+
+	TArray<TSubclassOf<UFGSchematic>> hardcodedSchematics;
+	hardcodedSchematics.Append(apWorldModule->mSchematics);
+	hardcodedSchematics.Append(apWorldModule->mTreeNodeSchematics);
+
+	TMap<int64, FApReplicatedItemInfo> replicatedItemInfoBySchematicId;
+	for (const FApReplicatedItemInfo& replicatedItemInfo : replicatedItemInfos) {
+		replicatedItemInfoBySchematicId.Add((int64)replicatedItemInfo.location + ID_OFFSET, replicatedItemInfo);
+	}
+
+	TMap<int, TMap<int, TArray<FApReplicatedItemInfo>>> replicatedItemsPerMilestone;
+	for (const FApReplicatedMilestoneInfo& replicatedMilestone : replicatedMilestones) {
+		if (!replicatedItemsPerMilestone.Contains(replicatedMilestone.tier)) {
+			replicatedItemsPerMilestone.Add(replicatedMilestone.tier, TMap<int, TArray<FApReplicatedItemInfo>>());
+		}
+
+		replicatedItemsPerMilestone[replicatedMilestone.tier].Add(replicatedMilestone.milestone, replicatedMilestone.items);
+	}
+
+	for (TSubclassOf<UFGSchematic>& schematic : hardcodedSchematics) {
+		//The magic, we store AP id's inside the menu priority, and we set techtier to -1 for item send by the server
+		int locationId = FMath::RoundToInt(UFGSchematic::GetMenuPriority(schematic));
+		if (locationId > ID_OFFSET) {
+			bool isItemSchematic = UFGSchematic::GetTechTier(schematic) == -1;
+			bool isShop = UFGSchematic::GetType(schematic) == ESchematicType::EST_ResourceSink;
+
+			if (!isItemSchematic && replicatedItemInfoBySchematicId.Contains(locationId)) {
+				InitializaSchematicForItem(schematic, replicatedItemInfoBySchematicId[locationId], isShop);
+			}
+		} else if (UFGSchematic::GetType(schematic) == ESchematicType::EST_Milestone) {
+			int tier = UFGSchematic::GetTechTier(schematic);
+			int milestone = FMath::RoundToInt(UFGSchematic::GetMenuPriority(schematic));
+
+			if (tier <= 0)
+				continue;
+
+			if (replicatedItemsPerMilestone.Contains(tier) && replicatedItemsPerMilestone[tier].Contains(milestone)) {
+				InitializaHubSchematic(schematic, replicatedItemsPerMilestone[tier][milestone], TMap<FString, int>()); //TODO add actual cost based on slot_data
+			}
+		}
+	}
+}
+
+void AApSchematicPatcherSubsystem::InitializaHubSchematic(TSubclassOf<UFGSchematic> factorySchematic, const TArray<FApReplicatedItemInfo>& items, const TMap<FString, int>& costs) {
+	FContentLib_Schematic schematic = FContentLib_Schematic();
+	schematic.Cost = costs;
+
+	for (const FApReplicatedItemInfo& item : items)
+		schematic.InfoCards.Add(CreateUnlockInfoOnly(item));
+
+	UCLSchematicBPFLib::InitSchematicFromStruct(schematic, factorySchematic, contentLibSubsystem);
 }
 
 /*
-TSubclassOf<UFGSchematic> AApSchematicPatcherSubsystem::CreateSchematicBoundToItemId(int64 itemid, TSharedRef<FApRecipeItem> apitem) {
-	Initialize();
-
-	FString name = FString::Printf(TEXT("AP_ItemId_%i"), itemid);
-
-	TTuple<bool, TSubclassOf<UFGSchematic>> foundSchematic = UApUtils::FindOrCreateClass(TEXT("/Archipelago/"), *name, UFGSchematic::StaticClass());
-	if (!foundSchematic.Key) {
-		TArray<FString> recipesToUnlock;
-		for (FApRecipeInfo& recipe : apitem->Recipes) {
-			recipesToUnlock.Add(recipe.Class->GetName());
-		}
-
-		FString typePrefix = apitem->Type == EItemType::Building ? "Building: " : "Recipe: ";
-		FString recipeName = apitem->Recipes[0].Recipe->GetDisplayName().ToString();
-
-		FContentLib_Schematic schematic = FContentLib_Schematic();
-		schematic.Name = typePrefix + recipeName;
-		schematic.Type = "Custom";
-		schematic.Recipes = recipesToUnlock;
-
-		UCLSchematicBPFLib::InitSchematicFromStruct(schematic, foundSchematic.Value, contentLibSubsystem);
-
-		contentRegistry->RegisterSchematic(FName(TEXT("Archipelago")), foundSchematic.Value);
-	}
-
-	return foundSchematic.Value;
-}
-*/
-
-void AApSchematicPatcherSubsystem::InitializaHubSchematic(FString name, TSubclassOf<UFGSchematic> factorySchematic, TArray<FApNetworkItem> items) {
-	Initialize();
-
+void AApSchematicPatcherSubsystem::InitializaHubSchematic(FString name, TSubclassOf<UFGSchematic> factorySchematic, const TArray<FApReplicatedItemInfo>& items) {
 	int delimeterPos;
 	name.FindChar('-', delimeterPos);
 	int32 tier = FCString::Atoi(*name.Mid(delimeterPos - 1, 1));
 	int32 milestone = FCString::Atoi(*name.Mid(delimeterPos + 1, 1));
 
+	InitializaHubSchematic(factorySchematic, items, slotDataSubsystem->GetSlotData().hubLayout[tier - 1][milestone - 1]);
+
 	FContentLib_Schematic schematic = FContentLib_Schematic();
-	schematic.Name = name;
+	//schematic.Name = name;
 	//schematic.Type = "Milestone";
 	//schematic.Time = 200;
 	//schematic.Tier = tier;
@@ -119,10 +246,8 @@ void AApSchematicPatcherSubsystem::InitializaHubSchematic(FString name, TSubclas
 
 	UCLSchematicBPFLib::InitSchematicFromStruct(schematic, factorySchematic, contentLibSubsystem);
 }
-
-void AApSchematicPatcherSubsystem::InitializaSchematicForItem(TSubclassOf<UFGSchematic> factorySchematic, FApNetworkItem item, bool updateSchemaName) {
-	Initialize();
-
+*/ 
+void AApSchematicPatcherSubsystem::InitializaSchematicForItem(TSubclassOf<UFGSchematic> factorySchematic, const FApReplicatedItemInfo& item, bool updateSchemaName) {
 	FContentLib_UnlockInfoOnly unlockOnlyInfo = CreateUnlockInfoOnly(item);
 
 	FContentLib_Schematic schematic = FContentLib_Schematic();
@@ -158,7 +283,7 @@ void AApSchematicPatcherSubsystem::InitializaSchematicForItem(TSubclassOf<UFGSch
 	}
 }
 
-FContentLib_UnlockInfoOnly AApSchematicPatcherSubsystem::CreateUnlockInfoOnly(FApNetworkItem item) {
+FContentLib_UnlockInfoOnly AApSchematicPatcherSubsystem::CreateUnlockInfoOnly(const FApReplicatedItemInfo& item) {
 	FFormatNamedArguments Args;
 	if (item.flags == 0b001) {
 		Args.Add(TEXT("ProgressionType"), LOCTEXT("NetworkItemProgressionTypeAdvancement", "progression item"));
@@ -177,33 +302,33 @@ FContentLib_UnlockInfoOnly AApSchematicPatcherSubsystem::CreateUnlockInfoOnly(FA
 
 	FContentLib_UnlockInfoOnly infoCard;
 
-	if (item.player == connectionInfo->GetCurrentPlayerSlot()) {
+	if ((item.flags & IS_LOCAL_PLAYER) > 0) {
 		Args.Add(TEXT("ApPlayerName"), LOCTEXT("NetworkItemDescriptionYourOwnName", "your"));
 
 		infoCard.mUnlockName = FText::FromString(item.itemName);
 
-		if (mappingSubsystem->ApItems.Contains(item.item)) {
-			TSharedRef<FApItemBase> apItem = mappingSubsystem->ApItems[item.item];
+		if (mappingSubsystem->ApItems.Contains(item.item + ID_OFFSET)) {
+			TSharedRef<FApItemBase> apItem = mappingSubsystem->ApItems[item.item + ID_OFFSET];
 
 			switch (apItem->Type) {
 				case EItemType::Building:
-					UpdateInfoOnlyUnlockWithBuildingInfo(&infoCard, Args, &item, StaticCastSharedRef<FApBuildingItem>(apItem));
+					UpdateInfoOnlyUnlockWithBuildingInfo(&infoCard, Args, item, StaticCastSharedRef<FApBuildingItem>(apItem));
 					break;
 				case EItemType::Recipe:
-					UpdateInfoOnlyUnlockWithRecipeInfo(&infoCard, Args, &item, StaticCastSharedRef<FApRecipeItem>(apItem));
+					UpdateInfoOnlyUnlockWithRecipeInfo(&infoCard, Args, item, StaticCastSharedRef<FApRecipeItem>(apItem));
 					break;
 				case EItemType::Item:
-					UpdateInfoOnlyUnlockWithItemBundleInfo(&infoCard, Args, &item, StaticCastSharedRef<FApItem>(apItem));
+					UpdateInfoOnlyUnlockWithItemBundleInfo(&infoCard, Args, item, StaticCastSharedRef<FApItem>(apItem));
 					break;
 				case EItemType::Schematic:
-					UpdateInfoOnlyUnlockWithSchematicInfo(&infoCard, Args, &item, StaticCastSharedRef<FApSchematicItem>(apItem));
+					UpdateInfoOnlyUnlockWithSchematicInfo(&infoCard, Args, item, StaticCastSharedRef<FApSchematicItem>(apItem));
 					break;
 				case EItemType::Special:
-					UpdateInfoOnlyUnlockWithSpecialInfo(&infoCard, Args, &item, StaticCastSharedRef<FApSpecialItem>(apItem));
+					UpdateInfoOnlyUnlockWithSpecialInfo(&infoCard, Args, item, StaticCastSharedRef<FApSpecialItem>(apItem));
 					break;
 			}
 		} else {
-			UpdateInfoOnlyUnlockWithGenericApInfo(&infoCard, Args, &item);
+			UpdateInfoOnlyUnlockWithGenericApInfo(&infoCard, Args, item);
 		}
 	}	else {
 		Args.Add(TEXT("ApPlayerName"), FText::FormatNamed(LOCTEXT("NetworkItemPlayerOwnerPossessive", "{remotePlayerName}'s"),
@@ -212,13 +337,13 @@ FContentLib_UnlockInfoOnly AApSchematicPatcherSubsystem::CreateUnlockInfoOnly(FA
 
 		infoCard.mUnlockName = FText::Format(LOCTEXT("NetworkItemUnlockDisplayName", "{ApPlayerName} {ApItemName}"), Args);
 
-		UpdateInfoOnlyUnlockWithGenericApInfo(&infoCard, Args, &item);
+		UpdateInfoOnlyUnlockWithGenericApInfo(&infoCard, Args, item);
 	}
 
 	return infoCard;
 }
 
-void AApSchematicPatcherSubsystem::UpdateInfoOnlyUnlockWithBuildingInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, FApNetworkItem* item, TSharedRef<FApBuildingItem> itemInfo) {
+void AApSchematicPatcherSubsystem::UpdateInfoOnlyUnlockWithBuildingInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, const FApReplicatedItemInfo& item, TSharedRef<FApBuildingItem> itemInfo) {
 	UFGRecipe* recipe = itemInfo->Recipes[0].Recipe;
 	UFGItemDescriptor* itemDescriptor = recipe->GetProducts()[0].ItemClass.GetDefaultObject();
 
@@ -227,7 +352,7 @@ void AApSchematicPatcherSubsystem::UpdateInfoOnlyUnlockWithBuildingInfo(FContent
 	infoCard->mUnlockDescription = FText::Format(LOCTEXT("NetworkItemUnlockPersonalBuildingDescription", "This will unlock your {ApItemName}"), Args);
 }
 
-void AApSchematicPatcherSubsystem::UpdateInfoOnlyUnlockWithRecipeInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, FApNetworkItem* item, TSharedRef<FApRecipeItem> itemInfo) {
+void AApSchematicPatcherSubsystem::UpdateInfoOnlyUnlockWithRecipeInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, const FApReplicatedItemInfo& item, TSharedRef<FApRecipeItem> itemInfo) {
 	UFGRecipe* recipe = itemInfo->Recipes[0].Recipe;
 	UFGItemDescriptor* itemDescriptor = recipe->GetProducts()[0].ItemClass.GetDefaultObject();
 
@@ -270,7 +395,7 @@ void AApSchematicPatcherSubsystem::UpdateInfoOnlyUnlockWithRecipeInfo(FContentLi
 	infoCard->mUnlockDescription = FText::Format(LOCTEXT("NetworkItemUnlockPersonalRecipeDescription", "This will unlock {ApPlayerName} {ApItemName} which is considered a {ProgressionType}.\nProduced in: {Building}.\nCosts: {Costs}.\nProduces: {Output}."), Args);
 }
 
-void AApSchematicPatcherSubsystem::UpdateInfoOnlyUnlockWithItemBundleInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, FApNetworkItem* item, TSharedRef<FApItem> itemInfo) {
+void AApSchematicPatcherSubsystem::UpdateInfoOnlyUnlockWithItemBundleInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, const FApReplicatedItemInfo& item, TSharedRef<FApItem> itemInfo) {
 	UFGItemDescriptor* itemDescriptor = itemInfo->Descriptor;
 
 	infoCard->BigIcon = infoCard->SmallIcon = UApUtils::GetImagePathForItem(itemDescriptor);
@@ -278,7 +403,7 @@ void AApSchematicPatcherSubsystem::UpdateInfoOnlyUnlockWithItemBundleInfo(FConte
 	infoCard->mUnlockDescription = FText::Format(LOCTEXT("NetworkItemUnlockPersonalItemDescription", "This will give {ApPlayerName} {ApItemName}. It can be collected by building an Archipelago Portal."), Args);
 }
 
-void AApSchematicPatcherSubsystem::UpdateInfoOnlyUnlockWithSchematicInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, FApNetworkItem* item, TSharedRef<FApSchematicItem> itemInfo) {
+void AApSchematicPatcherSubsystem::UpdateInfoOnlyUnlockWithSchematicInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, const FApReplicatedItemInfo& item, TSharedRef<FApSchematicItem> itemInfo) {
 	UFGRecipe* recipe = nullptr;
 	for (UFGUnlock* unlock : itemInfo->Schematic->mUnlocks) {
 		UFGUnlockRecipe* recipeUnlockInfo = Cast<UFGUnlockRecipe>(unlock);
@@ -305,7 +430,7 @@ void AApSchematicPatcherSubsystem::UpdateInfoOnlyUnlockWithSchematicInfo(FConten
 	}
 }
 
-void AApSchematicPatcherSubsystem::UpdateInfoOnlyUnlockWithSpecialInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, FApNetworkItem* item, TSharedRef<FApSpecialItem> itemInfo) {
+void AApSchematicPatcherSubsystem::UpdateInfoOnlyUnlockWithSpecialInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, const FApReplicatedItemInfo& item, TSharedRef<FApSpecialItem> itemInfo) {
 	switch (itemInfo->SpecialType) {
 	case ESpecialItemType::Inventory3:
 	case ESpecialItemType::Inventory6: {
@@ -324,17 +449,17 @@ void AApSchematicPatcherSubsystem::UpdateInfoOnlyUnlockWithSpecialInfo(FContentL
 	}
 }
 
-void AApSchematicPatcherSubsystem::UpdateInfoOnlyUnlockWithGenericApInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, FApNetworkItem* item) {
+void AApSchematicPatcherSubsystem::UpdateInfoOnlyUnlockWithGenericApInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, const FApReplicatedItemInfo& item) {
 	infoCard->CategoryIcon = TEXT("/Archipelago/Assets/SourceArt/ArchipelagoAssetPack/ArchipelagoIconWhite128.ArchipelagoIconWhite128");
 	infoCard->mUnlockDescription = FText::Format(LOCTEXT("NetworkItemUnlockDescription", "This will unlock {ApPlayerName} {ApItemName} which is considered a {ProgressionType}."), Args);
 
-	if (item->flags == 0b001) {
+	if ((item.flags & 0b001) > 0) {
 		infoCard->BigIcon = infoCard->SmallIcon = TEXT("/Archipelago/Assets/DerivedArt/ApLogo/AP-Purple.AP-Purple");
 	}
-	else if (item->flags == 0b010) {
+	else if ((item.flags & 0b010) > 0) {
 		infoCard->BigIcon = infoCard->SmallIcon = TEXT("/Archipelago/Assets/DerivedArt/ApLogo/AP-Blue.AP-Blue");
 	}
-	else if (item->flags == 0b100) {
+	else if (item.flags == 0b100) {
 		infoCard->BigIcon = infoCard->SmallIcon = TEXT("/Archipelago/Assets/DerivedArt/ApLogo/AP-Red.AP-Red");
 	}
 	else {

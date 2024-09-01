@@ -47,6 +47,8 @@ void AApMappingsSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase) {
 }
 
 void AApMappingsSubsystem::BeginPlay() {
+	Super::BeginPlay();
+
 	UE_LOG(LogApMappingsSubsystem, Display, TEXT("AApMappingsSubsystem(::BeginPlay()"));
 
 	AGameStateBase* gameState = GetWorld()->GetGameState();

@@ -100,7 +100,7 @@ bool AApServerRandomizerSubsystem::InitializeTick() {
 		if (!slotDataSubsystem->GetSlotData().hasLoadedSlotData)
 			slotDataSubsystem->SetSlotDataJson(connectionInfo->GetSlotDataJson());
 
-		if (scoutedLocations.Num() == 0 && slotDataSubsystem->GetSlotData().hasLoadedSlotData)
+		if (!scoutedLocations.IsEmpty() && slotDataSubsystem->GetSlotData().hasLoadedSlotData)
 			ScoutArchipelagoItems();
 
 		if (!mappingSubsystem->HasLoadedItemNameMappings())
@@ -108,7 +108,7 @@ bool AApServerRandomizerSubsystem::InitializeTick() {
 	}
 
 	if (!areRecipiesAndSchematicsInitialized
-		&& scoutedLocations.Num() > 0
+		&& !scoutedLocations.IsEmpty()
 		&& slotDataSubsystem->GetSlotData().hasLoadedSlotData
 		&& mappingSubsystem->HasLoadedItemNameMappings()) {
 
@@ -159,6 +159,7 @@ void AApServerRandomizerSubsystem::ScoutArchipelagoItems() {
 	TMap<int64, FApNetworkItem> scoutResults = ap->ScoutLocation(locations);
 
 	scoutedLocations.Empty();
+
 	for (const TPair<int64, const FApNetworkItem> scoutResult : scoutResults) {
 		scoutedLocations.Add(scoutResult.Value);
 	}
@@ -184,65 +185,83 @@ void AApServerRandomizerSubsystem::ParseScoutedItemsAndCreateRecipiesAndSchemati
 		}
 	}
 
+	//used by schamtic patcher
+	TArray<FApNetworkItem> itemInfoPerSchematicId;
+	TMap<int, TMap<int, TArray<FApNetworkItem>>> itemInfosPerMilestone;
+
 	for (const FApNetworkItem& location : scoutedLocations) {
 		if (location.locationName.StartsWith("Hub")) {
 
 			//location.locationName = "Hub 1-1, Item 1"
 			FString milestoneName = location.locationName.Left(location.locationName.Find(","));
 
+			int delimeterPos;
+			milestoneName.FindChar('-', delimeterPos);
+			int tier = FCString::Atoi(*milestoneName.Mid(delimeterPos - 1, 1));
+			int milestone = FCString::Atoi(*milestoneName.Mid(delimeterPos + 1, 1));
+
+
+			FString bpName = FString::Format(TEXT("/Archipelago/Schematics/AP_HubSchematics/AP_HUB_{0}_{1}.AP_HUB_{0}_{1}_C"), { tier, milestone });
+
+			TSubclassOf<UFGSchematic> schematic = LoadClass<UFGSchematic>(nullptr, *bpName);
+			fgcheck(schematic != nullptr)
+
 			if (!schematicsPerMilestone.Contains(milestoneName)) {
-				int delimeterPos;
-				milestoneName.FindChar('-', delimeterPos);
-				FString tier = milestoneName.Mid(delimeterPos - 1, 1);
-				FString milestone = milestoneName.Mid(delimeterPos + 1, 1);
-				FString bpName = FString::Format(TEXT("/Archipelago/Schematics/AP_HubSchematics/AP_HUB_{0}_{1}.AP_HUB_{0}_{1}_C"), { tier, milestone });
-
-				TSubclassOf<UFGSchematic> schematic = LoadClass<UFGSchematic>(nullptr, *bpName);
-				fgcheck(schematic != nullptr)
-
-				//TTuple<bool, TSubclassOf<UFGSchematic>> schematic = UApUtils::FindClass(TEXT("/Archipelago/"), *milestone, UFGSchematic::StaticClass());
 				schematicsPerMilestone.Add(milestoneName, schematic);
 			}
 
 			if (!locationsPerMilestone.Contains(schematicsPerMilestone[milestoneName])) {
-				locationsPerMilestone.Add(schematicsPerMilestone[milestoneName], TArray<FApNetworkItem>{ location });
-			}
-			else {
+				locationsPerMilestone.Add(schematic, TArray<FApNetworkItem>{ location });
+
+				if (!itemInfosPerMilestone.Contains(tier)) {
+					itemInfosPerMilestone.Add(tier, TMap<int, TArray<FApNetworkItem>>());
+				}
+				itemInfosPerMilestone[tier].Add(milestone, TArray<FApNetworkItem>{ location });
+			} else {
 				locationsPerMilestone[schematicsPerMilestone[milestoneName]].Add(location);
+
+				itemInfosPerMilestone[tier][milestone].Add(location);
 			}
 		}
 		else if (location.location >= 1338500 && location.location <= 1338571 && schematicsPerLocation.Contains(location.location)) {
 			locationPerMamNode.Add(schematicsPerLocation[location.location], location);
+			itemInfoPerSchematicId.Add(location);
 		}
 		else if (location.location >= 1338600 && location.location <= 1338699 && schematicsPerLocation.Contains(location.location)) {
 			locationPerHardDrive.Add(schematicsPerLocation[location.location], location);
+			itemInfoPerSchematicId.Add(location);
 		}
 		else if (location.location >= 1338700 && location.location <= 1338709 && schematicsPerLocation.Contains(location.location)) {
 			locationPerShopNode.Add(schematicsPerLocation[location.location], location);
+			itemInfoPerSchematicId.Add(location);
 		}
 	}
 
-	UE_LOG(LogApServerRandomizerSubsystem, Display, TEXT("Generating HUB milestones"));
+	int currentPlayer = connectionInfo->GetCurrentPlayerSlot();
 
+	schematicPatcher->Server_SetItemInfoPerSchematicId(currentPlayer, itemInfoPerSchematicId);
+	schematicPatcher->Server_SetItemInfoPerMilestone(currentPlayer, itemInfosPerMilestone);
+
+	//UE_LOG(LogApServerRandomizerSubsystem, Display, TEXT("Generating HUB milestones"));
+
+	/*
 	for (TPair<TSubclassOf<UFGSchematic>, TArray<FApNetworkItem>>& itemPerMilestone : locationsPerMilestone) {
 		for (TPair<FString, TSubclassOf<UFGSchematic>>& schematicAndName : schematicsPerMilestone) {
 			if (itemPerMilestone.Key == schematicAndName.Value) {
-				//if (!schematicAndName.Value.Key)
 				schematicPatcher->InitializaHubSchematic(schematicAndName.Key, itemPerMilestone.Key, itemPerMilestone.Value);
-
-				//contentRegistry->RegisterSchematic(FName(TEXT("Archipelago")), itemPerMilestone.Key);
 
 				break;
 			}
 		}
 	}
+	*/
 
-	for (TPair<TSubclassOf<UFGSchematic>, FApNetworkItem>& itemPerMamNode : locationPerMamNode)
+	/*for (TPair<TSubclassOf<UFGSchematic>, FApNetworkItem>& itemPerMamNode : locationPerMamNode)
 		schematicPatcher->InitializaSchematicForItem(itemPerMamNode.Key, itemPerMamNode.Value, false);
 	for (TPair<TSubclassOf<UFGSchematic>, FApNetworkItem>& itemPerHardDrive : locationPerHardDrive)
 		schematicPatcher->InitializaSchematicForItem(itemPerHardDrive.Key, itemPerHardDrive.Value, false);
 	for (TPair<TSubclassOf<UFGSchematic>, FApNetworkItem>& itemPerMamNode : locationPerShopNode)
-		schematicPatcher->InitializaSchematicForItem(itemPerMamNode.Key, itemPerMamNode.Value, true);
+		schematicPatcher->InitializaSchematicForItem(itemPerMamNode.Key, itemPerMamNode.Value, true);*/
 
 	areRecipiesAndSchematicsInitialized = true;
 }

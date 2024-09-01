@@ -49,6 +49,7 @@ void AApReplicatedGiftingSubsystem::BeginPlay() {
 	UApGiftingMappings::TraitDefaultItemIds.GenerateKeyArray(AllTraits);
 
 	UWorld* world = GetWorld();
+	fgcheck(world != nullptr);
 
 	mappingSubsystem = AApMappingsSubsystem::Get(world);
 
