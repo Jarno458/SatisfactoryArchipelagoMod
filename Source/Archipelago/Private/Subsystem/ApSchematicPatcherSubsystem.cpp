@@ -72,7 +72,7 @@ void AApSchematicPatcherSubsystem::Initialize() {
 	fgcheck(contentLibSubsystem)
 	connectionInfo = AApConnectionInfoSubsystem::Get(world);
 	fgcheck(connectionInfo);
-	slotDataSubsystem = AApSlotDataSubsystem::Get(world);  //FAIL slot data is not replicated
+	slotDataSubsystem = AApSlotDataSubsystem::Get(world);
 	fgcheck(slotDataSubsystem);
 	mappingSubsystem = AApMappingsSubsystem::Get(world);
 	fgcheck(mappingSubsystem)
@@ -88,7 +88,7 @@ void AApSchematicPatcherSubsystem::Tick(float DeltaTime) {
 		|| connectionInfo->GetConnectionState() != EApConnectionState::Connected 
 		|| !receivedItemInfos
 		|| !receivedMilestones
-		//|| !slotDataSubsystem->GetSlotData().hasLoadedSlotData
+		|| !slotDataSubsystem->GetSlotData().hasLoadedSlotData
 		)
 			return;
 
@@ -109,28 +109,6 @@ void AApSchematicPatcherSubsystem::Server_SetItemInfoPerSchematicId(int currentP
 	OnRep_ItemInfosReplicated();
 }
 
-TArray<FApReplicatedItemInfo> AApSchematicPatcherSubsystem::MakeReplicateable(int currentPlayerId, const TArray<FApNetworkItem>& itemInfo) {
-	TArray<FApReplicatedItemInfo> itemsToReplicate;
-	for (const FApNetworkItem& itemInfoToReplicate : itemInfo) {
-		FApReplicatedItemInfo replicatedItem;
-
-		replicatedItem.flags = itemInfoToReplicate.flags;
-		replicatedItem.item = 0;
-		replicatedItem.location = itemInfoToReplicate.location - ID_OFFSET;
-		replicatedItem.itemName = itemInfoToReplicate.itemName;
-		replicatedItem.playerName = itemInfoToReplicate.playerName;
-
-		if (itemInfoToReplicate.player == currentPlayerId) {
-			replicatedItem.flags &= IS_LOCAL_PLAYER;
-
-			if (itemInfoToReplicate.item >= ID_OFFSET)
-				replicatedItem.item = itemInfoToReplicate.item - ID_OFFSET;
-		}
-	}
-
-	return itemsToReplicate;
-}
-
 void AApSchematicPatcherSubsystem::Server_SetItemInfoPerMilestone(int currentPlayerId, const TMap<int, TMap<int, TArray<FApNetworkItem>>>& itemsPerMilestone) {
 	if (!HasAuthority())
 		return;
@@ -142,6 +120,8 @@ void AApSchematicPatcherSubsystem::Server_SetItemInfoPerMilestone(int currentPla
 			replicatedMilestone.tier = itemsPerMilestonePerTier.Key;
 			replicatedMilestone.milestone = itemsPerMilestoneToReplicate.Key;
 			replicatedMilestone.items = MakeReplicateable(currentPlayerId, itemsPerMilestoneToReplicate.Value);
+
+			milestonesToReplicate.Add(replicatedMilestone);
 		}
 	}
 
@@ -150,6 +130,23 @@ void AApSchematicPatcherSubsystem::Server_SetItemInfoPerMilestone(int currentPla
 	OnRep_MilestonesReplicated();
 }
 
+TArray<FApReplicatedItemInfo> AApSchematicPatcherSubsystem::MakeReplicateable(int currentPlayerId, const TArray<FApNetworkItem>& itemInfo) {
+	TArray<FApReplicatedItemInfo> itemsToReplicate;
+	for (const FApNetworkItem& itemInfoToReplicate : itemInfo) {
+		FApReplicatedItemInfo replicatedItem;
+
+		bool isLocalPlayer = itemInfoToReplicate.player == currentPlayerId;
+		if (!isLocalPlayer) {
+			replicatedItem.playerName = itemInfoToReplicate.playerName.Left(16);
+		}
+		replicatedItem.itemName = itemInfoToReplicate.itemName; // .Left(16); might need truncation? might be calculated locally?
+		replicatedItem.Pack(itemInfoToReplicate.item, itemInfoToReplicate.location, itemInfoToReplicate.flags, isLocalPlayer);
+
+		itemsToReplicate.Add(replicatedItem);
+	}
+
+	return itemsToReplicate;
+}
 
 void AApSchematicPatcherSubsystem::OnRep_ItemInfosReplicated() {
 	receivedItemInfos = true;
@@ -177,7 +174,7 @@ void AApSchematicPatcherSubsystem::InitializeSchematicsBasedOnScoutedData() {
 
 	TMap<int64, FApReplicatedItemInfo> replicatedItemInfoBySchematicId;
 	for (const FApReplicatedItemInfo& replicatedItemInfo : replicatedItemInfos) {
-		replicatedItemInfoBySchematicId.Add((int64)replicatedItemInfo.location + ID_OFFSET, replicatedItemInfo);
+		replicatedItemInfoBySchematicId.Add(replicatedItemInfo.GetLocationId(), replicatedItemInfo);
 	}
 
 	TMap<int, TMap<int, TArray<FApReplicatedItemInfo>>> replicatedItemsPerMilestone;
@@ -223,30 +220,6 @@ void AApSchematicPatcherSubsystem::InitializaHubSchematic(TSubclassOf<UFGSchemat
 	UCLSchematicBPFLib::InitSchematicFromStruct(schematic, factorySchematic, contentLibSubsystem);
 }
 
-/*
-void AApSchematicPatcherSubsystem::InitializaHubSchematic(FString name, TSubclassOf<UFGSchematic> factorySchematic, const TArray<FApReplicatedItemInfo>& items) {
-	int delimeterPos;
-	name.FindChar('-', delimeterPos);
-	int32 tier = FCString::Atoi(*name.Mid(delimeterPos - 1, 1));
-	int32 milestone = FCString::Atoi(*name.Mid(delimeterPos + 1, 1));
-
-	InitializaHubSchematic(factorySchematic, items, slotDataSubsystem->GetSlotData().hubLayout[tier - 1][milestone - 1]);
-
-	FContentLib_Schematic schematic = FContentLib_Schematic();
-	//schematic.Name = name;
-	//schematic.Type = "Milestone";
-	//schematic.Time = 200;
-	//schematic.Tier = tier;
-	//schematic.MenuPriority = items[0].location;
-	//schematic.VisualKit = "Kit_AP_Logo";
-	schematic.Cost = slotDataSubsystem->GetSlotData().hubLayout[tier - 1][milestone - 1];
-
-	for (auto& item : items)
-		schematic.InfoCards.Add(CreateUnlockInfoOnly(item));
-
-	UCLSchematicBPFLib::InitSchematicFromStruct(schematic, factorySchematic, contentLibSubsystem);
-}
-*/ 
 void AApSchematicPatcherSubsystem::InitializaSchematicForItem(TSubclassOf<UFGSchematic> factorySchematic, const FApReplicatedItemInfo& item, bool updateSchemaName) {
 	FContentLib_UnlockInfoOnly unlockOnlyInfo = CreateUnlockInfoOnly(item);
 
@@ -284,31 +257,34 @@ void AApSchematicPatcherSubsystem::InitializaSchematicForItem(TSubclassOf<UFGSch
 }
 
 FContentLib_UnlockInfoOnly AApSchematicPatcherSubsystem::CreateUnlockInfoOnly(const FApReplicatedItemInfo& item) {
+	int flags = item.GetFlags();
 	FFormatNamedArguments Args;
-	if (item.flags == 0b001) {
+	if (flags == 0b001) {
 		Args.Add(TEXT("ProgressionType"), LOCTEXT("NetworkItemProgressionTypeAdvancement", "progression item"));
 	}
-	else if (item.flags == 0b010) {
+	else if (flags == 0b010) {
 		Args.Add(TEXT("ProgressionType"), LOCTEXT("NetworkItemProgressionTypeUseful", "useful item"));
 	}
-	else if (item.flags == 0b100) {
+	else if (flags == 0b100) {
 		Args.Add(TEXT("ProgressionType"), LOCTEXT("NetworkItemProgressionTypeTrap", "trap"));
 	}
 	else {
 		Args.Add(TEXT("ProgressionType"), LOCTEXT("NetworkItemProgressionTypeJunk", "normal item"));
 	}
 
-	Args.Add(TEXT("ApItemName"), FText::FromString(item.itemName));
-
 	FContentLib_UnlockInfoOnly infoCard;
 
-	if ((item.flags & IS_LOCAL_PLAYER) > 0) {
+	if (item.GetIsLocalPlayer()) {
+		FString itemName = item.itemName;
+
 		Args.Add(TEXT("ApPlayerName"), LOCTEXT("NetworkItemDescriptionYourOwnName", "your"));
+		Args.Add(TEXT("ApItemName"), FText::FromString(itemName));
 
-		infoCard.mUnlockName = FText::FromString(item.itemName);
+		infoCard.mUnlockName = FText::FromString(itemName);
 
-		if (mappingSubsystem->ApItems.Contains(item.item + ID_OFFSET)) {
-			TSharedRef<FApItemBase> apItem = mappingSubsystem->ApItems[item.item + ID_OFFSET];
+		int64 itemId = item.GetItemId();
+		if (mappingSubsystem->ApItems.Contains(itemId)) {
+			TSharedRef<FApItemBase> apItem = mappingSubsystem->ApItems[itemId];
 
 			switch (apItem->Type) {
 				case EItemType::Building:
@@ -334,6 +310,7 @@ FContentLib_UnlockInfoOnly AApSchematicPatcherSubsystem::CreateUnlockInfoOnly(co
 		Args.Add(TEXT("ApPlayerName"), FText::FormatNamed(LOCTEXT("NetworkItemPlayerOwnerPossessive", "{remotePlayerName}'s"),
 			TEXT("remotePlayerName"), FText::FromString(item.playerName)
 		));
+		Args.Add(TEXT("ApItemName"), FText::FromString(item.itemName));
 
 		infoCard.mUnlockName = FText::Format(LOCTEXT("NetworkItemUnlockDisplayName", "{ApPlayerName} {ApItemName}"), Args);
 
@@ -453,13 +430,14 @@ void AApSchematicPatcherSubsystem::UpdateInfoOnlyUnlockWithGenericApInfo(FConten
 	infoCard->CategoryIcon = TEXT("/Archipelago/Assets/SourceArt/ArchipelagoAssetPack/ArchipelagoIconWhite128.ArchipelagoIconWhite128");
 	infoCard->mUnlockDescription = FText::Format(LOCTEXT("NetworkItemUnlockDescription", "This will unlock {ApPlayerName} {ApItemName} which is considered a {ProgressionType}."), Args);
 
-	if ((item.flags & 0b001) > 0) {
+	int flags = item.GetFlags();
+	if ((flags & 0b001) > 0) {
 		infoCard->BigIcon = infoCard->SmallIcon = TEXT("/Archipelago/Assets/DerivedArt/ApLogo/AP-Purple.AP-Purple");
 	}
-	else if ((item.flags & 0b010) > 0) {
+	else if ((flags & 0b010) > 0) {
 		infoCard->BigIcon = infoCard->SmallIcon = TEXT("/Archipelago/Assets/DerivedArt/ApLogo/AP-Blue.AP-Blue");
 	}
-	else if (item.flags == 0b100) {
+	else if (flags == 0b100) {
 		infoCard->BigIcon = infoCard->SmallIcon = TEXT("/Archipelago/Assets/DerivedArt/ApLogo/AP-Red.AP-Red");
 	}
 	else {

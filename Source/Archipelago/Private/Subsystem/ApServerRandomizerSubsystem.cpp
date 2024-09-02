@@ -242,27 +242,6 @@ void AApServerRandomizerSubsystem::ParseScoutedItemsAndCreateRecipiesAndSchemati
 	schematicPatcher->Server_SetItemInfoPerSchematicId(currentPlayer, itemInfoPerSchematicId);
 	schematicPatcher->Server_SetItemInfoPerMilestone(currentPlayer, itemInfosPerMilestone);
 
-	//UE_LOG(LogApServerRandomizerSubsystem, Display, TEXT("Generating HUB milestones"));
-
-	/*
-	for (TPair<TSubclassOf<UFGSchematic>, TArray<FApNetworkItem>>& itemPerMilestone : locationsPerMilestone) {
-		for (TPair<FString, TSubclassOf<UFGSchematic>>& schematicAndName : schematicsPerMilestone) {
-			if (itemPerMilestone.Key == schematicAndName.Value) {
-				schematicPatcher->InitializaHubSchematic(schematicAndName.Key, itemPerMilestone.Key, itemPerMilestone.Value);
-
-				break;
-			}
-		}
-	}
-	*/
-
-	/*for (TPair<TSubclassOf<UFGSchematic>, FApNetworkItem>& itemPerMamNode : locationPerMamNode)
-		schematicPatcher->InitializaSchematicForItem(itemPerMamNode.Key, itemPerMamNode.Value, false);
-	for (TPair<TSubclassOf<UFGSchematic>, FApNetworkItem>& itemPerHardDrive : locationPerHardDrive)
-		schematicPatcher->InitializaSchematicForItem(itemPerHardDrive.Key, itemPerHardDrive.Value, false);
-	for (TPair<TSubclassOf<UFGSchematic>, FApNetworkItem>& itemPerMamNode : locationPerShopNode)
-		schematicPatcher->InitializaSchematicForItem(itemPerMamNode.Key, itemPerMamNode.Value, true);*/
-
 	areRecipiesAndSchematicsInitialized = true;
 }
 

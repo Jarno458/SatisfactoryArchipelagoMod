@@ -29,7 +29,6 @@ DECLARE_LOG_CATEGORY_EXTERN(LogApSchematicPatcherSubsystem, Log, All);
 
 #include "ApSchematicPatcherSubsystem.generated.h"
 
-#define IS_LOCAL_PLAYER 0b10000000
 #define ID_OFFSET 1338000
 
 USTRUCT()
@@ -39,19 +38,26 @@ struct ARCHIPELAGO_API FApReplicatedItemInfo
 
 public:
 	UPROPERTY()
-	uint8 flags;
-
-	UPROPERTY()
-	int16 item;
-
-	UPROPERTY()
-	int16 location;
+	uint32 data;
 
 	UPROPERTY()
 	FString itemName;
 
 	UPROPERTY()
 	FString playerName;
+
+public:
+	// replication compression
+	void Pack(int64 itemId, int64 locationId, int flags, bool isLocalPlayer) {
+		//current format <islocal:1>,<flags:7>,<locationid:12>,<itemid:12>
+		//could be squahed to free 8 bits -> <free:8>,<islocal:1>,<flags:3>,<locationid:10>,<itemid:10>
+		data = ((isLocalPlayer ? 1 : 0) << 31) | ((flags) << 24) | ((locationId - ID_OFFSET) << 12) | ((itemId - ID_OFFSET) << 0);
+	}
+	FORCEINLINE int64 const GetItemId() const { return ID_OFFSET + (data & 0x00000FFF); }
+	FORCEINLINE int64 const GetLocationId() const { return ID_OFFSET + ((data & 0x00FFF000) >> 12); }
+	FORCEINLINE int const GetFlags() const { return (data & 0x4F000000) >> 24; }
+	FORCEINLINE bool GetIsLocalPlayer() const { return (data & 0x80000000) > 0; }
+	//
 };
 
 USTRUCT()
@@ -66,7 +72,7 @@ public:
 	UPROPERTY()
 	uint8 milestone;
 
-	UPROPERTY(SaveGame)
+	UPROPERTY()
 	TArray<FApReplicatedItemInfo> items;
 };
 
@@ -94,7 +100,7 @@ public:
 	FORCEINLINE bool IsInitialized() const { return isInitialized; };
 
 	//quite slow now its not a set
-	FORCEINLINE bool IsCollected(int64 locationId) const { return collectedLocations.Contains(locationId); };
+	bool IsCollected(int64 locationId) const { return collectedLocations.Contains(locationId); };
 
 	bool IsCollected(UFGUnlock* unlock); //TODO remove
 	void Collect(UFGSchematic* schematic, int unlockIndex, FApNetworkItem& networkItem);
@@ -134,7 +140,6 @@ private:
 	void Initialize();
 	void InitializeSchematicsBasedOnScoutedData();
 
-	//void InitializaHubSchematic(FString name, TSubclassOf<UFGSchematic> factorySchematic, const TArray<FApReplicatedItemInfo>& apItems);
 	void InitializaHubSchematic(TSubclassOf<UFGSchematic> factorySchematic, const TArray<FApReplicatedItemInfo>& items, const TMap<FString, int>& costs);
 	void InitializaSchematicForItem(TSubclassOf<UFGSchematic> factorySchematic, const FApReplicatedItemInfo& item, bool updateSchemaName);
 

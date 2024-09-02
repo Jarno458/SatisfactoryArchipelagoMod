@@ -53,9 +53,9 @@ void UApEditorScripts::GenerateApHubSchematicBlueprints() {
 	RemoveEmptySchematics(worldModule);
 	RemoveSchematicsContaining(worldModule, "AP_HubSchematics");
 
-	int menuPrio = 0;
-
 	for (int tier = 1; tier <= 9; tier++) {
+		int menuPrio = 0;
+
 		for (int milestone = 1; milestone <= 5; milestone++) {
 			FName bpName(TEXT("AP_HUB_") + FString::FromInt(tier) + TEXT("_") + FString::FromInt(milestone));
 			FString packagePath(TEXT("/Archipelago/Schematics/AP_HubSchematics/") + bpName.ToString());
