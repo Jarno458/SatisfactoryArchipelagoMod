@@ -120,6 +120,13 @@ const TMap<int64, int> AApSlotDataSubsystem::GetCostsForMilestone(int tier, int 
 	int8 correctedTier = tier - 1;
 	int8 correctedMilestone = milestone - 1;
 
+	if (correctedMilestone < 0) {
+		auto x = 10;
+	}
+
+	fgcheck(correctedTier >= 0);
+	fgcheck(correctedMilestone >= 0);
+
 	if ((correctedTier <= (hubLayout.Num() - 1)) && (correctedMilestone <= (hubLayout[correctedTier].Num() - 1))) {
 		return hubLayout[correctedTier][correctedMilestone];
 	}

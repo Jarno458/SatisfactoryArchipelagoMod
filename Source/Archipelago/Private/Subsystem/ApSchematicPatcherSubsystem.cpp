@@ -199,7 +199,7 @@ void AApSchematicPatcherSubsystem::InitializeSchematicsBasedOnScoutedData() {
 			int tier = UFGSchematic::GetTechTier(schematic);
 			int milestone = FMath::RoundToInt(UFGSchematic::GetMenuPriority(schematic));
 
-			if (tier <= 0)
+			if (tier <= 0 || milestone <= 0)
 				continue;
 
 			if (replicatedItemsPerMilestone.Contains(tier) && replicatedItemsPerMilestone[tier].Contains(milestone)) {
