@@ -49,12 +49,10 @@ void AApEnergyLinkSubsystem::Tick(float DeltaTime) {
 	if (!apInitialized && randomizerSubsystem->IsInitialized()) {
 		apInitialized = true;
 
-		FApSlotData slotData = slotDataSubsystem->GetSlotData();
-
-		if (!slotData.hasLoadedSlotData)
+		if (!slotDataSubsystem->HasLoadedSlotData())
 			return;
 
-		energyLinkEnabled = slotDataSubsystem->GetSlotData().energyLink;
+		energyLinkEnabled = slotDataSubsystem->EnergyLink;
 
 		if (apConnectionInfo->GetConnectionState() == EApConnectionState::Connected && energyLinkEnabled) {
 			UE_LOG(LogApEnergyLink, Display, TEXT("Modifying Power Storage asset"));

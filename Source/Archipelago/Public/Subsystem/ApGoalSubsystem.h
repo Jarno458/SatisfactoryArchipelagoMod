@@ -23,7 +23,7 @@ private:
 
 	AApSubsystem* ap;
 	AApConnectionInfoSubsystem* connectionInfoSubsystem;
-	AApSlotDataSubsystem* slotDataSubsystem;
+	AApSlotDataSubsystem* slotData;
 
 public:
 	AApGoalSubsystem();
@@ -33,11 +33,11 @@ public:
 
 	static AApGoalSubsystem* Get(class UWorld* world);
 
-	bool AreGoalsCompleted(const FApSlotData* slotData);
+	bool AreGoalsCompleted();
 
 private:
 	bool hasSentGoal;
 
-	bool CheckSpaceElevatorGoal(const FApSlotData* slotData);
-	bool CheckResourceSinkPointsGoal(const FApSlotData* slotData);
+	bool CheckSpaceElevatorGoal();
+	bool CheckResourceSinkPointsGoal();
 };

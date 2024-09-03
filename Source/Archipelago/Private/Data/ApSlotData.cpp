@@ -1,5 +1,6 @@
 #include "Data/ApSlotData.h"
 
+/*
 bool FApSlotData::ParseSlotData(FString jsonString, FApSlotData* data) {
 	//TODO use https://docs.unrealengine.com/5.1/en-US/API/Runtime/JsonUtilities/FJsonObjectConverter/JsonObjectStringToUStruct/
 
@@ -14,15 +15,15 @@ bool FApSlotData::ParseSlotData(FString jsonString, FApSlotData* data) {
 	}
 
 	for (TSharedPtr<FJsonValue> tier : parsedJson->GetArrayField("HubLayout")) {
-		TArray<TMap<FString, int>> milestones;
+		TArray<TMap<int64, int>> milestones;
 
 		for (TSharedPtr<FJsonValue> milestone : tier->AsArray()) {
-			TMap<FString, int> costs;
+			TMap<int64, int> costs;
 
 			for (TPair<FString, TSharedPtr<FJsonValue>> cost : milestone->AsObject()->Values) {
 				int64 itemId = FCString::Atoi64(*cost.Key);
 
-				costs.Add(UApMappings::ItemIdToGameItemDescriptor[itemId], cost.Value->AsNumber());
+				costs.Add(itemId, cost.Value->AsNumber());
 			}
 
 			milestones.Add(costs);
@@ -51,3 +52,4 @@ bool FApSlotData::ParseSlotData(FString jsonString, FApSlotData* data) {
 
 	return true;
 }
+*/

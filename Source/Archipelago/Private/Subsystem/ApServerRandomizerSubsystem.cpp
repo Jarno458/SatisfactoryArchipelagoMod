@@ -45,8 +45,8 @@ void AApServerRandomizerSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase,
 		fgcheck(ap);
 		connectionInfo = AApConnectionInfoSubsystem::Get(world);
 		fgcheck(connectionInfo);
-		slotDataSubsystem = AApSlotDataSubsystem::Get(world);
-		fgcheck(slotDataSubsystem);
+		slotData = AApSlotDataSubsystem::Get(world);
+		fgcheck(slotData);
 		schematicPatcher = AApSchematicPatcherSubsystem::Get(world);
 		fgcheck(schematicPatcher);
 		mappingSubsystem = AApMappingsSubsystem::Get(world);
@@ -97,10 +97,10 @@ bool AApServerRandomizerSubsystem::InitializeTick() {
 	EApConnectionState connectionState = connectionInfo->GetConnectionState();
 
 	if (connectionState == EApConnectionState::Connected) {
-		if (!slotDataSubsystem->GetSlotData().hasLoadedSlotData)
-			slotDataSubsystem->SetSlotDataJson(connectionInfo->GetSlotDataJson());
+		if (!slotData->HasLoadedSlotData())
+			slotData->SetSlotDataJson(connectionInfo->GetSlotDataJson());
 
-		if (!scoutedLocations.IsEmpty() && slotDataSubsystem->GetSlotData().hasLoadedSlotData)
+		if (scoutedLocations.IsEmpty() && slotData->HasLoadedSlotData())
 			ScoutArchipelagoItems();
 
 		if (!mappingSubsystem->HasLoadedItemNameMappings())
@@ -109,7 +109,7 @@ bool AApServerRandomizerSubsystem::InitializeTick() {
 
 	if (!areRecipiesAndSchematicsInitialized
 		&& !scoutedLocations.IsEmpty()
-		&& slotDataSubsystem->GetSlotData().hasLoadedSlotData
+		&& slotData->HasLoadedSlotData()
 		&& mappingSubsystem->HasLoadedItemNameMappings()) {
 
 		ParseScoutedItemsAndCreateRecipiesAndSchematics();
@@ -129,12 +129,10 @@ void AApServerRandomizerSubsystem::ScoutArchipelagoItems() {
 
 	int64 hubBaseId = 1338000;
 
-	const FApSlotData slotData = slotDataSubsystem->GetSlotData();
-
-	for (int tier = 1; tier <= slotData.hubLayout.Num(); tier++) {
+	for (int tier = 1; tier <= slotData->GetNumberOfHubTiers(); tier++) {
 		for (int milestone = 1; milestone <= maxMilestones; milestone++) {
 			for (int slot = 1; slot <= maxSlots; slot++) {
-				if (milestone <= slotData.hubLayout[tier - 1].Num() && slot <= slotData.numberOfChecksPerMilestone)
+				if (milestone <= slotData->GetNumberOfMilestonesForTier(tier) && slot <= slotData->NumberOfChecksPerMilestone)
 					locations.Add(hubBaseId);
 
 				hubBaseId++;
@@ -147,7 +145,7 @@ void AApServerRandomizerSubsystem::ScoutArchipelagoItems() {
 		locations.Add(l);
 
 	//hardrive locations
-	if (slotData.enableHardDriveGacha) {
+	if (slotData->EnableHardDriveGacha) {
 		//for (int l = 1338600; l <= 1338699; l++)
 		//	locations.Add(l);
 	}
@@ -379,14 +377,12 @@ bool AApServerRandomizerSubsystem::UpdateFreeSamplesConfiguration() {
 		return false;
 	}
 
-	const FApSlotData slotData = slotDataSubsystem->GetSlotData();
-
 	if (configRoot->SectionProperties.Contains("Equipment")) {
 		UConfigPropertySection* EquipmentSection = Cast<UConfigPropertySection>(configRoot->SectionProperties["Equipment"]);
 		if (EquipmentSection != nullptr && EquipmentSection->SectionProperties.Contains("Quantity")) {
 			UConfigPropertyInteger* quantity = Cast<UConfigPropertyInteger>(EquipmentSection->SectionProperties["Quantity"]);
 			if (quantity != nullptr)
-				quantity->Value = slotData.freeSampleEquipment;
+				quantity->Value = slotData->FreeSampleEquipment;
 		}
 	}
 
@@ -395,7 +391,7 @@ bool AApServerRandomizerSubsystem::UpdateFreeSamplesConfiguration() {
 		if (BuildingsSection != nullptr && BuildingsSection->SectionProperties.Contains("Quantity")) {
 			UConfigPropertyInteger* quantity = Cast<UConfigPropertyInteger>(BuildingsSection->SectionProperties["Quantity"]);
 			if (quantity != nullptr)
-				quantity->Value = slotData.freeSampleBuildings;
+				quantity->Value = slotData->FreeSampleBuildings;
 		}
 	}
 
@@ -404,7 +400,7 @@ bool AApServerRandomizerSubsystem::UpdateFreeSamplesConfiguration() {
 		if (PartsSection != nullptr && PartsSection->SectionProperties.Contains("Quantity")) {
 			UConfigPropertyInteger* quantity = Cast<UConfigPropertyInteger>(PartsSection->SectionProperties["Quantity"]);
 			if (quantity != nullptr)
-				quantity->Value = slotData.freeSampleParts;
+				quantity->Value = slotData->FreeSampleParts;
 		}
 	}
 
@@ -413,7 +409,7 @@ bool AApServerRandomizerSubsystem::UpdateFreeSamplesConfiguration() {
 		if (ExcludeSection != nullptr && ExcludeSection->SectionProperties.Contains("SkipRadioactive")) {
 			UConfigPropertyBool* excludeRadioActive = Cast<UConfigPropertyBool>(ExcludeSection->SectionProperties["SkipRadioactive"]);
 			if (excludeRadioActive != nullptr)
-				excludeRadioActive->Value = !slotData.freeSampleRadioactive;
+				excludeRadioActive->Value = !slotData->FreeSampleRadioactive;
 		}
 	}
 

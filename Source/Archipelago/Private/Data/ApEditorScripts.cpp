@@ -54,8 +54,6 @@ void UApEditorScripts::GenerateApHubSchematicBlueprints() {
 	RemoveSchematicsContaining(worldModule, "AP_HubSchematics");
 
 	for (int tier = 1; tier <= 9; tier++) {
-		int menuPrio = 0;
-
 		for (int milestone = 1; milestone <= 5; milestone++) {
 			FName bpName(TEXT("AP_HUB_") + FString::FromInt(tier) + TEXT("_") + FString::FromInt(milestone));
 			FString packagePath(TEXT("/Archipelago/Schematics/AP_HubSchematics/") + bpName.ToString());
@@ -83,7 +81,7 @@ void UApEditorScripts::GenerateApHubSchematicBlueprints() {
 			schematic->mDisplayName = FText::FromString(displayName);
 			schematic->mType = ESchematicType::EST_Milestone;
 			schematic->mTimeToComplete = 200;
-			schematic->mMenuPriority = ++menuPrio;
+			schematic->mMenuPriority = milestone;
 			schematic->mTechTier = tier;
 			schematic->mSchematicIcon.SetResourceObject(apIcon);
 			schematic->mSmallSchematicIcon = apIcon;

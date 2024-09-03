@@ -43,7 +43,8 @@ void AApHardDriveGachaSubsystem::BeginPlay() {
 	AApSlotDataSubsystem* slotDataSubsystem = AApSlotDataSubsystem::Get(world);
 	fgcheck(slotDataSubsystem);
 
-	if (!slotDataSubsystem->GetSlotData().hasLoadedSlotData || !slotDataSubsystem->GetSlotData().enableHardDriveGacha) {
+	//risky to assume slot data is always ready when BeginPlay is called but i think it will work..
+	if (!slotDataSubsystem->HasLoadedSlotData() || !slotDataSubsystem->EnableHardDriveGacha) {
 		UE_LOG(LogApHardDriveGachaSubsystem, Display, TEXT("AApHardDriveGachaSubsystem::BeginPlay() Hard Drive Gacha disabled"));
 		return;
 	}

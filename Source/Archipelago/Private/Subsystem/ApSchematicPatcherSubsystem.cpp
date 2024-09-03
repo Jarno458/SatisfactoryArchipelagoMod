@@ -88,8 +88,7 @@ void AApSchematicPatcherSubsystem::Tick(float DeltaTime) {
 		|| connectionInfo->GetConnectionState() != EApConnectionState::Connected 
 		|| !receivedItemInfos
 		|| !receivedMilestones
-		|| !slotDataSubsystem->GetSlotData().hasLoadedSlotData
-		)
+		|| !slotDataSubsystem->HasLoadedSlotData())
 			return;
 
 	InitializeSchematicsBasedOnScoutedData();
@@ -204,18 +203,37 @@ void AApSchematicPatcherSubsystem::InitializeSchematicsBasedOnScoutedData() {
 				continue;
 
 			if (replicatedItemsPerMilestone.Contains(tier) && replicatedItemsPerMilestone[tier].Contains(milestone)) {
-				InitializaHubSchematic(schematic, replicatedItemsPerMilestone[tier][milestone], TMap<FString, int>()); //TODO add actual cost based on slot_data
+				InitializaHubSchematic(schematic, replicatedItemsPerMilestone[tier][milestone], slotDataSubsystem->GetCostsForMilestone(tier, milestone));
+			} else {
+				InitializaHubSchematic(schematic, TArray<FApReplicatedItemInfo>(), slotDataSubsystem->GetCostsForMilestone(tier, milestone));
 			}
 		}
 	}
 }
 
-void AApSchematicPatcherSubsystem::InitializaHubSchematic(TSubclassOf<UFGSchematic> factorySchematic, const TArray<FApReplicatedItemInfo>& items, const TMap<FString, int>& costs) {
+void AApSchematicPatcherSubsystem::InitializaHubSchematic(TSubclassOf<UFGSchematic> factorySchematic, const TArray<FApReplicatedItemInfo>& items, const TMap<int64, int>& costs) {
 	FContentLib_Schematic schematic = FContentLib_Schematic();
-	schematic.Cost = costs;
 
-	for (const FApReplicatedItemInfo& item : items)
-		schematic.InfoCards.Add(CreateUnlockInfoOnly(item));
+	TMap<FString, int> costsByClassName;
+	for (const TPair<int64, int> costByItemId : costs) {
+		if (UApMappings::ItemIdToGameItemDescriptor.Contains(costByItemId.Key)) {
+			costsByClassName.Add(UApMappings::ItemIdToGameItemDescriptor[costByItemId.Key], costByItemId.Value);
+		}
+	}
+
+	schematic.Cost = costsByClassName;
+
+	//got to clear entries from previus saves
+	UFGSchematic* factorySchematicCDO = Cast<UFGSchematic>(factorySchematic->GetDefaultObject());
+	factorySchematicCDO->mUnlocks.Empty();
+
+	if (items.IsEmpty()) {
+		schematic.DependsOn.Add("Schematic_AP_lock"); //hide empty milestones
+	} else {
+		schematic.ClearDeps = true; //unhide if it was hidden
+		for (const FApReplicatedItemInfo& item : items)
+			schematic.InfoCards.Add(CreateUnlockInfoOnly(item));
+	}
 
 	UCLSchematicBPFLib::InitSchematicFromStruct(schematic, factorySchematic, contentLibSubsystem);
 }
@@ -236,10 +254,11 @@ void AApSchematicPatcherSubsystem::InitializaSchematicForItem(TSubclassOf<UFGSch
 	UFGSchematic* factorySchematicCDO = Cast<UFGSchematic>(factorySchematic->GetDefaultObject());
 	if (factorySchematicCDO != nullptr) {
 		// ContentLib keeps adding new `InfoCards`
+		// we carefully remove here as we still expect mUnlocks[0] to be an UFGUnlockInfoOnly
 		if (factorySchematicCDO->mUnlocks.Num() > 1) {
 			factorySchematicCDO->mUnlocks.RemoveAt(1, 1, true);
 		}
-
+		
 		UTexture2D* bigText = LoadObject<UTexture2D>(nullptr, *unlockOnlyInfo.BigIcon);
 
 		factorySchematicCDO->mSchematicIcon.SetResourceObject(bigText);

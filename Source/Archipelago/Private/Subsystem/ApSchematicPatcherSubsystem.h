@@ -36,10 +36,11 @@ struct ARCHIPELAGO_API FApReplicatedItemInfo
 {
 	GENERATED_BODY()
 
-public:
+private:
 	UPROPERTY()
 	uint32 data;
 
+public:
 	UPROPERTY()
 	FString itemName;
 
@@ -116,7 +117,7 @@ private:
 	TArray<FApReplicatedMilestoneInfo> replicatedMilestones;
 
 	UPROPERTY(ReplicatedUsing = OnRep_CollectedLocationsReplicated)
-	TArray<int> collectedLocations;
+	TArray<int16> collectedLocations;
 
 	UContentLibSubsystem* contentLibSubsystem;
 	AApConnectionInfoSubsystem* connectionInfo;
@@ -140,7 +141,7 @@ private:
 	void Initialize();
 	void InitializeSchematicsBasedOnScoutedData();
 
-	void InitializaHubSchematic(TSubclassOf<UFGSchematic> factorySchematic, const TArray<FApReplicatedItemInfo>& items, const TMap<FString, int>& costs);
+	void InitializaHubSchematic(TSubclassOf<UFGSchematic> factorySchematic, const TArray<FApReplicatedItemInfo>& items, const TMap<int64, int>& costs);
 	void InitializaSchematicForItem(TSubclassOf<UFGSchematic> factorySchematic, const FApReplicatedItemInfo& item, bool updateSchemaName);
 
 	FContentLib_UnlockInfoOnly CreateUnlockInfoOnly(const FApReplicatedItemInfo& item);

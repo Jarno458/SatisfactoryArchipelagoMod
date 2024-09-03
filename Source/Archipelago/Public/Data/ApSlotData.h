@@ -1,5 +1,3 @@
-
-
 #pragma once
 
 #include "CoreMinimal.h"
@@ -10,26 +8,16 @@
 
 #include "ApSlotData.generated.h"
 
-/**
- * 
- */
+
+
 USTRUCT(BlueprintType)
 struct ARCHIPELAGO_API FApSlotData
 {
 	GENERATED_BODY()
 public:
-	bool hasLoadedSlotData;
-
+	/*
 	UPROPERTY(BlueprintReadOnly, SaveGame)
 	int numberOfChecksPerMilestone;
-
-	TArray<TArray<TMap<FString, int>>> hubLayout;
-
-	UPROPERTY(BlueprintReadOnly, SaveGame)
-	int finalSpaceElevatorTier;
-
-	UPROPERTY(BlueprintReadOnly, SaveGame)
-	int64 finalResourceSinkPoints;
 
 	UPROPERTY(BlueprintReadOnly, SaveGame)
 	int freeSampleEquipment;
@@ -48,12 +36,14 @@ public:
 
 	UPROPERTY(BlueprintReadOnly, SaveGame)
 	bool enableHardDriveGacha;
+	*/
 
 public:
 	// Parse slot data from server. Returns false if invalid.
-	static bool ParseSlotData(FString jsonString, FApSlotData* data);
+	//static bool ParseSlotData(FString jsonString, FApSlotData* data);
 };
 
+/*
 USTRUCT(BlueprintType)
 struct ARCHIPELAGO_API FApSaveableHubLayout
 {
@@ -69,3 +59,5 @@ public:
 	UPROPERTY(SaveGame)
 	TMap<FString, int> costs;
 };
+*/
+

@@ -25,18 +25,18 @@ void AApGoalSubsystem::BeginPlay() {
 
 	ap = AApSubsystem::Get(world);
 	connectionInfoSubsystem = AApConnectionInfoSubsystem::Get(world);
-	slotDataSubsystem = AApSlotDataSubsystem::Get(world);
+	slotData = AApSlotDataSubsystem::Get(world);
 }
 
 void AApGoalSubsystem::Tick(float DeltaTime) {
 	Super::Tick(DeltaTime);
 
-	if (hasSentGoal || connectionInfoSubsystem->GetConnectionState() != EApConnectionState::Connected)
-		return;
+	if (hasSentGoal 
+		|| connectionInfoSubsystem->GetConnectionState() != EApConnectionState::Connected
+		|| !slotData->HasLoadedSlotData())
+			return;
 
-	FApSlotData slotData = slotDataSubsystem->GetSlotData();
-
-	if (AreGoalsCompleted(&slotData)) {
+	if (AreGoalsCompleted()) {
 		UE_LOG(LogApSubsystem, Display, TEXT("Sending goal completion to server"));
 
 		ap->MarkGameAsDone();
@@ -45,16 +45,16 @@ void AApGoalSubsystem::Tick(float DeltaTime) {
 	}
 }
 
-bool AApGoalSubsystem::AreGoalsCompleted(const FApSlotData* slotData) {
+bool AApGoalSubsystem::AreGoalsCompleted() {
 	// TODO do we want to && goals and make them return True when they're disabled?
 	// This would make it easy to have multiple goals selected at once
-	return CheckSpaceElevatorGoal(slotData) || CheckResourceSinkPointsGoal(slotData);
+	return CheckSpaceElevatorGoal() || CheckResourceSinkPointsGoal();
 }
 
-bool AApGoalSubsystem::CheckSpaceElevatorGoal(const FApSlotData* slotData) {
-	return slotData->finalSpaceElevatorTier > 0 && phaseManager->GetGamePhase() >= slotData->finalSpaceElevatorTier;
+bool AApGoalSubsystem::CheckSpaceElevatorGoal() {
+	return slotData->FinalSpaceElevatorTier > 0 && phaseManager->GetGamePhase() >= slotData->FinalSpaceElevatorTier;
 }
 
-bool AApGoalSubsystem::CheckResourceSinkPointsGoal(const FApSlotData* slotData) {
-	return slotData->finalResourceSinkPoints > 0 && resourceSinkSubsystem->GetNumTotalPoints(EResourceSinkTrack::RST_Default) >= slotData->finalResourceSinkPoints;
+bool AApGoalSubsystem::CheckResourceSinkPointsGoal() {
+	return slotData->FinalResourceSinkPoints > 0 && resourceSinkSubsystem->GetNumTotalPoints(EResourceSinkTrack::RST_Default) >= slotData->FinalResourceSinkPoints;
 }
