@@ -243,9 +243,8 @@ void AApMappingsSubsystem::LoadTraitMappings() {
 	AFGResourceSinkSubsystem* resourceSinkSubsystem = AFGResourceSinkSubsystem::Get(GetWorld());
 	fgcheck(resourceSinkSubsystem)
 
-	TMap<FString, float> defaultSinkPointsPerTrait;
-
-	for (TPair<FString, int64> traitDefault : UApGiftingMappings::TraitDefaultItemIds) {
+	TMap<EGiftTrait, float> defaultSinkPointsPerTrait;
+	for (const TPair<EGiftTrait, int64>& traitDefault : UApGiftingMappings::TraitDefaultItemIds) {
 		fgcheck(ApItems.Contains(traitDefault.Value) && ApItems[traitDefault.Value]->Type == EItemType::Item);
 
 		TSharedRef<FApItem> itemInfo = StaticCastSharedRef<FApItem>(ApItems[traitDefault.Value]);
@@ -267,10 +266,9 @@ void AApMappingsSubsystem::LoadTraitMappings() {
 
 		int itemValue = GetResourceSinkPointsForItem(resourceSinkSubsystem, itemClass, itemId);
 
-		TMap<FString, float> calucatedTraitsForItem;
-
-		for (TPair<FString, float> traitRelativeRating : UApGiftingMappings::TraitsPerItemRatings[itemInfoMapping.Key]) {
-			FString traitName = traitRelativeRating.Key;
+		TMap<EGiftTrait, float> calucatedTraitsForItem;
+		for (const TPair<EGiftTrait, float>& traitRelativeRating : UApGiftingMappings::TraitsPerItemRatings[itemInfoMapping.Key]) {
+			EGiftTrait traitName = traitRelativeRating.Key;
 
 			fgcheck(defaultSinkPointsPerTrait.Contains(traitName));
 			float traitValue = GetTraitValue(itemValue, defaultSinkPointsPerTrait[traitName], traitRelativeRating.Value);
@@ -315,10 +313,10 @@ float AApMappingsSubsystem::GetTraitValue(int itemValue, float avarageItemValueF
 }
 
 void AApMappingsSubsystem::PrintTraitValuesPerItem() {
-	TMap<FString, TSortedMap<float, FString>> valuesPerItem;
+	TMap<EGiftTrait, TSortedMap<float, FString>> valuesPerItem;
 
-	for (TPair<TSubclassOf<UFGItemDescriptor>, TMap<FString, float>> traitsPerItem : TraitsPerItem) {
-		for (TPair<FString, float> trait : traitsPerItem.Value) {
+	for (const TPair<TSubclassOf<UFGItemDescriptor>, TMap<EGiftTrait, float>>& traitsPerItem : TraitsPerItem) {
+		for (TPair<EGiftTrait, float> trait : traitsPerItem.Value) {
 			if (!valuesPerItem.Contains(trait.Key))
 				valuesPerItem.Add(trait.Key, TSortedMap<float, FString>());
 
@@ -329,9 +327,12 @@ void AApMappingsSubsystem::PrintTraitValuesPerItem() {
 	}
 
 	TArray<FString> lines;
-	for (TPair<FString, TSortedMap<float, FString>> traitsPerItem : valuesPerItem) {
-		lines.Add(FString::Printf(TEXT("Trait: \"%s\":"), *traitsPerItem.Key));
+	for (const TPair<EGiftTrait, TSortedMap<float, FString>>& traitsPerItem : valuesPerItem) {
+		static const UEnum* giftTraitEnum = StaticEnum<EGiftTrait>();
+		FName traitName = giftTraitEnum->GetNameByValue((int64)traitsPerItem.Key);
 
+		lines.Add(FString::Printf(TEXT("Trait: \"%s\":"), *traitName.ToString()));
+				
 		for (TPair<float, FString> valuePerItem : traitsPerItem.Value)
 			lines.Add(FString::Printf(TEXT("  - Item: \"%s\": %.2f"), *valuePerItem.Value, valuePerItem.Key));
 	}

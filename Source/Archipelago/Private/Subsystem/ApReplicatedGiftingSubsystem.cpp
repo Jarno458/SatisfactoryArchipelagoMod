@@ -46,7 +46,10 @@ void AApReplicatedGiftingSubsystem::BeginPlay() {
 
 	UE_LOG(LogApReplicatedGiftingSubsystem, Display, TEXT("AApReplicatedGiftingSubsystem::BeginPlay()"));
 
-	UApGiftingMappings::TraitDefaultItemIds.GenerateKeyArray(AllTraits);
+	// todo check if there is a build in method to get all keys of an enum
+	TArray<EGiftTrait> allTraitsArray;
+	UApGiftingMappings::TraitDefaultItemIds.GenerateKeyArray(allTraitsArray);
+	AllTraits = TSet<EGiftTrait>(allTraitsArray);
 
 	UWorld* world = GetWorld();
 	fgcheck(world != nullptr);
@@ -102,7 +105,7 @@ bool AApReplicatedGiftingSubsystem::CanSend(FApPlayer targetPlayer, TSubclassOf<
 	if (!mappingSubsystem->HasLoadedItemTraits() || !mappingSubsystem->TraitsPerItem.Contains(itemClass))
 		return false;
 
-	for (TPair<FString, float>& trait : mappingSubsystem->TraitsPerItem[itemClass]) {
+	for (TPair<EGiftTrait, float>& trait : mappingSubsystem->TraitsPerItem[itemClass]) {
 		if (DoesPlayerAcceptGiftTrait(targetPlayer, trait.Key))
 			return true;
 	}
@@ -116,9 +119,9 @@ TArray<FApPlayer> AApReplicatedGiftingSubsystem::GetPlayersAcceptingGifts() {
 	return keys;
 }
 
-TArray<FString> AApReplicatedGiftingSubsystem::GetAcceptedTraitsPerPlayer(FApPlayer player) {
+TSet<EGiftTrait> AApReplicatedGiftingSubsystem::GetAcceptedTraitsPerPlayer(FApPlayer player) {
 	if (!AcceptedGiftTraitsPerPlayer.Contains(player))
-		return TArray<FString>();
+		return TSet<EGiftTrait>();
 
 	if (AcceptedGiftTraitsPerPlayer[player].AcceptAllTraits) {
 		return AllTraits;
@@ -127,37 +130,35 @@ TArray<FString> AApReplicatedGiftingSubsystem::GetAcceptedTraitsPerPlayer(FApPla
 	return AcceptedGiftTraitsPerPlayer[player].AcceptedTraits;
 }
 
-TArray<FString> AApReplicatedGiftingSubsystem::GetTraitNamesPerItem(TSubclassOf<UFGItemDescriptor> itemClass) {
-	TArray<FString> traits;
-
+TSet<EGiftTrait> AApReplicatedGiftingSubsystem::GetTraitNamesPerItem(TSubclassOf<UFGItemDescriptor> itemClass) {
 	if (!mappingSubsystem->HasLoadedItemTraits() || !mappingSubsystem->TraitsPerItem.Contains(itemClass))
-		return traits;
+		return TSet<EGiftTrait>();
 
+	TArray<EGiftTrait> traits;
 	mappingSubsystem->TraitsPerItem[itemClass].GenerateKeyArray(traits);
-	return traits;
+
+	return TSet<EGiftTrait>(traits);
 }
 
 TArray<FApGiftTrait> AApReplicatedGiftingSubsystem::GetTraitsForItem(TSubclassOf<UFGItemDescriptor> itemClass) {
 	if (!mappingSubsystem->HasLoadedItemTraits() || !mappingSubsystem->TraitsPerItem.Contains(itemClass))
 		return TArray<FApGiftTrait>();
 
-	TMap<FString, FApGiftTrait> Traits;
+	TArray<FApGiftTrait> traits;
 
-	for (TPair<FString, float>& trait : mappingSubsystem->TraitsPerItem[itemClass]) {
+	for (TPair<EGiftTrait, float>& trait : mappingSubsystem->TraitsPerItem[itemClass]) {
 		FApGiftTrait traitSpecification;
 		traitSpecification.Trait = trait.Key;
 		traitSpecification.Quality = trait.Value;
 		traitSpecification.Duration = 1.0f;
 
-		Traits.Add(trait.Key, traitSpecification);
+		traits.Add(traitSpecification);
 	}
 
-	TArray<FApGiftTrait> traitsToReturn;
-	Traits.GenerateValueArray(traitsToReturn);
-	return traitsToReturn;
+	return traits;
 }
 
-bool AApReplicatedGiftingSubsystem::DoesPlayerAcceptGiftTrait(FApPlayer player, FString giftTrait) {
+bool AApReplicatedGiftingSubsystem::DoesPlayerAcceptGiftTrait(FApPlayer player, EGiftTrait giftTrait) {
 	return AcceptedGiftTraitsPerPlayer.Contains(player)
 		&& (AcceptedGiftTraitsPerPlayer[player].AcceptAllTraits || AcceptedGiftTraitsPerPlayer[player].AcceptedTraits.Contains(giftTrait));
 }

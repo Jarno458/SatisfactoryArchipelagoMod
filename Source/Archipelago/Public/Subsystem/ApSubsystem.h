@@ -25,6 +25,7 @@
 #include "Module/ModModule.h"
 #include "ApConfigurationStruct.h"
 #include "Data/ApTypes.h"
+#include "Data/ApTypes.h"
 #include "Subsystem/ApConnectionInfoSubsystem.h"
 #include "Subsystem/ApMessagingSubsystem.h"
 

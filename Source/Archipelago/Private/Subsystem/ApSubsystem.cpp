@@ -423,8 +423,9 @@ TMap<FApPlayer, FApGiftBoxMetaData> AApSubsystem::GetAcceptedTraitsPerPlayer() {
 	std::map<std::pair<int, std::string>, AP_GiftBoxProperties> giftboxes =
 		CallOnGameThread<std::map<std::pair<int, std::string>, AP_GiftBoxProperties>>([]() { return AP_QueryGiftBoxes(); });
 
-	TMap<FApPlayer, FApGiftBoxMetaData> openGiftBoxes;
+	static const UEnum* giftTraitEnum = StaticEnum<EGiftTrait>();
 
+	TMap<FApPlayer, FApGiftBoxMetaData> openGiftBoxes;
 	for (std::pair<std::pair<int, std::string>, AP_GiftBoxProperties> giftbox : giftboxes) {
 		if (giftbox.second.IsOpen) {
 			FApPlayer player;
@@ -433,10 +434,14 @@ TMap<FApPlayer, FApGiftBoxMetaData> AApSubsystem::GetAcceptedTraitsPerPlayer() {
 
 			FApGiftBoxMetaData metaData;
 			metaData.AcceptAllTraits = giftbox.second.AcceptsAnyGift;
-			metaData.AcceptedTraits = TArray<FString>();
+			metaData.AcceptedTraits = TSet<EGiftTrait>();
 
-			for (std::string trait : giftbox.second.DesiredTraits)
-				metaData.AcceptedTraits.Add(UApUtils::FStr(trait));
+			for (std::string trait : giftbox.second.DesiredTraits) {
+				const int64 enumValue = giftTraitEnum->GetValueByNameString(UApUtils::FStr(trait));
+				if (enumValue != INDEX_NONE) {
+					metaData.AcceptedTraits.Add(static_cast<EGiftTrait>(enumValue));
+				}
+			}
 
 			openGiftBoxes.Add(player, metaData);
 		}
@@ -446,6 +451,8 @@ TMap<FApPlayer, FApGiftBoxMetaData> AApSubsystem::GetAcceptedTraitsPerPlayer() {
 }
 
 bool AApSubsystem::SendGift(FApSendGift giftToSend) {
+	static const UEnum* giftTraitEnum = StaticEnum<EGiftTrait>();
+
 	AP_Gift gift;
 	gift.ItemName = TCHAR_TO_UTF8(*giftToSend.ItemName);
 	gift.Amount = giftToSend.Amount;
@@ -458,7 +465,7 @@ bool AApSubsystem::SendGift(FApSendGift giftToSend) {
 	for (int i = 0; i < giftToSend.Traits.Num(); i++)
 	{
 		AP_GiftTrait trait;
-		trait.Trait = TCHAR_TO_UTF8(*giftToSend.Traits[i].Trait);
+		trait.Trait = TCHAR_TO_UTF8(*giftTraitEnum->GetNameByValue((int64)giftToSend.Traits[i].Trait).ToString());
 		trait.Duration = 1.0;
 		trait.Quality = giftToSend.Traits[i].Quality;
 
@@ -476,8 +483,9 @@ bool AApSubsystem::SendGift(FApSendGift giftToSend) {
 TArray<FApReceiveGift> AApSubsystem::GetGifts() {
 	std::vector<AP_Gift> gifts = CallOnGameThread<std::vector<AP_Gift>>([]() { return AP_CheckGifts(); });
 
-	TArray<FApReceiveGift> currentGifts;
+	static const UEnum* giftTraitEnum = StaticEnum<EGiftTrait>();
 
+	TArray<FApReceiveGift> currentGifts;
 	for (AP_Gift apGift : gifts) {
 		FApReceiveGift gift;
 		gift.Id = UApUtils::FStr(apGift.ID);
@@ -488,8 +496,12 @@ TArray<FApReceiveGift> AApSubsystem::GetGifts() {
 		
 		for (int i = 0; i < apGift.Traits.size(); i++)
 		{
+			const int64 enumValue = giftTraitEnum->GetValueByNameString(UApUtils::FStr(apGift.Traits[i].Trait));
+			if (enumValue == INDEX_NONE)
+				continue;
+
 			FApGiftTrait trait;
-			trait.Trait = UApUtils::FStr(apGift.Traits[i].Trait);
+			trait.Trait = static_cast<EGiftTrait>(enumValue);
 			trait.Duration = apGift.Traits[i].Duration;
 			trait.Quality = apGift.Traits[i].Quality;
 

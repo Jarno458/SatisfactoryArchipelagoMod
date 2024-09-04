@@ -4,6 +4,7 @@
 
 #include "Engine/UserDefinedStruct.h"
 #include "JsonObjectConverter.h"
+#include "Data/ApGiftingMappings.h"
 
 #include "ApTypes.generated.h"
 
@@ -53,6 +54,8 @@ FORCEINLINE uint32 GetTypeHash(const FApPlayer& This)
 	return HashCombine(GetTypeHash(This.Team), GetTypeHash(This.Name));
 };
 
+;
+
 USTRUCT(BlueprintType)
 struct ARCHIPELAGO_API FApGiftTrait
 {
@@ -60,7 +63,7 @@ struct ARCHIPELAGO_API FApGiftTrait
 
 public:
 	UPROPERTY(BlueprintReadOnly)
-	FString Trait;
+	EGiftTrait Trait;
 	UPROPERTY(BlueprintReadOnly)
 	float Quality;
 	UPROPERTY(BlueprintReadOnly)
@@ -116,22 +119,17 @@ public:
 	UPROPERTY()
 	bool AcceptAllTraits;
 	UPROPERTY()
-	TArray<FString> AcceptedTraits;
+	TSet<EGiftTrait> AcceptedTraits;
 
 	//Override the comparison operator
 	bool operator==(const FApGiftBoxMetaData& Other) const
 	{
-		if (AcceptAllTraits == Other.AcceptAllTraits	&& AcceptedTraits.Num() == Other.AcceptedTraits.Num()) {
-			for (int i = 0; i < AcceptedTraits.Num(); i++) {
-				if (!AcceptedTraits[i].Equals(Other.AcceptedTraits[i])) {
-					return false;
-				}
-			}
-
-			return true;
-		}
-
-		return false;
+		if (AcceptAllTraits == Other.AcceptAllTraits
+			&& AcceptedTraits.Num() == Other.AcceptedTraits.Num()
+			&& AcceptedTraits.Difference(Other.AcceptedTraits).IsEmpty())
+			return false;
+		else
+			return false;
 	}
 };
 

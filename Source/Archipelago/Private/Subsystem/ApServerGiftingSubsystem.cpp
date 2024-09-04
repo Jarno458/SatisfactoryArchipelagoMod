@@ -215,7 +215,7 @@ TSubclassOf<UFGItemDescriptor> AApServerGiftingSubsystem::TryGetItemClassByTrait
 	if (!HasTraitKnownToSatisfactory(traits))
 		return nullptr;
 
-	for (TPair<TSubclassOf<UFGItemDescriptor>, TMap<FString, float>>& traitsPerItem : mappingSubsystem->TraitsPerItem) {
+	for (const TPair<TSubclassOf<UFGItemDescriptor>, TMap<EGiftTrait, float>>& traitsPerItem : mappingSubsystem->TraitsPerItem) {
 		int matches = 0;
 		float totalDifference = 0.0f;
 
@@ -236,7 +236,7 @@ TSubclassOf<UFGItemDescriptor> AApServerGiftingSubsystem::TryGetItemClassByTrait
 	TMap<TSubclassOf<UFGItemDescriptor>, float> accurencyPerItem;
 	TSubclassOf<UFGItemDescriptor> itemClassWithLowestDifference = nullptr;
 
-	for (TPair<TSubclassOf<UFGItemDescriptor>, TPair<int, float>>& numberOfMatchesAndTotalDiviation : numberOfMatchesAndTotalDiviationPerItemClass) {
+	for (const TPair<TSubclassOf<UFGItemDescriptor>, TPair<int, float>>& numberOfMatchesAndTotalDiviation : numberOfMatchesAndTotalDiviationPerItemClass) {
 		if (numberOfMatchesAndTotalDiviation.Value.Key != mostMatches)
 			continue;
 
@@ -252,7 +252,7 @@ TSubclassOf<UFGItemDescriptor> AApServerGiftingSubsystem::TryGetItemClassByTrait
 }
 
 uint32 AApServerGiftingSubsystem::GetTraitsHash(TArray<FApGiftTrait>& traits) {
-	TSortedMap<FString, uint32> hashesPerTrait;
+	TSortedMap<EGiftTrait, uint32> hashesPerTrait;
 
 	for (FApGiftTrait& trait : traits)
 		hashesPerTrait.Add(trait.Trait, HashCombine(GetTypeHash(trait.Trait), GetTypeHash(trait.Quality)));

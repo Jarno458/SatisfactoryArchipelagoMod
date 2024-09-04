@@ -7,6 +7,7 @@
 #include "Subsystem/ModSubsystem.h"
 #include "Resources/FGItemDescriptor.h"
 #include "AssetRegistry/AssetRegistryModule.h"
+#include "Data/ApGiftingMappings.h"
 
 #include "ApMappingsSubsystem.generated.h"
 
@@ -150,7 +151,7 @@ public:
 	static TMap<TSubclassOf<UFGItemDescriptor>, int64> ItemClassToItemId;
 	TMap<FString, int64> NameToItemId;
 	TMap<int64, TSharedRef<FApItemBase>> ApItems;
-	TMap<TSubclassOf<UFGItemDescriptor>, TMap<FString, float>> TraitsPerItem;
+	TMap<TSubclassOf<UFGItemDescriptor>, TMap<EGiftTrait, float>> TraitsPerItem; //not sure why this isnt part of GiftMappings..
 
 	UPROPERTY(SaveGame)
 	TMap<int64, FString> ItemIdToName;

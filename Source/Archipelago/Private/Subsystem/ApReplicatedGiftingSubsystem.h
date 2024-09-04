@@ -7,6 +7,8 @@
 #include "Subsystem/ApConnectionInfoSubsystem.h"
 #include "Subsystem/ApMappingsSubsystem.h"
 #include "Subsystem/ApPortalSubsystem.h"
+#include "Data/ApGiftingMappings.h"
+#include "Data/ApTypes.h"
 #include "ApUtils.h"
 
 #include "ApReplicatedGiftingSubsystem.generated.h"
@@ -52,7 +54,7 @@ private:
 	UPROPERTY(Replicated)
 	EApGiftingServiceState ServiceState;
 
-	TArray<FString> AllTraits;
+	TSet<EGiftTrait> AllTraits;
 	TMap<FApPlayer, FApGiftBoxMetaData> AcceptedGiftTraitsPerPlayer;
 
 	bool hasLoadedPlayers = false;
@@ -68,16 +70,16 @@ public:
 	TArray<FApPlayer> GetPlayersAcceptingGifts();
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	TArray<FString> GetAcceptedTraitsPerPlayer(FApPlayer player);
+	TSet<EGiftTrait> GetAcceptedTraitsPerPlayer(FApPlayer player);
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	TArray<FString> GetTraitNamesPerItem(TSubclassOf<UFGItemDescriptor> itemClass);
+	TSet<EGiftTrait> GetTraitNamesPerItem(TSubclassOf<UFGItemDescriptor> itemClass);
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	TArray<FApGiftTrait> GetTraitsForItem(TSubclassOf<UFGItemDescriptor> itemClass);
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	bool DoesPlayerAcceptGiftTrait(FApPlayer player, FString giftTrait);
+	bool DoesPlayerAcceptGiftTrait(FApPlayer player, EGiftTrait giftTrait);
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	TArray<FApPlayer> GetAllApPlayers();
