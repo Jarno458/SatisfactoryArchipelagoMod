@@ -4,7 +4,6 @@
 #include "Subsystem/ModSubsystem.h"
 #include "Subsystem/SubsystemActorManager.h"
 #include "Subsystem/ApSubsystem.h"
-#include "Data/ApSlotData.h"
 #include "FGHardDriveSettings.h"
 #include "Patching/NativeHookManager.h"
 #include "FGGlobalSettings.h"

@@ -24,7 +24,6 @@
 #include "Templates/SubclassOf.h"
 #include "Module/ModModule.h"
 #include "ApConfigurationStruct.h"
-#include "Data/ApSlotData.h"
 #include "Data/ApTypes.h"
 #include "Subsystem/ApConnectionInfoSubsystem.h"
 #include "Subsystem/ApMessagingSubsystem.h"

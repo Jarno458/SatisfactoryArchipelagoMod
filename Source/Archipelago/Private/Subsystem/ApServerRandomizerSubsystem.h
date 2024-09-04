@@ -15,14 +15,11 @@
 #include "Configuration/ConfigProperty.h"
 #include "Configuration/Properties/ConfigPropertyInteger.h"
 #include "Configuration/Properties/ConfigPropertyBool.h"
-#include "Configuration/ConfigManager.h"
-#include "Configuration/Properties/ConfigPropertySection.h"
 #include "Templates/SubclassOf.h"
 #include "FGChatManager.h"
 #include "Unlocks/FGUnlockInfoOnly.h"
 
 #include "ApConfigurationStruct.h"
-#include "Data/ApSlotData.h"
 #include "Data/ApTypes.h"
 #include "Subsystem/ApPortalSubsystem.h"
 #include "Subsystem/ApMappingsSubsystem.h"
@@ -119,12 +116,7 @@ private:
 	bool InitializeTick();
 	void FinalizeInitialization();
 
-	//TODO move to client
 	bool UpdateFreeSamplesConfiguration();
-	void SetMamEnhancerConfigurationHooks();
-	UFUNCTION() //required for event binding
-	void LockMamEnhancerSpoilerConfiguration();
-	//
 
 	void ReceiveItem(int64 itemId, bool isFromServer);
 	void ProcessReceivedItems();

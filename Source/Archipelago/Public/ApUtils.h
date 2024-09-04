@@ -7,7 +7,6 @@
 #include "ApBlueprintDataBridge.h"
 #include "Module/ApGameInstanceModule.h"
 #include "Data/ApTypes.h"
-#include "Data/ApSlotData.h"
 #include "Subsystem/ApConnectionInfoSubsystem.h"
 
 #include "ApUtils.generated.h"

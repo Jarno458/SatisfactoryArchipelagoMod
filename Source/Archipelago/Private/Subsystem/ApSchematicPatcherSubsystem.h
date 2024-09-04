@@ -14,7 +14,6 @@
 #include "Buildables/FGBuildableAutomatedWorkBench.h"
 #include "Unlocks/FGUnlockInfoOnly.h"
 #include "ApConfigurationStruct.h"
-#include "Data/ApSlotData.h"
 #include "Data/ApTypes.h"
 #include "Subsystem/ApSubsystem.h"
 #include "Subsystem/ApConnectionInfoSubsystem.h"

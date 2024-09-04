@@ -8,7 +8,6 @@
 #include "Subsystem/ApSubsystem.h"
 #include "Subsystem/ApConnectionInfoSubsystem.h"
 #include "Subsystem/ApSlotDataSubsystem.h"
-#include "Data/ApSlotData.h"
 
 #include "ApGoalSubsystem.generated.h"
 

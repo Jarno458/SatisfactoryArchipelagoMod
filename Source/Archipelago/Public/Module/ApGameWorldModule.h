@@ -7,11 +7,6 @@
 #include "Subsystem/ModSubsystem.h"
 #include "Subsystem/SubsystemActorManager.h"
 
-#include "Subsystem/ApSubsystem.h"
-#include "Subsystem/ApMappingsSubsystem.h"
-#include "Subsystem/ApServerRandomizerSubsystem.h"
-#include "Subsystem/ApSchematicPatcherSubsystem.h"
-
 DECLARE_LOG_CATEGORY_EXTERN(LogApGameWorldModule, Log, All);
 
 #include "ApGameWorldModule.generated.h"

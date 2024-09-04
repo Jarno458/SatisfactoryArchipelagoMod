@@ -4,7 +4,6 @@
 #include "FGSaveInterface.h"
 #include "Subsystem/ModSubsystem.h"
 #include "Subsystem/SubsystemActorManager.h"
-#include "Data/ApSlotData.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(LogApSlotDataSubsystem, Log, All);
 

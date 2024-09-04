@@ -171,7 +171,6 @@ public:
 
 	void InitializeAfterConnectingToAp();
 
-	UFUNCTION(BlueprintCallable)
 	void DispatchLifecycleEvent(ELifecyclePhase phase);
 
 	FORCEINLINE int64 GetMamItemId() const { return mamId; }

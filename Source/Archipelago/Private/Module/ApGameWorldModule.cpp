@@ -1,5 +1,11 @@
 #include "Module/ApGameWorldModule.h"
 
+#include "Subsystem/ApSubsystem.h"
+#include "Subsystem/ApMappingsSubsystem.h"
+#include "Subsystem/ApServerRandomizerSubsystem.h"
+#include "Subsystem/ApSchematicPatcherSubsystem.h"
+#include "Subsystem/ApClientConfigurationSubsystem.h"
+
 DEFINE_LOG_CATEGORY(LogApGameWorldModule);
 
 UApGameWorldModule::UApGameWorldModule() {
