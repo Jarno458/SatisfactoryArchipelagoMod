@@ -55,7 +55,7 @@ private:
 	EApGiftingServiceState ServiceState;
 
 	TSet<EGiftTrait> AllTraits;
-	TMap<FApPlayer, FApGiftBoxMetaData> AcceptedGiftTraitsPerPlayer;
+	TMap<FApPlayer, FApGiftBoxMetaData> AcceptedGiftTraitsPerPlayer; //build using replication
 
 	bool hasLoadedPlayers = false;
 

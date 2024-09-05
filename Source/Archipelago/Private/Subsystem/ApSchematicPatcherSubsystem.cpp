@@ -1,7 +1,9 @@
 #include "Subsystem/ApSchematicPatcherSubsystem.h"
+#include "Net/UnrealNetwork.h"
 #include "FGGameState.h"
 #include "Module/WorldModuleManager.h"
 #include "Module/ApGameWorldModule.h"
+#include "Data/ApMappings.h"
 
 DEFINE_LOG_CATEGORY(LogApSchematicPatcherSubsystem);
 
