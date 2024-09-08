@@ -61,10 +61,7 @@ void AApSlotDataSubsystem::SetSlotDataJson(FString slotDataJson) {
 			for (TPair<FString, TSharedPtr<FJsonValue>> cost : milestone->AsObject()->Values) {
 				int64 itemId = FCString::Atoi64(*cost.Key);
 
-				FApReplicatedHubLayoutEntry hubCostEntry;
-				hubCostEntry.Pack(tierNumber, milestoneNumber, itemId, cost.Value->AsNumber());
-
-				parsedHubCostEntries.Add(hubCostEntry);
+				parsedHubCostEntries.Add(FApReplicatedHubLayoutEntry(tierNumber, milestoneNumber, itemId, cost.Value->AsNumber()));
 			}
 
 			milestoneNumber++;

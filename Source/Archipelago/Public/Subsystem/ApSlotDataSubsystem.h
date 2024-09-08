@@ -16,16 +16,34 @@ struct ARCHIPELAGO_API FApReplicatedHubLayoutEntry
 {
 	GENERATED_BODY()
 
+public:
+	// Value constructor
+	FApReplicatedHubLayoutEntry(int tier, int milestone, int64 itemId, int amount)
+		//current format <tier:4>,<milestone:4>,<itemId:12>,<amount:12>
+		: data((tier << 28) | (milestone << 24) | ((itemId - ID_OFFSET) << 12) | (amount << 0))
+	{}	
+	// Default constructor
+	FApReplicatedHubLayoutEntry()
+		: data(0)
+	{}
+	// Copy constructor
+	FApReplicatedHubLayoutEntry(const FApReplicatedHubLayoutEntry& Other)
+		: data(Other.data)
+	{}
+
 private:
 	UPROPERTY(SaveGame)
 	int32 data;
 
 public:
+	/*
 	// replication compression
 	void Pack(int tier, int milestone, int64 itemId, int amount) {
 		//current format <tier:4>,<milestone:4>,<itemId:12>,<amount:12>
 		data = (tier << 28) | (milestone << 24) | ((itemId - ID_OFFSET) << 12) | (amount << 0);
 	}
+	*/
+
 	FORCEINLINE int const GetTier() const { return (data & 0xF0000000) >> 28; }
 	FORCEINLINE int const GetMilestone() const { return (data & 0x0F000000) >> 24; }
 	FORCEINLINE int64 const GetItemId() const { return ID_OFFSET + ((data & 0x00FFF000) >> 12); }

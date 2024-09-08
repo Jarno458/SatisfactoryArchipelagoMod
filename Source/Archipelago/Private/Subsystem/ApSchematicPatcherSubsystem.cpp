@@ -134,14 +134,10 @@ void AApSchematicPatcherSubsystem::Server_SetItemInfoPerMilestone(int currentPla
 TArray<FApReplicatedItemInfo> AApSchematicPatcherSubsystem::MakeReplicateable(int currentPlayerId, const TArray<FApNetworkItem>& itemInfo) {
 	TArray<FApReplicatedItemInfo> itemsToReplicate;
 	for (const FApNetworkItem& itemInfoToReplicate : itemInfo) {
-		FApReplicatedItemInfo replicatedItem;
-
-		bool isLocalPlayer = itemInfoToReplicate.player == currentPlayerId;
-		if (!isLocalPlayer) {
-			replicatedItem.playerName = itemInfoToReplicate.playerName.Left(16);
-		}
-		replicatedItem.itemName = itemInfoToReplicate.itemName; // .Left(16); might need truncation? might be calculated locally?
-		replicatedItem.Pack(itemInfoToReplicate.item, itemInfoToReplicate.location, itemInfoToReplicate.flags, isLocalPlayer);
+		FApReplicatedItemInfo replicatedItem(
+			itemInfoToReplicate.itemName, itemInfoToReplicate.playerName, 
+			itemInfoToReplicate.item, itemInfoToReplicate.location, itemInfoToReplicate.flags, 
+			itemInfoToReplicate.player == currentPlayerId);
 
 		itemsToReplicate.Add(replicatedItem);
 	}
@@ -366,8 +362,7 @@ void AApSchematicPatcherSubsystem::UpdateInfoOnlyUnlockWithRecipeInfo(FContentLi
 				else
 					BuildingArray.Add(building->mDisplayName.ToString());
 			}
-		}
-		else if (buildingObject->IsChildOf(workshopComponent)) {
+		} else if (buildingObject->IsChildOf(workshopComponent)) {
 			BuildingArray.Add("Equipment Workshop");
 		}
 	}
@@ -472,7 +467,7 @@ bool AApSchematicPatcherSubsystem::IsCollected(UFGUnlock* unlock) {
 }
 
 void AApSchematicPatcherSubsystem::Collect(UFGSchematic* schematic, int unlockIndex, FApNetworkItem& networkItem) {
-	Collect(schematic->mUnlocks[unlockIndex], networkItem);
+	//Collect(schematic->mUnlocks[unlockIndex], networkItem);
 }
 
 void AApSchematicPatcherSubsystem::Collect(UFGUnlock* unlock, FApNetworkItem& networkItem) {

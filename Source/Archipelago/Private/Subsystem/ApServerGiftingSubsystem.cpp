@@ -50,7 +50,7 @@ void AApServerGiftingSubsystem::Tick(float dt) {
 
 	if (!apInitialized) {
 		if (connectionInfoSubsystem->GetConnectionState() == EApConnectionState::Connected
-			&& mappingSubsystem->HasLoadedItemTraits()
+			&& replicatedGiftingSubsystem->HasLoadedItemTraits()
 			&& mappingSubsystem->HasLoadedItemNameMappings()
 			&& portalSubSystem->IsInitialized())
 		{
@@ -176,19 +176,15 @@ void AApServerGiftingSubsystem::Send(TMap<FApPlayer, TMap<TSubclassOf<UFGItemDes
 		for (TPair<TSubclassOf<UFGItemDescriptor>, int>& stack : itemsToSendPerPlayer.Value) {
 			FApSendGift gift;
 
-			if (!mappingSubsystem->TraitsPerItem.Contains(stack.Key) || !mappingSubsystem->ItemClassToItemId.Contains(stack.Key)) {
-				gift.ItemName = UFGItemDescriptor::GetItemName(stack.Key).ToString();
-				gift.Amount = stack.Value;
-				gift.ItemValue = 0;
-				gift.Traits = TArray<FApGiftTrait>();
-				gift.Receiver = itemsToSendPerPlayer.Key;
-			} else {
-				gift.ItemName = mappingSubsystem->ItemIdToName[mappingSubsystem->ItemClassToItemId[stack.Key]];
-				gift.Amount = stack.Value;
-				gift.ItemValue = 0;
-				gift.Traits = replicatedGiftingSubsystem->GetTraitsForItem(stack.Key);
-				gift.Receiver = itemsToSendPerPlayer.Key;
-			}
+			FString itemName = mappingSubsystem->ItemClassToItemId.Contains(stack.Key)
+				? mappingSubsystem->ItemIdToName[mappingSubsystem->ItemClassToItemId[stack.Key]]
+				: UFGItemDescriptor::GetItemName(stack.Key).ToString();
+
+			gift.ItemName = itemName;
+			gift.Amount = stack.Value;
+			gift.ItemValue = 0;
+			gift.Traits = replicatedGiftingSubsystem->GetTraitsForItem(stack.Key);
+			gift.Receiver = itemsToSendPerPlayer.Key;
 
 			ap->SendGift(gift);
 		}
@@ -196,8 +192,10 @@ void AApServerGiftingSubsystem::Send(TMap<FApPlayer, TMap<TSubclassOf<UFGItemDes
 }
 
 bool AApServerGiftingSubsystem::HasTraitKnownToSatisfactory(TArray<FApGiftTrait>& traits) {
-	for (FApGiftTrait& trait : traits) {
-		if (UApGiftingMappings::TraitDefaultItemIds.Contains(trait.Trait))
+	static const UEnum* giftTraitEnum = StaticEnum<EGiftTrait>();
+
+	for (const FApGiftTrait& trait : traits) {
+		if (giftTraitEnum->IsValidEnumValue((uint8)trait.Trait))
 			return true;
 	}
 
@@ -215,13 +213,13 @@ TSubclassOf<UFGItemDescriptor> AApServerGiftingSubsystem::TryGetItemClassByTrait
 	if (!HasTraitKnownToSatisfactory(traits))
 		return nullptr;
 
-	for (const TPair<TSubclassOf<UFGItemDescriptor>, TMap<EGiftTrait, float>>& traitsPerItem : mappingSubsystem->TraitsPerItem) {
+	for (const TPair<TSubclassOf<UFGItemDescriptor>, FApTraitValues>& traitsPerItem : replicatedGiftingSubsystem->TraitsPerItem) {
 		int matches = 0;
 		float totalDifference = 0.0f;
 
 		for (FApGiftTrait& trait : traits) {
-			if (traitsPerItem.Value.Contains(trait.Trait)){
-				totalDifference += FGenericPlatformMath::Abs(traitsPerItem.Value[trait.Trait] - trait.Quality);
+			if (traitsPerItem.Value.AcceptsTrait(trait.Trait)){
+				totalDifference += FGenericPlatformMath::Abs(traitsPerItem.Value.TraitsValues[trait.Trait] - trait.Quality);
 				matches++;
 			}
 		}

@@ -35,6 +35,30 @@ struct ARCHIPELAGO_API FApReplicatedItemInfo
 {
 	GENERATED_BODY()
 
+
+public:
+	// Value constructor
+	FApReplicatedItemInfo(FString itemName, FString playerName, int64 itemId, int64 locationId, int flags, bool isLocalPlayer) 
+		//current format <islocal:1>,<flags:7>,<locationid:12>,<itemid:12>
+		//could be squahed to free 8 bits -> <free:8>,<islocal:1>,<flags:3>,<locationid:10>,<itemid:10>
+		: data(((isLocalPlayer ? 1 : 0) << 31) | ((flags) << 24) | ((locationId - ID_OFFSET) << 12) | ((itemId - ID_OFFSET) << 0)),
+			itemName(itemName), playerName()
+	{
+		//no need to replicated the local player's name
+		//truncation at 16 is default for AP
+		//todo might want to move player replication to its own subsystem so it can be shared between gifting and schematic patching
+		if (!isLocalPlayer) 
+			playerName = playerName.Left(16);
+	}
+	// Default constructor
+	FApReplicatedItemInfo()
+		: data(0), itemName(), playerName()
+	{}
+	// Copy constructor
+	FApReplicatedItemInfo(const FApReplicatedItemInfo& Other) 
+		: data(Other.data), itemName(Other.itemName), playerName(Other.playerName)
+	{}
+
 private:
 	UPROPERTY()
 	uint32 data;
@@ -47,12 +71,14 @@ public:
 	FString playerName;
 
 public:
+	/*
 	// replication compression
 	void Pack(int64 itemId, int64 locationId, int flags, bool isLocalPlayer) {
 		//current format <islocal:1>,<flags:7>,<locationid:12>,<itemid:12>
 		//could be squahed to free 8 bits -> <free:8>,<islocal:1>,<flags:3>,<locationid:10>,<itemid:10>
 		data = ((isLocalPlayer ? 1 : 0) << 31) | ((flags) << 24) | ((locationId - ID_OFFSET) << 12) | ((itemId - ID_OFFSET) << 0);
 	}
+	*/
 	FORCEINLINE int64 const GetItemId() const { return ID_OFFSET + (data & 0x00000FFF); }
 	FORCEINLINE int64 const GetLocationId() const { return ID_OFFSET + ((data & 0x00FFF000) >> 12); }
 	FORCEINLINE int const GetFlags() const { return (data & 0x4F000000) >> 24; }

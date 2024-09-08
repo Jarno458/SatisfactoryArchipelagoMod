@@ -7,7 +7,6 @@
 #include "Subsystem/ModSubsystem.h"
 #include "Resources/FGItemDescriptor.h"
 #include "AssetRegistry/AssetRegistryModule.h"
-#include "Data/ApGiftingMappings.h"
 
 #include "ApMappingsSubsystem.generated.h"
 
@@ -123,7 +122,6 @@ struct ARCHIPELAGO_API FApSpecialItem : public FApItemBase
 	ESpecialItemType SpecialType;
 };
 
-
 UCLASS()
 class AApMappingsSubsystem : public AModSubsystem, public IFGSaveInterface
 {
@@ -151,7 +149,6 @@ public:
 	static TMap<TSubclassOf<UFGItemDescriptor>, int64> ItemClassToItemId;
 	TMap<FString, int64> NameToItemId;
 	TMap<int64, TSharedRef<FApItemBase>> ApItems;
-	TMap<TSubclassOf<UFGItemDescriptor>, TMap<EGiftTrait, float>> TraitsPerItem; //not sure why this isnt part of GiftMappings..
 
 	UPROPERTY(SaveGame)
 	TMap<int64, FString> ItemIdToName;
@@ -166,9 +163,7 @@ private:
 	static int64 shopId;
 
 public:
-	//UFUNCTION(BlueprintCallable, BlueprintPure)
 	FORCEINLINE bool HasLoadedItemNameMappings() const { return hasLoadedItemNameMappings; };
-	FORCEINLINE bool HasLoadedItemTraits() const { return hasLoadedItemTraits; };
 
 	void InitializeAfterConnectingToAp();
 
@@ -187,11 +182,6 @@ private:
 	static void LoadBuildingMappings(TMap<int64, TSharedRef<FApItemBase>>& itemMap, TMap<FName, const FAssetData>& recipeAssets);
 	static void LoadSchematicMappings(TMap<int64, TSharedRef<FApItemBase>>& itemMap);
 
-	void LoadTraitMappings();
-	int GetResourceSinkPointsForItem(AFGResourceSinkSubsystem* resourceSinkSubsystem, TSubclassOf<UFGItemDescriptor> itemClass, int64 itemId);
-	float GetTraitValue(int itemValue, float avarageItemValueForTrait, float itemSpecificTraitMultiplier);
-	void PrintTraitValuesPerItem();
-
 	void LoadNamesFromAP();
 	
 	static const TMap<FName, const FAssetData> GetItemDescriptorAssets(IAssetRegistry& registery);
@@ -203,7 +193,4 @@ private:
 	static UFGSchematic* GetSchematicByName(FString name);
 
 	static UObject* FindAssetByName(const TMap<FName, const FAssetData> assets, FString assetName);
-
-	UFUNCTION() //required for event hookup
-	void OnClientSubsystemsValid();
 };

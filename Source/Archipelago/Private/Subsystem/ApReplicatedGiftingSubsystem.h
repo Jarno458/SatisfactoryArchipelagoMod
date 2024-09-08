@@ -46,7 +46,7 @@ private:
 	AApMappingsSubsystem* mappingSubsystem;
 
 	UPROPERTY(ReplicatedUsing = OnRep_AcceptedGiftTraitsPerPlayerReplicated)
-	TArray<FApReplicateableGiftBoxMetaData> AcceptedGiftTraitsPerPlayerReplicated;
+	TArray<FApTraitByPlayer> AcceptedGiftTraitsPerPlayerReplicated;
 
 	UPROPERTY(Replicated)
 	TArray<FApPlayer> AllPlayers;
@@ -55,16 +55,20 @@ private:
 	EApGiftingServiceState ServiceState;
 
 	TSet<EGiftTrait> AllTraits;
-	TMap<FApPlayer, FApGiftBoxMetaData> AcceptedGiftTraitsPerPlayer; //build using replication
+	TMap<FApPlayer, FApTraitBits> AcceptedGiftTraitsPerPlayer; //build using replication
+	TMap<TSubclassOf<UFGItemDescriptor>, FApTraitValues> TraitsPerItem; 	//also used by usage is Server side gifting subsystem
 
 	bool hasLoadedPlayers = false;
+	bool hasLoadedTraits = false;
 
 public:
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FORCEINLINE EApGiftingServiceState GetState() const { return ServiceState; };
 
+	FORCEINLINE bool HasLoadedItemTraits() const { return hasLoadedTraits; };
+
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	bool CanSend(FApPlayer targetPlayer, TSubclassOf<UFGItemDescriptor> itemClass);
+	bool CanSend(const FApPlayer& targetPlayer, const TSubclassOf<UFGItemDescriptor> itemClass);
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	TArray<FApPlayer> GetPlayersAcceptingGifts();
@@ -79,15 +83,23 @@ public:
 	TArray<FApGiftTrait> GetTraitsForItem(TSubclassOf<UFGItemDescriptor> itemClass);
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	bool DoesPlayerAcceptGiftTrait(FApPlayer player, EGiftTrait giftTrait);
-
-	UFUNCTION(BlueprintCallable, BlueprintPure)
 	TArray<FApPlayer> GetAllApPlayers();
 
 private:
 	void UpdateAcceptedGifts();
 	void UpdateAcceptedGiftTraitsPerPlayerReplicatedValue();
 
-	UFUNCTION()
+	void LoadTraitMappings();
+	int GetResourceSinkPointsForItem(AFGResourceSinkSubsystem* resourceSinkSubsystem, TSubclassOf<UFGItemDescriptor> itemClass, int64 itemId);
+	float GetTraitValue(int itemValue, float avarageItemValueForTrait, float itemSpecificTraitMultiplier);
+	void PrintTraitValuesPerItem();
+
+private:
+	UFUNCTION() //required for event hookup
 	void OnRep_AcceptedGiftTraitsPerPlayerReplicated();
+
+	UFUNCTION() //required for event hookup
+	void OnClientSubsystemsValid();
+
+	friend class AApServerGiftingSubsystem;
 };

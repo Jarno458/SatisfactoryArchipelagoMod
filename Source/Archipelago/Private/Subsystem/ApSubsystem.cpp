@@ -419,29 +419,28 @@ void AApSubsystem::SetGiftBoxState(bool open) {
 		UE_LOG(LogApSubsystem, Error, TEXT("AApSubsystem::SetGiftBoxState(\"%s\") Updating giftbox metadata failed"), (open ? TEXT("true") : TEXT("false")));
 }
 
-TMap<FApPlayer, FApGiftBoxMetaData> AApSubsystem::GetAcceptedTraitsPerPlayer() {
+TMap<FApPlayer, FApTraitBits> AApSubsystem::GetAcceptedTraitsPerPlayer() {
 	std::map<std::pair<int, std::string>, AP_GiftBoxProperties> giftboxes =
 		CallOnGameThread<std::map<std::pair<int, std::string>, AP_GiftBoxProperties>>([]() { return AP_QueryGiftBoxes(); });
 
 	static const UEnum* giftTraitEnum = StaticEnum<EGiftTrait>();
 
-	TMap<FApPlayer, FApGiftBoxMetaData> openGiftBoxes;
+	TMap<FApPlayer, FApTraitBits> openGiftBoxes;
 	for (std::pair<std::pair<int, std::string>, AP_GiftBoxProperties> giftbox : giftboxes) {
 		if (giftbox.second.IsOpen) {
 			FApPlayer player;
 			player.Team = giftbox.first.first;
 			player.Name = UApUtils::FStr(giftbox.first.second);
 
-			FApGiftBoxMetaData metaData;
-			metaData.AcceptAllTraits = giftbox.second.AcceptsAnyGift;
-			metaData.AcceptedTraits = TSet<EGiftTrait>();
-
+			TSet<EGiftTrait> acceptedTraits;
 			for (std::string trait : giftbox.second.DesiredTraits) {
 				const int64 enumValue = giftTraitEnum->GetValueByNameString(UApUtils::FStr(trait));
 				if (enumValue != INDEX_NONE) {
-					metaData.AcceptedTraits.Add(static_cast<EGiftTrait>(enumValue));
+					acceptedTraits.Add(static_cast<EGiftTrait>(enumValue));
 				}
 			}
+
+			FApTraitBits metaData(giftbox.second.AcceptsAnyGift, acceptedTraits);
 
 			openGiftBoxes.Add(player, metaData);
 		}

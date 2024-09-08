@@ -1,7 +1,7 @@
 #include "ApMappingsSubsystem.h"
 #include "Subsystem/ApSubsystem.h"
 #include "Data/ApMappings.h"
-#include "Data/ApGiftingMappings.h"
+//#include "Data/ApGiftingMappings.h"
 #include "Registry/ModContentRegistry.h"
 #include "FGGameState.h"
 #include "Logging/StructuredLog.h"
@@ -49,6 +49,7 @@ void AApMappingsSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase) {
 void AApMappingsSubsystem::BeginPlay() {
 	Super::BeginPlay();
 
+	/*
 	UE_LOG(LogApMappingsSubsystem, Display, TEXT("AApMappingsSubsystem(::BeginPlay()"));
 
 	AGameStateBase* gameState = GetWorld()->GetGameState();
@@ -63,12 +64,14 @@ void AApMappingsSubsystem::BeginPlay() {
 				LoadTraitMappings();
 			}
 		}
-	}
+	}*/
+	
 }
 
+/*
 void AApMappingsSubsystem::OnClientSubsystemsValid() {
 	LoadTraitMappings();
-}
+}*/
 
 void AApMappingsSubsystem::LoadMappings(TMap<int64, TSharedRef<FApItemBase>>& itemMap) {
 	FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
@@ -239,6 +242,7 @@ const TMap<FName, const FAssetData> AApMappingsSubsystem::GetBlueprintAssetsIn(I
 	return assetsMap;
 }
 
+/*
 void AApMappingsSubsystem::LoadTraitMappings() {
 	AFGResourceSinkSubsystem* resourceSinkSubsystem = AFGResourceSinkSubsystem::Get(GetWorld());
 	fgcheck(resourceSinkSubsystem)
@@ -340,7 +344,7 @@ void AApMappingsSubsystem::PrintTraitValuesPerItem() {
 	FString fileText = FString::Join(lines, TEXT("\n"));
 
 	UApUtils::WriteStringToFile(fileText, TEXT("T:\\ItemTraits.txt"), false);
-}
+}*/
 
 UObject* AApMappingsSubsystem::FindAssetByName(const TMap<FName, const FAssetData> assets, FString assetName) {
 	UE_LOG(LogApMappingsSubsystem, Display, TEXT("AApMappingsSubsystem::FindAssetByName(assets[%i], \"%s\")"), assets.Num(), *assetName);

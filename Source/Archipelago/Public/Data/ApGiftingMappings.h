@@ -7,7 +7,7 @@
 UENUM(BlueprintType)
 enum class EGiftTrait : uint8
 {
-	Electronics,
+	Electronics = 0,
 	Iron,
 	Steel,
 	Silver,

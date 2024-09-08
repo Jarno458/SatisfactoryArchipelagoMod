@@ -83,7 +83,7 @@ public:
 	TArray<FApReceiveGift> GetGifts();
 	void RejectGift(TSet<FString> ids);
 	void AcceptGift(TSet<FString> ids);
-	TMap<FApPlayer, FApGiftBoxMetaData> GetAcceptedTraitsPerPlayer();
+	TMap<FApPlayer, FApTraitBits> GetAcceptedTraitsPerPlayer();
 	TArray<FApPlayer> GetAllApPlayers();
 
 	void MarkGameAsDone();
