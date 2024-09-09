@@ -30,25 +30,30 @@ DECLARE_LOG_CATEGORY_EXTERN(LogApSchematicPatcherSubsystem, Log, All);
 
 #define ID_OFFSET 1338000
 
+//TODO REMOVE
+#pragma optimize("", off)
+
 USTRUCT()
 struct ARCHIPELAGO_API FApReplicatedItemInfo
 {
 	GENERATED_BODY()
-
 
 public:
 	// Value constructor
 	FApReplicatedItemInfo(FString itemName, FString playerName, int64 itemId, int64 locationId, int flags, bool isLocalPlayer) 
 		//current format <islocal:1>,<flags:7>,<locationid:12>,<itemid:12>
 		//could be squahed to free 8 bits -> <free:8>,<islocal:1>,<flags:3>,<locationid:10>,<itemid:10>
-		: data(((isLocalPlayer ? 1 : 0) << 31) | ((flags) << 24) | ((locationId - ID_OFFSET) << 12) | ((itemId - ID_OFFSET) << 0)),
-			itemName(itemName), playerName()
+		: data(((isLocalPlayer ? 1 : 0) << 31) | ((flags) << 24) | ((locationId - ID_OFFSET) << 12)),
+			itemName(itemName.Left(50)), playerName()
 	{
 		//no need to replicated the local player's name
+		//no need to replicate itemid if its not from local player
 		//truncation at 16 is default for AP
 		//todo might want to move player replication to its own subsystem so it can be shared between gifting and schematic patching
-		if (!isLocalPlayer) 
-			playerName = playerName.Left(16);
+		if (!isLocalPlayer)
+			this->playerName = playerName.Left(16);
+		else
+			this->data |= ((itemId - ID_OFFSET) << 0);
 	}
 	// Default constructor
 	FApReplicatedItemInfo()
@@ -71,20 +76,13 @@ public:
 	FString playerName;
 
 public:
-	/*
-	// replication compression
-	void Pack(int64 itemId, int64 locationId, int flags, bool isLocalPlayer) {
-		//current format <islocal:1>,<flags:7>,<locationid:12>,<itemid:12>
-		//could be squahed to free 8 bits -> <free:8>,<islocal:1>,<flags:3>,<locationid:10>,<itemid:10>
-		data = ((isLocalPlayer ? 1 : 0) << 31) | ((flags) << 24) | ((locationId - ID_OFFSET) << 12) | ((itemId - ID_OFFSET) << 0);
-	}
-	*/
 	FORCEINLINE int64 const GetItemId() const { return ID_OFFSET + (data & 0x00000FFF); }
 	FORCEINLINE int64 const GetLocationId() const { return ID_OFFSET + ((data & 0x00FFF000) >> 12); }
 	FORCEINLINE int const GetFlags() const { return (data & 0x4F000000) >> 24; }
 	FORCEINLINE bool GetIsLocalPlayer() const { return (data & 0x80000000) > 0; }
-	//
 };
+
+#pragma optimize("", on)
 
 USTRUCT()
 struct ARCHIPELAGO_API FApReplicatedMilestoneInfo
