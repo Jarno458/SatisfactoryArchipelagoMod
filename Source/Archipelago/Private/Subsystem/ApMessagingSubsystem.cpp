@@ -1,5 +1,6 @@
 #include "Subsystem/ApMessagingSubsystem.h"
 #include "ApUtils.h"
+#include "Kismet/GameplayStatics.h"
 
 DEFINE_LOG_CATEGORY(LogApChat);
 

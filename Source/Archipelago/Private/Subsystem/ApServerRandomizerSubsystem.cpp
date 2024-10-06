@@ -1,4 +1,6 @@
 #include "Subsystem/ApServerRandomizerSubsystem.h"
+#include "Engine\DamageEvents.h"
+#include "FGGamePhase.h"
 
 #include "data/ApMappings.h"
 
@@ -300,9 +302,9 @@ void AApServerRandomizerSubsystem::Tick(float DeltaTime) {
 	HandleCheckedLocations();
 	HandleDeathLink();
 
-	if (phaseManager->GetGamePhase() > lastGamePhase) {
+	if (phaseManager->GetCurrentGamePhase()->mGamePhase > lastGamePhase) {
 		OnAvaiableSchematicsChanged();
-		lastGamePhase = phaseManager->GetGamePhase();
+		lastGamePhase = phaseManager->GetCurrentGamePhase()->mGamePhase;
 	}
 }
 
@@ -485,7 +487,7 @@ void AApServerRandomizerSubsystem::OnSchematicCompleted(TSubclassOf<class UFGSch
 void AApServerRandomizerSubsystem::OnAvaiableSchematicsChanged() {
 	TSet<int64> locationHintsToPublish;
 
-	int maxAvailableTechTier = ((int)phaseManager->GetGamePhase() + 1) * 2;
+	int maxAvailableTechTier = phaseManager->GetCurrentGamePhase()->mLastTierOfPhase;
 	int currentPlayerSlot = connectionInfo->GetCurrentPlayerSlot();
 
 	for (TPair<TSubclassOf<UFGSchematic>, TArray<FApNetworkItem>>& itemPerMilestone : locationsPerMilestone) {

@@ -6,7 +6,7 @@
 #pragma optimize("", off)
 
 AApPortal::AApPortal() : Super() {
-	mPowerInfoClass = UFGPowerInfoComponent::StaticClass();
+	//mPowerInfoClass = UFGPowerInfoComponent::StaticClass();
 
 	bReplicates = true;
 

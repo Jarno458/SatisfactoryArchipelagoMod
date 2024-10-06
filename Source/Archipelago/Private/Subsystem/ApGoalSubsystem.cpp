@@ -1,4 +1,5 @@
 #include "Subsystem/ApGoalSubsystem.h"
+#include "FGGamePhase.h"
 
 AApGoalSubsystem::AApGoalSubsystem() : Super() {
 	PrimaryActorTick.bCanEverTick = true;
@@ -52,7 +53,7 @@ bool AApGoalSubsystem::AreGoalsCompleted() {
 }
 
 bool AApGoalSubsystem::CheckSpaceElevatorGoal() {
-	return slotData->FinalSpaceElevatorTier > 0 && phaseManager->GetGamePhase() >= slotData->FinalSpaceElevatorTier;
+	return slotData->FinalSpaceElevatorTier > 0 && phaseManager->GetCurrentGamePhase()->mGamePhase >= slotData->FinalSpaceElevatorTier;
 }
 
 bool AApGoalSubsystem::CheckResourceSinkPointsGoal() {

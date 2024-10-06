@@ -64,5 +64,7 @@ public class Archipelago : ModuleRules
             PublicDependencyModuleNames.AddRange(new string[] {/*"OnlineBlueprintSupport",*/ "AnimGraph", "UnrealEd" });
         }
         PublicDependencyModuleNames.AddRange(new string[] {"FactoryGame", "SML"});
+
+        CppStandard = CppStandardVersion.Cpp20;
     }
 }

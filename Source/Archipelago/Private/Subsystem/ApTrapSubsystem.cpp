@@ -1,5 +1,6 @@
 #include "Subsystem/ApTrapSubsystem.h"
 #include "ApUtils.h"
+#include "Kismet/GameplayStatics.h"
 
 bool AApTrapSubsystem::IsValidTrapType(FName trapName) {
 	return TrapTypes.Contains(trapName);

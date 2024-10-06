@@ -1,4 +1,5 @@
 #include "Subsystem/ApExplorationSubsystem.h"
+#include "Kismet/GameplayStatics.h"
 
 DEFINE_LOG_CATEGORY(LogApExplorationSubsystem);
 
