@@ -16,7 +16,7 @@ const TMap<int64, const FString> UApMappings::ItemIdToGameItemDescriptor = {
 	{1338011, TEXT("Desc_SpaceElevatorPart_3_C")}, //Automated Wiring
 	{1338012, TEXT("Desc_Battery_C")},
 	{1338013, TEXT("Desc_OreBauxite_C")},
-	{1338014, TEXT("BP_EquipmentDescriptorBeacon_C")}, //Beacon
+	//{1338014, TEXT("BP_EquipmentDescriptorBeacon_C")}, //Beacon //Removed 1.0
 	{1338015, TEXT("Desc_GenericBiomass_C")},
 	{1338016, TEXT("Desc_Gunpowder_C")}, //Black Powder
 	{1338017, TEXT("Desc_Cable_C")},
@@ -24,7 +24,7 @@ const TMap<int64, const FString> UApMappings::ItemIdToGameItemDescriptor = {
 	{1338019, TEXT("Desc_OreGold_C")}, //Caterium Ore
 	{1338020, TEXT("Desc_CircuitBoard_C")},
 	{1338021, TEXT("Desc_Coal_C")},
-	{1338022, TEXT("Desc_ColorCartridge_C")},
+	//{1338022, TEXT("Desc_ColorCartridge_C")}, // Removed 1.0
 	{1338023, TEXT("Desc_CompactedCoal_C")},
 	{1338024, TEXT("Desc_Computer_C")},
 	{1338025, TEXT("Desc_Cement_C")}, //Concrete
@@ -43,7 +43,7 @@ const TMap<int64, const FString> UApMappings::ItemIdToGameItemDescriptor = {
 	{1338038, TEXT("Desc_UraniumCell_C")},
 	{1338039, TEXT("Desc_Fabric_C")},
 	{1338040, TEXT("Desc_ResourceSinkCoupon_C")},
-	{1338041, TEXT("Desc_FlowerPetals_C")},
+	//{1338041, TEXT("Desc_FlowerPetals_C")}, // Removed 1.0
 	{1338042, TEXT("Desc_ModularFrameFused_C")},
 	{1338043, TEXT("Desc_HardDrive_C")},
 	{1338044, TEXT("Desc_AluminumPlateReinforced_C")}, //Heatsink
@@ -190,7 +190,7 @@ const TMap<int64, const TArray<FString>> UApMappings::ItemIdToGameRecipe = {
 	{1338214, {TEXT("Recipe_Alternate_RecycledRubber")}},
 	{1338215, {TEXT("Recipe_IronPlate")}},
 	{1338216, {TEXT("Recipe_Alternate_CoatedIronPlate")}},
-	{1338217, {TEXT("Recipe_Alternate_SteelCoatedPlate")}},
+	{1338217, {TEXT("Recipe_Alternate_SteelCastedPlate")}}, // 1.0
 	{1338218, {TEXT("Recipe_IronRod")}},
 	{1338219, {TEXT("Recipe_Alternate_SteelRod")}},
 	{1338220, {TEXT("Recipe_Screw")}},
@@ -318,8 +318,8 @@ const TMap<int64, const TArray<FString>> UApMappings::ItemIdToGameRecipe = {
 	{1338342, {TEXT("Recipe_Alternate_UraniumCell_1")}},
 	{1338343, {TEXT("Recipe_NuclearFuelRod")}},
 	{1338344, {TEXT("Recipe_Alternate_NuclearFuelRod_1")}},
-	{1338345, {TEXT("Recipe_Beacon")}},
-	{1338346, {TEXT("Recipe_Alternate_Beacon_1")}},
+	//{1338345, {TEXT("Recipe_Beacon")}}, // Removed 1.0
+	//{1338346, {TEXT("Recipe_Alternate_Beacon_1")}}, // Removed 1.0
 	//{1338347, {TEXT("")}}, // Recipe: Uranium Waste
 	{1338348, {TEXT("Recipe_NonFissileUranium")}},
 	{1338349, {TEXT("Recipe_Alternate_FertileUranium")}},
@@ -417,7 +417,7 @@ const TMap<int64, const TArray<FString>> UApMappings::ItemIdToGameBuilding = {
 	{1338604, {TEXT("Recipe_OilRefinery")}},
 	{1338605, {TEXT("Recipe_Blender")}},
 	{1338606, {TEXT("Recipe_HadronCollider")}},
-	{1338607, {TEXT("Recipe_GeneratorBiomass")}},
+	{1338607, {TEXT("Recipe_GeneratorBiomass_Automated")}}, //1.0
 	{1338608, {TEXT("Recipe_GeneratorCoal")}},
 	{1338609, {TEXT("Recipe_GeneratorGeoThermal")}},
 	{1338610, {TEXT("Recipe_GeneratorNuclear")}},
@@ -601,7 +601,7 @@ const TMap<int64, const FString> UApMappings::ItemIdToGameSchematic = {
 	{1338702, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_WallPowerPolesMK3.ResourceSink_WallPowerPolesMK3'")},
 	{1338703, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_Catwalks.ResourceSink_Catwalks'")},
 	{1338704, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_Walkways.ResourceSink_Walkways'")},
-	{1338705, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_Stairs.ResourceSink_Stairs'")},
+	{1338705, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_FoundationStairs.ResourceSink_FoundationStairs'")}, //1.0
 	{1338706, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_NoIndicator_PipelineMK1.ResourceSink_NoIndicator_PipelineMK1'")},
 	{1338707, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_NoIndicator_PipelineMK2.ResourceSink_NoIndicator_PipelineMK2'")},
 	{1338708, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_FactoryBarrier.ResourceSink_FactoryBarrier'")},

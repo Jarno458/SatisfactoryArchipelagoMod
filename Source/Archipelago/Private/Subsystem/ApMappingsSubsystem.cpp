@@ -361,14 +361,14 @@ UObject* AApMappingsSubsystem::FindAssetByName(const TMap<FName, const FAssetDat
 
 	if (assetName.Contains("/")) {
 #if !WITH_EDITOR
-		UE_LOG(LogApMappingsSubsystem, Error, TEXT("AApMappingsSubsystem::FindAssetByName() cant load asset of name %s"), *assetName);
-
 		//working examples while ingame
 		//auto s = LoadObject<UBlueprintGeneratedClass>(NULL, TEXT("/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_Ladders.ResourceSink_Ladders_C"));
 		//auto a = registery.GetAssetByObjectPath(TEXT("/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_Ladders.ResourceSink_Ladders_C"));
 		//auto c = LoadClass<UObject>(nullptr, TEXT("/Game/FactoryGame/Resource/RawResources/OreIron/Desc_OreIron.Desc_OreIron_C"));
 		//TSubclassOf<UFGSchematic> d = LoadClass<UFGSchematic>(nullptr, TEXT("/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_Ladders.ResourceSink_Ladders_C"));
 		assetName.RemoveFromStart("/Script/Engine.Blueprint'");
+
+		UE_LOG(LogApMappingsSubsystem, Display, TEXT("AApMappingsSubsystem::FindAssetByName() attempting to load asset of name %s"), *assetName);
 
 		UBlueprintGeneratedClass* blueprint = LoadObject<UBlueprintGeneratedClass>(NULL, *assetName);
 		fgcheck(blueprint != nullptr);
