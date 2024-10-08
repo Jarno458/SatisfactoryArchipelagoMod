@@ -33,7 +33,6 @@ enum class EGiftTrait : uint8
 	Trap,
 	Resource,
 	Tool,
-	Flower, 
 	Radioactive,
 	Crystal,
 	Artifact,

@@ -37,7 +37,6 @@ const TMap<EGiftTrait, int64> UApGiftingMappings::TraitDefaultItemIds = {
 	{EGiftTrait::Tool, 1338173}, // BP_EquipmentDescriptorObjectScanner_C
 	{EGiftTrait::Bomb, 1338097}, // Desc_GunpowderMK2_C, //Smokeless Powder
 	{EGiftTrait::Ore, 1338021}, // Desc_Coal_C
-	{EGiftTrait::Flower, 1338041}, // Desc_FlowerPetals_C,
 	{EGiftTrait::Stone, 1338025}, // Desc_Cement_C, //Concrete
 	{EGiftTrait::Material, 1338081}, // Desc_PolymerResin_C,
 	{EGiftTrait::Radioactive, 1338038}, // Desc_UraniumCell_C,
@@ -79,7 +78,7 @@ const TMap<int64, TMap<EGiftTrait, float>> UApGiftingMappings::TraitsPerItemRati
 	{1338011, {{EGiftTrait::Copper, 1.0f}}}, // Desc_SpaceElevatorPart_3_C, //Automated Wiring
 	{1338012, {{EGiftTrait::Copper, 1.0f}}}, // Desc_Battery_C, 
 	{1338013, {{EGiftTrait::Silver, 1.0f},{EGiftTrait::Ore, 1.0f}}}, // Desc_OreBauxite_C, 
-	{1338014, {{EGiftTrait::Tool, 1.0f}}}, // BP_EquipmentDescriptorBeacon_C, //Beacon
+	//{1338014, {{ }}},
 	{1338015, {{EGiftTrait::Grass, 1.0f}}}, // Desc_GenericBiomass_C, 
 	{1338016, {{EGiftTrait::Bomb, 1.0f}}}, // Desc_Gunpowder_C, //Black Powder
 	{1338017, {{EGiftTrait::Copper, 1.0f}}}, // Desc_Cable_C, 
@@ -87,7 +86,7 @@ const TMap<int64, TMap<EGiftTrait, float>> UApGiftingMappings::TraitsPerItemRati
 	{1338019, {{EGiftTrait::Gold, 1.0f},{EGiftTrait::Ore, 1.0f}}}, // Desc_OreGold_C, //Caterium Ore
 	{1338020, {{EGiftTrait::Electronics, 1.0f}}}, // Desc_CircuitBoard_C, 
 	{1338021, {{EGiftTrait::Coal, 1.0f},{EGiftTrait::Ore, 1.0f}}}, // Desc_Coal_C, 
-	{1338022, {{EGiftTrait::Flower, 2.0f}}}, // Desc_ColorCartridge_C, 
+	//{1338022, {{ }}},
 	{1338023, {{EGiftTrait::Coal, 1.0f}}}, // Desc_CompactedCoal_C, 
 	{1338024, {{EGiftTrait::Electronics, 1.0f}}}, // Desc_Computer_C, 
 	{1338025, {{EGiftTrait::Stone, 1.0f},{EGiftTrait::Ore, 1.0f}}}, // Desc_Cement_C, //Concrete
@@ -106,7 +105,7 @@ const TMap<int64, TMap<EGiftTrait, float>> UApGiftingMappings::TraitsPerItemRati
 	{1338038, {{EGiftTrait::Radioactive,	0.5f},{EGiftTrait::Damage, 0.05f}}}, // Desc_UraniumCell_C, 
 	{1338039, {{EGiftTrait::Fiber, 1.0f}}}, // Desc_Fabric_C, 
 	{1338040, {{EGiftTrait::Resource, 1.0f}}}, // Desc_ResourceSinkCoupon_C, 
-	{1338041, {{EGiftTrait::Flower, 1.0f}}}, // Desc_FlowerPetals_C, 
+	//{1338041, {{ }}}, 
 	{1338042, {{EGiftTrait::Silver, 1.0f}}}, // Desc_ModularFrameFused_C, 
 	{1338043, {{EGiftTrait::Electronics, 1.0f}}}, // Desc_HardDrive_C, 
 	{1338044, {{EGiftTrait::Silver, 1.0f}}}, // Desc_AluminumPlateReinforced_C, //Heatsink
