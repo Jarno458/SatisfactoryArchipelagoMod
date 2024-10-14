@@ -150,7 +150,7 @@ private:
 	TQueue<int64> collectedLocationsToProcess;
 
 	UTexture2D* collectedIcon = LoadObject<UTexture2D>(nullptr, TEXT("/Archipelago/Assets/SourceArt/ArchipelagoAssetPack/AP-Black.AP-Black"));
-	UClass* workshopComponent = LoadClass<UObject>(nullptr, TEXT("/Game/FactoryGame/Buildable/-Shared/WorkBench/BP_WorkshopComponent.BP_WorkshopComponent_C"));
+	UClass* workshopComponent = nullptr;
 
 	bool receivedItemInfos = false;
 	bool receivedMilestones = false;

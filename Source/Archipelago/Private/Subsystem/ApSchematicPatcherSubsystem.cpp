@@ -164,6 +164,8 @@ void AApSchematicPatcherSubsystem::InitializeSchematicsBasedOnScoutedData() {
 	fgcheck(wordModuleManager != nullptr);
 	UApGameWorldModule* apWorldModule = Cast<UApGameWorldModule>(wordModuleManager->FindModule(FName("Archipelago")));
 	fgcheck(apWorldModule != nullptr);
+	workshopComponent = LoadClass<UObject>(nullptr, TEXT("/Game/FactoryGame/Buildable/-Shared/WorkBench/BP_WorkshopComponent.BP_WorkshopComponent_C"));
+	fgcheck(workshopComponent != nullptr)
 
 	TArray<TSubclassOf<UFGSchematic>> hardcodedSchematics;
 	hardcodedSchematics.Append(apWorldModule->mSchematics);
