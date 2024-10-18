@@ -266,7 +266,7 @@ int AApReplicatedGiftingSubsystem::GetResourceSinkPointsForItem(AFGResourceSinkS
 
 	if (value == 0) {
 		FString itemName = UFGItemDescriptor::GetItemName(itemClass).ToString();
-		UE_LOG(LogApMappingsSubsystem, Error, TEXT("AApMappingsSubsystem::GetResourceSinkPointsForItem(\"%s\", %i) Not sink value for item"), *itemName, itemId);
+		UE_LOG(LogApMappingsSubsystem, Error, TEXT("AApMappingsSubsystem::GetResourceSinkPointsForItem(\"%s\", %i) No sink value for item"), *itemName, itemId);
 		value = 1;
 	}
 
