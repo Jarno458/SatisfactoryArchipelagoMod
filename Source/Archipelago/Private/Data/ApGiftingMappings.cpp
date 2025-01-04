@@ -75,6 +75,7 @@ const TMap<EGiftTrait, int64> UApGiftingMappings::TraitDefaultItemIds = {
 	{EGiftTrait::Platinum, 1338123}, // Desc_FicsiteIngot
 	{EGiftTrait::DarkMatter, 1338127}, // Biochemical Sculptor
 	{EGiftTrait::SpaceMineral, 1338125}, // Desc_SAMIngot
+	{EGiftTrait::Statue, 1338064} // Desc_DoggoStatue_C
 	//1.0
 };
 
@@ -110,7 +111,7 @@ const TMap<int64, TMap<EGiftTrait, float>> UApGiftingMappings::TraitsPerItemRati
 	{1338028, {{EGiftTrait::Copper, 1.0f}}}, // Desc_OreCopper_C, //Copper Ore
 	{1338029, {{EGiftTrait::Copper, 1.0f}}}, // Desc_CopperDust_C, 
 	{1338030, {{EGiftTrait::Copper, 1.0f}}}, // Desc_CopperSheet_C, 
-	{1338031, {{EGiftTrait::Copper, 5.0f}}}, // Desc_CharacterRunStatue_C, 
+	{1338031, {{EGiftTrait::Copper, 5.0f},{EGiftTrait::Statue, 1.0f}}}, // Desc_CharacterRunStatue_C, 
 	{1338032, {{EGiftTrait::Crystal, 1.0f}}}, // Desc_CrystalOscillator_C, 
 	{1338033, {{EGiftTrait::Copper, 1.0f}}}, // Desc_ElectromagneticControlRod_C, 
 	{1338034, {{EGiftTrait::Material, 1.0f},{EGiftTrait::Container, 1.0f}}}, // Desc_FluidCanister_C, 
@@ -126,13 +127,13 @@ const TMap<int64, TMap<EGiftTrait, float>> UApGiftingMappings::TraitsPerItemRati
 	{1338044, {{EGiftTrait::Silver, 1.0f}}}, // Desc_AluminumPlateReinforced_C, //Heatsink
 	{1338045, {{EGiftTrait::Steel, 1.0f}}}, // Desc_ModularFrameHeavy_C, 
 	{1338046, {{EGiftTrait::Electronics, 1.0f}}}, // Desc_HighSpeedConnector_C, 
-	{1338047, {{EGiftTrait::Gold, 5.0f}}}, // Desc_CharacterSpin_Statue_C, 
-	{1338048, {{EGiftTrait::Silver, 5.0f}}}, // Desc_CharacterClap_Statue_C, 
+	{1338047, {{EGiftTrait::Gold, 5.0f},{EGiftTrait::Statue, 1.0f}}}, // Desc_CharacterSpin_Statue_C, 
+	{1338048, {{EGiftTrait::Silver, 5.0f},{EGiftTrait::Statue, 1.0f}}}, // Desc_CharacterClap_Statue_C, 
 	{1338049, {{EGiftTrait::Iron, 1.0f}}}, // Desc_IronIngot_C, 
 	{1338050, {{EGiftTrait::Iron, 1.0f},{EGiftTrait::Ore, 1.0f}}}, // Desc_OreIron_C, 
 	{1338051, {{EGiftTrait::Iron, 1.0f}}}, // Desc_IronPlate_C, 
 	{1338052, {{EGiftTrait::Iron, 1.0f}}}, // Desc_IronRod_C, 
-	{1338053, {{EGiftTrait::Gold, 5.0f}}}, // Desc_GoldenNut_Statue_C, 
+	{1338053, {{EGiftTrait::Gold, 5.0f},{EGiftTrait::Statue, 1.0f}}}, // Desc_GoldenNut_Statue_C, 
 	{1338054, {{EGiftTrait::Grass, 1.0f}}}, // Desc_Leaves_C, 
 	{1338055, {{EGiftTrait::Stone, 1.0f},{EGiftTrait::Ore, 1.0f}}}, // Desc_Stone_C, //Limestone
 	{1338056, {{EGiftTrait::Copper, 0.4f},{EGiftTrait::Iron, 0.3f},{EGiftTrait::Steel,0.3f}}}, // Desc_SpaceElevatorPart_6_C, //Magnetic Field Generator
@@ -143,7 +144,7 @@ const TMap<int64, TMap<EGiftTrait, float>> UApGiftingMappings::TraitsPerItemRati
 	{1338061, {{EGiftTrait::Fiber, 1.0f}}}, // Desc_Mycelia_C, 
 	{1338062, {{EGiftTrait::Radioactive, 0.075f},{EGiftTrait::Damage, 0.075f}}}, // Desc_NonFissibleUranium_C, 
 	{1338063, {{EGiftTrait::Silver, 0.3f},{EGiftTrait::Electronics, 0.4f},{EGiftTrait::Copper, 0.3f}}}, // Desc_SpaceElevatorPart_9_C, //Nuclear Pasta
-	{1338064, {{EGiftTrait::Gold, 5.0f}}}, // Desc_DoggoStatue_C, 
+	{1338064, {{EGiftTrait::Gold, 5.0f},{EGiftTrait::Statue, 1.0f}}}, // Desc_DoggoStatue_C, 
 	{1338065, {{EGiftTrait::Resource, 1.0f}}}, // Desc_AlienDNACapsule_C, 
 	{1338066, {{EGiftTrait::Silver, 1.0f},{EGiftTrait::Chemicals, 1.0f}}}, // Desc_PackagedAlumina_C, 
 	{1338067, {{EGiftTrait::Material, 1.0f},{EGiftTrait::Fuel, 1.0f}}}, // Desc_Fuel_C, 
@@ -162,7 +163,7 @@ const TMap<int64, TMap<EGiftTrait, float>> UApGiftingMappings::TraitsPerItemRati
 	{1338080, {{EGiftTrait::Chemicals, 1.0f},{EGiftTrait::Radioactive, 20.0f},{EGiftTrait::Damage, 20.0f}}}, // Desc_PlutoniumWaste_C, 
 	{1338081, {{EGiftTrait::Material, 1.0f}}}, // Desc_PolymerResin_C, 
 	{1338082, {{EGiftTrait::Artifact,1.0f},{EGiftTrait::Speed,1.0f}}}, // Desc_CrystalShard_C, //Power Shard
-	{1338083, {{EGiftTrait::Gold, 5.0f}}}, // Desc_SpaceGiraffeStatue_C, 
+	{1338083, {{EGiftTrait::Gold, 5.0f},{EGiftTrait::Statue, 1.0f}}}, // Desc_SpaceGiraffeStatue_C, 
 	{1338084, {{EGiftTrait::Silver, 0.4f},{EGiftTrait::Electronics, 0.6f}}}, // Desc_PressureConversionCube_C, 
 	{1338085, {{EGiftTrait::Artifact,1000.0f},{EGiftTrait::Speed,1000.0f},{EGiftTrait::DarkMatter, 1000.0f},{EGiftTrait::SpaceMineral, 1000.0f}}}, // Desc_AlienPowerFuel, 
 	{1338086, {{EGiftTrait::Crystal, 1.0f}}}, // Desc_QuartzCrystal_C, 
@@ -192,7 +193,7 @@ const TMap<int64, TMap<EGiftTrait, float>> UApGiftingMappings::TraitsPerItemRati
 	{1338110, {{EGiftTrait::Grass, 1.0f},{EGiftTrait::Resource, 0.1f}}}, // Desc_HogParts_C, 
 	{1338111, {{EGiftTrait::Radioactive, 1.5f},{EGiftTrait::Damage, 1.5f},{EGiftTrait::Ore, 1.0f}}}, // Desc_OreUranium_C, 
 	{1338112, {{EGiftTrait::Stone, 0.5f},{EGiftTrait::Steel, 0.5f},{EGiftTrait::Radioactive, 5.0f},{EGiftTrait::Damage, 5.0f}}}, // Desc_NuclearFuelRod_C, 
-	{1338113, {{EGiftTrait::Chemicals},{ EGiftTrait::Radioactive,1.0f},{EGiftTrait::Damage, 1.0f}}}, // Desc_NuclearWaste_C, 
+	{1338113, {{EGiftTrait::Chemicals, 1.0f},{EGiftTrait::Radioactive,1.0f},{EGiftTrait::Damage, 1.0f}}}, // Desc_NuclearWaste_C, 
 	{1338114, {{EGiftTrait::Steel, 0.5f},{EGiftTrait::Iron, 0.5f}}}, // Desc_SpaceElevatorPart_2_C, //Versatile Framework
 	{1338115, {{EGiftTrait::Copper, 1.0f}}}, // Desc_Wire_C, 
 	{1338116, {{EGiftTrait::Wood, 1.0}}}, // Desc_Wood_C, 
@@ -201,8 +202,8 @@ const TMap<int64, TMap<EGiftTrait, float>> UApGiftingMappings::TraitsPerItemRati
 	{1338119, {{EGiftTrait::Grass, 1.0f},{EGiftTrait::Resource, 0.1f}}}, // Desc_HatcherParts_C, 
 
 	// 1.0
-	//{1338120, {{EGiftTrait::Grass, 1.0f},{EGiftTrait::Resource, 0.1f}} }, // Desc_AlienDNACapsule_C, Might yeet as it uses a different data table
-	{1338121, {{EGiftTrait::Diamond, 1.0f},{EGiftTrait::Coal, 0.5f}} }, // Desc_Diamond, 
+	//{1338120, {{EGiftTrait::Grass, 1.0f},{EGiftTrait::Resource, 0.1f}}}, // Desc_AlienDNACapsule_C, Might yeet as it uses a different data table
+	{1338121, {{EGiftTrait::Diamond, 1.0f},{EGiftTrait::Coal, 0.5f}}}, // Desc_Diamond, 
 	{1338122, {{EGiftTrait::Diamond, 1.0f}}}, // Desc_TimeCrystal, 
 	{1338123, {{EGiftTrait::Platinum, 1.0f},{EGiftTrait::SpaceMineral, 0.5f}}}, // Desc_FicsiteIngot, 
 	{1338124, {{EGiftTrait::Platinum, 1.0f},{EGiftTrait::SpaceMineral, 0.5f}}}, // Desc_FicsiteMesh, 

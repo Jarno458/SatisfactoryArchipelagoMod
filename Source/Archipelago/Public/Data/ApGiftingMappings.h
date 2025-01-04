@@ -55,7 +55,8 @@ enum class EGiftTrait : uint8
 	Chemicals,
 	Platinum,
 	DarkMatter,
-	SpaceMineral
+	SpaceMineral,
+	Statue
 };
 
 UCLASS()
