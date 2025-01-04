@@ -16,7 +16,7 @@ const TMap<int64, const FString> UApMappings::ItemIdToGameItemDescriptor = {
 	{1338011, TEXT("Desc_SpaceElevatorPart_3_C")}, //Automated Wiring
 	{1338012, TEXT("Desc_Battery_C")},
 	{1338013, TEXT("Desc_OreBauxite_C")},
-	//{1338014, TEXT("BP_EquipmentDescriptorBeacon_C")}, //Beacon //Removed 1.0
+	{1338014, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Resource/Parts/TemporalProcessor/Desc_TemporalProcessor.Desc_TemporalProcessor'")}, //Neural-Quantum Processor
 	{1338015, TEXT("Desc_GenericBiomass_C")},
 	{1338016, TEXT("Desc_Gunpowder_C")}, //Black Powder
 	{1338017, TEXT("Desc_Cable_C")},
@@ -24,7 +24,7 @@ const TMap<int64, const FString> UApMappings::ItemIdToGameItemDescriptor = {
 	{1338019, TEXT("Desc_OreGold_C")}, //Caterium Ore
 	{1338020, TEXT("Desc_CircuitBoard_C")},
 	{1338021, TEXT("Desc_Coal_C")},
-	//{1338022, TEXT("Desc_ColorCartridge_C")}, // Removed 1.0
+	{1338022, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Resource/Parts/SingularityCell/Desc_SingularityCell.Desc_SingularityCell'")},
 	{1338023, TEXT("Desc_CompactedCoal_C")},
 	{1338024, TEXT("Desc_Computer_C")},
 	{1338025, TEXT("Desc_Cement_C")}, //Concrete
@@ -43,7 +43,7 @@ const TMap<int64, const FString> UApMappings::ItemIdToGameItemDescriptor = {
 	{1338038, TEXT("Desc_UraniumCell_C")},
 	{1338039, TEXT("Desc_Fabric_C")},
 	{1338040, TEXT("Desc_ResourceSinkCoupon_C")},
-	//{1338041, TEXT("Desc_FlowerPetals_C")}, // Removed 1.0
+	{1338041, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Resource/Parts/SpaceElevatorParts/Desc_SpaceElevatorPart_12.Desc_SpaceElevatorPart_12'")}, //AI Expansion Server
 	{1338042, TEXT("Desc_ModularFrameFused_C")},
 	{1338043, TEXT("Desc_HardDrive_C")},
 	{1338044, TEXT("Desc_AluminumPlateReinforced_C")}, //Heatsink
@@ -87,7 +87,7 @@ const TMap<int64, const FString> UApMappings::ItemIdToGameItemDescriptor = {
 	{1338082, TEXT("Desc_CrystalShard_C")}, //Power Shard
 	{1338083, TEXT("Desc_SpaceGiraffeStatue_C")},
 	{1338084, TEXT("Desc_PressureConversionCube_C")},
-	{1338085, TEXT("Desc_ComputerQuantum_C")},
+	{1338085, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Resource/Parts/AlienPowerFuel/Desc_AlienPowerFuel.Desc_AlienPowerFuel'")}, //Alien Power Matrix
 	{1338086, TEXT("Desc_QuartzCrystal_C")},
 	{1338087, TEXT("Desc_HighSpeedWire_C")},
 	{1338088, TEXT("Desc_ModularFrameLightweight_C")}, //Radio Control Unit
@@ -124,6 +124,21 @@ const TMap<int64, const FString> UApMappings::ItemIdToGameItemDescriptor = {
 	{1338119, TEXT("Desc_HatcherParts_C")},
 	{1338120, TEXT("Desc_AlienDNACapsule_C")},
 
+	// 1.0
+	{1338121, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Resource/Parts/Diamond/Desc_Diamond.Desc_Diamond'")},
+	{1338122, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Resource/Parts/TimeCrystal/Desc_TimeCrystal.Desc_TimeCrystal'")},
+	{1338123, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Resource/Parts/FicsiteIngot/Desc_FicsiteIngot.Desc_FicsiteIngot'")},
+	{1338124, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Resource/Parts/FicsiteMesh/Desc_FicsiteMesh.Desc_FicsiteMesh'")}, //Ficsite Trigon
+	{1338125, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Resource/Parts/SAMIngot/Desc_SAMIngot.Desc_SAMIngot'")}, //Reanimated SAM
+	{1338126, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Resource/Parts/SAMFluctuator/Desc_SAMFluctuator.Desc_SAMFluctuator'")},
+	{1338127, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Resource/Parts/SpaceElevatorParts/Desc_SpaceElevatorPart_10.Desc_SpaceElevatorPart_10'")}, //Biochemical Sculptor
+	{1338128, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Resource/Parts/SpaceElevatorParts/Desc_SpaceElevatorPart_11.Desc_SpaceElevatorPart_11'")},  //Ballistic Warp Drive
+	{1338129, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Resource/Parts/Ficsonium/Desc_Ficsonium.Desc_Ficsonium'")},
+	{1338130, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Resource/Parts/FicsoniumFuelRod/Desc_FicsoniumFuelRod.Desc_FicsoniumFuelRod'")},
+	{1338131, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Resource/Parts/RocketFuel/Desc_PackagedRocketFuel.Desc_PackagedRocketFuel'")},
+	{1338131, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Resource/Parts/IonizedFuel/Desc_PackagedIonizedFuel.Desc_PackagedIonizedFuel'") },
+	// 1.0
+	
 	//Enquipment/Ammo
 	{1338150, TEXT("Desc_Shroom_C")},
 	{1338151, TEXT("Desc_Nut_C")},

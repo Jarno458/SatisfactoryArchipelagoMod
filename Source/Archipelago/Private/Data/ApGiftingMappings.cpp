@@ -22,6 +22,7 @@ const TMap<EGiftTrait, EGiftTrait> UApGiftingMappings::TraitParents = {
 	{EGiftTrait::Seed, EGiftTrait::Food},
 	{EGiftTrait::Fruit, EGiftTrait::Food},
 	{EGiftTrait::Food, EGiftTrait::Consumable},
+	{EGiftTrait::Diamond, EGiftTrait::Mineral},
 };
 
 const TMap<EGiftTrait, int64> UApGiftingMappings::TraitDefaultItemIds = {
@@ -61,6 +62,20 @@ const TMap<EGiftTrait, int64> UApGiftingMappings::TraitDefaultItemIds = {
 	{EGiftTrait::Vegetable, 1338150}, // Desc_Shroom_C, //Bacon Agaric
 	{EGiftTrait::Heal, 1338174}, // Desc_Berry_C
 	{EGiftTrait::Fruit, 1338174}, // Desc_Berry_C
+	{EGiftTrait::Berry, 1338174}, // Desc_Berry_C
+	//1.0
+	{EGiftTrait::Oil, 1338072}, // Desc_PackagedOil_C
+	{EGiftTrait::Fuel, 1338067}, // Desc_Fuel_C
+	{EGiftTrait::Water, 1338075}, // Desc_PackagedWater
+	{EGiftTrait::Container, 1338034}, // Desc_FluidCanister_C
+	{EGiftTrait::Cloth, 1338039}, // Desc_Fabric
+	{EGiftTrait::Plastic, 1338077}, // Desc_Platic
+	{EGiftTrait::Diamond, 1338121}, // Desc_Diamond
+	{EGiftTrait::Chemicals, 1338073}, // Desc_PackagedSulfuricAcid
+	{EGiftTrait::Platinum, 1338123}, // Desc_FicsiteIngot
+	{EGiftTrait::DarkMatter, 1338127}, // Biochemical Sculptor
+	{EGiftTrait::SpaceMineral, 1338125}, // Desc_SAMIngot
+	//1.0
 };
 
 const TMap<int64, TMap<EGiftTrait, float>> UApGiftingMappings::TraitsPerItemRatings = {
@@ -76,19 +91,19 @@ const TMap<int64, TMap<EGiftTrait, float>> UApGiftingMappings::TraitsPerItemRati
 	{1338009, {{EGiftTrait::Silver, 1.0f}}}, // Desc_AluminumScrap_C, 
 	{1338010, {{EGiftTrait::Electronics, 1.0f}}}, // Desc_SpaceElevatorPart_7_C, //Assembly Director System
 	{1338011, {{EGiftTrait::Copper, 1.0f}}}, // Desc_SpaceElevatorPart_3_C, //Automated Wiring
-	{1338012, {{EGiftTrait::Copper, 1.0f}}}, // Desc_Battery_C, 
+	{1338012, {{EGiftTrait::Copper, 1.0f},{EGiftTrait::Chemicals, 1.0f}}}, // Desc_Battery_C, 
 	{1338013, {{EGiftTrait::Silver, 1.0f},{EGiftTrait::Ore, 1.0f}}}, // Desc_OreBauxite_C, 
-	//{1338014, {{ }}},
+	{1338014, {{EGiftTrait::Platinum, 1.0f}, {EGiftTrait::Diamond, 1.0f}, {EGiftTrait::Electronics, 1.0f}}},
 	{1338015, {{EGiftTrait::Grass, 1.0f}}}, // Desc_GenericBiomass_C, 
 	{1338016, {{EGiftTrait::Bomb, 1.0f}}}, // Desc_Gunpowder_C, //Black Powder
 	{1338017, {{EGiftTrait::Copper, 1.0f}}}, // Desc_Cable_C, 
 	{1338018, {{EGiftTrait::Gold, 1.0f}}}, // Desc_GoldIngot_C, //Caterium Ingot
 	{1338019, {{EGiftTrait::Gold, 1.0f},{EGiftTrait::Ore, 1.0f}}}, // Desc_OreGold_C, //Caterium Ore
-	{1338020, {{EGiftTrait::Electronics, 1.0f}}}, // Desc_CircuitBoard_C, 
+	{1338020, {{EGiftTrait::Electronics, 1.0f},{EGiftTrait::Plastic, 0.1f}}}, // Desc_CircuitBoard_C, 
 	{1338021, {{EGiftTrait::Coal, 1.0f},{EGiftTrait::Ore, 1.0f}}}, // Desc_Coal_C, 
-	//{1338022, {{ }}},
+	{1338022, {{EGiftTrait::Iron, 0.2f},{EGiftTrait::Stone, 0.2f},{EGiftTrait::Copper, 0.2f}, {EGiftTrait::DarkMatter, 0.4f}}}, //Desc_SingularityCell
 	{1338023, {{EGiftTrait::Coal, 1.0f}}}, // Desc_CompactedCoal_C, 
-	{1338024, {{EGiftTrait::Electronics, 1.0f}}}, // Desc_Computer_C, 
+	{1338024, {{EGiftTrait::Electronics, 1.0f},{EGiftTrait::Plastic, 0.5f}}}, // Desc_Computer_C, 
 	{1338025, {{EGiftTrait::Stone, 1.0f},{EGiftTrait::Ore, 1.0f}}}, // Desc_Cement_C, //Concrete
 	{1338026, {{EGiftTrait::Silver, 1.0f}}}, // Desc_CoolingSystem_C, 
 	{1338027, {{EGiftTrait::Copper, 1.0f}}}, // Desc_CopperIngot_C, 
@@ -98,14 +113,14 @@ const TMap<int64, TMap<EGiftTrait, float>> UApGiftingMappings::TraitsPerItemRati
 	{1338031, {{EGiftTrait::Copper, 5.0f}}}, // Desc_CharacterRunStatue_C, 
 	{1338032, {{EGiftTrait::Crystal, 1.0f}}}, // Desc_CrystalOscillator_C, 
 	{1338033, {{EGiftTrait::Copper, 1.0f}}}, // Desc_ElectromagneticControlRod_C, 
-	{1338034, {{EGiftTrait::Material, 1.0f}}}, // Desc_FluidCanister_C, 
-	{1338035, {{EGiftTrait::Silver, 1.0f}}}, // Desc_GasTank_C, //Empty Fluid Tank
+	{1338034, {{EGiftTrait::Material, 1.0f},{EGiftTrait::Container, 1.0f}}}, // Desc_FluidCanister_C, 
+	{1338035, {{EGiftTrait::Silver, 1.0f},{EGiftTrait::Container, 1.0f}}}, // Desc_GasTank_C, //Empty Fluid Tank
 	{1338036, {{EGiftTrait::Steel, 0.5f},{EGiftTrait::Stone, 0.5f}}}, // Desc_SteelPlateReinforced_C, //Encased Industrial Beam
 	{1338037, {{EGiftTrait::Stone, 1.0f},{EGiftTrait::Radioactive, 12.0f},{EGiftTrait::Damage, 12.0f}}}, // Desc_PlutoniumCell_C, 
 	{1338038, {{EGiftTrait::Radioactive,	0.5f},{EGiftTrait::Damage, 0.05f}}}, // Desc_UraniumCell_C, 
-	{1338039, {{EGiftTrait::Fiber, 1.0f}}}, // Desc_Fabric_C, 
+	{1338039, {{EGiftTrait::Fiber, 1.0f},{EGiftTrait::Cloth, 1.0f}}}, // Desc_Fabric_C, 
 	{1338040, {{EGiftTrait::Resource, 1.0f}}}, // Desc_ResourceSinkCoupon_C, 
-	//{1338041, {{ }}}, 
+	{1338041, {{EGiftTrait::Platinum, 1.0f}, {EGiftTrait::DarkMatter, 0.8f}, {EGiftTrait::Electronics, 1.2f}}},//AI Expansion Server
 	{1338042, {{EGiftTrait::Silver, 1.0f}}}, // Desc_ModularFrameFused_C, 
 	{1338043, {{EGiftTrait::Electronics, 1.0f}}}, // Desc_HardDrive_C, 
 	{1338044, {{EGiftTrait::Silver, 1.0f}}}, // Desc_AluminumPlateReinforced_C, //Heatsink
@@ -130,26 +145,26 @@ const TMap<int64, TMap<EGiftTrait, float>> UApGiftingMappings::TraitsPerItemRati
 	{1338063, {{EGiftTrait::Silver, 0.3f},{EGiftTrait::Electronics, 0.4f},{EGiftTrait::Copper, 0.3f}}}, // Desc_SpaceElevatorPart_9_C, //Nuclear Pasta
 	{1338064, {{EGiftTrait::Gold, 5.0f}}}, // Desc_DoggoStatue_C, 
 	{1338065, {{EGiftTrait::Resource, 1.0f}}}, // Desc_AlienDNACapsule_C, 
-	{1338066, {{EGiftTrait::Silver, 1.0f}}}, // Desc_PackagedAlumina_C, 
-	{1338067, {{EGiftTrait::Material, 1.0f}}}, // Desc_Fuel_C, 
-	{1338068, {{EGiftTrait::Material, 1.0f}}}, // Desc_PackagedOilResidue_C, 
-	{1338069, {{EGiftTrait::Grass, 1.0f}}}, // Desc_PackagedBiofuel_C, 
-	{1338070, {{EGiftTrait::Material, 1.0f}}}, // Desc_PackagedNitricAcid_C, 
+	{1338066, {{EGiftTrait::Silver, 1.0f},{EGiftTrait::Chemicals, 1.0f}}}, // Desc_PackagedAlumina_C, 
+	{1338067, {{EGiftTrait::Material, 1.0f},{EGiftTrait::Fuel, 1.0f}}}, // Desc_Fuel_C, 
+	{1338068, {{EGiftTrait::Material, 1.0f},{EGiftTrait::Oil, 1.0f}}}, // Desc_PackagedOilResidue_C, 
+	{1338069, {{EGiftTrait::Grass, 1.0f},{EGiftTrait::Fuel, 1.0f}}}, // Desc_PackagedBiofuel_C, 
+	{1338070, {{EGiftTrait::Material, 1.0f},{EGiftTrait::Chemicals, 1.0f}}}, // Desc_PackagedNitricAcid_C, 
 	{1338071, {{EGiftTrait::Material, 1.0f}}}, // Desc_PackagedNitrogenGas_C, 
-	{1338072, {{EGiftTrait::Material, 1.0f}}}, // Desc_PackagedOil_C, 
-	{1338073, {{EGiftTrait::Material, 1.0f}}}, // Desc_PackagedSulfuricAcid_C, 
-	{1338074, {{EGiftTrait::Material, 1.0f},{EGiftTrait::Speed, 1.0f}}}, // Desc_TurboFuel_C, //Packaged Turno Fuel
-	{1338075, {{EGiftTrait::Material, 1.0f},{EGiftTrait::Drink, 1.0f}}}, // Desc_PackagedWater_C, 
+	{1338072, {{EGiftTrait::Material, 1.0f},{EGiftTrait::Oil, 1.0f}}}, // Desc_PackagedOil_C, 
+	{1338073, {{EGiftTrait::Material, 1.0f},{EGiftTrait::Chemicals, 1.0f}}}, // Desc_PackagedSulfuricAcid_C, 
+	{1338074, {{EGiftTrait::Material, 1.0f},{EGiftTrait::Speed, 1.0f},{EGiftTrait::Fuel, 1.0f}}}, // Desc_TurboFuel_C, //Packaged Turno Fuel
+	{1338075, {{EGiftTrait::Material, 1.0f},{EGiftTrait::Drink, 1.0f},{EGiftTrait::Water, 1.0f}}}, // Desc_PackagedWater_C, 
 	{1338076, {{EGiftTrait::Steel, 0.1f}}}, // Desc_PetroleumCoke_C, 
-	{1338077, {{EGiftTrait::Material, 1.0f}}}, // Desc_Plastic_C, 
+	{1338077, {{EGiftTrait::Material, 1.0f},{EGiftTrait::Plastic, 1.0f}}}, // Desc_Plastic_C, 
 	{1338078, {{EGiftTrait::Stone, 1.0f},{EGiftTrait::Radioactive, 25.0f},{EGiftTrait::Damage, 25.0f}}}, // Desc_PlutoniumFuelRod_C, 
 	{1338079, {{EGiftTrait::Radioactive, 2.0f},{EGiftTrait::Damage, 2.0f}}}, // Desc_PlutoniumPellet_C, 
-	{1338080, {{EGiftTrait::Stone, 1.0f},{EGiftTrait::Radioactive, 20.0f},{EGiftTrait::Damage, 20.0f}}}, // Desc_PlutoniumWaste_C, 
+	{1338080, {{EGiftTrait::Chemicals, 1.0f},{EGiftTrait::Radioactive, 20.0f},{EGiftTrait::Damage, 20.0f}}}, // Desc_PlutoniumWaste_C, 
 	{1338081, {{EGiftTrait::Material, 1.0f}}}, // Desc_PolymerResin_C, 
 	{1338082, {{EGiftTrait::Artifact,1.0f},{EGiftTrait::Speed,1.0f}}}, // Desc_CrystalShard_C, //Power Shard
 	{1338083, {{EGiftTrait::Gold, 5.0f}}}, // Desc_SpaceGiraffeStatue_C, 
 	{1338084, {{EGiftTrait::Silver, 0.4f},{EGiftTrait::Electronics, 0.6f}}}, // Desc_PressureConversionCube_C, 
-	{1338085, {{EGiftTrait::Electronics, 1.0f}}}, // Desc_ComputerQuantum_C, 
+	{1338085, {{EGiftTrait::Artifact,1000.0f},{EGiftTrait::Speed,1000.0f},{EGiftTrait::DarkMatter, 1000.0f},{EGiftTrait::SpaceMineral, 1000.0f}}}, // Desc_AlienPowerFuel, 
 	{1338086, {{EGiftTrait::Crystal, 1.0f}}}, // Desc_QuartzCrystal_C, 
 	{1338087, {{EGiftTrait::Copper, 1.0f}}}, // Desc_HighSpeedWire_C, 
 	{1338088, {{EGiftTrait::Electronics, 1.0f}}}, // Desc_ModularFrameLightweight_C, //Radio Control Unit
@@ -157,7 +172,7 @@ const TMap<int64, TMap<EGiftTrait, float>> UApGiftingMappings::TraitsPerItemRati
 	{1338090, {{EGiftTrait::Iron, 1.0f}}}, // Desc_IronPlateReinforced_C, 
 	{1338091, {{EGiftTrait::Copper, 1.0f}}}, // Desc_Rotor_C, 
 	{1338092, {{EGiftTrait::Material, 1.0f}}}, // Desc_Rubber_C, 
-	//{1338093, {{ }}}, // Desc_SAM_C, 
+	{1338093, {{EGiftTrait::SpaceMineral, 1.0f},{EGiftTrait::Ore, 1.0f}}}, // Desc_SAM_C, 
 	{1338094, {{EGiftTrait::Iron, 1.0f}}}, // Desc_IronScrew_C, 
 	{1338095, {{EGiftTrait::Crystal, 1.0f}}}, // Desc_Silica_C, 
 	{1338096, {{EGiftTrait::Iron, 0.5f},{EGiftTrait::Copper, 0.5f}}}, // Desc_SpaceElevatorPart_1_C, //Smart Plating
@@ -177,13 +192,29 @@ const TMap<int64, TMap<EGiftTrait, float>> UApGiftingMappings::TraitsPerItemRati
 	{1338110, {{EGiftTrait::Grass, 1.0f},{EGiftTrait::Resource, 0.1f}}}, // Desc_HogParts_C, 
 	{1338111, {{EGiftTrait::Radioactive, 1.5f},{EGiftTrait::Damage, 1.5f},{EGiftTrait::Ore, 1.0f}}}, // Desc_OreUranium_C, 
 	{1338112, {{EGiftTrait::Stone, 0.5f},{EGiftTrait::Steel, 0.5f},{EGiftTrait::Radioactive, 5.0f},{EGiftTrait::Damage, 5.0f}}}, // Desc_NuclearFuelRod_C, 
-	{1338113, {{EGiftTrait::Radioactive, 1.0f},{EGiftTrait::Damage, 1.0f}}}, // Desc_NuclearWaste_C, 
+	{1338113, {{EGiftTrait::Chemicals},{ EGiftTrait::Radioactive,1.0f},{EGiftTrait::Damage, 1.0f}}}, // Desc_NuclearWaste_C, 
 	{1338114, {{EGiftTrait::Steel, 0.5f},{EGiftTrait::Iron, 0.5f}}}, // Desc_SpaceElevatorPart_2_C, //Versatile Framework
 	{1338115, {{EGiftTrait::Copper, 1.0f}}}, // Desc_Wire_C, 
 	{1338116, {{EGiftTrait::Wood, 1.0}}}, // Desc_Wood_C, 
 	{1338117, {{EGiftTrait::Grass, 1.0f},{EGiftTrait::Resource, 0.1f}}}, // Desc_SpitterParts_C, 
 	{1338118, {{EGiftTrait::Grass, 1.0f},{EGiftTrait::Resource, 0.1f}}}, // Desc_StingerParts_C, 
 	{1338119, {{EGiftTrait::Grass, 1.0f},{EGiftTrait::Resource, 0.1f}}}, // Desc_HatcherParts_C, 
+
+	// 1.0
+	//{1338120, {{EGiftTrait::Grass, 1.0f},{EGiftTrait::Resource, 0.1f}} }, // Desc_AlienDNACapsule_C, Might yeet as it uses a different data table
+	{1338121, {{EGiftTrait::Diamond, 1.0f},{EGiftTrait::Coal, 0.5f}} }, // Desc_Diamond, 
+	{1338122, {{EGiftTrait::Diamond, 1.0f}}}, // Desc_TimeCrystal, 
+	{1338123, {{EGiftTrait::Platinum, 1.0f},{EGiftTrait::SpaceMineral, 0.5f}}}, // Desc_FicsiteIngot, 
+	{1338124, {{EGiftTrait::Platinum, 1.0f},{EGiftTrait::SpaceMineral, 0.5f}}}, // Desc_FicsiteMesh, 
+	{1338125, {{EGiftTrait::SpaceMineral, 1.0f}}}, // Desc_SAMIngot, 
+	{1338126, {{EGiftTrait::SpaceMineral, 1.0f},{EGiftTrait::Copper, 0.1f},{EGiftTrait::Steel, 0.1f}}}, // Desc_SAMFluctuator, 
+	{1338127, {{EGiftTrait::Electronics, 1.0f},{EGiftTrait::Platinum, 1.0f},{EGiftTrait::SpaceMineral, 0.5f}}}, // Biochemical Sculptor
+	{1338128, {{EGiftTrait::Silver, 0.3f},{EGiftTrait::Electronics, 0.3f},{EGiftTrait::Steel, 0.4f},{EGiftTrait::Speed, 1.0f},{EGiftTrait::DarkMatter, 2.0f}}}, // Ballistic Warp Drive
+	{1338129, {{EGiftTrait::Radioactive, 20.0f},{EGiftTrait::Damage, 20.0f},{EGiftTrait::DarkMatter, 2.0f}}}, // Desc_Ficsonium
+	{1338130, {{EGiftTrait::Radioactive, 20.0f},{EGiftTrait::Damage, 20.0f},{EGiftTrait::DarkMatter, 2.0f},{EGiftTrait::Platinum, 1.0f},{EGiftTrait::SpaceMineral, 0.5f}} }, // Desc_FicsoniumFuelRod
+	{1338131, {{EGiftTrait::Material, 1.0f},{EGiftTrait::Speed, 1.0f},{EGiftTrait::Fuel, 1.0f}}}, // Desc_PackagedRocketFuel
+	{1338132, {{EGiftTrait::Material, 1.0f},{EGiftTrait::Speed, 1.0f},{EGiftTrait::Fuel, 1.0f}}}, // Desc_PackagedRocketFuel
+	// 1.0
 
 	//Enquipment/Ammo
 	{1338150, {{EGiftTrait::Vegetable, 1.0f},{EGiftTrait::Heal, 1.0f}}}, // Desc_Shroom_C, //Bacon Agaric
@@ -239,7 +270,7 @@ const TMap<int64, int> UApGiftingMappings::HardcodedSinkValues = {
 	{1338005, 1000}, // Desc_AlienProtein_C, //High value as 1 Protein = 100 biomass = 12 * 100 = 1200 points
 	{1338120, 14}, // Desc_AlienDNACapsule_C,
 
-	{1338043, 900}, //Desc_HardDrive_C
+	//{1338043, 900}, //Desc_HardDrive_C //Should not be sinkable as its tied to progression
 	{1338099, 1000}, //Desc_WAT1_C, //Somersloop
 	{1338057, 1050}, //Desc_WAT2_C, //Mercer Sphere
 
@@ -272,6 +303,6 @@ const TMap<int64, int> UApGiftingMappings::HardcodedSinkValues = {
 	{1338150, 30}, // Desc_Shroom_C, //Bacon Agaric
 	// Medicinal Inhaler = 125
 
-	{1338085, 300000}, // Desc_ComputerQuantum_C, 
-	{1338107, 400000}, // Desc_QuantumOscillator_C,
+	{1338129, 260000},  // Desc_Ficsonium
+	{1338130, 300000} // Desc_FicsoniumFuelRod
 };

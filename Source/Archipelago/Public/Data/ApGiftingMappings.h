@@ -41,7 +41,21 @@ enum class EGiftTrait : uint8
 	Fiber,
 	Coal,
 	Drink,
-	Heal
+	Heal,
+
+	//1.0
+	Berry,
+	Oil,
+	Fuel,
+	Water,
+	Container,
+	Cloth,
+	Plastic,
+	Diamond,
+	Chemicals,
+	Platinum,
+	DarkMatter,
+	SpaceMineral
 };
 
 UCLASS()
