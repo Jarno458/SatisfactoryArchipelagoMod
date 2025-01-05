@@ -205,7 +205,7 @@ const TMap<int64, const TArray<FString>> UApMappings::ItemIdToGameRecipe = {
 	{1338214, {TEXT("Recipe_Alternate_RecycledRubber")}},
 	{1338215, {TEXT("Recipe_IronPlate")}},
 	{1338216, {TEXT("Recipe_Alternate_CoatedIronPlate")}},
-	{1338217, {TEXT("Recipe_Alternate_SteelCastedPlate")}}, // 1.0
+	{1338217, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/AlternateRecipes/New_Update9/Recipe_Alternate_SteelCastedPlate.Recipe_Alternate_SteelCastedPlate'")}}, // 1.0
 	{1338218, {TEXT("Recipe_IronRod")}},
 	{1338219, {TEXT("Recipe_Alternate_SteelRod")}},
 	{1338220, {TEXT("Recipe_Screw")}},
@@ -225,13 +225,13 @@ const TMap<int64, const TArray<FString>> UApMappings::ItemIdToGameRecipe = {
 	{1338234, {TEXT("Recipe_Alternate_SteamedCopperSheet")}},
 	{1338235, {TEXT("Recipe_SteelPipe")}},
 	{1338236, {TEXT("Recipe_SteelBeam")}},
-	//{1338237, {TEXT("")}}, //Crude Oil
+	{1338237, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/QuantumEncoder/Recipe_TemporalProcessor.Recipe_TemporalProcessor'")}}, //Recipe: Neural-Quantum Processor
 	{1338238, {TEXT("Recipe_Alternate_HeavyOilResidue")}},
 	{1338239, {TEXT("Recipe_Alternate_PolymerResin")}},
 	{1338240, {TEXT("Recipe_LiquidFuel")}},
 	{1338241, {TEXT("Recipe_ResidualFuel")}},
 	{1338242, {TEXT("Recipe_Alternate_DilutedPackagedFuel")}},
-	//{1338243, {TEXT("")}}, //Water
+	{1338243, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/SpaceElevatorParts/Recipe_SpaceElevatorPart_12.Recipe_SpaceElevatorPart_12'")}}, //Recipe AI Expansion server
 	{1338244, {TEXT("Recipe_Concrete")}},
 	{1338245, {TEXT("Recipe_Alternate_RubberConcrete")}},
 	{1338246, {TEXT("Recipe_Alternate_WetConcrete")}},
@@ -252,13 +252,13 @@ const TMap<int64, const TArray<FString>> UApMappings::ItemIdToGameRecipe = {
 	{1338261, {TEXT("Recipe_Alternate_PureCopperIngot")}},
 	{1338262, {TEXT("Recipe_IngotCaterium")}},
 	{1338263, {TEXT("Recipe_Alternate_PureCateriumIngot")}},
-	//{1338264, {TEXT("")}}, //Limestone
-	//{1338265, {TEXT("")}}, //Raw Quartz
-	//{1338266, {TEXT("")}}, //Iron Ore
-	//{1338267, {TEXT("")}}, //Copper Ore
-	//{1338268, {TEXT("")}}, //Coal
-	//{1338269, {TEXT("")}}, //Sulfur
-	//{1338270, {TEXT("")}}, //Caterium Ore
+	{1338264, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/QuantumEncoder/Recipe_AlienPowerFuel.Recipe_AlienPowerFuel'")}}, //Recipe: Alien Power Matrix
+	{1338265, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/Converter/Recipe_FicsiteIngot_AL.Recipe_FicsiteIngot_AL'")}},
+	{1338266, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/Converter/Recipe_FicsiteIngot_CAT.Recipe_FicsiteIngot_CAT'")}},
+	{1338267, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/Converter/Recipe_FicsiteIngot_Iron.Recipe_FicsiteIngot_Iron'")}},
+	{1338268, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/Constructor/Recipe_FicsiteMesh.Recipe_FicsiteMesh'")}}, // Ficsite Trigon
+	{1338269, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/Smelter/Recipe_IngotSAM.Recipe_IngotSAM'")}}, //Reanimted SAM
+	{1338270, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/Assembler/Recipe_SAMFluctuator.Recipe_SAMFluctuator'")}},
 	{1338271, {TEXT("Recipe_PetroleumCoke")}},
 	{1338272, {TEXT("Recipe_Alternate_EnrichedCoal")}},
 	{1338273, {TEXT("Recipe_Motor")}},
@@ -297,7 +297,7 @@ const TMap<int64, const TArray<FString>> UApMappings::ItemIdToGameRecipe = {
 	{1338306, {TEXT("Recipe_Alternate_DilutedFuel")}},
 	{1338307, {TEXT("Recipe_AluminaSolution")}},
 	{1338308, {TEXT("Recipe_Alternate_AutomatedMiner")}},
-	//{1338309, {TEXT("")}}, //Bauxite
+	{1338309, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/HadronCollider/Recipe_SingularityCell.Recipe_SingularityCell'")}},
 	{1338310, {TEXT("Recipe_AluminumScrap")}},
 	{1338311, {TEXT("Recipe_Alternate_ElectroAluminumScrap")}},
 	{1338312, {TEXT("Recipe_Alternate_InstantScrap")}},
@@ -308,7 +308,7 @@ const TMap<int64, const TArray<FString>> UApMappings::ItemIdToGameRecipe = {
 	{1338317, {TEXT("Recipe_Alternate_AlcladCasing")}},
 	{1338318, {TEXT("Recipe_HeatSink")}},
 	{1338319, {TEXT("Recipe_Alternate_HeatSink_1")}},
-	//{1338320, {TEXT("")}}, //Nitrogen Gas
+	{1338320, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/QuantumEncoder/Recipe_SyntheticPowerShard.Recipe_SyntheticPowerShard'")}},
 	{1338321, {TEXT("Recipe_NitricAcid")}},
 	{1338322, {TEXT("Recipe_FusedModularFrame")}},
 	{1338323, {TEXT("Recipe_Alternate_HeatFusedFrame")}},
@@ -326,16 +326,16 @@ const TMap<int64, const TArray<FString>> UApMappings::ItemIdToGameRecipe = {
 	{1338335, {TEXT("Recipe_ComputerSuper")}},
 	{1338336, {TEXT("Recipe_Alternate_OCSupercomputer")}},
 	{1338337, {TEXT("Recipe_Alternate_SuperStateComputer")}},
-	//{1338338, {TEXT("")}}, //Uranium
+	{1338338, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/SpaceElevatorParts/Recipe_SpaceElevatorPart_10.Recipe_SpaceElevatorPart_10'")}}, //Recipe: Biochemical Sculptor
 	{1338339, {TEXT("Recipe_SulfuricAcid")}},
-	//{1338340, {TEXT("")}}, //Unused
+	{1338340, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/SpaceElevatorParts/Recipe_SpaceElevatorPart_11.Recipe_SpaceElevatorPart_11'")}}, //Recipe: Ballistic Warp Drive
 	{1338341, {TEXT("Recipe_UraniumCell")}},
 	{1338342, {TEXT("Recipe_Alternate_UraniumCell_1")}},
 	{1338343, {TEXT("Recipe_NuclearFuelRod")}},
 	{1338344, {TEXT("Recipe_Alternate_NuclearFuelRod_1")}},
-	//{1338345, {TEXT("Recipe_Beacon")}}, // Removed 1.0
-	//{1338346, {TEXT("Recipe_Alternate_Beacon_1")}}, // Removed 1.0
-	//{1338347, {TEXT("")}}, // Recipe: Uranium Waste
+	{1338345, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/AlternateRecipes/New_Update9/Recipe_Alternate_SteelBeam_Aluminum.Recipe_Alternate_SteelBeam_Aluminum'")}},
+	{1338346, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/AlternateRecipes/New_Update9/Recipe_Alternate_AluminumRod.Recipe_Alternate_AluminumRod'")}},
+	{1338347, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/AlternateRecipes/New_Update9_Ingots/Recipe_Alternate_IronIngot_Basic.Recipe_Alternate_IronIngot_Basic'")}},
 	{1338348, {TEXT("Recipe_NonFissileUranium")}},
 	{1338349, {TEXT("Recipe_Alternate_FertileUranium")}},
 	{1338350, {TEXT("Recipe_Plutonium")}},
@@ -350,11 +350,11 @@ const TMap<int64, const TArray<FString>> UApMappings::ItemIdToGameRecipe = {
 	{1338359, {TEXT("Recipe_CopperDust")}},
 	{1338360, {TEXT("Recipe_SpaceElevatorPart_9")}},
 	{1338361, {TEXT("Recipe_SpaceElevatorPart_8")}},
-	//{1338362, {TEXT("")}}, //Recipe: Leaves
-	//{1338363, {TEXT("")}}, //Recipe: Wood
-	//{1338364, {TEXT("")}}, //Recipe: Hatcher Remains
-	//{1338365, {TEXT("")}}, //Recipe: Hog Remains
-	//{1338366, {TEXT("")}}, //Recipe: Plasma Spitter Remains
+	{1338362, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/Converter/Recipe_Ficsonium.Recipe_Ficsonium'")}},
+	{1338363, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/HadronCollider/Recipe_FicsoniumFuelRod.Recipe_FicsoniumFuelRod'")}},
+	{1338364, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/HadronCollider/Recipe_DarkMatter.Recipe_DarkMatter'")}}, // Dark Matter Crystal
+	{1338365, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/AlternateRecipes/Alt_Tier9/Recipe_Alternate_DarkMatter_Crystallization.Recipe_Alternate_DarkMatter_Crystallization'")}},
+	{1338366, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/AlternateRecipes/Alt_Tier9/Recipe_Alternate_DarkMatter_Trap.Recipe_Alternate_DarkMatter_Trap'")}},
 	{1338367, {TEXT("Recipe_NobeliskShockwave")}},
 	{1338368, {TEXT("Recipe_Protein_Crab")}},
 	{1338369, {TEXT("Recipe_Protein_Hog")}},
@@ -422,6 +422,33 @@ const TMap<int64, const TArray<FString>> UApMappings::ItemIdToGameRecipe = {
 	{1338431, {TEXT("Recipe_PowerCrystalShard_1")}},
 	{1338432, {TEXT("Recipe_PowerCrystalShard_2")}},
 	{1338433, {TEXT("Recipe_PowerCrystalShard_3")}},
+	//1.0
+	{1338434, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/HadronCollider/Recipe_Diamond.Recipe_Diamond'")}},
+	{1338435, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/AlternateRecipes/Alt_Tier9/Recipe_Alternate_Diamond_Cloudy.Recipe_Alternate_Diamond_Cloudy'")}},
+	{1338436, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/AlternateRecipes/Alt_Tier9/Recipe_Alternate_Diamond_OilBased.Recipe_Alternate_Diamond_OilBased'")}},
+	{1338437, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/AlternateRecipes/Alt_Tier9/Recipe_Alternate_Diamond_Petroleum.Recipe_Alternate_Diamond_Petroleum'")}},
+	{1338438, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/AlternateRecipes/Alt_Tier9/Recipe_Alternate_Diamond_Pink.Recipe_Alternate_Diamond_Pink'")}},
+	{1338439, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/AlternateRecipes/Alt_Tier9/Recipe_Alternate_Diamond_Turbo.Recipe_Alternate_Diamond_Turbo'")}},
+	{1338440, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/Converter/Recipe_TimeCrystal.Recipe_TimeCrystal'")}},
+	{1338441, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/QuantumEncoder/Recipe_SuperpositionOscillator.Recipe_SuperpositionOscillator'")}},
+	{1338442, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/Converter/Recipe_QuantumEnergy.Recipe_QuantumEnergy'")}},
+	{1338443, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/Blender/Recipe_RocketFuel.Recipe_RocketFuel'")}},
+	{1338444, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/AlternateRecipes/Alt_Tier9/Recipe_Alternate_RocketFuel_Nitro.Recipe_Alternate_RocketFuel_Nitro'")}},
+	{1338445, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/OilRefinery/Recipe_IonizedFuel.Recipe_IonizedFuel'")}},
+	{1338446, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/Packager/Recipe_PackagedRocketFuel.Recipe_PackagedRocketFuel'"), TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/Packager/Recipe_UnpackageRocketFuel.Recipe_UnpackageRocketFuel'")}},
+	{1338447, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/Packager/Recipe_PackagedIonizedFuel.Recipe_PackagedIonizedFuel'"), TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/Packager/Recipe_UnpackageIonizedFuel.Recipe_UnpackageIonizedFuel'")}},
+	{1338448, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/AlternateRecipes/Alt_Tier9/Recipe_Alternate_IonizedFuel_Dark.Recipe_Alternate_IonizedFuel_Dark'")}},
+	{1338449, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/AlternateRecipes/New_Update9_Ingots/Recipe_Alternate_Quartz_Purified.Recipe_Alternate_Quartz_Purified'"), TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/AlternateRecipes/New_Update9_Ingots/Recipe_Alternate_Silica_Distilled.Recipe_Alternate_Silica_Distilled'")}},
+	{1338450, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/AlternateRecipes/New_Update9_Ingots/Recipe_Alternate_Quartz_Fused.Recipe_Alternate_Quartz_Fused'")}},
+	{1338451, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/AlternateRecipes/New_Update9_Ingots/Recipe_Alternate_CateriumIngot_Leached.Recipe_Alternate_CateriumIngot_Leached'")}},
+	{1338452, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/AlternateRecipes/New_Update9_Ingots/Recipe_Alternate_CopperIngot_Leached.Recipe_Alternate_CopperIngot_Leached'")}},
+	{1338453, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/AlternateRecipes/New_Update9_Ingots/Recipe_Alternate_IronIngot_Leached.Recipe_Alternate_IronIngot_Leached'")}},
+	{1338454, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/AlternateRecipes/New_Update9/Recipe_Alternate_SteelBeam_Molded.Recipe_Alternate_SteelBeam_Molded'")}},
+	{1338455, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/AlternateRecipes/New_Update9/Recipe_Alternate_SteelPipe_Molded.Recipe_Alternate_SteelPipe_Molded'")}},
+	{1338456, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/AlternateRecipes/New_Update9/Recipe_Alternate_AILimiter_Plastic.Recipe_Alternate_AILimiter_Plastic'")}},
+	{1338457, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/AlternateRecipes/New_Update9_Ingots/Recipe_Alternate_CateriumIngot_Tempered.Recipe_Alternate_CateriumIngot_Tempered'")}},
+	{1338458, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/AlternateRecipes/New_Update9_Ingots/Recipe_Alternate_CopperIngot_Tempered.Recipe_Alternate_CopperIngot_Tempered'")}},
+	//1.0
 };
 
 const TMap<int64, const TArray<FString>> UApMappings::ItemIdToGameBuilding = {
@@ -525,6 +552,17 @@ const TMap<int64, const TArray<FString>> UApMappings::ItemIdToGameBuilding = {
 	//1338697 Schematic
 	//1338698 Schematic
 	//1338699 Schematic
+
+	//1.0
+	{1338722, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/Buildings/Recipe_Converter.Recipe_Converter'")}},
+	{1338723, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/Buildings/Recipe_QuantumEncoder.Recipe_QuantumEncoder'"), TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/Converter/Recipe_QuantumEnergy.Recipe_QuantumEnergy'")}},
+	{1338724, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/Buildings/Recipe_Portal.Recipe_Portal'"), TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/Buildings/Recipe_PortalSatellite.Recipe_PortalSatellite'")}},
+	{1338725, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/Buildings/Recipe_ConveyorBeltMk6.Recipe_ConveyorBeltMk6'")}},
+	{1338726, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/Buildings/Recipe_ConveyorLiftMk6.Recipe_ConveyorLiftMk6'")}},
+	{1338727, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/Buildings/Recipe_AlienPowerBuilding.Recipe_AlienPowerBuilding'")}},
+	{1338728, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/Buildings/Recipe_CentralStorage.Recipe_CentralStorage'")}},
+	//1.0
+
 
 	//transports
 	{1338800,
@@ -633,6 +671,18 @@ const TMap<int64, const FString> UApMappings::ItemIdToGameSchematic = {
 	{1338719, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_GateWalls.ResourceSink_GateWalls'")},
 	{1338720, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_Roofs_Basic.ResourceSink_Roofs_Basic'")},
 	{1338721, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_Roofs_Corners.ResourceSink_Roofs_Corners'")},
+
+
+	//1.0
+	{1338767, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_FrameWindows.ResourceSink_FrameWindows'")},
+	{1338768, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_Fences.ResourceSink_Fences'")},
+	{1338769, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/Patterns/ResourceSink_UnPainted_PaintFinish.ResourceSink_UnPainted_PaintFinish'")},
+	{1338770, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/Patterns/ResourceSink_Copper_PaintFinish.ResourceSink_Copper_PaintFinish'")},
+	{1338771, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/Patterns/ResourceSink_Chrome_PaintFinish.ResourceSink_Chrome_PaintFinish'")},
+	{1338772, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/Patterns/ResourceSink_CarbonSteel_PaintFinish.ResourceSink_CarbonSteel_PaintFinish'")},
+	{1338773, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/Patterns/ResourceSink_Caterium_PaintFinish.ResourceSink_Caterium_PaintFinish'")},
+	//1.0
+
 
 	{1338850, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/Customizer/ResourceSink_Customizer_Asphalt_FoundationMaterial.ResourceSink_Customizer_Asphalt_FoundationMaterial'")},
 	{1338851, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/Customizer/ResourceSink_Customizer_Concrete_FoundationMaterial.ResourceSink_Customizer_Concrete_FoundationMaterial'")},
