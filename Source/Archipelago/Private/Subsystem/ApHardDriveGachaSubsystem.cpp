@@ -72,10 +72,6 @@ void AApHardDriveGachaSubsystem::BeginPlay() {
 	}
 }
 
-void AApHardDriveGachaSubsystem::Tick(float DeltaTime) {
-	Super::Tick(DeltaTime);
-}
-
 void AApHardDriveGachaSubsystem::GetValidSchematicRewardDrops(
 		TCallScope<void(*)(const UFGHardDriveSettings*, class AFGSchematicManager*, TArray<TSubclassOf<class UFGSchematic>>&)>& Scope, 
 		const UFGHardDriveSettings* self, class AFGSchematicManager* schematicManager, TArray<TSubclassOf<class UFGSchematic>>& out_validSchematics) {

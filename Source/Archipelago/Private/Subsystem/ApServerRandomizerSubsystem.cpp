@@ -62,19 +62,6 @@ void AApServerRandomizerSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase,
 		hardDriveGachaSubsystem = AApHardDriveGachaSubsystem::Get(world);
 		fgcheck(hardDriveGachaSubsystem)
 
-		/* Moved to Editor Scripts Generation
-		//TODO: generatic AP Items can be totally hardcoded outside of the initialization phase
-		UE_LOG(LogApServerRandomizerSubsystem, Display, TEXT("Generating schematics from AP Item IDs..."));
-		for (TPair<int64, TSharedRef<FApItemBase>>& apitem : mappingSubsystem->ApItems) {
-			if (apitem.Value->Type == EItemType::Recipe || apitem.Value->Type == EItemType::Building) {
-				TSubclassOf<UFGSchematic> schematic =
-					schematicPatcher->CreateSchematicBoundToItemId(apitem.Key, StaticCastSharedRef<FApRecipeItem>(apitem.Value));
-
-				ItemSchematics.Add(apitem.Key, schematic);
-			}
-		}
-		*/
-
 		ap->SetItemReceivedCallback([this](int64 itemid, bool isFromServer) { ReceiveItem(itemid, isFromServer); });
 		ap->SetLocationCheckedCallback([this](int64 itemid) { CollectLocation(itemid); });
 		ap->SetDeathLinkReceivedCallback([this](FText message) { OnDeathLinkReceived(message); });
@@ -145,13 +132,13 @@ void AApServerRandomizerSubsystem::ScoutArchipelagoItems() {
 	}
 
 	//mam locations
-	for (int l = 1338500; l <= 1338571; l++)
+	for (int l = 1338500; l <= 1338593; l++)
 		locations.Add(l);
 
 	//hardrive locations
 	if (slotData->EnableHardDriveGacha) {
-		//for (int l = 1338600; l <= 1338699; l++)
-		//	locations.Add(l);
+		for (int l = 1338600; l <= 1338699; l++)
+			locations.Add(l);
 	}
 
 	//shop locations

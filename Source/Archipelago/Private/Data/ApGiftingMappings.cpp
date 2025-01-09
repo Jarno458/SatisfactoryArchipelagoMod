@@ -164,7 +164,7 @@ const TMap<int64, TMap<EGiftTrait, float>> UApGiftingMappings::TraitsPerItemRati
 	{1338081, {{EGiftTrait::Material, 1.0f}}}, // Desc_PolymerResin_C, 
 	{1338082, {{EGiftTrait::Artifact,1.0f},{EGiftTrait::Speed,1.0f}}}, // Desc_CrystalShard_C, //Power Shard
 	{1338083, {{EGiftTrait::Gold, 5.0f},{EGiftTrait::Statue, 1.0f}}}, // Desc_SpaceGiraffeStatue_C, 
-	{1338084, {{EGiftTrait::Silver, 0.4f},{EGiftTrait::Electronics, 0.6f}}}, // Desc_PressureConversionCube_C, 
+	{1338084, {{EGiftTrait::Silver, 0.4f},{EGiftTrait::Electronics, 0.6f}, {EGiftTrait::Container, 0.5f}}}, // Desc_PressureConversionCube_C, 
 	{1338085, {{EGiftTrait::Artifact,1000.0f},{EGiftTrait::Speed,1000.0f},{EGiftTrait::DarkMatter, 1000.0f},{EGiftTrait::SpaceMineral, 1000.0f}}}, // Desc_AlienPowerFuel, 
 	{1338086, {{EGiftTrait::Crystal, 1.0f}}}, // Desc_QuartzCrystal_C, 
 	{1338087, {{EGiftTrait::Copper, 1.0f}}}, // Desc_HighSpeedWire_C, 

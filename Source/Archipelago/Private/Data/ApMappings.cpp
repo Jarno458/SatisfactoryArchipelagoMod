@@ -683,7 +683,6 @@ const TMap<int64, const FString> UApMappings::ItemIdToGameSchematic = {
 	{1338773, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/Patterns/ResourceSink_Caterium_PaintFinish.ResourceSink_Caterium_PaintFinish'")},
 	//1.0
 
-
 	{1338850, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/Customizer/ResourceSink_Customizer_Asphalt_FoundationMaterial.ResourceSink_Customizer_Asphalt_FoundationMaterial'")},
 	{1338851, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/Customizer/ResourceSink_Customizer_Concrete_FoundationMaterial.ResourceSink_Customizer_Concrete_FoundationMaterial'")},
 	{1338852, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/Customizer/ResourceSink_Customizer_ConcreteWallMaterial.ResourceSink_Customizer_ConcreteWallMaterial'")},

@@ -29,7 +29,7 @@
 		{
 			"Name": "SML",
 			"Enabled": true,
-			"SemVersion": "^3.8.0"
+			"SemVersion": "^3.9.0"
 		},
 		{
 			"Name": "ContentLib",
@@ -44,12 +44,12 @@
 		{
 			"Name": "MAMTips",
 			"Enabled": true,
-			"SemVersion": "^1.6.0"
+			"SemVersion": "^1.7.0"
 		},
 		{
 			"Name": "FixClientResourceSinkPoints",
 			"Enabled": true,
-			"SemVersion": ">=1.0.0"
+			"SemVersion": ">=1.1.0"
 		}
 	]
 }

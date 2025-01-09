@@ -24,7 +24,6 @@ public:
 	AApHardDriveGachaSubsystem();
 
 	virtual void BeginPlay() override;
-	virtual void Tick(float DeltaTime) override;
 
 	static AApHardDriveGachaSubsystem* Get(class UWorld* world);
 

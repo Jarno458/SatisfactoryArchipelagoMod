@@ -18,7 +18,7 @@ AApPortalSubsystem::AApPortalSubsystem() : Super() {
 
 	PrimaryActorTick.bCanEverTick = true;
 	PrimaryActorTick.bStartWithTickEnabled = true;
-	PrimaryActorTick.TickInterval = 0.06; //needs to thick atleast 13 times per seconds to keep up with a 780 belt, 0.06 is 16.6666... times per second
+	PrimaryActorTick.TickInterval = 0.048f; //needs to thick atleast 20 times per seconds to keep up with a 1200 belt, 0.048 is ~20.8 times per second
 
 	ReplicationPolicy = ESubsystemReplicationPolicy::SpawnOnServer;
 }

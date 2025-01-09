@@ -249,7 +249,13 @@ void AApReplicatedGiftingSubsystem::LoadTraitMappings() {
 				}
 			}
 
-			TraitsPerItem.Add(itemInfo->Class, FApTraitValues(traitValueForItem));
+			if (!TraitsPerItem.Contains(itemInfo->Class)) {
+				TraitsPerItem.Add(itemInfo->Class, FApTraitValues(traitValueForItem));
+			}
+			else {
+				TraitsPerItem[itemInfo->Class].TraitsValues.Append(traitValueForItem);
+				TraitsPerItem[itemInfo->Class] = FApTraitValues(TraitsPerItem[itemInfo->Class].TraitsValues);
+			}
 		}
 	}
 
