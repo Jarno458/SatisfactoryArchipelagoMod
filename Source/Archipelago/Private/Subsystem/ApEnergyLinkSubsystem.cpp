@@ -31,7 +31,7 @@ void AApEnergyLinkSubsystem::BeginPlay() {
 	if (!hooksInitialized) {
 		UE_LOG(LogApEnergyLink, Display, TEXT("Initializing hooks"));
 		AFGBuildablePowerStorage* bpscdo = GetMutableDefault<AFGBuildablePowerStorage>();
-		SUBSCRIBE_METHOD_VIRTUAL(AFGBuildablePowerStorage::BeginPlay, bpscdo, [this](auto& scope, AFGBuildablePowerStorage* self) {
+		hookHandler = SUBSCRIBE_METHOD_VIRTUAL(AFGBuildablePowerStorage::BeginPlay, bpscdo, [this](auto& scope, AFGBuildablePowerStorage* self) {
 			UE_LOG(LogApEnergyLink, Display, TEXT("AFGBuildablePowerStorage::BeginPlay()"));
 
 			if (!PowerStorages.Contains(self)) {
@@ -41,6 +41,11 @@ void AApEnergyLinkSubsystem::BeginPlay() {
 
 		hooksInitialized = true;
 	}
+}
+
+void AApEnergyLinkSubsystem::EndPlay(const EEndPlayReason::Type endPlayReason) {
+	if (hookHandler.IsValid())
+		UNSUBSCRIBE_METHOD(AFGBuildablePowerStorage::BeginPlay, hookHandler);
 }
 
 void AApEnergyLinkSubsystem::Tick(float DeltaTime) {

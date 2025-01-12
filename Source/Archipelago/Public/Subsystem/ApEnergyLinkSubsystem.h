@@ -27,14 +27,12 @@ public:
 	AApEnergyLinkSubsystem();
 
 protected:
-	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
+	virtual void Tick(float DeltaTime) override;
+	virtual void EndPlay(const EEndPlayReason::Type endPlayReason) override;
 
 public:
 	bool apInitialized = false;
-
-	// Called every frame
-	virtual void Tick(float DeltaTime) override;
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	const bool IsEnergyLinkEnabled();
@@ -46,6 +44,8 @@ private:
 	long currentServerStorage = 0;
 
 	float localStorage = 0.0f;
+
+	FDelegateHandle hookHandler;
 
 	TArray<AFGBuildablePowerStorage*> PowerStorages;
 

@@ -70,7 +70,8 @@ void AApHardDriveGachaSubsystem::EndPlay(const EEndPlayReason::Type endPlayReaso
 
 	Super::EndPlay(endPlayReason);
 
-	UNSUBSCRIBE_METHOD(AFGResearchManager::GetAvailableAlternateSchematics, hookHandler);
+	if (hookHandler.IsValid())
+		UNSUBSCRIBE_METHOD(AFGResearchManager::GetAvailableAlternateSchematics, hookHandler);
 }
 
 bool AApHardDriveGachaSubsystem::GetAvailableAlternateSchematics(
