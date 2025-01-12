@@ -4,9 +4,9 @@
 #include "Subsystem/ModSubsystem.h"
 #include "Subsystem/SubsystemActorManager.h"
 #include "Subsystem/ApSubsystem.h"
-#include "FGHardDriveSettings.h"
 #include "Patching/NativeHookManager.h"
-#include "FGGlobalSettings.h"
+#include "FGSchematicManager.h"
+#include "FGResearchManager.h"
 
 #include "ApHardDriveGachaSubsystem.generated.h"
 
@@ -24,32 +24,30 @@ public:
 	AApHardDriveGachaSubsystem();
 
 	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type endPlayReason) override;
 
 	static AApHardDriveGachaSubsystem* Get(class UWorld* world);
 
 	const int bucketSize = 4;
 
-	void Initialize(const TArray<TSubclassOf<UFGSchematic>>& apSchematics);
-
-	UPROPERTY()
-	UFGHardDriveSettings* HardDriveSettings;
+	void Initialize(const TArray<TSubclassOf<UFGSchematic>>& apHardDriveSchematics);
 
 private:
 	bool isEnabled = false;
 	bool hooksInitialized = false;
 
+	FDelegateHandle hookHandler;
+
 	TArray<TSubclassOf<class UFGSchematic>> apHardDriveSchematics;
-	TArray<TSubclassOf<class UFGSchematic>> schematicsToOffer;
 
-	AApSubsystem* ap;
 	UModContentRegistry* contentRegistry;
-	AFGSchematicManager* SManager;
+	AFGResearchManager* RManager;
 
-	void GetValidSchematicRewardDrops(TCallScope<void(*)(const UFGHardDriveSettings*, class AFGSchematicManager*, TArray<TSubclassOf<class UFGSchematic>>&)>& Scope, const UFGHardDriveSettings* self, class AFGSchematicManager* schematicManager, TArray<TSubclassOf<class UFGSchematic>>& out_validSchematics);
-	TArray<TSubclassOf<class UFGSchematic>> GetFinalSchematicRewards(TCallScope<TArray<TSubclassOf<class UFGSchematic>>(*)(const UFGHardDriveSettings*, const TArray<TSubclassOf<class UFGSchematic>>& allValidSchematicDrops)>& Scope, const UFGHardDriveSettings* self, const TArray<TSubclassOf<class UFGSchematic>>& allValidSchematicDrops);
+	bool GetAvailableAlternateSchematics(TCallScope<bool(*)(const AFGResearchManager* self, TArray<TSubclassOf<UFGSchematic>>, int32, TArray<TSubclassOf<UFGSchematic>>&)>& Scope, const AFGResearchManager* self, TArray<TSubclassOf<UFGSchematic>> excludedSchematics, int32 numSchematics, TArray<TSubclassOf<UFGSchematic>>& out_schematics);
 
-	TSubclassOf<class UFGSchematic> GetRandomSchematic(int lowerBound, int upperBound);
+	bool IsExternalModSchematic(TSubclassOf<class UFGSchematic> schematic);
 
+	TSubclassOf<class UFGSchematic> GetRandomSchematic(TSet<TSubclassOf<UFGSchematic>> excludedSchematics);
 
 	UFUNCTION() //required for event binding
 	void OnSchematicCompleted(TSubclassOf<class UFGSchematic> schematic);

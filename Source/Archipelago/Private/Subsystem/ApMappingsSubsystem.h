@@ -4,9 +4,11 @@
 
 #include "FGSaveInterface.h"
 #include "FGResourceSinkSubsystem.h"
+#include "FGRecipe.h"
 #include "Subsystem/ModSubsystem.h"
 #include "Resources/FGItemDescriptor.h"
 #include "AssetRegistry/AssetRegistryModule.h"
+#include "Module/ModModule.h"
 
 #include "ApMappingsSubsystem.generated.h"
 

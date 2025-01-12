@@ -1,7 +1,6 @@
 #include "ApMappingsSubsystem.h"
 #include "Subsystem/ApSubsystem.h"
 #include "Data/ApMappings.h"
-//#include "Data/ApGiftingMappings.h"
 #include "Registry/ModContentRegistry.h"
 #include "FGGameState.h"
 #include "Logging/StructuredLog.h"
@@ -48,30 +47,7 @@ void AApMappingsSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase) {
 
 void AApMappingsSubsystem::BeginPlay() {
 	Super::BeginPlay();
-
-	/*
-	UE_LOG(LogApMappingsSubsystem, Display, TEXT("AApMappingsSubsystem(::BeginPlay()"));
-
-	AGameStateBase* gameState = GetWorld()->GetGameState();
-
-	if (gameState->HasAuthority()) {
-		LoadTraitMappings();
-	} else {
-		if (AFGGameState* factoryGameState = Cast<AFGGameState>(gameState)) {
-			factoryGameState->mOnClientSubsystemsValid.AddDynamic(this, &AApMappingsSubsystem::OnClientSubsystemsValid);
-
-			if (factoryGameState->AreClientSubsystemsValid()) {
-				LoadTraitMappings();
-			}
-		}
-	}*/
-	
 }
-
-/*
-void AApMappingsSubsystem::OnClientSubsystemsValid() {
-	LoadTraitMappings();
-}*/
 
 void AApMappingsSubsystem::LoadMappings(TMap<int64, TSharedRef<FApItemBase>>& itemMap) {
 	FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
@@ -241,110 +217,6 @@ const TMap<FName, const FAssetData> AApMappingsSubsystem::GetBlueprintAssetsIn(I
 
 	return assetsMap;
 }
-
-/*
-void AApMappingsSubsystem::LoadTraitMappings() {
-	AFGResourceSinkSubsystem* resourceSinkSubsystem = AFGResourceSinkSubsystem::Get(GetWorld());
-	fgcheck(resourceSinkSubsystem)
-
-	TMap<EGiftTrait, float> defaultSinkPointsPerTrait;
-	for (const TPair<EGiftTrait, int64>& traitDefault : UApGiftingMappings::TraitDefaultItemIds) {
-		fgcheck(ApItems.Contains(traitDefault.Value) && ApItems[traitDefault.Value]->Type == EItemType::Item);
-
-		TSharedRef<FApItem> itemInfo = StaticCastSharedRef<FApItem>(ApItems[traitDefault.Value]);
-
-		int defaultItemSinkPoints = GetResourceSinkPointsForItem(resourceSinkSubsystem, itemInfo->Class, traitDefault.Value);
-
-		defaultSinkPointsPerTrait.Add(traitDefault.Key, defaultItemSinkPoints);
-	}
-
-	for (TPair<int64, TSharedRef<FApItemBase>>& itemInfoMapping : ApItems) {
-		if (!UApGiftingMappings::TraitsPerItemRatings.Contains(itemInfoMapping.Key))
-			continue;
-
-		fgcheck(itemInfoMapping.Value->Type == EItemType::Item)
-
-		TSharedRef<FApItem> itemInfo = StaticCastSharedRef<FApItem>(itemInfoMapping.Value);
-		TSubclassOf<UFGItemDescriptor> itemClass = itemInfo->Class;
-		int64 itemId = itemInfoMapping.Key;
-
-		int itemValue = GetResourceSinkPointsForItem(resourceSinkSubsystem, itemClass, itemId);
-
-		TMap<EGiftTrait, float> calucatedTraitsForItem;
-		for (const TPair<EGiftTrait, float>& traitRelativeRating : UApGiftingMappings::TraitsPerItemRatings[itemInfoMapping.Key]) {
-			EGiftTrait traitName = traitRelativeRating.Key;
-
-			fgcheck(defaultSinkPointsPerTrait.Contains(traitName));
-			float traitValue = GetTraitValue(itemValue, defaultSinkPointsPerTrait[traitName], traitRelativeRating.Value);
-			calucatedTraitsForItem.Add(traitName, traitValue);
-
-			while (UApGiftingMappings::TraitParents.Contains(traitName)) {
-				traitName = UApGiftingMappings::TraitParents[traitName];
-
-				if (!calucatedTraitsForItem.Contains(traitName)) {
-					fgcheck(defaultSinkPointsPerTrait.Contains(traitName));
-					traitValue = GetTraitValue(itemValue, defaultSinkPointsPerTrait[traitName], traitRelativeRating.Value);
-					calucatedTraitsForItem.Add(traitName, traitValue);
-				}
-			}
-		}
-
-		TraitsPerItem.Add(itemInfo->Class, calucatedTraitsForItem);
-	}
-
-	//PrintTraitValuesPerItem();
-
-	hasLoadedItemTraits = true;
-}
-
-int AApMappingsSubsystem::GetResourceSinkPointsForItem(AFGResourceSinkSubsystem* resourceSinkSubsystem, TSubclassOf<UFGItemDescriptor> itemClass, int64 itemId) {
-	if (UApGiftingMappings::HardcodedSinkValues.Contains(itemId))
-		return UApGiftingMappings::HardcodedSinkValues[itemId];
-
-	int value = resourceSinkSubsystem->GetResourceSinkPointsForItem(itemClass);
-
-	if (value == 0) {
-		FString itemName = UFGItemDescriptor::GetItemName(itemClass).ToString();
-		UE_LOG(LogApMappingsSubsystem, Error, TEXT("AApMappingsSubsystem::GetResourceSinkPointsForItem(\"%s\", %i) Not sink value for item"), *itemName, itemId);
-		value = 1;
-	}
-
-	return value;
-}
-
-float AApMappingsSubsystem::GetTraitValue(int itemValue, float avarageItemValueForTrait, float itemSpecificTraitMultiplier) {
-	return (FPlatformMath::LogX(10, (double)itemValue + 0.1) / FPlatformMath::LogX(10, (double)avarageItemValueForTrait + 0.1)) * itemSpecificTraitMultiplier;
-}
-
-void AApMappingsSubsystem::PrintTraitValuesPerItem() {
-	TMap<EGiftTrait, TSortedMap<float, FString>> valuesPerItem;
-
-	for (const TPair<TSubclassOf<UFGItemDescriptor>, TMap<EGiftTrait, float>>& traitsPerItem : TraitsPerItem) {
-		for (TPair<EGiftTrait, float> trait : traitsPerItem.Value) {
-			if (!valuesPerItem.Contains(trait.Key))
-				valuesPerItem.Add(trait.Key, TSortedMap<float, FString>());
-
-			FString itemName = ItemIdToName[ItemClassToItemId[traitsPerItem.Key]];
-
-			valuesPerItem[trait.Key].Add(trait.Value, itemName);
-		}
-	}
-
-	TArray<FString> lines;
-	for (const TPair<EGiftTrait, TSortedMap<float, FString>>& traitsPerItem : valuesPerItem) {
-		static const UEnum* giftTraitEnum = StaticEnum<EGiftTrait>();
-		FName traitName = giftTraitEnum->GetNameByValue((int64)traitsPerItem.Key);
-
-		lines.Add(FString::Printf(TEXT("Trait: \"%s\":"), *traitName.ToString()));
-				
-		for (TPair<float, FString> valuePerItem : traitsPerItem.Value)
-			lines.Add(FString::Printf(TEXT("  - Item: \"%s\": %.2f"), *valuePerItem.Value, valuePerItem.Key));
-	}
-
-	FString fileText = FString::Join(lines, TEXT("\n"));
-
-	UApUtils::WriteStringToFile(fileText, TEXT("T:\\ItemTraits.txt"), false);
-}*/
 
 UObject* AApMappingsSubsystem::FindAssetByName(const TMap<FName, const FAssetData> assets, FString assetName) {
 	UE_LOG(LogApMappingsSubsystem, Display, TEXT("AApMappingsSubsystem::FindAssetByName(assets[%i], \"%s\")"), assets.Num(), *assetName);

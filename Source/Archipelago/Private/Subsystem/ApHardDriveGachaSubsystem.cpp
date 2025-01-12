@@ -12,8 +12,6 @@ DEFINE_LOG_CATEGORY(LogApHardDriveGachaSubsystem);
 
 AApHardDriveGachaSubsystem::AApHardDriveGachaSubsystem() : Super() {
 	PrimaryActorTick.bCanEverTick = false;
-	PrimaryActorTick.bStartWithTickEnabled = false;
-	PrimaryActorTick.TickInterval = 1.0f;
 
 	ReplicationPolicy = ESubsystemReplicationPolicy::SpawnOnServer;
 }
@@ -25,10 +23,10 @@ AApHardDriveGachaSubsystem* AApHardDriveGachaSubsystem::Get(UWorld* world) {
 	return SubsystemActorManager->GetSubsystemActor<AApHardDriveGachaSubsystem>();
 }
 
-void AApHardDriveGachaSubsystem::Initialize(const TArray<TSubclassOf<UFGSchematic>>& apSchematics) {
+void AApHardDriveGachaSubsystem::Initialize(const TArray<TSubclassOf<UFGSchematic>>& hardDriveSchematics) {
 	UE_LOG(LogApHardDriveGachaSubsystem, Display, TEXT("AApSubsystem()::Initialize()"));
 
-	apHardDriveSchematics = apSchematics;
+	apHardDriveSchematics = hardDriveSchematics;
 
 	//we cannot trust the order of this array to be in order of check priority, so we re-sort it
 	UFGSchematic::SortByMenuPriority(apHardDriveSchematics);
@@ -49,98 +47,108 @@ void AApHardDriveGachaSubsystem::BeginPlay() {
 		return;
 	}
 
-	ap = AApSubsystem::Get(world);
-	fgcheck(ap);
 	contentRegistry = UModContentRegistry::Get(world);
 	fgcheck(contentRegistry);
-	SManager = AFGSchematicManager::Get(world);
-	fgcheck(SManager);
+	RManager = AFGResearchManager::Get(world);
+	fgcheck(RManager);
 
+	AFGSchematicManager* SManager = AFGSchematicManager::Get(world);
+	fgcheck(SManager);
 	SManager->PurchasedSchematicDelegate.AddDynamic(this, &AApHardDriveGachaSubsystem::OnSchematicCompleted);
 
 	if (!hooksInitialized) {
-		SUBSCRIBE_METHOD(UFGHardDriveSettings::GetValidSchematicRewardDrops, [this](auto& scope, const UFGHardDriveSettings* self, AFGSchematicManager* schematicManager, TArray<TSubclassOf<class UFGSchematic>>& out_validSchematics) {
-			GetValidSchematicRewardDrops(scope, self, schematicManager, out_validSchematics);
+		hookHandler = SUBSCRIBE_METHOD(AFGResearchManager::GetAvailableAlternateSchematics, [this](auto& scope, const AFGResearchManager* self, TArray<TSubclassOf<UFGSchematic>> excludedSchematics, int32 numSchematics, TArray<TSubclassOf<UFGSchematic>>& out_schematics) {
+			return GetAvailableAlternateSchematics(scope, self, excludedSchematics, numSchematics, out_schematics);
 		});
-
-		//TOOD maybe not needed
-		//SUBSCRIBE_METHOD(UFGHardDriveSettings::GetFinalSchematicRewards, [this](auto& scope, const UFGHardDriveSettings* self, const TArray<TSubclassOf<class UFGSchematic>>& allValidSchematicDrops) {
-		//	return GetFinalSchematicRewards(scope, self, allValidSchematicDrops);
-		//});
 
 		hooksInitialized = true;
 	}
 }
 
-void AApHardDriveGachaSubsystem::GetValidSchematicRewardDrops(
-		TCallScope<void(*)(const UFGHardDriveSettings*, class AFGSchematicManager*, TArray<TSubclassOf<class UFGSchematic>>&)>& Scope, 
-		const UFGHardDriveSettings* self, class AFGSchematicManager* schematicManager, TArray<TSubclassOf<class UFGSchematic>>& out_validSchematics) {
-	UE_LOG(LogApHardDriveGachaSubsystem, Display, TEXT("AApHardDriveGachaSubsystem::GetValidSchematicRewardDrops()"));
+void AApHardDriveGachaSubsystem::EndPlay(const EEndPlayReason::Type endPlayReason) {
+	UE_LOG(LogApSubsystem, Display, TEXT("AApHardDriveGachaSubsystem::EndPlay(%i)"), endPlayReason);
 
-	TArray<TSubclassOf<class UFGSchematic>> resultSchematics;
+	Super::EndPlay(endPlayReason);
 
-	Scope(self, schematicManager, resultSchematics);
-
-	TArray<TSubclassOf<class UFGSchematic>> modSchematics;
-	for (TSubclassOf<class UFGSchematic> schematic : resultSchematics) {
-		FGameObjectRegistration registration;
-		if (contentRegistry->GetSchematicRegistrationInfo(schematic, registration) 
-					&& !registration.HasAnyFlags(EGameObjectRegistrationFlags::BuiltIn)
-					&& !(UFGSchematic::GetMenuPriority(schematic) >= 1338600 && UFGSchematic::GetMenuPriority(schematic) <= 1338699))
-			modSchematics.Add(schematic);
-	}
-
-	schematicsToOffer.Empty();
-
-	int numSchematicsLeft = apHardDriveSchematics.Num();
-
-	if (numSchematicsLeft >= 1) schematicsToOffer.Add(GetRandomSchematic(0, bucketSize));
-	if (numSchematicsLeft >= 2) schematicsToOffer.Add(GetRandomSchematic(bucketSize, bucketSize * 2));
-	if (numSchematicsLeft >= 3) schematicsToOffer.Add(GetRandomSchematic(bucketSize * 2, bucketSize * 3));
-
-	if (modSchematics.Num() > 0)	{
-		UFGGlobalSettings::GetHardDriveSettingsCDO()->mUniqueItemCount = 4;
-
-		int index = FMath::RandRange(0, modSchematics.Num() - 1);
-		schematicsToOffer.Add(modSchematics[index]);
-	} else {
-		UFGGlobalSettings::GetHardDriveSettingsCDO()->mUniqueItemCount = 3;
-	}
-
-	out_validSchematics = schematicsToOffer;
+	UNSUBSCRIBE_METHOD(AFGResearchManager::GetAvailableAlternateSchematics, hookHandler);
 }
 
-TSubclassOf<class UFGSchematic> AApHardDriveGachaSubsystem::GetRandomSchematic(int lowerBound, int upperBound) {
-	int size = upperBound - lowerBound;
-	int numSchematicsLeft = apHardDriveSchematics.Num();
+bool AApHardDriveGachaSubsystem::GetAvailableAlternateSchematics(
+	TCallScope<bool(*)(const AFGResearchManager* self, TArray<TSubclassOf<UFGSchematic>>, int32, TArray<TSubclassOf<UFGSchematic>>&)>& Scope,
+	const AFGResearchManager* self, TArray<TSubclassOf<UFGSchematic>> excludedSchematics, int32 numSchematics, TArray<TSubclassOf<UFGSchematic>>& out_schematics) {
 
-	if (numSchematicsLeft - schematicsToOffer.Num() <= 0)
+	UE_LOG(LogApHardDriveGachaSubsystem, Display, TEXT("AApHardDriveGachaSubsystem::GetAvailableAlternateSchematics()"));
+
+	// run normal schematic selection to give external mod schematics a chance
+	bool result = Scope(self, excludedSchematics, numSchematics, out_schematics);
+
+	//Schematic should be inside apHardDriveSchematics (that the list of schematics to still unlock)
+	//Schematic should not be in excludedSchematics (those are the previus ones on a reroll)
+	//Schematic should not already be pending for selection in AFGResearchManager::GetUnclaimedHardDrives(TArray<UFGHardDrive*>& out_HardDrives)
+	//Schematic should not already be already be selected to offer
+	TSet<TSubclassOf<UFGSchematic>> schematicsToExclude;
+
+	schematicsToExclude.Append(excludedSchematics);
+
+	//i could not get AFGResearchManager::GetPendingRewards to work
+	TArray<UFGHardDrive*> unclaimedHarddrives;
+	RManager->GetUnclaimedHardDrives(unclaimedHarddrives);
+	for (UFGHardDrive* pendingHarddrive : unclaimedHarddrives) {
+		if (!IsValid(pendingHarddrive))
+			continue;
+
+		TArray<TSubclassOf<UFGSchematic>> pendingSchematics;
+		pendingHarddrive->GetSchematics(pendingSchematics);
+
+		schematicsToExclude.Append(pendingSchematics);
+	}
+
+	for (int i=0; i < out_schematics.Num(); i++) {
+		if (IsExternalModSchematic(out_schematics[i])) {
+			// if its a external mod schematic (aka a schematic added by an other mod), preserve it
+		}
+		else {
+			//if its an AP harddrive schematic, replace it according to progresion logic
+			TSubclassOf<UFGSchematic> randomlySelectedSchematic = GetRandomSchematic(schematicsToExclude);
+
+			if (randomlySelectedSchematic != nullptr) {
+				out_schematics[i] = randomlySelectedSchematic;
+
+				schematicsToExclude.Add(randomlySelectedSchematic);
+			}
+		}
+	}
+
+	return result;
+}
+
+TSubclassOf<class UFGSchematic> AApHardDriveGachaSubsystem::GetRandomSchematic(TSet<TSubclassOf<UFGSchematic>> excludedSchematics) {
+	//Schematic should be randomly selected from the first x schematics in apHardDriveSchematics that arent excluded
+
+	TArray<TSubclassOf<class UFGSchematic>> schematicsToOffer;
+	for (TSubclassOf<class UFGSchematic> schematic : apHardDriveSchematics) {
+		if (excludedSchematics.Contains(schematic))
+			continue;
+
+		schematicsToOffer.Add(schematic);
+
+		if (schematicsToOffer.Num() >= bucketSize)
+			break;
+	}
+
+	if (schematicsToOffer.Num() == 0)
 		return nullptr;
 
-	if (lowerBound > numSchematicsLeft - size)
-		lowerBound = numSchematicsLeft - size;
-	if (lowerBound	< 0)
-		lowerBound = 0;
-	if (upperBound > numSchematicsLeft)
-		upperBound = numSchematicsLeft;
+	int index = FMath::RandRange(0, schematicsToOffer.Num() - 1);
 
-	TSubclassOf<class UFGSchematic> schematic;
-	do {
-		int index = FMath::RandRange(lowerBound, upperBound - 1);
-		schematic = apHardDriveSchematics[index];
-	} while (schematicsToOffer.Contains(schematic));
-
-	return schematic;
+	return schematicsToOffer[index];
 }
 
-TArray<TSubclassOf<class UFGSchematic>> AApHardDriveGachaSubsystem::GetFinalSchematicRewards(
-		TCallScope<TArray<TSubclassOf<class UFGSchematic>>(*)(const UFGHardDriveSettings*, const TArray<TSubclassOf<class UFGSchematic>>& allValidSchematicDrops)>& Scope,
-	const UFGHardDriveSettings* self, const TArray<TSubclassOf<class UFGSchematic>>& allValidSchematicDrops) {
-	UE_LOG(LogApHardDriveGachaSubsystem, Display, TEXT("AApHardDriveGachaSubsystem::GetFinalSchematicRewards()"));
-
-	TArray<TSubclassOf<class UFGSchematic>> resultSchematics = Scope(self, schematicsToOffer);
-
-	return resultSchematics;
+bool AApHardDriveGachaSubsystem::IsExternalModSchematic(TSubclassOf<class UFGSchematic> schematic) {
+	FGameObjectRegistration registration;
+	return !(UFGSchematic::GetMenuPriority(schematic) >= 1338600 && UFGSchematic::GetMenuPriority(schematic) <= 1338699)
+		&& contentRegistry->GetSchematicRegistrationInfo(schematic, registration)
+		&& !registration.HasAnyFlags(EGameObjectRegistrationFlags::BuiltIn);
 }
 
 void AApHardDriveGachaSubsystem::OnSchematicCompleted(TSubclassOf<class UFGSchematic> schematic) {
@@ -151,7 +159,6 @@ void AApHardDriveGachaSubsystem::OnSchematicCompleted(TSubclassOf<class UFGSchem
 
 	apHardDriveSchematics.Remove(schematic);
 }
-
 
 #pragma optimize("", on)
 

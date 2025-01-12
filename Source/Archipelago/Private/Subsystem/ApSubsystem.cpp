@@ -594,6 +594,9 @@ TMap<int64, FApNetworkItem> AApSubsystem::ScoutLocation(const TSet<int64>& locat
 		locationsToScout.insert(locationId);
 	}
 
+	//TOOD if we send in unknown location to the server, this promose is never fufilled
+	// we likely need to add an async task with a scope lock on a boolean that can set the promise if the server doesnt after a certain time
+	// currently causes the game to hang indefently
 	locationScoutingPromise = MakeShared<TPromise<TMap<int64, FApNetworkItem>>>();
 
 	CallOnGameThread<void>([this, &locationsToScout]() {
