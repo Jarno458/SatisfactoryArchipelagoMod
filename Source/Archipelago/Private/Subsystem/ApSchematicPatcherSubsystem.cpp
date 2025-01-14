@@ -4,6 +4,7 @@
 #include "Module/WorldModuleManager.h"
 #include "Module/ApGameWorldModule.h"
 #include "Data/ApMappings.h"
+#include "PushModel.h"
 
 DEFINE_LOG_CATEGORY(LogApSchematicPatcherSubsystem);
 
@@ -35,9 +36,12 @@ AApSchematicPatcherSubsystem* AApSchematicPatcherSubsystem::Get(class UWorld* wo
 void AApSchematicPatcherSubsystem::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-	DOREPLIFETIME(AApSchematicPatcherSubsystem, replicatedItemInfos);
-	DOREPLIFETIME(AApSchematicPatcherSubsystem, replicatedMilestones);
-	DOREPLIFETIME(AApSchematicPatcherSubsystem, collectedLocations);
+	FDoRepLifetimeParams replicationParams;
+	replicationParams.bIsPushBased = true;
+
+	DOREPLIFETIME_WITH_PARAMS_FAST(AApSchematicPatcherSubsystem, replicatedItemInfos, replicationParams);
+	DOREPLIFETIME_WITH_PARAMS_FAST(AApSchematicPatcherSubsystem, replicatedMilestones, replicationParams);
+	DOREPLIFETIME_WITH_PARAMS_FAST(AApSchematicPatcherSubsystem, replicatedCollectedLocations, replicationParams);
 }
 
 void AApSchematicPatcherSubsystem::BeginPlay() {
@@ -93,12 +97,16 @@ void AApSchematicPatcherSubsystem::Tick(float DeltaTime) {
 		|| !slotDataSubsystem->HasLoadedSlotData())
 			return;
 
-	InitializeSchematicsBasedOnScoutedData();
+	if (!hasPatchedSchematics) {
+		InitializeSchematicsBasedOnScoutedData();
 
-	hasPatchedSchematics = true;
+		hasPatchedSchematics = true;
+	}
 
-	//maybe? dont think we need to thick anymore
-	SetActorTickEnabled(false);
+	if (IsRunningDedicatedServer())
+		SetActorTickEnabled(false);
+	else
+		Client_ProcessCollectedLocations();
 }
 
 void AApSchematicPatcherSubsystem::Server_SetItemInfoPerSchematicId(int currentPlayerId, const TArray<FApNetworkItem>& itemInfo) {
@@ -107,6 +115,8 @@ void AApSchematicPatcherSubsystem::Server_SetItemInfoPerSchematicId(int currentP
 
 	replicatedItemInfos = MakeReplicateable(currentPlayerId, itemInfo);
 
+	MARK_PROPERTY_DIRTY_FROM_NAME(AApSchematicPatcherSubsystem, replicatedItemInfos, this);
+	
 	OnRep_ItemInfosReplicated();
 }
 
@@ -128,6 +138,8 @@ void AApSchematicPatcherSubsystem::Server_SetItemInfoPerMilestone(int currentPla
 
 	replicatedMilestones = milestonesToReplicate;
 
+	MARK_PROPERTY_DIRTY_FROM_NAME(AApSchematicPatcherSubsystem, replicatedItemInfos, this);
+
 	OnRep_MilestonesReplicated();
 }
 
@@ -145,6 +157,18 @@ TArray<FApReplicatedItemInfo> AApSchematicPatcherSubsystem::MakeReplicateable(in
 	return itemsToReplicate;
 }
 
+void AApSchematicPatcherSubsystem::Server_Collect(TSet<int64> locations) {
+	if (!HasAuthority())
+		return;
+
+	for (int64 location : locations)
+		replicatedCollectedLocations.AddUnique(location - ID_OFFSET);
+
+	MARK_PROPERTY_DIRTY_FROM_NAME(AApSchematicPatcherSubsystem, replicatedCollectedLocations, this);
+
+	OnRep_CollectedLocationsReplicated();
+}
+
 void AApSchematicPatcherSubsystem::OnRep_ItemInfosReplicated() {
 	receivedItemInfos = true;
 }
@@ -154,7 +178,15 @@ void AApSchematicPatcherSubsystem::OnRep_MilestonesReplicated() {
 }
 
 void AApSchematicPatcherSubsystem::OnRep_CollectedLocationsReplicated() {
-	//TODO Update collected locations
+	for (int16 location : replicatedCollectedLocations) {
+		int64 location64 = location + ID_OFFSET;
+
+		if (!collectedLocations.Contains(location64))
+		{
+			collectedLocations.Add(location64);
+			clientCollectedLocationsToProcess.Enqueue(location64);
+		}
+	}
 }
 
 void AApSchematicPatcherSubsystem::InitializeSchematicsBasedOnScoutedData() {
@@ -174,6 +206,9 @@ void AApSchematicPatcherSubsystem::InitializeSchematicsBasedOnScoutedData() {
 	TMap<int64, FApReplicatedItemInfo> replicatedItemInfoBySchematicId;
 	for (const FApReplicatedItemInfo& replicatedItemInfo : replicatedItemInfos) {
 		replicatedItemInfoBySchematicId.Add(replicatedItemInfo.GetLocationId(), replicatedItemInfo);
+
+		if (!IsRunningDedicatedServer() && replicatedItemInfo.GetIsLocalPlayer())
+			client_localItems.Add(replicatedItemInfo.GetLocationId());
 	}
 
 	TMap<int, TMap<int, TArray<FApReplicatedItemInfo>>> replicatedItemsPerMilestone;
@@ -193,6 +228,9 @@ void AApSchematicPatcherSubsystem::InitializeSchematicsBasedOnScoutedData() {
 			bool isShop = UFGSchematic::GetType(schematic) == ESchematicType::EST_ResourceSink;
 
 			if (!isItemSchematic && replicatedItemInfoBySchematicId.Contains(locationId)) {
+				if (!IsRunningDedicatedServer())
+					client_schematicPerLocation.Add(locationId, schematic);
+
 				InitializaSchematicForItem(schematic, replicatedItemInfoBySchematicId[locationId], isShop);
 			}
 		} else if (UFGSchematic::GetType(schematic) == ESchematicType::EST_Milestone) {
@@ -264,14 +302,15 @@ void AApSchematicPatcherSubsystem::InitializaSchematicForItem(TSubclassOf<UFGSch
 		factorySchematicCDO->mSchematicIcon.SetResourceObject(bigText);
 		factorySchematicCDO->mSmallSchematicIcon = bigText;
 
-		if (!IsCollected(factorySchematicCDO->mUnlocks[0])) {
+		// collection should run async after shematic edit
+		/*if (!IsCollected(factorySchematicCDO->mUnlocks[0])) {
 			UFGUnlockInfoOnly* unlockInfo = Cast<UFGUnlockInfoOnly>(factorySchematicCDO->mUnlocks[0]);
 
 			if (unlockInfo != nullptr) {
 				unlockInfo->mUnlockIconBig = bigText;
 				unlockInfo->mUnlockIconSmall = bigText;
 			}
-		}
+		}*/
 	}
 }
 
@@ -370,13 +409,13 @@ void AApSchematicPatcherSubsystem::UpdateInfoOnlyUnlockWithRecipeInfo(FContentLi
 	}
 
 	TArray<FString> CostsArray;
-	for (FItemAmount cost : recipe->GetIngredients()) {
+	for (const FItemAmount& cost : recipe->GetIngredients()) {
 		UFGItemDescriptor* costItemDescriptor = cost.ItemClass.GetDefaultObject();
 		CostsArray.Add(costItemDescriptor->GetItemNameFromInstanceAsString());
 	}
 
 	TArray<FString> OutputArray;
-	for (FItemAmount product : recipe->GetProducts()) {
+	for (const FItemAmount& product : recipe->GetProducts()) {
 		UFGItemDescriptor* productItemDescriptor = product.ItemClass.GetDefaultObject();
 		OutputArray.Add(productItemDescriptor->GetItemNameFromInstanceAsString());
 	}
@@ -463,6 +502,7 @@ void AApSchematicPatcherSubsystem::UpdateInfoOnlyUnlockWithGenericApInfo(FConten
 	}
 }
 
+/*
 bool AApSchematicPatcherSubsystem::IsCollected(UFGUnlock* unlock) {
 	UFGUnlockInfoOnly* unlockInfo = Cast<UFGUnlockInfoOnly>(unlock);
 	return IsValid(unlockInfo) && unlockInfo->mUnlockIconSmall == collectedIcon;
@@ -471,8 +511,44 @@ bool AApSchematicPatcherSubsystem::IsCollected(UFGUnlock* unlock) {
 void AApSchematicPatcherSubsystem::Collect(UFGSchematic* schematic, int unlockIndex, FApNetworkItem& networkItem) {
 	//Collect(schematic->mUnlocks[unlockIndex], networkItem);
 }
+*/
 
-void AApSchematicPatcherSubsystem::Collect(UFGUnlock* unlock, FApNetworkItem& networkItem) {
+void AApSchematicPatcherSubsystem::Client_ProcessCollectedLocations() {
+	if (IsRunningDedicatedServer())
+		return;
+
+	int64 location;
+	if (clientCollectedLocationsToProcess.Dequeue(location)) {
+		if (!client_schematicPerLocation.Contains(location) || !IsValid(client_schematicPerLocation[location]))
+			return;
+
+		TSubclassOf<UFGSchematic> schematic = client_schematicPerLocation[location];
+		TArray<UFGUnlock*> unlocks = UFGSchematic::GetUnlocks(schematic);
+
+		if (unlocks.Num() == 0)
+			return;
+
+		FApReplicatedItemInfo itemInfo;
+		for (const FApReplicatedItemInfo& replicatedItemInfo : replicatedItemInfos) {
+			if (replicatedItemInfo.GetLocationId() == location)
+			{
+				itemInfo = replicatedItemInfo;
+				return;
+			}
+		}
+
+		if (UFGSchematic::GetType(schematic) == ESchematicType::EST_Milestone) {
+			//yes milestones need specail threatment
+			//TODO select correct unlock inside milestone
+
+		} 
+		else {
+			Client_Collect(unlocks[0], client_localItems.Contains(location));
+		}
+	}
+}
+
+void AApSchematicPatcherSubsystem::Client_Collect(UFGUnlock* unlock, bool isLocalItem) {
 	UFGUnlockInfoOnly* unlockInfo = Cast<UFGUnlockInfoOnly>(unlock);
 
 	if (IsValid(unlockInfo)) {
@@ -481,7 +557,7 @@ void AApSchematicPatcherSubsystem::Collect(UFGUnlock* unlock, FApNetworkItem& ne
 
 		unlockInfo->mUnlockIconSmall = collectedIcon;
 
-		if (networkItem.player != connectionInfo->GetCurrentPlayerSlot()) {
+		if (!isLocalItem) {
 			unlockInfo->mUnlockName = FText::Format(LOCTEXT("Collected", "Collected: {0}"), unlockInfo->mUnlockName);
 			unlockInfo->mUnlockIconBig = collectedIcon;
 		}

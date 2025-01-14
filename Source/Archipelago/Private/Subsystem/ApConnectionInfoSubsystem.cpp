@@ -1,4 +1,5 @@
 #include "Subsystem/ApConnectionInfoSubsystem.h"
+#include "Net/UnrealNetwork.h"
 
 DEFINE_LOG_CATEGORY(LogApConnectionInfoSubsystem);
 

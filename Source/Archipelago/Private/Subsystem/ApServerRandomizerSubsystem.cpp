@@ -558,46 +558,68 @@ void AApServerRandomizerSubsystem::CollectLocation(int64 itemId) {
 void AApServerRandomizerSubsystem::HandleCheckedLocations() {
 	int64 location;
 
+	TSet<int64> checkedLocations;
+	int64 locationId;
+	while (CheckedLocations.Dequeue(location)) {
+		if (!schematicPatcher->IsCollected(location))
+			checkedLocations.Add(locationId);
+	}
+
 	//could use a while loop but we now handle only 1 per tick for perform reasons as this opperation is quite slow
-	if (CheckedLocations.Dequeue(location)) {
-		for (TPair<TSubclassOf<UFGSchematic>, TArray<FApNetworkItem>>& itemsPerMilestone : locationsPerMilestone) {
-			for (int index = 0; index < itemsPerMilestone.Value.Num(); index++) {
-				FApNetworkItem& networkItem = itemsPerMilestone.Value[index];
-				if (networkItem.location == location) {
-					UFGSchematic* schematic = Cast<UFGSchematic>(itemsPerMilestone.Key->GetDefaultObject());
+	//if (CheckedLocations.Dequeue(location)) {
+	schematicPatcher->ServerCollect(checkedLocations);
 
-					if (IsValid(schematic))
-						schematicPatcher->Collect(schematic, index, networkItem);
+	for (TPair<TSubclassOf<UFGSchematic>, TArray<FApNetworkItem>>& itemsPerMilestone : locationsPerMilestone) {
+		for (int index = 0; index < itemsPerMilestone.Value.Num(); index++) {
+			FApNetworkItem& networkItem = itemsPerMilestone.Value[index];
+			//if (networkItem.location == location) {
+			if (checkedLocations.Contains(networkItem.location)) {
+				//UFGSchematic* schematic = Cast<UFGSchematic>(itemsPerMilestone.Key->GetDefaultObject());
 
-					if (!itemsPerMilestone.Value.ContainsByPredicate([this](FApNetworkItem& item) {
-								return !schematicPatcher->IsCollected(item.location);	})) {
-						SManager->GiveAccessToSchematic(itemsPerMilestone.Key, nullptr);
-					}
+				//if (IsValid(schematic))
+				//	schematicPatcher->Collect(schematic, index, networkItem);
+
+				if (!itemsPerMilestone.Value.ContainsByPredicate([this](FApNetworkItem& item) {
+							return !schematicPatcher->IsCollected(item.location);	})) {
+					SManager->GiveAccessToSchematic(itemsPerMilestone.Key, nullptr);
 				}
 			}
 		}
+	}
 
-		for (TPair<TSubclassOf<UFGSchematic>, FApNetworkItem>& itemPerMamNode : locationPerMamNode) {
-			if (itemPerMamNode.Value.location == location) {
-				UFGSchematic* schematic = Cast<UFGSchematic>(itemPerMamNode.Key->GetDefaultObject());
+	for (TPair<TSubclassOf<UFGSchematic>, FApNetworkItem>& itemPerMamNode : locationPerMamNode) {
+		//if (itemPerMamNode.Value.location == location) {
+		if (checkedLocations.Contains(itemPerMamNode.Value.location)) {
 
-				if (IsValid(schematic))
-					schematicPatcher->Collect(schematic, 0, itemPerMamNode.Value);
+			//UFGSchematic* schematic = Cast<UFGSchematic>(itemPerMamNode.Key->GetDefaultObject());
 
-				SManager->GiveAccessToSchematic(itemPerMamNode.Key, nullptr);
-			}
-		}
-		for (TPair<TSubclassOf<UFGSchematic>, FApNetworkItem>& itemPerShopNode : locationPerShopNode) {
-			if (itemPerShopNode.Value.location == location) {
-				UFGSchematic* schematic = Cast<UFGSchematic>(itemPerShopNode.Key->GetDefaultObject());
+			//if (IsValid(schematic))
+			//	schematicPatcher->Collect(schematic, 0, itemPerMamNode.Value);
 
-				if (IsValid(schematic))
-					schematicPatcher->Collect(schematic, 0, itemPerShopNode.Value);
-
-				SManager->GiveAccessToSchematic(itemPerShopNode.Key, nullptr);
-			}
+			SManager->GiveAccessToSchematic(itemPerMamNode.Key, nullptr);
 		}
 	}
+	for (TPair<TSubclassOf<UFGSchematic>, FApNetworkItem>& itemPerShopNode : locationPerShopNode) {
+		//if (itemPerShopNode.Value.location == location) {
+		if (checkedLocations.Contains(itemPerShopNode.Value.location)) {
+			//UFGSchematic* schematic = Cast<UFGSchematic>(itemPerShopNode.Key->GetDefaultObject());
+
+			//if (IsValid(schematic))
+			//	schematicPatcher->Collect(schematic, 0, itemPerShopNode.Value);
+
+			SManager->GiveAccessToSchematic(itemPerShopNode.Key, nullptr);
+		}
+	}
+
+	for (TPair<TSubclassOf<UFGSchematic>, FApNetworkItem>& itemPerHardDrive : locationPerHardDrive) {
+		//if (itemPerHardDrive.Value.location == location) {
+		if (checkedLocations.Contains(itemPerHardDrive.Value.location)) {
+			SManager->GiveAccessToSchematic(itemPerHardDrive.Key, nullptr);
+
+			//TODO add free reroll if this would collect both side of the harddrive
+		}
+	}
+	//}
 }
 
 AFGCharacterPlayer* AApServerRandomizerSubsystem::GetLocalPlayer() {

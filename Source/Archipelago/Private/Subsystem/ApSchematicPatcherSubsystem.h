@@ -126,12 +126,11 @@ public:
 	//quite slow now its not a set
 	bool IsCollected(int64 locationId) const { return collectedLocations.Contains(locationId); };
 
-	bool IsCollected(UFGUnlock* unlock); //TODO remove
-	void Collect(UFGSchematic* schematic, int unlockIndex, FApNetworkItem& networkItem);
-
+	//bool IsCollected(UFGUnlock* unlock); //TODO remove
+	//void Collect(UFGSchematic* schematic, int unlockIndex, FApNetworkItem& networkItem);
 	void Server_SetItemInfoPerSchematicId(int currentPlayerId, const TArray<FApNetworkItem>& itemInfo);
 	void Server_SetItemInfoPerMilestone(int currentPlayerId, const TMap<int, TMap<int, TArray<FApNetworkItem>>>& itemsPerMilestone);
-
+	void Server_Collect(TSet<int64> locations);
 private:
 	UPROPERTY(ReplicatedUsing = OnRep_ItemInfosReplicated)
 	TArray<FApReplicatedItemInfo> replicatedItemInfos;
@@ -140,14 +139,18 @@ private:
 	TArray<FApReplicatedMilestoneInfo> replicatedMilestones;
 
 	UPROPERTY(ReplicatedUsing = OnRep_CollectedLocationsReplicated)
-	TArray<int16> collectedLocations;
+	TArray<int16> replicatedCollectedLocations;
 
 	UContentLibSubsystem* contentLibSubsystem;
 	AApConnectionInfoSubsystem* connectionInfo;
 	AApSlotDataSubsystem* slotDataSubsystem;
 	AApMappingsSubsystem* mappingSubsystem;
 
-	TQueue<int64> collectedLocationsToProcess;
+	TSet<int64> collectedLocations;
+	TQueue<int64> clientCollectedLocationsToProcess;
+
+	TMap<int64, TSubclassOf<UFGSchematic>> client_schematicPerLocation;
+	TSet<int64> client_localItems;
 
 	UTexture2D* collectedIcon = LoadObject<UTexture2D>(nullptr, TEXT("/Archipelago/Assets/SourceArt/ArchipelagoAssetPack/AP-Black.AP-Black"));
 	UClass* workshopComponent = nullptr;
@@ -156,8 +159,6 @@ private:
 	bool receivedMilestones = false;
 	bool isInitialized = false;
 	bool hasPatchedSchematics = false;
-
-	void Collect(UFGUnlock* unlock, FApNetworkItem& networkItem);
 
 	TArray<FApReplicatedItemInfo> MakeReplicateable(int currentPlayerId, const TArray<FApNetworkItem>& itemInfo);
 
@@ -175,6 +176,9 @@ private:
 	void UpdateInfoOnlyUnlockWithSpecialInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, const FApReplicatedItemInfo& item, TSharedRef<FApSpecialItem> itemInfo);
 	void UpdateInfoOnlyUnlockWithGenericApInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, const FApReplicatedItemInfo& item);
 	
+	void Client_ProcessCollectedLocations();
+	void Client_Collect(UFGUnlock* unlock, bool isLocalItem);
+
 	UFUNCTION() //required for event hookup
 	void OnRep_ItemInfosReplicated();
 	UFUNCTION() //required for event hookup

@@ -1,4 +1,6 @@
 #include "Subsystem/ApSlotDataSubsystem.h"
+#include "Net/UnrealNetwork.h"
+#include "PushModel.h"
 
 DEFINE_LOG_CATEGORY(LogApSlotDataSubsystem);
 
@@ -28,7 +30,10 @@ AApSlotDataSubsystem* AApSlotDataSubsystem::Get(class UWorld* world) {
 void AApSlotDataSubsystem::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-	DOREPLIFETIME(AApSlotDataSubsystem, hubCostEntries);
+	FDoRepLifetimeParams replicationParams;
+	replicationParams.bIsPushBased = true;
+
+	DOREPLIFETIME_WITH_PARAMS_FAST(AApSlotDataSubsystem, hubCostEntries, replicationParams);
 	DOREPLIFETIME(AApSlotDataSubsystem, FinalSpaceElevatorTier);
 	DOREPLIFETIME(AApSlotDataSubsystem, FinalResourceSinkPoints);
 }
@@ -71,6 +76,9 @@ void AApSlotDataSubsystem::SetSlotDataJson(FString slotDataJson) {
 	}
 
 	hubCostEntries = parsedHubCostEntries;
+
+	MARK_PROPERTY_DIRTY_FROM_NAME(AApSlotDataSubsystem, hubCostEntries, this);
+
 	ReconstructHubLayout();
 
 	TSharedPtr<FJsonObject> options = parsedJson->GetObjectField("Options");

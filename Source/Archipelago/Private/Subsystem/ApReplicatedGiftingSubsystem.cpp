@@ -1,6 +1,7 @@
 #include "ApReplicatedGiftingSubsystem.h"
 #include "Data/ApGiftingMappings.h"
 #include "FGGameState.h"
+#include "PushModel.h"
 
 DEFINE_LOG_CATEGORY(LogApReplicatedGiftingSubsystem);
 
@@ -37,8 +38,12 @@ AApReplicatedGiftingSubsystem::AApReplicatedGiftingSubsystem() : Super() {
 void AApReplicatedGiftingSubsystem::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-	DOREPLIFETIME(AApReplicatedGiftingSubsystem, AcceptedGiftTraitsPerPlayerReplicated);
-	DOREPLIFETIME(AApReplicatedGiftingSubsystem, AllPlayers);
+	FDoRepLifetimeParams replicationParams;
+	replicationParams.bIsPushBased = true;
+
+	DOREPLIFETIME_WITH_PARAMS_FAST(AApReplicatedGiftingSubsystem, AcceptedGiftTraitsPerPlayerReplicated, replicationParams);
+	DOREPLIFETIME_WITH_PARAMS_FAST(AApReplicatedGiftingSubsystem, AllPlayers, replicationParams);
+
 	DOREPLIFETIME(AApReplicatedGiftingSubsystem, ServiceState);
 }
 
@@ -93,6 +98,7 @@ void AApReplicatedGiftingSubsystem::Tick(float dt) {
 	} else {
 		if (!hasLoadedPlayers) {
 			AllPlayers = ap->GetAllApPlayers();
+			MARK_PROPERTY_DIRTY_FROM_NAME(AApReplicatedGiftingSubsystem, AllPlayers, this);
 			hasLoadedPlayers = true;
 		}
 
@@ -201,6 +207,8 @@ void AApReplicatedGiftingSubsystem::UpdateAcceptedGiftTraitsPerPlayerReplicatedV
 	}
 
 	AcceptedGiftTraitsPerPlayerReplicated = toBeReplicated;
+
+	MARK_PROPERTY_DIRTY_FROM_NAME(AApReplicatedGiftingSubsystem, AcceptedGiftTraitsPerPlayerReplicated, this);
 }
 
 void AApReplicatedGiftingSubsystem::LoadTraitMappings() {
