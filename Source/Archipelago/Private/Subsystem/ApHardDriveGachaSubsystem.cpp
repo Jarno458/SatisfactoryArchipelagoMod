@@ -51,6 +51,8 @@ void AApHardDriveGachaSubsystem::BeginPlay() {
 	fgcheck(contentRegistry);
 	RManager = AFGResearchManager::Get(world);
 	fgcheck(RManager);
+	schematicPatcherSubsystem = AApSchematicPatcherSubsystem::Get(world);
+	fgcheck(schematicPatcherSubsystem);
 
 	AFGSchematicManager* SManager = AFGSchematicManager::Get(world);
 	fgcheck(SManager);
@@ -94,7 +96,7 @@ bool AApHardDriveGachaSubsystem::GetAvailableAlternateSchematics(
 	//i could not get AFGResearchManager::GetPendingRewards to work
 	TArray<UFGHardDrive*> unclaimedHarddrives;
 	RManager->GetUnclaimedHardDrives(unclaimedHarddrives);
-	for (UFGHardDrive* pendingHarddrive : unclaimedHarddrives) {
+	for (const UFGHardDrive* pendingHarddrive : unclaimedHarddrives) {
 		if (!IsValid(pendingHarddrive))
 			continue;
 
@@ -127,8 +129,13 @@ TSubclassOf<class UFGSchematic> AApHardDriveGachaSubsystem::GetRandomSchematic(T
 	//Schematic should be randomly selected from the first x schematics in apHardDriveSchematics that arent excluded
 
 	TArray<TSubclassOf<class UFGSchematic>> schematicsToOffer;
-	for (TSubclassOf<class UFGSchematic> schematic : apHardDriveSchematics) {
+	for (const TSubclassOf<class UFGSchematic> schematic : apHardDriveSchematics) {
 		if (excludedSchematics.Contains(schematic))
+			continue;
+
+		// Schematic should ideally not already be collected
+		int locationId = FMath::RoundToInt(UFGSchematic::GetMenuPriority(schematic));
+		if (schematicPatcherSubsystem->IsCollected(locationId))
 			continue;
 
 		schematicsToOffer.Add(schematic);

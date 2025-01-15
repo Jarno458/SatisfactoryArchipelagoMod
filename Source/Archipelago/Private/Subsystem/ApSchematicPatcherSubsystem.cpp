@@ -89,8 +89,14 @@ void AApSchematicPatcherSubsystem::Initialize() {
 void AApSchematicPatcherSubsystem::Tick(float DeltaTime) {
 	Super::Tick(DeltaTime);
 
+	if (hasPatchedSchematics) {
+		if (IsRunningDedicatedServer())
+			SetActorTickEnabled(false);
+		else
+			Client_ProcessCollectedLocations();
+	}
+
 	if (!isInitialized
-		|| hasPatchedSchematics
 		|| connectionInfo->GetConnectionState() != EApConnectionState::Connected 
 		|| !receivedItemInfos
 		|| !receivedMilestones
@@ -102,11 +108,6 @@ void AApSchematicPatcherSubsystem::Tick(float DeltaTime) {
 
 		hasPatchedSchematics = true;
 	}
-
-	if (IsRunningDedicatedServer())
-		SetActorTickEnabled(false);
-	else
-		Client_ProcessCollectedLocations();
 }
 
 void AApSchematicPatcherSubsystem::Server_SetItemInfoPerSchematicId(int currentPlayerId, const TArray<FApNetworkItem>& itemInfo) {
@@ -224,13 +225,13 @@ void AApSchematicPatcherSubsystem::InitializeSchematicsBasedOnScoutedData() {
 		//The magic, we store AP id's inside the menu priority, and we set techtier to -1 for item send by the server
 		int locationId = FMath::RoundToInt(UFGSchematic::GetMenuPriority(schematic));
 		if (locationId > ID_OFFSET) {
+			if (!IsRunningDedicatedServer())
+				client_schematicPerLocation.Add(locationId, schematic);
+
 			bool isItemSchematic = UFGSchematic::GetTechTier(schematic) == -1;
 			bool isShop = UFGSchematic::GetType(schematic) == ESchematicType::EST_ResourceSink;
 
 			if (!isItemSchematic && replicatedItemInfoBySchematicId.Contains(locationId)) {
-				if (!IsRunningDedicatedServer())
-					client_schematicPerLocation.Add(locationId, schematic);
-
 				InitializaSchematicForItem(schematic, replicatedItemInfoBySchematicId[locationId], isShop);
 			}
 		} else if (UFGSchematic::GetType(schematic) == ESchematicType::EST_Milestone) {
@@ -241,8 +242,15 @@ void AApSchematicPatcherSubsystem::InitializeSchematicsBasedOnScoutedData() {
 				continue;
 
 			if (replicatedItemsPerMilestone.Contains(tier) && replicatedItemsPerMilestone[tier].Contains(milestone)) {
+				if (!IsRunningDedicatedServer()) {
+					for (const FApReplicatedItemInfo& itemInfo : replicatedItemsPerMilestone[tier][milestone]) {
+						client_schematicPerLocation.Add(itemInfo.GetLocationId(), schematic);
+					}
+				}
+
 				InitializaHubSchematic(schematic, replicatedItemsPerMilestone[tier][milestone], slotDataSubsystem->GetCostsForMilestone(tier, milestone));
 			} else {
+				// I dont think this should ever happen, maybe we should yeet here
 				InitializaHubSchematic(schematic, TArray<FApReplicatedItemInfo>(), slotDataSubsystem->GetCostsForMilestone(tier, milestone));
 			}
 		}
@@ -528,19 +536,8 @@ void AApSchematicPatcherSubsystem::Client_ProcessCollectedLocations() {
 		if (unlocks.Num() == 0)
 			return;
 
-		FApReplicatedItemInfo itemInfo;
-		for (const FApReplicatedItemInfo& replicatedItemInfo : replicatedItemInfos) {
-			if (replicatedItemInfo.GetLocationId() == location)
-			{
-				itemInfo = replicatedItemInfo;
-				return;
-			}
-		}
-
 		if (UFGSchematic::GetType(schematic) == ESchematicType::EST_Milestone) {
-			//yes milestones need specail threatment
-			//TODO select correct unlock inside milestone
-
+			Client_Collect(unlocks[location % 10], client_localItems.Contains(location));
 		} 
 		else {
 			Client_Collect(unlocks[0], client_localItems.Contains(location));

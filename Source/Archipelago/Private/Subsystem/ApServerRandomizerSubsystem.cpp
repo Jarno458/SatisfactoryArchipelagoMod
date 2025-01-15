@@ -160,7 +160,7 @@ void AApServerRandomizerSubsystem::ParseScoutedItemsAndCreateRecipiesAndSchemati
 	TMap<FString, TSubclassOf<UFGSchematic>> schematicsPerMilestone = TMap<FString, TSubclassOf<UFGSchematic>>();
 	TMap<int64, TSubclassOf<UFGSchematic>> schematicsPerLocation = TMap<int64, TSubclassOf<UFGSchematic>>();
 
-	for (TSubclassOf<UFGSchematic>& schematic : hardcodedSchematics) {
+	for (const TSubclassOf<UFGSchematic>& schematic : hardcodedSchematics) {
 		//The magic, we store AP id's inside the menu priority, and we set techtier to -1 for item send by the server
 		int locationId = FMath::RoundToInt(UFGSchematic::GetMenuPriority(schematic));
 		if (locationId > 1338000) {
@@ -180,7 +180,6 @@ void AApServerRandomizerSubsystem::ParseScoutedItemsAndCreateRecipiesAndSchemati
 
 	for (const FApNetworkItem& location : scoutedLocations) {
 		if (location.locationName.StartsWith("Hub")) {
-
 			//location.locationName = "Hub 1-1, Item 1"
 			FString milestoneName = location.locationName.Left(location.locationName.Find(","));
 
@@ -188,7 +187,6 @@ void AApServerRandomizerSubsystem::ParseScoutedItemsAndCreateRecipiesAndSchemati
 			milestoneName.FindChar('-', delimeterPos);
 			int tier = FCString::Atoi(*milestoneName.Mid(delimeterPos - 1, 1));
 			int milestone = FCString::Atoi(*milestoneName.Mid(delimeterPos + 1, 1));
-
 
 			FString bpName = FString::Format(TEXT("/Archipelago/Schematics/AP_HubSchematics/AP_HUB_{0}_{1}.AP_HUB_{0}_{1}_C"), { tier, milestone });
 
@@ -243,8 +241,8 @@ void AApServerRandomizerSubsystem::FinalizeInitialization() {
 	TArray<TSubclassOf<class UFGResearchTree>> researchTrees;
 	RManager->GetAllResearchTrees(researchTrees);
 
-	for (TSubclassOf<UFGResearchTree>& tree : researchTrees) {
-		UFGResearchTree* treeCDO = Cast<UFGResearchTree>(tree->GetDefaultObject());
+	for (const TSubclassOf<UFGResearchTree>& tree : researchTrees) {
+		const UFGResearchTree* treeCDO = Cast<UFGResearchTree>(tree->GetDefaultObject());
 		if (treeCDO != nullptr) {
 			FString className = treeCDO->GetName();
 
@@ -322,7 +320,7 @@ void AApServerRandomizerSubsystem::HandleDeathLink() {
 	if (IsRunningDedicatedServer())
 		return; // TODO make deathlink work for dedicated servers
 
-	AFGPlayerController* playerController = UFGBlueprintFunctionLibrary::GetLocalPlayerController(GetWorld());
+	const AFGPlayerController* playerController = UFGBlueprintFunctionLibrary::GetLocalPlayerController(GetWorld());
 	if (playerController == nullptr)
 		return;
 
@@ -347,7 +345,7 @@ void AApServerRandomizerSubsystem::HandleInstagib(AFGCharacterPlayer* player) {
 	if (instagib) {
 		instagib = false;
 
-		TSubclassOf<UDamageType> const damageType = TSubclassOf<UDamageType>(UDamageType::StaticClass());
+		const TSubclassOf<UDamageType> damageType = TSubclassOf<UDamageType>(UDamageType::StaticClass());
 		FDamageEvent instagibDamageEvent = FDamageEvent(damageType);
 		player->TakeDamage(1333337, instagibDamageEvent, player->GetFGPlayerController(), player);
 	}
@@ -477,9 +475,9 @@ void AApServerRandomizerSubsystem::OnAvaiableSchematicsChanged() {
 	int maxAvailableTechTier = phaseManager->GetCurrentGamePhase()->mLastTierOfPhase;
 	int currentPlayerSlot = connectionInfo->GetCurrentPlayerSlot();
 
-	for (TPair<TSubclassOf<UFGSchematic>, TArray<FApNetworkItem>>& itemPerMilestone : locationsPerMilestone) {
+	for (const TPair<TSubclassOf<UFGSchematic>, TArray<FApNetworkItem>>& itemPerMilestone : locationsPerMilestone) {
 		if (UFGSchematic::GetTechTier(itemPerMilestone.Key) <= maxAvailableTechTier) {
-			for (FApNetworkItem item : itemPerMilestone.Value) {
+			for (const FApNetworkItem& item : itemPerMilestone.Value) {
 				if (item.player != currentPlayerSlot && (item.flags & 0b011) > 0)
 					locationHintsToPublish.Add(item.location);
 			}
@@ -487,7 +485,7 @@ void AApServerRandomizerSubsystem::OnAvaiableSchematicsChanged() {
 	}
 
 	if (SManager->IsSchematicPurchased(ItemSchematics[mappingSubsystem->GetMamItemId()])) {
-		for (TPair<TSubclassOf<UFGSchematic>, FApNetworkItem>& itemPerMamNode : locationPerMamNode) {
+		for (const TPair<TSubclassOf<UFGSchematic>, FApNetworkItem>& itemPerMamNode : locationPerMamNode) {
 			if (itemPerMamNode.Value.player != currentPlayerSlot
 				&& (itemPerMamNode.Value.flags & 0b011) > 0
 				&& RManager->CanResearchBeInitiated(itemPerMamNode.Key))
@@ -497,7 +495,7 @@ void AApServerRandomizerSubsystem::OnAvaiableSchematicsChanged() {
 	}
 
 	if (SManager->IsSchematicPurchased(ItemSchematics[mappingSubsystem->GetAwesomeShopItemId()])) {
-		for (TPair<TSubclassOf<UFGSchematic>, FApNetworkItem>& itemPerShopNode : locationPerShopNode) {
+		for (const TPair<TSubclassOf<UFGSchematic>, FApNetworkItem>& itemPerShopNode : locationPerShopNode) {
 			if (itemPerShopNode.Value.player != currentPlayerSlot && (itemPerShopNode.Value.flags & 0b011) > 0)
 				locationHintsToPublish.Add(itemPerShopNode.Value.location);
 		}
@@ -516,7 +514,7 @@ void AApServerRandomizerSubsystem::AwardItem(int64 itemid, bool isFromServer) {
 	else if (mappingSubsystem->ApItems.Contains(itemid)) {
 		if (mappingSubsystem->ApItems[itemid]->Type == EItemType::Item) {
 			if (isFromServer && !IsRunningDedicatedServer()) { //TODO fix rewarding starter inventory to newly spawned clients on dead servers
-				AFGCharacterPlayer* player = GetLocalPlayer();
+				const AFGCharacterPlayer* player = GetLocalPlayer();
 				fgcheck(player);
 				UFGInventoryComponent* inventory = player->GetInventory();
 				TSubclassOf<UFGItemDescriptor> itemClass = StaticCastSharedRef<FApItem>(mappingSubsystem->ApItems[itemid])->Class;
@@ -556,40 +554,37 @@ void AApServerRandomizerSubsystem::CollectLocation(int64 itemId) {
 }
 
 void AApServerRandomizerSubsystem::HandleCheckedLocations() {
-	int64 location;
-
-	TSet<int64> checkedLocations;
+	TSet<int64> newCheckedLocations;
 	int64 locationId;
-	while (CheckedLocations.Dequeue(location)) {
-		if (!schematicPatcher->IsCollected(location))
-			checkedLocations.Add(locationId);
+	while (CheckedLocations.Dequeue(locationId)) {
+		if (!schematicPatcher->IsCollected(locationId))
+			newCheckedLocations.Add(locationId);
 	}
 
-	//could use a while loop but we now handle only 1 per tick for perform reasons as this opperation is quite slow
-	//if (CheckedLocations.Dequeue(location)) {
-	schematicPatcher->ServerCollect(checkedLocations);
+	schematicPatcher->Server_Collect(newCheckedLocations);
 
-	for (TPair<TSubclassOf<UFGSchematic>, TArray<FApNetworkItem>>& itemsPerMilestone : locationsPerMilestone) {
+	for (const TPair<TSubclassOf<UFGSchematic>, TArray<FApNetworkItem>>& itemsPerMilestone : locationsPerMilestone) {
 		for (int index = 0; index < itemsPerMilestone.Value.Num(); index++) {
-			FApNetworkItem& networkItem = itemsPerMilestone.Value[index];
+			const FApNetworkItem& networkItem = itemsPerMilestone.Value[index];
 			//if (networkItem.location == location) {
-			if (checkedLocations.Contains(networkItem.location)) {
+			if (newCheckedLocations.Contains(networkItem.location)) {
 				//UFGSchematic* schematic = Cast<UFGSchematic>(itemsPerMilestone.Key->GetDefaultObject());
 
 				//if (IsValid(schematic))
 				//	schematicPatcher->Collect(schematic, index, networkItem);
 
 				if (!itemsPerMilestone.Value.ContainsByPredicate([this](FApNetworkItem& item) {
-							return !schematicPatcher->IsCollected(item.location);	})) {
+							return !schematicPatcher->IsCollected(item.location);	
+				})) {
 					SManager->GiveAccessToSchematic(itemsPerMilestone.Key, nullptr);
 				}
 			}
 		}
 	}
 
-	for (TPair<TSubclassOf<UFGSchematic>, FApNetworkItem>& itemPerMamNode : locationPerMamNode) {
+	for (const TPair<TSubclassOf<UFGSchematic>, FApNetworkItem>& itemPerMamNode : locationPerMamNode) {
 		//if (itemPerMamNode.Value.location == location) {
-		if (checkedLocations.Contains(itemPerMamNode.Value.location)) {
+		if (newCheckedLocations.Contains(itemPerMamNode.Value.location)) {
 
 			//UFGSchematic* schematic = Cast<UFGSchematic>(itemPerMamNode.Key->GetDefaultObject());
 
@@ -599,9 +594,9 @@ void AApServerRandomizerSubsystem::HandleCheckedLocations() {
 			SManager->GiveAccessToSchematic(itemPerMamNode.Key, nullptr);
 		}
 	}
-	for (TPair<TSubclassOf<UFGSchematic>, FApNetworkItem>& itemPerShopNode : locationPerShopNode) {
+	for (const TPair<TSubclassOf<UFGSchematic>, FApNetworkItem>& itemPerShopNode : locationPerShopNode) {
 		//if (itemPerShopNode.Value.location == location) {
-		if (checkedLocations.Contains(itemPerShopNode.Value.location)) {
+		if (newCheckedLocations.Contains(itemPerShopNode.Value.location)) {
 			//UFGSchematic* schematic = Cast<UFGSchematic>(itemPerShopNode.Key->GetDefaultObject());
 
 			//if (IsValid(schematic))
@@ -611,22 +606,30 @@ void AApServerRandomizerSubsystem::HandleCheckedLocations() {
 		}
 	}
 
-	for (TPair<TSubclassOf<UFGSchematic>, FApNetworkItem>& itemPerHardDrive : locationPerHardDrive) {
-		//if (itemPerHardDrive.Value.location == location) {
-		if (checkedLocations.Contains(itemPerHardDrive.Value.location)) {
-			SManager->GiveAccessToSchematic(itemPerHardDrive.Key, nullptr);
+	for (const TPair<TSubclassOf<UFGSchematic>, FApNetworkItem>& itemPerHardDrive : locationPerHardDrive) {
+		if (newCheckedLocations.Contains(itemPerHardDrive.Value.location)) {
+			for (FHardDriveData& unclaimedHarddrive : RManager->mUnclaimedHardDriveData) {
+				if (unclaimedHarddrive.PendingRewards.Contains(itemPerHardDrive.Key))
+				{
+					if (unclaimedHarddrive.PendingRewardsRerollsExecuted > 0
+						&& !unclaimedHarddrive.PendingRewards.ContainsByPredicate([this](TSubclassOf<UFGSchematic>& harddriveOption) {
+						return !schematicPatcher->IsCollected(FMath::RoundToInt(UFGSchematic::GetMenuPriority(harddriveOption)));
+					})) {
+						unclaimedHarddrive.PendingRewardsRerollsExecuted--;
+					}
+				}
+			}
 
-			//TODO add free reroll if this would collect both side of the harddrive
+			SManager->GiveAccessToSchematic(itemPerHardDrive.Key, nullptr);
 		}
 	}
-	//}
 }
 
 AFGCharacterPlayer* AApServerRandomizerSubsystem::GetLocalPlayer() {
 	if (IsRunningDedicatedServer())
 		return nullptr;
 
-	AFGPlayerController* playerController = UFGBlueprintFunctionLibrary::GetLocalPlayerController(GetWorld());
+	const AFGPlayerController* playerController = UFGBlueprintFunctionLibrary::GetLocalPlayerController(GetWorld());
 	return Cast<AFGCharacterPlayer>(playerController->GetControlledCharacter());
 }
 

@@ -42,6 +42,7 @@ private:
 
 	UModContentRegistry* contentRegistry;
 	AFGResearchManager* RManager;
+	AApSchematicPatcherSubsystem* schematicPatcherSubsystem;
 
 	bool GetAvailableAlternateSchematics(TCallScope<bool(*)(const AFGResearchManager* self, TArray<TSubclassOf<UFGSchematic>>, int32, TArray<TSubclassOf<UFGSchematic>>&)>& Scope, const AFGResearchManager* self, TArray<TSubclassOf<UFGSchematic>> excludedSchematics, int32 numSchematics, TArray<TSubclassOf<UFGSchematic>>& out_schematics);
 
