@@ -82,6 +82,8 @@ void AApSchematicPatcherSubsystem::Initialize() {
 	fgcheck(slotDataSubsystem);
 	mappingSubsystem = AApMappingsSubsystem::Get(world);
 	fgcheck(mappingSubsystem)
+	RManager = AFGResearchManager::Get(world);
+	fgcheck(RManager)
 
 	isInitialized = true;
 }
@@ -209,7 +211,7 @@ void AApSchematicPatcherSubsystem::InitializeSchematicsBasedOnScoutedData() {
 		replicatedItemInfoBySchematicId.Add(replicatedItemInfo.GetLocationId(), replicatedItemInfo);
 
 		if (!IsRunningDedicatedServer() && replicatedItemInfo.GetIsLocalPlayer())
-			client_localItems.Add(replicatedItemInfo.GetLocationId());
+			client_locationsWithLocalItems.Add(replicatedItemInfo.GetLocationId());
 	}
 
 	TMap<int, TMap<int, TArray<FApReplicatedItemInfo>>> replicatedItemsPerMilestone;
@@ -225,13 +227,13 @@ void AApSchematicPatcherSubsystem::InitializeSchematicsBasedOnScoutedData() {
 		//The magic, we store AP id's inside the menu priority, and we set techtier to -1 for item send by the server
 		int locationId = FMath::RoundToInt(UFGSchematic::GetMenuPriority(schematic));
 		if (locationId > ID_OFFSET) {
-			if (!IsRunningDedicatedServer())
-				client_schematicPerLocation.Add(locationId, schematic);
-
 			bool isItemSchematic = UFGSchematic::GetTechTier(schematic) == -1;
 			bool isShop = UFGSchematic::GetType(schematic) == ESchematicType::EST_ResourceSink;
 
 			if (!isItemSchematic && replicatedItemInfoBySchematicId.Contains(locationId)) {
+				if (!IsRunningDedicatedServer())
+					client_collectableSchematicPerLocation.Add(locationId, schematic);
+
 				InitializaSchematicForItem(schematic, replicatedItemInfoBySchematicId[locationId], isShop);
 			}
 		} else if (UFGSchematic::GetType(schematic) == ESchematicType::EST_Milestone) {
@@ -244,7 +246,7 @@ void AApSchematicPatcherSubsystem::InitializeSchematicsBasedOnScoutedData() {
 			if (replicatedItemsPerMilestone.Contains(tier) && replicatedItemsPerMilestone[tier].Contains(milestone)) {
 				if (!IsRunningDedicatedServer()) {
 					for (const FApReplicatedItemInfo& itemInfo : replicatedItemsPerMilestone[tier][milestone]) {
-						client_schematicPerLocation.Add(itemInfo.GetLocationId(), schematic);
+						client_collectableSchematicPerLocation.Add(itemInfo.GetLocationId(), schematic);
 					}
 				}
 
@@ -309,16 +311,6 @@ void AApSchematicPatcherSubsystem::InitializaSchematicForItem(TSubclassOf<UFGSch
 
 		factorySchematicCDO->mSchematicIcon.SetResourceObject(bigText);
 		factorySchematicCDO->mSmallSchematicIcon = bigText;
-
-		// collection should run async after shematic edit
-		/*if (!IsCollected(factorySchematicCDO->mUnlocks[0])) {
-			UFGUnlockInfoOnly* unlockInfo = Cast<UFGUnlockInfoOnly>(factorySchematicCDO->mUnlocks[0]);
-
-			if (unlockInfo != nullptr) {
-				unlockInfo->mUnlockIconBig = bigText;
-				unlockInfo->mUnlockIconSmall = bigText;
-			}
-		}*/
 	}
 }
 
@@ -510,43 +502,33 @@ void AApSchematicPatcherSubsystem::UpdateInfoOnlyUnlockWithGenericApInfo(FConten
 	}
 }
 
-/*
-bool AApSchematicPatcherSubsystem::IsCollected(UFGUnlock* unlock) {
-	UFGUnlockInfoOnly* unlockInfo = Cast<UFGUnlockInfoOnly>(unlock);
-	return IsValid(unlockInfo) && unlockInfo->mUnlockIconSmall == collectedIcon;
-}
-
-void AApSchematicPatcherSubsystem::Collect(UFGSchematic* schematic, int unlockIndex, FApNetworkItem& networkItem) {
-	//Collect(schematic->mUnlocks[unlockIndex], networkItem);
-}
-*/
-
 void AApSchematicPatcherSubsystem::Client_ProcessCollectedLocations() {
 	if (IsRunningDedicatedServer())
 		return;
 
 	int64 location;
 	if (clientCollectedLocationsToProcess.Dequeue(location)) {
-		if (!client_schematicPerLocation.Contains(location) || !IsValid(client_schematicPerLocation[location]))
+		if (!client_collectableSchematicPerLocation.Contains(location) || !IsValid(client_collectableSchematicPerLocation[location]))
 			return;
 
-		TSubclassOf<UFGSchematic> schematic = client_schematicPerLocation[location];
+		TSubclassOf<UFGSchematic> schematic = client_collectableSchematicPerLocation[location];
 		TArray<UFGUnlock*> unlocks = UFGSchematic::GetUnlocks(schematic);
 
 		if (unlocks.Num() == 0)
 			return;
 
 		if (UFGSchematic::GetType(schematic) == ESchematicType::EST_Milestone) {
-			Client_Collect(unlocks[location % 10], client_localItems.Contains(location));
+			Client_Collect(unlocks[location % 10], client_locationsWithLocalItems.Contains(location));
 		} 
 		else {
-			Client_Collect(unlocks[0], client_localItems.Contains(location));
+			Client_Collect(unlocks[0], client_locationsWithLocalItems.Contains(location));
 		}
 	}
 }
 
 void AApSchematicPatcherSubsystem::Client_Collect(UFGUnlock* unlock, bool isLocalItem) {
 	UFGUnlockInfoOnly* unlockInfo = Cast<UFGUnlockInfoOnly>(unlock);
+	UFGUnlockRecipe* recipeUnlock = Cast<UFGUnlockRecipe>(unlock);
 
 	if (IsValid(unlockInfo)) {
 		if (unlockInfo->mUnlockIconSmall == collectedIcon)

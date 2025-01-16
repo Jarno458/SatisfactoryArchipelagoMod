@@ -123,11 +123,8 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FORCEINLINE bool IsInitialized() const { return isInitialized; };
 
-	//quite slow now its not a set
 	bool IsCollected(int64 locationId) const { return collectedLocations.Contains(locationId); };
 
-	//bool IsCollected(UFGUnlock* unlock); //TODO remove
-	//void Collect(UFGSchematic* schematic, int unlockIndex, FApNetworkItem& networkItem);
 	void Server_SetItemInfoPerSchematicId(int currentPlayerId, const TArray<FApNetworkItem>& itemInfo);
 	void Server_SetItemInfoPerMilestone(int currentPlayerId, const TMap<int, TMap<int, TArray<FApNetworkItem>>>& itemsPerMilestone);
 	void Server_Collect(TSet<int64> locations);
@@ -145,12 +142,13 @@ private:
 	AApConnectionInfoSubsystem* connectionInfo;
 	AApSlotDataSubsystem* slotDataSubsystem;
 	AApMappingsSubsystem* mappingSubsystem;
+	AFGResearchManager* RManager;
 
 	TSet<int64> collectedLocations;
 	TQueue<int64> clientCollectedLocationsToProcess;
 
-	TMap<int64, TSubclassOf<UFGSchematic>> client_schematicPerLocation;
-	TSet<int64> client_localItems;
+	TMap<int64, TSubclassOf<UFGSchematic>> client_collectableSchematicPerLocation;
+	TSet<int64> client_locationsWithLocalItems;
 
 	UTexture2D* collectedIcon = LoadObject<UTexture2D>(nullptr, TEXT("/Archipelago/Assets/SourceArt/ArchipelagoAssetPack/AP-Black.AP-Black"));
 	UClass* workshopComponent = nullptr;

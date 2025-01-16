@@ -566,13 +566,8 @@ void AApServerRandomizerSubsystem::HandleCheckedLocations() {
 	for (const TPair<TSubclassOf<UFGSchematic>, TArray<FApNetworkItem>>& itemsPerMilestone : locationsPerMilestone) {
 		for (int index = 0; index < itemsPerMilestone.Value.Num(); index++) {
 			const FApNetworkItem& networkItem = itemsPerMilestone.Value[index];
-			//if (networkItem.location == location) {
+
 			if (newCheckedLocations.Contains(networkItem.location)) {
-				//UFGSchematic* schematic = Cast<UFGSchematic>(itemsPerMilestone.Key->GetDefaultObject());
-
-				//if (IsValid(schematic))
-				//	schematicPatcher->Collect(schematic, index, networkItem);
-
 				if (!itemsPerMilestone.Value.ContainsByPredicate([this](FApNetworkItem& item) {
 							return !schematicPatcher->IsCollected(item.location);	
 				})) {
@@ -583,25 +578,12 @@ void AApServerRandomizerSubsystem::HandleCheckedLocations() {
 	}
 
 	for (const TPair<TSubclassOf<UFGSchematic>, FApNetworkItem>& itemPerMamNode : locationPerMamNode) {
-		//if (itemPerMamNode.Value.location == location) {
 		if (newCheckedLocations.Contains(itemPerMamNode.Value.location)) {
-
-			//UFGSchematic* schematic = Cast<UFGSchematic>(itemPerMamNode.Key->GetDefaultObject());
-
-			//if (IsValid(schematic))
-			//	schematicPatcher->Collect(schematic, 0, itemPerMamNode.Value);
-
 			SManager->GiveAccessToSchematic(itemPerMamNode.Key, nullptr);
 		}
 	}
 	for (const TPair<TSubclassOf<UFGSchematic>, FApNetworkItem>& itemPerShopNode : locationPerShopNode) {
-		//if (itemPerShopNode.Value.location == location) {
 		if (newCheckedLocations.Contains(itemPerShopNode.Value.location)) {
-			//UFGSchematic* schematic = Cast<UFGSchematic>(itemPerShopNode.Key->GetDefaultObject());
-
-			//if (IsValid(schematic))
-			//	schematicPatcher->Collect(schematic, 0, itemPerShopNode.Value);
-
 			SManager->GiveAccessToSchematic(itemPerShopNode.Key, nullptr);
 		}
 	}
