@@ -209,18 +209,24 @@ void AApServerRandomizerSubsystem::ParseScoutedItemsAndCreateRecipiesAndSchemati
 
 				itemInfosPerMilestone[tier][milestone].Add(location);
 			}
-		}
-		else if (location.location >= 1338500 && location.location <= 1338571 && schematicsPerLocation.Contains(location.location)) {
-			locationPerMamNode.Add(schematicsPerLocation[location.location], location);
+		} else if (schematicsPerLocation.Contains(location.location)) {
 			itemInfoPerSchematicId.Add(location);
-		}
-		else if (location.location >= 1338600 && location.location <= 1338699 && schematicsPerLocation.Contains(location.location)) {
-			locationPerHardDrive.Add(schematicsPerLocation[location.location], location);
-			itemInfoPerSchematicId.Add(location);
-		}
-		else if (location.location >= 1338700 && location.location <= 1338709 && schematicsPerLocation.Contains(location.location)) {
-			locationPerShopNode.Add(schematicsPerLocation[location.location], location);
-			itemInfoPerSchematicId.Add(location);
+
+			ESchematicType type = UFGSchematic::GetType(schematicsPerLocation[location.location]);
+
+			switch (type) {
+				case ESchematicType::EST_MAM:
+					locationPerMamNode.Add(schematicsPerLocation[location.location], location);
+					break;
+
+				case ESchematicType::EST_Alternate:
+					locationPerHardDrive.Add(schematicsPerLocation[location.location], location);
+					break;
+
+				case ESchematicType::EST_ResourceSink:
+					locationPerShopNode.Add(schematicsPerLocation[location.location], location);
+					break;
+			}
 		}
 	}
 
@@ -509,6 +515,9 @@ void AApServerRandomizerSubsystem::AwardItem(int64 itemid, bool isFromServer) {
 		SManager->GiveAccessToSchematic(ItemSchematics[itemid], nullptr);
 	}
 	else if (auto trapName = UApMappings::ItemIdToTrap.Find(itemid)) {
+		//if (itemid == 1338917 || itemid == 1338918)
+		//	return; //Temporary disabled as they cause a crash
+
 		trapSubsystem->SpawnTrap(*trapName, nullptr);
 	}
 	else if (mappingSubsystem->ApItems.Contains(itemid)) {
