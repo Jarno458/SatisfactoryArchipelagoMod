@@ -1,5 +1,5 @@
 //Game/FactoryGame/Schematics/Research/HardDrive_RS/Research_HardDrive_0.Research_HardDrive_0_C
 {
     "$schema": "https://raw.githubusercontent.com/budak7273/ContentLib_Documentation/main/JsonSchemas/CL_Schematic.json",
-    "Time": 1
+    "Time": 3
   }

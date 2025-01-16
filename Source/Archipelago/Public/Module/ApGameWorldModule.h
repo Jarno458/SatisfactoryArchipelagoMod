@@ -21,7 +21,7 @@ class ARCHIPELAGO_API UApGameWorldModule : public UGameWorldModule
 	
 public:	
 	/**
-	* Used for recipes that are used by the ApServerRandomizerSubsystem but need to explicitly go through content registration
+	* Used for recipes that are used by the ApServerRandomizerSubsystem but with no need to explicitly go through content registration
 	* Such as MAM tree nodes that are registered indirectly
 	*/
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
