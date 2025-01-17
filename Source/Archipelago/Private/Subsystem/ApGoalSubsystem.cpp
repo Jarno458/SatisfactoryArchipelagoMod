@@ -47,15 +47,18 @@ void AApGoalSubsystem::Tick(float DeltaTime) {
 }
 
 bool AApGoalSubsystem::AreGoalsCompleted() {
-	// TODO do we want to && goals and make them return True when they're disabled?
-	// This would make it easy to have multiple goals selected at once
-	return CheckSpaceElevatorGoal() || CheckResourceSinkPointsGoal();
+	if (slotData->RequireAllGoals())
+		return CheckSpaceElevatorGoal() && CheckResourceSinkPointsGoal();
+	else
+		return CheckSpaceElevatorGoal() || CheckResourceSinkPointsGoal();
 }
 
 bool AApGoalSubsystem::CheckSpaceElevatorGoal() {
-	return slotData->FinalSpaceElevatorTier > 0 && phaseManager->GetCurrentGamePhase()->mGamePhase >= slotData->FinalSpaceElevatorTier;
+	return slotData->IsSpaceElevatorGoalEnabled()
+		&& phaseManager->GetCurrentGamePhase()->mGamePhase >= slotData->GetFinalSpaceElevatorTier();
 }
 
 bool AApGoalSubsystem::CheckResourceSinkPointsGoal() {
-	return slotData->FinalResourceSinkPoints > 0 && resourceSinkSubsystem->GetNumTotalPoints(EResourceSinkTrack::RST_Default) >= slotData->FinalResourceSinkPoints;
+	return slotData->IsResourceSinkGoalEnabled()
+		&&	resourceSinkSubsystem->GetNumTotalPoints(EResourceSinkTrack::RST_Default) >= slotData->GetFinalResourceSinkPoints();
 }

@@ -42,6 +42,43 @@ public:
 	FORCEINLINE int const GetAmount() const { return (data & 0x00000FFF) >> 0; }
 };
 
+USTRUCT()
+struct ARCHIPELAGO_API FApGoals
+{
+	GENERATED_BODY()
+
+public:
+	// Value constructor
+	FApGoals(bool anyGoal, bool resourceSinkGoal, bool spaceElevatorGoal, uint8 finalSpaceElevatorTier, uint64 finalResourceSinkPoints)
+		//current format <anyGoal:1>,<final_space_elevator_tier:2><undefined:27>,<resource_sink_goal:1>,<space_elevator_tier:1>
+		: data(((anyGoal ? 1 : 0) << 31) | ((finalSpaceElevatorTier) << 29) | ((resourceSinkGoal ? 1 : 0) << 1) | ((spaceElevatorGoal ? 1 : 0) << 0)),
+			finalResourceSinkPoints(finalResourceSinkPoints)
+	{
+	}
+	// Default constructor
+	FApGoals()
+		: data(0), finalResourceSinkPoints(0)
+	{}
+	// Copy constructor
+	FApGoals(const FApGoals& Other)
+		: data(Other.data), finalResourceSinkPoints(Other.finalResourceSinkPoints)
+	{}
+
+private:
+	UPROPERTY()
+	uint32 data;
+
+	UPROPERTY()
+	uint64 finalResourceSinkPoints;
+
+public:
+	FORCEINLINE int64 const RequireAllGoals() const { return (data & 0x80000000) == 0; }
+	FORCEINLINE uint8 const GetFinalSpaceElevatorTier() const { return (data & 0x60000000) >> 29; }
+	FORCEINLINE int const GetFinalResourceSinkPoints() const { return finalResourceSinkPoints; }
+	FORCEINLINE bool const IsSpaceElevatorGoalEnabled() const { return (data & 0x00000001) > 0; }
+	FORCEINLINE bool const IsResourceSinkGoalEnabled() const { return (data & 0x00000002) > 0; }
+};
+
 UCLASS()
 class ARCHIPELAGO_API AApSlotDataSubsystem : public AModSubsystem, public IFGSaveInterface
 {
@@ -98,10 +135,7 @@ public:
 	bool EnergyLink;
 	UPROPERTY(BlueprintReadOnly, SaveGame)
 	bool EnableHardDriveGacha;
-	UPROPERTY(BlueprintReadOnly, SaveGame, Replicated)
-	uint8 FinalSpaceElevatorTier;
-	UPROPERTY(BlueprintReadOnly, SaveGame, Replicated)
-	int64 FinalResourceSinkPoints;
+
 
 private:
 	UPROPERTY(SaveGame, ReplicatedUsing = ReconstructHubLayout)
@@ -109,6 +143,25 @@ private:
 	TArray<TArray<TMap<int64, int>>> hubLayout; //build based on hubCostEntries
 
 	bool hasLoadedSlotData;
+
+	UPROPERTY(SaveGame, Replicated)
+	FApGoals Goals;
+
+public:
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	FORCEINLINE int64 const RequireAllGoals() const { return Goals.RequireAllGoals(); }
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	FORCEINLINE uint8 const GetFinalSpaceElevatorTier() const { return Goals.GetFinalSpaceElevatorTier(); }
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	FORCEINLINE int const GetFinalResourceSinkPoints() const { return Goals.GetFinalResourceSinkPoints(); }
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	FORCEINLINE bool const IsSpaceElevatorGoalEnabled() const { return Goals.IsSpaceElevatorGoalEnabled(); }
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	FORCEINLINE bool const IsResourceSinkGoalEnabled() const { return Goals.IsResourceSinkGoalEnabled(); }
 
 private:
 	UFUNCTION() //required for event hookup

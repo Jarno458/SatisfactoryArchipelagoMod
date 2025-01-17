@@ -34,8 +34,7 @@ void AApSlotDataSubsystem::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&
 	replicationParams.bIsPushBased = true;
 
 	DOREPLIFETIME_WITH_PARAMS_FAST(AApSlotDataSubsystem, hubCostEntries, replicationParams);
-	DOREPLIFETIME(AApSlotDataSubsystem, FinalSpaceElevatorTier);
-	DOREPLIFETIME(AApSlotDataSubsystem, FinalResourceSinkPoints);
+	DOREPLIFETIME(AApSlotDataSubsystem, Goals);
 }
 
 void AApSlotDataSubsystem::BeginPlay() {
@@ -83,13 +82,23 @@ void AApSlotDataSubsystem::SetSlotDataJson(FString slotDataJson) {
 
 	TSharedPtr<FJsonObject> options = parsedJson->GetObjectField("Options");
 
+	int goalRequirement = options->GetIntegerField("GoalRequirement");
+	uint8 finalSpaceElevatorTier = options->GetIntegerField("FinalElevatorTier");
+	uint64 finalResourceSinkPoints; //using Try method as it allow for uint64
+	options->TryGetNumberField("FinalResourceSinkPoints", finalResourceSinkPoints);
+	TArray<FString> goalSelection; 
+	options->TryGetStringArrayField("GoalSelection", goalSelection);
+
+	bool requiresAnyGoal = goalRequirement == 0;
+	bool isSpaceElevatorGoalEnabled = goalSelection.Contains("Space Elevator Tier");
+	bool isResourceSinkGoalEnabled = goalSelection.Contains("Resource Sink Points");
+
 	NumberOfChecksPerMilestone = parsedJson->GetIntegerField("SlotsPerMilestone");
-	FinalSpaceElevatorTier = options->GetIntegerField("FinalElevatorTier");
-	FinalResourceSinkPoints = options->GetIntegerField("FinalResourceSinkPoints");
 	FreeSampleEquipment = options->GetIntegerField("FreeSampleEquipment");
 	FreeSampleBuildings = options->GetIntegerField("FreeSampleBuildings");
 	FreeSampleParts = options->GetIntegerField("FreeSampleParts");
 	FreeSampleRadioactive = options->GetBoolField("FreeSampleRadioactive");
+	Goals = FApGoals(requiresAnyGoal, isResourceSinkGoalEnabled, isSpaceElevatorGoalEnabled, finalSpaceElevatorTier, finalResourceSinkPoints);
 
 	if (!options->TryGetBoolField("EnergyLink", EnergyLink))
 		EnergyLink = false;
@@ -125,10 +134,6 @@ const TMap<int64, int> AApSlotDataSubsystem::GetCostsForMilestone(int tier, int 
 	int8 correctedTier = tier - 1;
 	int8 correctedMilestone = milestone - 1;
 
-	if (correctedMilestone < 0) {
-		auto x = 10;
-	}
-
 	fgcheck(correctedTier >= 0);
 	fgcheck(correctedMilestone >= 0);
 
@@ -153,29 +158,6 @@ int AApSlotDataSubsystem::GetNumberOfMilestonesForTier(int tier) {
 
 	return 0;
 }
-
-/*
-void AApSlotDataSubsystem::PreSaveGame_Implementation(int32 saveVersion, int32 gameVersion) {
-	UE_LOG(LogApSlotDataSubsystem, Display, TEXT("AApSlotDataSubsystem::PreSaveGame_Implementation(saveVersion: %i, gameVersion: %i)"), saveVersion, gameVersion);
-
-	for (int tier = 0; tier < slotData.hubLayout.Num(); tier++) {
-		for (int milestone = 0; milestone < slotData.hubLayout[tier].Num(); milestone++) {
-			for (const TPair<int64, int>& milestoneCostEntry : slotData.hubLayout[tier][milestone]) {
-				FApReplicatedHubLayoutEntry hubCostEntry;
-				hubCostEntry.Pack(tier, milestone, milestoneCostEntry.Key, milestoneCostEntry.Value);
-
-				saveSlotDataHubLayout.Add(hubCostEntry);
-			}
-		}
-	}
-}
-
-void AApSlotDataSubsystem::PostSaveGame_Implementation(int32 saveVersion, int32 gameVersion) {
-	UE_LOG(LogApSlotDataSubsystem, Display, TEXT("AApSlotDataSubsystem::PostSaveGame_Implementation(saveVersion: %i, gameVersion: %i)"), saveVersion, gameVersion);
-
-	//saveSlotDataHubLayout.Empty();
-}
-*/
 
 //TODO fix is now fired when loading a fresh save
 void AApSlotDataSubsystem::PostLoadGame_Implementation(int32 saveVersion, int32 gameVersion) {
