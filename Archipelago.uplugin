@@ -1,8 +1,8 @@
 {
 	"FileVersion": 3,
 	"Version": 0,
-	"VersionName": "0.1.6",
-	"SemVersion": "0.1.6",
+	"VersionName": "0.2.0-pre1",
+	"SemVersion": "0.2.0-pre1",
 	"FriendlyName": "Archipelago",
 	"Description": "Provides connection to an Archipelago multiworld",
 	"Category": "Modding",
@@ -39,7 +39,7 @@
 		{
 			"Name": "FreeSamples",
 			"Enabled": true,
-			"SemVersion": "^1.3.1"
+			"SemVersion": "^1.4.0"
 		},
 		{
 			"Name": "MAMTips",
@@ -51,5 +51,6 @@
 			"Enabled": true,
 			"SemVersion": ">=1.1.0"
 		}
-	]
+	],
+	"GameVersion": ">=383729"
 }
