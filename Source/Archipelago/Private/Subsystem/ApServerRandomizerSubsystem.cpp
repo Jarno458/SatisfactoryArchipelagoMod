@@ -62,6 +62,11 @@ void AApServerRandomizerSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase,
 		hardDriveGachaSubsystem = AApHardDriveGachaSubsystem::Get(world);
 		fgcheck(hardDriveGachaSubsystem)
 
+		FApConfigurationStruct config = ap->GetConfig();
+		fgcheck(config.IsLoaded()) //should be available from start of INITIALIZATION phase
+		if (!config.Enabled)
+			return;
+
 		ap->SetItemReceivedCallback([this](int64 itemid, bool isFromServer) { ReceiveItem(itemid, isFromServer); });
 		ap->SetLocationCheckedCallback([this](int64 itemid) { CollectLocation(itemid); });
 		ap->SetDeathLinkReceivedCallback([this](FText message) { OnDeathLinkReceived(message); });
