@@ -15,9 +15,10 @@ void UApGameInstanceModule::YeetToMainMenu(APlayerController* player, FText reas
 	UFGBlueprintFunctionLibrary::TravelToMainMenu(player);
 
 	FPopupClosed closed;
-	FText title = LOCTEXT("APInitFailed", "Archipelago Initailization Failed");
+	FText title = LOCTEXT("APInitFailed", "Archipelago Initialization Failed");
 	UFGBlueprintFunctionLibrary::AddPopupWithCloseDelegate(player, title, reason, closed);
 
-	//the above code does not work, so we yeet the entire game instead
-	UE_LOG(LogApGameInstanceModule, Fatal, TEXT("Archipelago Initailization Failed: %s"), *reason.ToString());
+	// the above code does not work, so we yeet the entire game instead
+	// LogGame: SendToMainMenu: Null player controller supplied
+	UE_LOG(LogApGameInstanceModule, Fatal, TEXT("Archipelago Initialization Failed: %s"), *reason.ToString());
 }

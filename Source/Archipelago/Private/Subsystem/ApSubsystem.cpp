@@ -663,7 +663,7 @@ void AApSubsystem::PostLoadGame_Implementation(int32 saveVersion, int32 gameVers
 
 void AApSubsystem::AbortGame(FText reason) {
 	if (IsRunningDedicatedServer()) {
-		UE_LOG(LogApSubsystem, Error, TEXT("AApSubsystem::AbortGame(%s)"), *reason.ToString());
+		UE_LOG(LogApSubsystem, Fatal, TEXT("AApSubsystem::AbortGame(%s)"), *reason.ToString());
 	} else {
 		UWorld* world = GEngine->GameViewport->GetWorld();
 		UApGameInstanceModule* gameInstance = UApUtils::GetGameInstanceModule(world);
