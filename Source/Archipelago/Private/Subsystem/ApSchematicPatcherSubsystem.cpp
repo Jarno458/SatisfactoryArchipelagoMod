@@ -470,15 +470,15 @@ void AApSchematicPatcherSubsystem::UpdateInfoOnlyUnlockWithSpecialInfo(FContentL
 	case ESpecialItemType::Inventory6: {
 		Args.Add(TEXT("Amount"), itemInfo->SpecialType == ESpecialItemType::Inventory3 ? FText::FromString("3") : FText::FromString("6"));
 
-		infoCard->BigIcon = infoCard->SmallIcon = TEXT("/Game/FactoryGame/Interface/UI/Assets/Shared/ThumbsUp_64.ThumbsUp_64");
+		infoCard->BigIcon = infoCard->SmallIcon = TEXT("/Game/FactoryGame/Buildable/Factory/Mam/UI/TXUI_InventoryUpgrade_256.TXUI_InventoryUpgrade_256");
 		infoCard->CategoryIcon = TEXT("/Game/FactoryGame/Buildable/Factory/TradingPost/UI/RecipeIcons/Recipe_Icon_Upgrade.Recipe_Icon_Upgrade");
-		infoCard->mUnlockDescription = FText::Format(LOCTEXT("NetworkItemUnlockPersonalInventoryDescription", "This will inflate {ApPlayerName} pocket-dimension by {Amount}."), Args);
+		infoCard->mUnlockDescription = FText::Format(LOCTEXT("NetworkItemUnlockPersonalInventoryDescription", "This will inflate {ApPlayerName} Pocket Dimension by {Amount} slots."), Args);
 	}
 												break;
 	case ESpecialItemType::Toolbelt1:
-		infoCard->BigIcon = infoCard->SmallIcon = TEXT("/Game/FactoryGame/Interface/UI/Assets/Shared/ThumbsUp_64.ThumbsUp_64");
+		infoCard->BigIcon = infoCard->SmallIcon = TEXT("/Game/FactoryGame/Buildable/Factory/Mam/UI/TXUI_HandUpgrade_256.TXUI_HandUpgrade_256");
 		infoCard->CategoryIcon = TEXT("/Game/FactoryGame/Buildable/Factory/TradingPost/UI/RecipeIcons/Recipe_Icon_Upgrade.Recipe_Icon_Upgrade");
-		infoCard->mUnlockDescription = FText::Format(LOCTEXT("NetworkItemUnlockPersonalHandSlotDescription", "This will expand {ApPlayerName} tool-chain by 1."), Args);
+		infoCard->mUnlockDescription = FText::Format(LOCTEXT("NetworkItemUnlockPersonalHandSlotDescription", "This will expand {ApPlayerName} Toolbelt by 1 slot."), Args);
 		break;
 	}
 }
