@@ -133,9 +133,6 @@ public:
 	bool FreeSampleRadioactive;
 	UPROPERTY(BlueprintReadOnly, SaveGame)
 	bool EnergyLink;
-	UPROPERTY(BlueprintReadOnly, SaveGame)
-	bool EnableHardDriveGacha;
-
 
 private:
 	UPROPERTY(SaveGame, ReplicatedUsing = ReconstructHubLayout)

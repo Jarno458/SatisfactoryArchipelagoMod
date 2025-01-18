@@ -3,7 +3,6 @@
 #include "Registry/ModContentRegistry.h"
 #include "Subsystem/ApSchematicPatcherSubsystem.h"
 #include "Subsystem/ApMappingsSubsystem.h"
-#include "Subsystem/ApSlotDataSubsystem.h"
 
 DEFINE_LOG_CATEGORY(LogApHardDriveGachaSubsystem);
 
@@ -37,15 +36,6 @@ void AApHardDriveGachaSubsystem::BeginPlay() {
 	Super::BeginPlay();
 
 	UWorld* world = GetWorld();
-
-	AApSlotDataSubsystem* slotDataSubsystem = AApSlotDataSubsystem::Get(world);
-	fgcheck(slotDataSubsystem);
-
-	//risky to assume slot data is always ready when BeginPlay is called but i think it will work..
-	if (!slotDataSubsystem->HasLoadedSlotData() || !slotDataSubsystem->EnableHardDriveGacha) {
-		UE_LOG(LogApHardDriveGachaSubsystem, Display, TEXT("AApHardDriveGachaSubsystem::BeginPlay() Hard Drive Gacha disabled"));
-		return;
-	}
 
 	contentRegistry = UModContentRegistry::Get(world);
 	fgcheck(contentRegistry);
