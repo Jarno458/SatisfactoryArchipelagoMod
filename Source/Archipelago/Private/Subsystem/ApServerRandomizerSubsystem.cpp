@@ -79,8 +79,6 @@ void AApServerRandomizerSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase,
 	else if (phase == ELifecyclePhase::POST_INITIALIZATION) {
 		SetActorTickEnabled(true);
 
-		EnableCentralStorage();
-
 		if (connectionInfo->GetConnectionState() == EApConnectionState::Connected) {
 			TArray<TSubclassOf<UFGSchematic>> unlockedSchematics;
 
@@ -622,16 +620,6 @@ void AApServerRandomizerSubsystem::HandleCheckedLocations() {
 			SManager->GiveAccessToSchematic(itemPerHardDrive.Key, nullptr);
 		}
 	}
-}
-
-void AApServerRandomizerSubsystem::EnableCentralStorage() {
-	/*AFGCentralStorageSubsystem* centralStorage = AFGCentralStorageSubsystem::Get(GetWorld());
-	fgcheck(centralStorage)
-
-	FItemAmount dummyStack(dummyItem, 0);
-
-	centralStorage->mStoredItems.Add(dummyStack);
-	*/
 }
 
 AFGCharacterPlayer* AApServerRandomizerSubsystem::GetLocalPlayer() {

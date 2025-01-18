@@ -115,7 +115,6 @@ private:
 	void ParseScoutedItemsAndCreateRecipiesAndSchematics();
 	bool InitializeTick();
 	void FinalizeInitialization();
-	void EnableCentralStorage();
 
 	bool UpdateFreeSamplesConfiguration();
 
