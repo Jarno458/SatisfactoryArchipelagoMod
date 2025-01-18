@@ -1,6 +1,7 @@
 #include "Subsystem/ApServerRandomizerSubsystem.h"
 #include "Engine\DamageEvents.h"
 #include "FGGamePhase.h"
+#include "FGCentralStorageSubsystem.h"
 
 #include "data/ApMappings.h"
 
@@ -78,6 +79,8 @@ void AApServerRandomizerSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase,
 	else if (phase == ELifecyclePhase::POST_INITIALIZATION) {
 		SetActorTickEnabled(true);
 
+		EnableCentralStorage();
+
 		if (connectionInfo->GetConnectionState() == EApConnectionState::Connected) {
 			TArray<TSubclassOf<UFGSchematic>> unlockedSchematics;
 
@@ -141,11 +144,9 @@ void AApServerRandomizerSubsystem::ScoutArchipelagoItems() {
 		locations.Add(l);
 
 	//hardrive locations
-	if (slotData->EnableHardDriveGacha) {
-		for (int l = 1338600; l <= 1338699; l++)
-			locations.Add(l);
-	}
-
+	for (int l = 1338600; l <= 1338699; l++)
+		locations.Add(l);
+	
 	//shop locations
 	for (int l = 1338700; l <= 1338709; l++)
 		locations.Add(l);
@@ -558,6 +559,8 @@ void AApServerRandomizerSubsystem::AwardItem(int64 itemid, bool isFromServer) {
 			case ESpecialItemType::Toolbelt1:
 				unlockSubsystem->UnlockArmEquipmentSlots(1);
 				break;
+			case ESpecialItemType::InventoryUpload:
+				unlockSubsystem->UnlockCentralStorageUploadSlots(5);
 			}
 		}
 	}
@@ -619,6 +622,16 @@ void AApServerRandomizerSubsystem::HandleCheckedLocations() {
 			SManager->GiveAccessToSchematic(itemPerHardDrive.Key, nullptr);
 		}
 	}
+}
+
+void AApServerRandomizerSubsystem::EnableCentralStorage() {
+	/*AFGCentralStorageSubsystem* centralStorage = AFGCentralStorageSubsystem::Get(GetWorld());
+	fgcheck(centralStorage)
+
+	FItemAmount dummyStack(dummyItem, 0);
+
+	centralStorage->mStoredItems.Add(dummyStack);
+	*/
 }
 
 AFGCharacterPlayer* AApServerRandomizerSubsystem::GetLocalPlayer() {

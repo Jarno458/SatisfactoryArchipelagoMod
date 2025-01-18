@@ -103,9 +103,6 @@ void AApSlotDataSubsystem::SetSlotDataJson(FString slotDataJson) {
 	if (!options->TryGetBoolField("EnergyLink", EnergyLink))
 		EnergyLink = false;
 
-	if (!options->TryGetBoolField("EnableHardDriveGacha", EnableHardDriveGacha))
-		EnableHardDriveGacha = false;
-
 	hasLoadedSlotData = true;
 }
 

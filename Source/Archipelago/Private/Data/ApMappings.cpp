@@ -184,7 +184,8 @@ const TMap<int64, const FString> UApMappings::ItemIdToGameItemDescriptor = {
 const TMap<int64, const EApMappingsSpecialItemType> UApMappings::ItemIdToSpecialItemType = {
 	{1338188, EApMappingsSpecialItemType::Inventory3},
 	{1338189, EApMappingsSpecialItemType::Inventory6},
-	{1338190, EApMappingsSpecialItemType::Toolbelt1}
+	{1338190, EApMappingsSpecialItemType::Toolbelt1},
+	{1338191, EApMappingsSpecialItemType::InventoryUpload}
 };
 
 const TMap<int64, const TArray<FString>> UApMappings::ItemIdToGameRecipe = {

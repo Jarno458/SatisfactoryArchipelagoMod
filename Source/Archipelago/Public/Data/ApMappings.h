@@ -10,6 +10,7 @@ enum class EApMappingsSpecialItemType : uint8
 	Inventory3,
 	Inventory6,
 	Toolbelt1,
+	InventoryUpload
 };
 
 UCLASS()

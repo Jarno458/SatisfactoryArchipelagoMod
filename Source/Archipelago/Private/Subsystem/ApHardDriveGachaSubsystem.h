@@ -33,7 +33,6 @@ public:
 	void Initialize(const TArray<TSubclassOf<UFGSchematic>>& apHardDriveSchematics);
 
 private:
-	bool isEnabled = false;
 	bool hooksInitialized = false;
 
 	FDelegateHandle hookHandler;

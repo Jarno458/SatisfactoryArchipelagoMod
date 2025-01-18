@@ -115,6 +115,7 @@ private:
 	void ParseScoutedItemsAndCreateRecipiesAndSchematics();
 	bool InitializeTick();
 	void FinalizeInitialization();
+	void EnableCentralStorage();
 
 	bool UpdateFreeSamplesConfiguration();
 
@@ -132,6 +133,8 @@ private:
 	void OnDeathLinkReceived(FText message);
 	void HandleDeathLink();
 	void HandleInstagib(AFGCharacterPlayer* player);
+
+
 
 	UFUNCTION() //required for event binding
 	void OnMamResearchCompleted(TSubclassOf<class UFGSchematic> schematic);

@@ -112,6 +112,9 @@ void AApMappingsSubsystem::LoadSpecialItemMappings(TMap<int64, TSharedRef<FApIte
 			case EApMappingsSpecialItemType::Toolbelt1:
 				specialItem.SpecialType = ESpecialItemType::Toolbelt1;
 				break;
+			case EApMappingsSpecialItemType::InventoryUpload:
+				specialItem.SpecialType = ESpecialItemType::InventoryUpload;
+				break;
 		}
 
 		itemMap.Add(specialItemMapping.Key, MakeShared<FApSpecialItem>(specialItem));
