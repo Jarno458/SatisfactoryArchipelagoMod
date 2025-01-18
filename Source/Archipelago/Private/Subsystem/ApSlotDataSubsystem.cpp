@@ -91,14 +91,14 @@ void AApSlotDataSubsystem::SetSlotDataJson(FString slotDataJson) {
 
 	bool requiresAnyGoal = goalRequirement == 0;
 	bool isSpaceElevatorGoalEnabled = goalSelection.Contains("Space Elevator Tier");
-	bool isResourceSinkGoalEnabled = goalSelection.Contains("Resource Sink Points");
+	bool isResourceSinkGoalEnabled = goalSelection.Contains("AWESOME Sink Points");
 
+	Goals = FApGoals(requiresAnyGoal, isResourceSinkGoalEnabled, isSpaceElevatorGoalEnabled, finalSpaceElevatorTier, finalResourceSinkPoints);
 	NumberOfChecksPerMilestone = parsedJson->GetIntegerField("SlotsPerMilestone");
 	FreeSampleEquipment = options->GetIntegerField("FreeSampleEquipment");
 	FreeSampleBuildings = options->GetIntegerField("FreeSampleBuildings");
 	FreeSampleParts = options->GetIntegerField("FreeSampleParts");
 	FreeSampleRadioactive = options->GetBoolField("FreeSampleRadioactive");
-	Goals = FApGoals(requiresAnyGoal, isResourceSinkGoalEnabled, isSpaceElevatorGoalEnabled, finalSpaceElevatorTier, finalResourceSinkPoints);
 
 	if (!options->TryGetBoolField("EnergyLink", EnergyLink))
 		EnergyLink = false;

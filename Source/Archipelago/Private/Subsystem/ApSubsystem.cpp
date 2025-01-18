@@ -225,7 +225,7 @@ void AApSubsystem::LoadRoomInfo() {
 	if (connectionInfoSubsystem->roomSeed.IsEmpty())
 		connectionInfoSubsystem->roomSeed = seedName;
 	else if (connectionInfoSubsystem->roomSeed != seedName)
-		AbortGame(LOCTEXT("RoomSeedMissmatch", "Room seed does not match seed of save, this save does not belong to the multiworld your connecting to"));
+		AbortGame(LOCTEXT("RoomSeedMissmatch", "Room seed does not match save's seed - this save does not belong to the multiworld you're connecting to. Ensure you're loading the right save file and check your connection details."));
 
 	connectionInfoSubsystem->currentPlayerTeam = AP_GetCurrentPlayerTeam();
 	connectionInfoSubsystem->currentPlayerSlot = AP_GetPlayerID();

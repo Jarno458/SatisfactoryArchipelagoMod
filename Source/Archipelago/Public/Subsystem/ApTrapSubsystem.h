@@ -6,6 +6,27 @@
 
 #include "ApTrapSubsystem.generated.h"
 
+USTRUCT(BlueprintType, Blueprintable)
+struct FApTrapData {
+	GENERATED_BODY()
+
+	// Some things handled by the trap subsystem are not actually "traps" in the AP sense, they should have this as false
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	bool IsDangerous = true;
+
+	// Triggering the trap will spawn this actor.
+	// If null, the trap subsystem requires a custom implementation to spawn it.
+	// If subclass of AFGItemPickup, treated as an "Item Trap"
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	TSubclassOf<AActor> ActorToSpawn;
+
+	// The end-user-facing name of the trap, as it appears in the Archipelago options page and hint text
+	// Intentionally not FText because it should not be translated (must match hard-coded AP server data)
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	FString UserFacingName;
+};
+
+
 /**
  * Blueprint implemented subsystem for spawning Archipelago traps on players
  */
@@ -15,10 +36,10 @@ class ARCHIPELAGO_API AApTrapSubsystem : public AModSubsystem
 	GENERATED_BODY()
 
 public:
-	// Registry of available traps, there could be nullptr entries for custom traps that aren't Actors 
+	// Registry of available traps, map of internal trap Name to trap data
 	// Populated in the blueprint implementation of this subsystem
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly)
-		TMap<FName, TSubclassOf<AActor>> TrapTypes;
+		TMap<FName, FApTrapData> TrapTypes;
 
 public:
 	UFUNCTION(BlueprintCallable)
@@ -45,5 +66,3 @@ public:
 		static AApTrapSubsystem* Get();
 
 };
-
-
