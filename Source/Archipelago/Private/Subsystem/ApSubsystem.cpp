@@ -33,8 +33,8 @@ AApSubsystem* AApSubsystem::Get(class UWorld* world) {
 }
 
 void AApSubsystem::ConnectToArchipelago() {
-	std::string const uri = TCHAR_TO_UTF8(*config.Url);
-	std::string const user = TCHAR_TO_UTF8(*config.Login);
+	std::string const uri = TCHAR_TO_UTF8(*config.Url.TrimStartAndEnd());
+	std::string const user = TCHAR_TO_UTF8(*config.Login.TrimStartAndEnd());
 	std::string const password = TCHAR_TO_UTF8(*config.Password);
 
 	AP_NetworkVersion apVersion;
