@@ -250,16 +250,16 @@ void AApSchematicPatcherSubsystem::InitializeSchematicsBasedOnScoutedData() {
 					}
 				}
 
-				InitializaHubSchematic(schematic, replicatedItemsPerMilestone[tier][milestone], slotDataSubsystem->GetCostsForMilestone(tier, milestone));
+				InitializeHubSchematic(schematic, replicatedItemsPerMilestone[tier][milestone], slotDataSubsystem->GetCostsForMilestone(tier, milestone));
 			} else {
 				// I dont think this should ever happen, maybe we should yeet here
-				InitializaHubSchematic(schematic, TArray<FApReplicatedItemInfo>(), slotDataSubsystem->GetCostsForMilestone(tier, milestone));
+				InitializeHubSchematic(schematic, TArray<FApReplicatedItemInfo>(), slotDataSubsystem->GetCostsForMilestone(tier, milestone));
 			}
 		}
 	}
 }
 
-void AApSchematicPatcherSubsystem::InitializaHubSchematic(TSubclassOf<UFGSchematic> factorySchematic, const TArray<FApReplicatedItemInfo>& items, const TMap<int64, int>& costs) {
+void AApSchematicPatcherSubsystem::InitializeHubSchematic(TSubclassOf<UFGSchematic> factorySchematic, const TArray<FApReplicatedItemInfo>& items, const TMap<int64, int>& costs) {
 	FContentLib_Schematic schematic = FContentLib_Schematic();
 
 	TMap<FString, int> costsByClassName;
