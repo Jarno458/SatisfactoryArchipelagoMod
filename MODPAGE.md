@@ -47,7 +47,7 @@ If you get stuck, ask for help in the [Archipelago Discord](https://discord.gg/a
 1. Download the Archipelago Client installer from the [Archipelago GitHub Releases](https://github.com/ArchipelagoMW/Archipelago/releases/latest)
 2. Run the installer
 3. Open the Archipelago Launcher
-4. Download the apworld file from [here](https://github.com/Jarno458/SatisfactoryArchipelagoMod/releases/tag/v0.1.3)
+4. Download the latest released apworld file from [here](https://github.com/Jarno458/SatisfactoryArchipelagoMod/releases)
 5. Press the "Browse Files" button
 6. Place the downloaded apworld file into the `/lib/worlds` folder that the button took you to
 7. Close and reopen the Archipelago Launcher
