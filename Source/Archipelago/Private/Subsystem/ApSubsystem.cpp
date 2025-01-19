@@ -37,6 +37,13 @@ void AApSubsystem::ConnectToArchipelago() {
 	std::string const user = TCHAR_TO_UTF8(*config.Login);
 	std::string const password = TCHAR_TO_UTF8(*config.Password);
 
+	AP_NetworkVersion apVersion;
+	apVersion.major = 0;
+	apVersion.minor = 5;
+	apVersion.build = 1;
+
+	AP_SetClientVersion(&apVersion);
+
 	AP_Init(uri.c_str(), "Satisfactory", user.c_str(), password.c_str());
 
 	callbackTarget = this;
@@ -140,10 +147,16 @@ void AApSubsystem::EndPlay(const EEndPlayReason::Type endPlayReason) {
 
 void AApSubsystem::ItemClearCallback() {
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::ItemClearCallback()"));
+
+	if (!IsValid(callbackTarget))
+		return;
 }
 
 void AApSubsystem::ItemReceivedCallback(int64 item, bool notify, bool isFromServer) {
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::ItemReceivedCallback(%i, \"%s\")"), item, (notify ? TEXT("true") : TEXT("false")));
+
+	if (!IsValid(callbackTarget))
+		return;
 
 	TTuple<int64, bool> receivedItem = TTuple<int64, bool>(item, isFromServer);
 	callbackTarget->ReceivedItems.Enqueue(receivedItem);
@@ -152,11 +165,17 @@ void AApSubsystem::ItemReceivedCallback(int64 item, bool notify, bool isFromServ
 void AApSubsystem::LocationCheckedCallback(int64 id) {
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::LocationCheckedCallback(%i)"), id);
 
+	if (!IsValid(callbackTarget))
+		return;
+
 	callbackTarget->CheckedLocations.Enqueue(id);
 }
 
 void AApSubsystem::DeathLinkReceivedCallback(std::string source, std::string cause) {
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::DeathLinkReceivedCallback()"));
+
+	if (!IsValid(callbackTarget))
+		return;
 
 	FText sourceString = UApUtils::FText(source);
 	FText causeString = UApUtils::FText(cause);
@@ -172,6 +191,9 @@ void AApSubsystem::DeathLinkReceivedCallback(std::string source, std::string cau
 void AApSubsystem::SetReplyCallback(AP_SetReply setReply) {
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::SetReplyCallback(\"%s\")"), *UApUtils::FStr(setReply.key));
 
+	if (!IsValid(callbackTarget))
+		return;
+
 	FString key = UApUtils::FStr(setReply.key);
 
 	if (callbackTarget->dataStoreCallbacks.Contains(key))
@@ -180,6 +202,9 @@ void AApSubsystem::SetReplyCallback(AP_SetReply setReply) {
 
 void AApSubsystem::LocationScoutedCallback(std::vector<AP_NetworkItem> scoutedLocations) {
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::LocationScoutedCallback(vector[%i])"), scoutedLocations.size());
+
+	if (!IsValid(callbackTarget))
+		return;
 
 	TMap<int64, FApNetworkItem> scoutedLocationsResult = TMap<int64, FApNetworkItem>();
 
@@ -204,6 +229,9 @@ void AApSubsystem::ParseSlotData(std::string json) {
 	FString jsonString = UApUtils::FStr(json);
 
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::ParseSlotData(\"%s\")"), *jsonString);
+
+	if (!IsValid(callbackTarget))
+		return;
 
 	callbackTarget->connectionInfoSubsystem->slotDataJson = jsonString;
 }

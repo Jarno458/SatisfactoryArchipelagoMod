@@ -221,6 +221,13 @@ void AApSchematicPatcherSubsystem::InitializeSchematicsBasedOnScoutedData() {
 		}
 
 		replicatedItemsPerMilestone[replicatedMilestone.tier].Add(replicatedMilestone.milestone, replicatedMilestone.items);
+
+		if (!IsRunningDedicatedServer()) {
+			for (const FApReplicatedItemInfo& itemInfo : replicatedMilestone.items) {
+				if (itemInfo.GetIsLocalPlayer())
+					client_locationsWithLocalItems.Add(itemInfo.GetLocationId());
+			}
+		}
 	}
 
 	for (TSubclassOf<UFGSchematic>& schematic : hardcodedSchematics) {
@@ -467,18 +474,24 @@ void AApSchematicPatcherSubsystem::UpdateInfoOnlyUnlockWithSchematicInfo(FConten
 void AApSchematicPatcherSubsystem::UpdateInfoOnlyUnlockWithSpecialInfo(FContentLib_UnlockInfoOnly* infoCard, FFormatNamedArguments Args, const FApReplicatedItemInfo& item, TSharedRef<FApSpecialItem> itemInfo) {
 	switch (itemInfo->SpecialType) {
 	case ESpecialItemType::Inventory3:
-	case ESpecialItemType::Inventory6: {
+	case ESpecialItemType::Inventory6:
 		Args.Add(TEXT("Amount"), itemInfo->SpecialType == ESpecialItemType::Inventory3 ? FText::FromString("3") : FText::FromString("6"));
 
 		infoCard->BigIcon = infoCard->SmallIcon = TEXT("/Game/FactoryGame/Buildable/Factory/Mam/UI/TXUI_InventoryUpgrade_256.TXUI_InventoryUpgrade_256");
 		infoCard->CategoryIcon = TEXT("/Game/FactoryGame/Buildable/Factory/TradingPost/UI/RecipeIcons/Recipe_Icon_Upgrade.Recipe_Icon_Upgrade");
 		infoCard->mUnlockDescription = FText::Format(LOCTEXT("NetworkItemUnlockPersonalInventoryDescription", "This will inflate {ApPlayerName} Pocket Dimension by {Amount} slots."), Args);
-	}
-												break;
+		break;
+
 	case ESpecialItemType::Toolbelt1:
 		infoCard->BigIcon = infoCard->SmallIcon = TEXT("/Game/FactoryGame/Buildable/Factory/Mam/UI/TXUI_HandUpgrade_256.TXUI_HandUpgrade_256");
 		infoCard->CategoryIcon = TEXT("/Game/FactoryGame/Buildable/Factory/TradingPost/UI/RecipeIcons/Recipe_Icon_Upgrade.Recipe_Icon_Upgrade");
 		infoCard->mUnlockDescription = FText::Format(LOCTEXT("NetworkItemUnlockPersonalHandSlotDescription", "This will expand {ApPlayerName} Toolbelt by 1 slot."), Args);
+		break;
+
+	case ESpecialItemType::InventoryUpload:
+		infoCard->BigIcon = infoCard->SmallIcon = TEXT("/Game/FactoryGame/Buildable/Factory/Mam/UI/TXUI_UploadUpgrade_256.TXUI_UploadUpgrade_256");
+		infoCard->CategoryIcon = TEXT("/Game/FactoryGame/Buildable/Factory/TradingPost/UI/RecipeIcons/Recipe_Icon_Upgrade.Recipe_Icon_Upgrade");
+		infoCard->mUnlockDescription = FText::Format(LOCTEXT("NetworkItemUnlockInventoryUpload", "This will enable {ApPlayerName} uploading to the Dimensional Depot from the inventory."), Args);
 		break;
 	}
 }
@@ -528,12 +541,8 @@ void AApSchematicPatcherSubsystem::Client_ProcessCollectedLocations() {
 
 void AApSchematicPatcherSubsystem::Client_Collect(UFGUnlock* unlock, bool isLocalItem) {
 	UFGUnlockInfoOnly* unlockInfo = Cast<UFGUnlockInfoOnly>(unlock);
-	UFGUnlockRecipe* recipeUnlock = Cast<UFGUnlockRecipe>(unlock);
 
 	if (IsValid(unlockInfo)) {
-		if (unlockInfo->mUnlockIconSmall == collectedIcon)
-			return;
-
 		unlockInfo->mUnlockIconSmall = collectedIcon;
 
 		if (!isLocalItem) {
