@@ -102,7 +102,7 @@ This server will automatically shut down your room after 2h of inactivity, and t
 
 Upon loading into your save file you will see a chat message indicating connection failure if the room is asleep, its port changed, (or if the connection failed for some other reason).
 
-In order to continue your save, you will first need to restart the room by re-opening or re-loading the `Room Page` url you held onto earlier, for example `https://archipelago.gg/room/NWP0FXp4R79EBIAb7b9Iwx`, this will spin your room back up on the server.
+In order to continue your save, you will first need to restart the room by re-opening or re-loading the `Room Page` url you held onto earlier, for example `https://archipelago.gg/room/dQw4w9WgXcQ`, this will spin your room back up on the server.
 
 Back in the game, load your save file again and the connection should succeed.
 If it doesn't, your room's port may have been reassigned.
@@ -122,6 +122,11 @@ Once connection details are entered, connection to the server will be attempted 
 If the connection succeeds, the sever will transmit information to the game client that is used to generate schematics, items, recipes, etc. at runtime.
 Unlocking schematics in the game and sending chat messages in the in-game text chat will send messages to the server to handle cross-game chat and progression tracking.
 Messages can be sent from the server to the game client to display messages in the in-game text chat and to unlock schematics or trigger other actions in-game.
+
+## Support the Developers
+
+- Jarno: <https://ko-fi.com/P5P718V0J4>
+- Robb: _If you enjoy my work, please consider donating to my [completely optional tip jar](https://ko-fi.com/robb4)._
 
 ## Copyright Notice
 
