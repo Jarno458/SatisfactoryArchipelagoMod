@@ -50,8 +50,8 @@ struct ARCHIPELAGO_API FApGoals
 public:
 	// Value constructor
 	FApGoals(bool anyGoal, bool resourceSinkGoal, bool spaceElevatorGoal, uint8 finalSpaceElevatorTier, uint64 finalResourceSinkPoints)
-		//current format <anyGoal:1>,<final_space_elevator_tier:2><undefined:27>,<resource_sink_goal:1>,<space_elevator_tier:1>
-		: data(((anyGoal ? 1 : 0) << 31) | ((finalSpaceElevatorTier) << 29) | ((resourceSinkGoal ? 1 : 0) << 1) | ((spaceElevatorGoal ? 1 : 0) << 0)),
+		//current format <anyGoal:1>,<final_space_elevator_tier:3><undefined:26>,<resource_sink_goal:1>,<space_elevator_tier:1>
+		: data(((anyGoal ? 1 : 0) << 31) | ((finalSpaceElevatorTier) << 28) | ((resourceSinkGoal ? 1 : 0) << 1) | ((spaceElevatorGoal ? 1 : 0) << 0)),
 			finalResourceSinkPoints(finalResourceSinkPoints)
 	{
 	}
@@ -73,7 +73,7 @@ private:
 
 public:
 	FORCEINLINE int64 const RequireAllGoals() const { return (data & 0x80000000) == 0; }
-	FORCEINLINE uint8 const GetFinalSpaceElevatorTier() const { return (data & 0x60000000) >> 29; }
+	FORCEINLINE uint8 const GetFinalSpaceElevatorTier() const { return (data & 0x70000000) >> 28; }
 	FORCEINLINE int const GetFinalResourceSinkPoints() const { return finalResourceSinkPoints; }
 	FORCEINLINE bool const IsSpaceElevatorGoalEnabled() const { return (data & 0x00000001) > 0; }
 	FORCEINLINE bool const IsResourceSinkGoalEnabled() const { return (data & 0x00000002) > 0; }
