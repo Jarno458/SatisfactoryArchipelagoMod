@@ -150,6 +150,9 @@ void AApSubsystem::ItemClearCallback() {
 
 	if (!IsValid(callbackTarget))
 		return;
+
+	callbackTarget->ReceivedItems.Empty();
+	callbackTarget->isReconnect = true;
 }
 
 void AApSubsystem::ItemReceivedCallback(int64 item, bool notify, bool isFromServer) {
@@ -344,7 +347,17 @@ void AApSubsystem::SetDeathLinkReceivedCallback(TFunction<void(FText)> onDeathLi
 	deathLinkReceivedCallbacks.Add(onDeathLinkReceived);
 }
 
+void AApSubsystem::SetReconnectCallback(TFunction<void(void)> onReconnect) {
+	onReconnectCallbacks.Add(onReconnect);
+}
+
 void AApSubsystem::ProcessReceivedItems() {
+	if (isReconnect) {
+		isReconnect = false;
+		for (TFunction<void(void)> callback : onReconnectCallbacks)
+			callback();
+	}
+
 	TTuple<int64, bool> item;
 	while (ReceivedItems.Dequeue(item)) {
 		for (TFunction<void(int64, bool)> callback : itemReceivedCallbacks)

@@ -71,6 +71,7 @@ void AApServerRandomizerSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase,
 		ap->SetItemReceivedCallback([this](int64 itemid, bool isFromServer) { ReceiveItem(itemid, isFromServer); });
 		ap->SetLocationCheckedCallback([this](int64 itemid) { CollectLocation(itemid); });
 		ap->SetDeathLinkReceivedCallback([this](FText message) { OnDeathLinkReceived(message); });
+		ap->SetReconnectCallback([this]() { ResetCurrentItemCounter(); });
 
 		FGenericPlatformProcess::ConditionalSleep([this]() { return InitializeTick(); }, 0.5);
 
@@ -317,6 +318,19 @@ void AApServerRandomizerSubsystem::ProcessReceivedItems() {
 
 		lastProcessedItemIndex++;
 	}
+}
+
+void AApServerRandomizerSubsystem::ResetCurrentItemCounter() {
+	UE_LOG(LogApServerRandomizerSubsystem, Display, TEXT("AApServerRandomizerSubsystem::ResetCurrentItemCounter()"));
+
+	currentItemIndex = 0;
+}
+
+void AApServerRandomizerSubsystem::ResetDuplicationCounter() {
+	lastProcessedItemIndex = 0;
+
+	FText message = FText::FromString(TEXT("Item duplication counter reset, please save your game and reload that save!"));
+	ap->AddChatMessage(message, FLinearColor::Blue);
 }
 
 void AApServerRandomizerSubsystem::OnDeathLinkReceived(FText message) {

@@ -101,6 +101,7 @@ public:
 	void SetItemReceivedCallback(TFunction<void(int64, bool)> onItemReceived);
 	void SetLocationCheckedCallback(TFunction<void(int64)> onLocationChecked);
 	void SetDeathLinkReceivedCallback(TFunction<void(FText)> onDeathLinkReceived);
+	void SetReconnectCallback(TFunction<void(void)> onReconnect);
 
 	void AddChatMessage(FText, FLinearColor);
 
@@ -116,6 +117,7 @@ private:
 	TArray<TFunction<void(int64, bool)>> itemReceivedCallbacks;
 	TArray<TFunction<void(int64)>> locationCheckedCallbacks;
 	TArray<TFunction<void(FText)>> deathLinkReceivedCallbacks;
+	TArray<TFunction<void(void)>> onReconnectCallbacks;
 
 	static void SetReplyCallback(AP_SetReply setReply);
 	static void ItemClearCallback();
@@ -133,6 +135,7 @@ private:
 	TQueue<int64> CheckedLocations;
 	TQueue<FText> PendingDeathlinks;
 	TQueue<TPair<FString, FLinearColor>> ChatMessageQueue;
+	std::atomic_bool isReconnect = false;
 
 	bool canRecieveChat;
 

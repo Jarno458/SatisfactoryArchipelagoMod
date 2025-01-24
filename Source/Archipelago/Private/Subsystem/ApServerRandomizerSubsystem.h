@@ -71,6 +71,9 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FORCEINLINE bool IsInitialized() const { return areRecipiesAndSchematicsInitialized; };
 
+	void ResetDuplicationCounter();
+	void ResetCurrentItemCounter();
+
 private:
 	UPROPERTY(SaveGame)
 	int lastProcessedItemIndex = 0;
@@ -132,8 +135,6 @@ private:
 	void OnDeathLinkReceived(FText message);
 	void HandleDeathLink();
 	void HandleInstagib(AFGCharacterPlayer* player);
-
-
 
 	UFUNCTION() //required for event binding
 	void OnMamResearchCompleted(TSubclassOf<class UFGSchematic> schematic);
