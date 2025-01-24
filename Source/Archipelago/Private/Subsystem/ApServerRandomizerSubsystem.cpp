@@ -519,9 +519,6 @@ void AApServerRandomizerSubsystem::AwardItem(int64 itemid, bool isFromServer) {
 		SManager->GiveAccessToSchematic(ItemSchematics[itemid], nullptr);
 	}
 	else if (auto trapName = UApMappings::ItemIdToTrap.Find(itemid)) {
-		//if (itemid == 1338917 || itemid == 1338918)
-		//	return; //Temporary disabled as they cause a crash
-
 		trapSubsystem->SpawnTrap(*trapName, nullptr);
 	}
 	else if (mappingSubsystem->ApItems.Contains(itemid)) {

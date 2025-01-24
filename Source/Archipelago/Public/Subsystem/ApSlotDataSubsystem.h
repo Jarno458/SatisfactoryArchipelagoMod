@@ -65,10 +65,10 @@ public:
 	{}
 
 private:
-	UPROPERTY()
+	UPROPERTY(SaveGame)
 	uint32 data;
 
-	UPROPERTY()
+	UPROPERTY(SaveGame)
 	uint64 finalResourceSinkPoints;
 
 public:
