@@ -12,10 +12,6 @@ class UApBlueprintDataBridge : public UDataAsset {
 	GENERATED_BODY()
 public:
 
-	// Power Storage building asset for UI modifications
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-		TSubclassOf<AFGBuildablePowerStorage> PowerStorageBuilding;
-
 	// Item to use as the Archipelago Blocker
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		TSubclassOf<UFGItemDescriptor> BlockerItem;

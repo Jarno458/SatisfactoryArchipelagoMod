@@ -60,14 +60,7 @@ void AApEnergyLinkSubsystem::Tick(float DeltaTime) {
 		energyLinkEnabled = slotDataSubsystem->EnergyLink;
 
 		if (apConnectionInfo->GetConnectionState() == EApConnectionState::Connected && energyLinkEnabled) {
-			UE_LOG(LogApEnergyLink, Display, TEXT("Modifying Power Storage asset"));
-			const auto asset = UApUtils::GetBlueprintDataBridge(GetWorld())->PowerStorageBuilding;
-			fgcheck(asset);
-			const auto buildingCDO = Cast<AFGBuildablePowerStorage>(asset->ClassDefaultObject);
-
-			buildingCDO->mDisplayName = FText::FormatOrdered(LOCTEXT("EnergyLinkName", "{VanillaName} [EnergyLink]"), buildingCDO->mDisplayName);
-			buildingCDO->mDescription = LOCTEXT("EnergyLinkDescription", "TODO accurate Storage, Max Capacity, Max Discharge Rate info. Talk about how to use the building.");
-
+			UE_LOG(LogApEnergyLink, Display, TEXT("Setting MonitorDataStoreValue OnEnergyLinkValueChanged"));
 			ap->MonitorDataStoreValue(FString("EnergyLink") + UApUtils::FStr(apConnectionInfo->GetCurrentPlayerTeam()), AP_DataType::Raw, energyLinkDefault, [&](AP_SetReply setReply) {
 				OnEnergyLinkValueChanged(setReply);
 			});
