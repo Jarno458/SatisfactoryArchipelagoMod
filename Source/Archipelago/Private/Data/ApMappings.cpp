@@ -480,7 +480,7 @@ const TMap<int64, const TArray<FString>> UApMappings::ItemIdToGameBuilding = {
 	{1338624, {TEXT("Recipe_BlueprintDesigner")}},
 	{1338625, {TEXT("Recipe_PipeStorageTank")}},
 	{1338626, {TEXT("Recipe_IndustrialTank")}},
-	{1338627, {TEXT("Recipe_JumpPad")}},
+	{1338627, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/Buildings/Recipe_JumpPadAdjustable.Recipe_JumpPadAdjustable'")}},
 	//1338628 Schematic
 	{1338629, {TEXT("Recipe_Mam")}},
 	{1338630, {TEXT("Recipe_StoragePlayer"), TEXT("Recipe_StorageMedkit"), TEXT("Recipe_StorageHazard")}}, 
