@@ -72,9 +72,9 @@ private:
 	uint64 finalResourceSinkPoints;
 
 public:
-	FORCEINLINE int64 const RequireAllGoals() const { return (data & 0x80000000) == 0; }
-	FORCEINLINE uint8 const GetFinalSpaceElevatorTier() const { return (data & 0x70000000) >> 28; }
-	FORCEINLINE int const GetFinalResourceSinkPoints() const { return finalResourceSinkPoints; }
+	FORCEINLINE bool const RequireAllGoals() const { return (data & 0x80000000) == 0; }
+	FORCEINLINE int const GetFinalSpaceElevatorTier() const { return (data & 0x70000000) >> 28; }
+	FORCEINLINE int64 const GetFinalResourceSinkPoints() const { return finalResourceSinkPoints; }
 	FORCEINLINE bool const IsSpaceElevatorGoalEnabled() const { return (data & 0x00000001) > 0; }
 	FORCEINLINE bool const IsResourceSinkGoalEnabled() const { return (data & 0x00000002) > 0; }
 };
@@ -146,13 +146,13 @@ private:
 
 public:
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	FORCEINLINE int64 const RequireAllGoals() const { return Goals.RequireAllGoals(); }
+	FORCEINLINE bool const RequireAllGoals() const { return Goals.RequireAllGoals(); }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FORCEINLINE uint8 const GetFinalSpaceElevatorTier() const { return Goals.GetFinalSpaceElevatorTier(); }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	FORCEINLINE int const GetFinalResourceSinkPoints() const { return Goals.GetFinalResourceSinkPoints(); }
+	FORCEINLINE int64 const GetFinalResourceSinkPoints() const { return Goals.GetFinalResourceSinkPoints(); }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FORCEINLINE bool const IsSpaceElevatorGoalEnabled() const { return Goals.IsSpaceElevatorGoalEnabled(); }
