@@ -78,7 +78,7 @@ public:
 
 	FString GetApItemName(int64 itemId);
 
-	void SetGiftBoxState(bool open);
+	void SetGiftBoxState(bool open, const TSet<FString>& acceptedTraits);
 	bool SendGift(FApSendGift giftToSend);
 	TArray<FApReceiveGift> GetGifts();
 	void RejectGift(TSet<FString> ids);

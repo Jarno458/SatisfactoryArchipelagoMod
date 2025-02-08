@@ -17,8 +17,10 @@ public class APCpp : ModuleRules
         if (Target.Platform == UnrealTargetPlatform.Win64)
         {
             PublicAdditionalLibraries.AddRange(Directory.EnumerateFiles(LibFolder, "*.lib"));
+            PublicAdditionalLibraries.AddRange(Directory.EnumerateFiles(Path.Combine(LibFolder, "mbedtls"), "*.lib"));
 
             PublicSystemLibraries.Add("crypt32.lib");
+            PublicSystemLibraries.Add("bcrypt.lib");
         }
         else if (Target.Platform == UnrealTargetPlatform.Linux)
         {

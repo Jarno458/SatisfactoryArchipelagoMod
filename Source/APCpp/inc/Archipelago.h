@@ -13,6 +13,9 @@ bool AP_IsInit();
 void AP_Start();
 void AP_Shutdown();
 
+// AP_Shutdown resets the library state to before initialization, and doesn't just disconnect!
+void AP_Shutdown();
+
 struct AP_NetworkVersion {
     int major;
     int minor;
@@ -194,6 +197,13 @@ struct AP_SetReply {
     void* value;
 };
 
+struct AP_Bounce {
+    std::vector<std::string>* games = nullptr; // Can be nullptr or empty, but must be set to either
+    std::vector<std::string>* slots = nullptr; // Can be nullptr or empty, but must be set to either
+    std::vector<std::string>* tags  = nullptr; // Can be nullptr or empty, but must be set to either
+    std::string data; // Valid JSON Data. Can also be primitive (Numbers or literals)
+};
+
 /* Serverside Data Functions */
 
 // Set and Receive Data
@@ -221,9 +231,17 @@ std::string AP_GetPrivateServerDataPrefix();
 void AP_RegisterSetReplyCallback(void (*f_setreply)(AP_SetReply));
 
 // Receive all SetReplys with Keys in parameter list
+// AP_SetNotify will call AP_CommitServerData() and thus complete all pending serverdata requests
 void AP_SetNotify(std::map<std::string,AP_DataType>, bool = false);
 // Single Key version of above for convenience
+// AP_SetNotify will call AP_CommitServerData() and thus complete all pending serverdata requests
 void AP_SetNotify(std::string, AP_DataType, bool = false);
+
+// Send Bounce package
+void AP_SendBounce(AP_Bounce);
+
+// Receive Bounced packages. Disables automatic DeathLink management
+void AP_RegisterBouncedCallback(void (*f_bounced)(AP_Bounce));
 
 /* Gifting API Types */
 
@@ -243,7 +261,7 @@ struct AP_Gift {
     std::string ID;
     std::string ItemName;
     size_t Amount;
-    int64_t ItemValue;
+    uint64_t ItemValue;
     std::vector<AP_GiftTrait> Traits;
     std::string Sender;
     std::string Receiver;
@@ -265,9 +283,7 @@ AP_RequestStatus AP_SetGiftBoxProperties(AP_GiftBoxProperties props);
 
 // Returns information on all Gift Boxes on the server as a map of <Team,PlayerName> -> GiftBoxProperties.
 // This data is cached by the library, and attempting to send to someone who has no or a closed giftbox the last time this function was called will always fail
-// Additionally, this cache will be refreshed after the client attempts to send a gift (whether refund or new) 5 minutes after the last time the Gift Box information was pulled
-// This tries to minimize the amount of erroneous gifts sent, should someone close their giftbox / change their DesiredTraits.
-// Thus, should sending a gift fail, it might be that your Gift Box info is outdated. Refresh using this function.
+// This data is automaticly kept in sync with the AP server
 std::map<std::pair<int,std::string>,AP_GiftBoxProperties> AP_QueryGiftBoxes();
 
 // Get currently available Gifts in own gift box
@@ -289,3 +305,6 @@ AP_RequestStatus AP_RejectGift(std::set<std::string> ids);
 // This is mainly a "consistency checker", but could be expensive to use compared to letting the player reject gifts manually, as this will scan all incoming gifts!
 // It is enabled by default, but performance impact may mean that it needs to be disabled depending on game and server environment (such as clients that automatically send gifts, unaware that the giftbox is closed)
 void AP_UseGiftAutoReject(bool enable);
+
+// Enabled the gifting api functions, should be configured before AP_Start get called, defaults to off
+void AP_SetGiftingSupported(bool);

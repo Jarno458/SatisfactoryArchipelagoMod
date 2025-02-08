@@ -58,6 +58,7 @@ enum class EGiftTrait : uint8
 	SpaceMineral,
 	Statue
 };
+ENUM_RANGE_BY_FIRST_AND_LAST(EGiftTrait, EGiftTrait::Electronics, EGiftTrait::Statue)
 
 UCLASS()
 class ARCHIPELAGO_API UApGiftingMappings : public UObject

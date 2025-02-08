@@ -52,11 +52,10 @@ void AApReplicatedGiftingSubsystem::BeginPlay() {
 
 	UE_LOG(LogApReplicatedGiftingSubsystem, Display, TEXT("AApReplicatedGiftingSubsystem::BeginPlay()"));
 
-	// todo check if there is a build in method to get all keys of an enum
-	//static const UEnum* giftTraitEnum = StaticEnum<EGiftTrait>();
-	TArray<EGiftTrait> allTraitsArray;
-	UApGiftingMappings::TraitDefaultItemIds.GenerateKeyArray(allTraitsArray);
-	AllTraits = TSet<EGiftTrait>(allTraitsArray);
+	AllTraits.Empty();
+	for (EGiftTrait trait : TEnumRange<EGiftTrait>()) {
+		AllTraits.Add(trait);
+	}
 
 	UWorld* world = GetWorld();
 	fgcheck(world != nullptr);

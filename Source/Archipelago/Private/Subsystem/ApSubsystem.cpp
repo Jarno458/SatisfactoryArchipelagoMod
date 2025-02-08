@@ -57,6 +57,7 @@ void AApSubsystem::ConnectToArchipelago() {
 	AP_SetLoggingCallback(AApSubsystem::LogFromAPCpp);
 	AP_RegisterSlotDataRawCallback("Data", AApSubsystem::ParseSlotData);
 	AP_SetDeathLinkSupported(true);
+	AP_SetGiftingSupported(true);
 
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::Starting AP"));
 	AP_Start();
@@ -444,13 +445,18 @@ FString AApSubsystem::GetApItemName(int64 id) {
 	return UApUtils::FStr(CallOnGameThread<std::string>([id]() { return AP_GetItemName("Satisfactory", id); }));
 }
 
-void AApSubsystem::SetGiftBoxState(bool open) {
-	AP_RequestStatus result = CallOnGameThread<AP_RequestStatus>([open]() {
-		AP_UseGiftAutoReject(false);
+void AApSubsystem::SetGiftBoxState(bool open, const TSet<FString>& acceptedTraits) {
+	AP_RequestStatus result = CallOnGameThread<AP_RequestStatus>([open, acceptedTraits]() {
+		AP_UseGiftAutoReject(true);
+
+		std::vector<std::string> desiredTriats;
+
+		for (const FString trait : acceptedTraits)
+			desiredTriats.push_back(TCHAR_TO_UTF8(*trait));
 
 		AP_GiftBoxProperties giftbox;
-		giftbox.AcceptsAnyGift = true;
-		giftbox.DesiredTraits = std::vector<std::string>();
+		giftbox.AcceptsAnyGift = false;
+		giftbox.DesiredTraits = desiredTriats;
 		giftbox.IsOpen = open;
 
 		 return AP_SetGiftBoxProperties(giftbox);
@@ -505,7 +511,7 @@ bool AApSubsystem::SendGift(FApSendGift giftToSend) {
 	for (int i = 0; i < giftToSend.Traits.Num(); i++)
 	{
 		AP_GiftTrait trait;
-		trait.Trait = TCHAR_TO_UTF8(*giftTraitEnum->GetNameByValue((int64)giftToSend.Traits[i].Trait).ToString());
+		trait.Trait = TCHAR_TO_UTF8(*giftTraitEnum->GetNameStringByValue((int64)giftToSend.Traits[i].Trait));
 		trait.Duration = 1.0;
 		trait.Quality = giftToSend.Traits[i].Quality;
 

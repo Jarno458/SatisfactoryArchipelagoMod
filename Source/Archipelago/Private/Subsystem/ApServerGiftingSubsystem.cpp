@@ -54,7 +54,15 @@ void AApServerGiftingSubsystem::Tick(float dt) {
 			&& mappingSubsystem->HasLoadedItemNameMappings()
 			&& portalSubSystem->IsInitialized())
 		{
-			ap->SetGiftBoxState(true);
+			static const UEnum* giftTraitEnum = StaticEnum<EGiftTrait>();
+
+			TSet<FString> allTraits;
+			for (int32 i = 0; i < (giftTraitEnum->NumEnums() - 1); i++) {
+			for (EGiftTrait trait : TEnumRange<EGiftTrait>())
+				allTraits.Add(giftTraitEnum->GetNameStringByIndex(i));
+			}
+
+			ap->SetGiftBoxState(true, allTraits);
 
 			apInitialized = true;
 
@@ -99,8 +107,8 @@ void AApServerGiftingSubsystem::PullAllGiftsAsync() {
 			int64 itemId = UApGiftingMappings::HardcodedItemNameToIdMappings[gift.ItemName];
 			itemClass = StaticCastSharedRef<FApItem>(mappingSubsystem->ApItems[itemId])->Class;
 		} else {
-			UE_LOG(LogApServerGiftingSubsystem, Display, TEXT("AApServerGiftingSubsystem::PullAllGiftsAsync() passing gift(%s) to portalSubSystem by traits as item %s"), *gift.Id, *UFGItemDescriptor::GetItemName(itemClass).ToString());
 			itemClass = TryGetItemClassByTraits(gift.Traits);
+			UE_LOG(LogApServerGiftingSubsystem, Display, TEXT("AApServerGiftingSubsystem::PullAllGiftsAsync() passing gift(%s) to portalSubSystem by traits as item %s"), *gift.Id, *UFGItemDescriptor::GetItemName(itemClass).ToString());
 		}
 
 		if (itemClass != nullptr) {
@@ -203,16 +211,19 @@ bool AApServerGiftingSubsystem::HasTraitKnownToSatisfactory(TArray<FApGiftTrait>
 }
 
 TSubclassOf<UFGItemDescriptor> AApServerGiftingSubsystem::TryGetItemClassByTraits(TArray<FApGiftTrait>& traits) {
-	uint32 hash = GetTraitsHash(traits);
-	if (ItemPerTraitsHashCache.Contains(hash))
-		return ItemPerTraitsHashCache[hash];
-
-	TMap<TSubclassOf<UFGItemDescriptor>, TPair<int, float>> numberOfMatchesAndTotalDiviationPerItemClass;
-	int mostMatches = 0;
-
 	if (!HasTraitKnownToSatisfactory(traits))
 		return nullptr;
 
+	uint32 hash = GetTraitsHash(traits);
+	if (ItemPerTraitsHashCache.Contains(hash))
+	{
+		UE_LOG(LogApServerGiftingSubsystem, Display, TEXT("AApServerGiftingSubsystem::TryGetItemClassByTraits() matched on hash"));
+		return ItemPerTraitsHashCache[hash];
+	}
+
+	TMap<TSubclassOf<UFGItemDescriptor>, TPair<int, float>> numberOfMatchesAndTotalDiviationPerItemClass;
+	int mostMatches = 0;
+	
 	for (const TPair<TSubclassOf<UFGItemDescriptor>, FApTraitValues>& traitsPerItem : replicatedGiftingSubsystem->TraitsPerItem) {
 		int matches = 0;
 		float totalDifference = 0.0f;
