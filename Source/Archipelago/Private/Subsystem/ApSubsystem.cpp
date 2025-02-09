@@ -110,7 +110,7 @@ void AApSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase) {
 bool AApSubsystem::InitializeTick(FDateTime connectingStartedTime) {
 	return CallOnGameThread<bool>([this, connectingStartedTime]() {
 		if (connectionInfoSubsystem->ConnectionState == EApConnectionState::Connecting) {
-			if ((FDateTime::Now() - connectingStartedTime).GetSeconds() > 15)
+			if ((FDateTime::Now() - connectingStartedTime).GetSeconds() > 25)
 				TimeoutConnection();
 			else
 				CheckConnectionState();

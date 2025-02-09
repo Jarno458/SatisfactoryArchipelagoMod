@@ -46,6 +46,9 @@ void AApSlotDataSubsystem::BeginPlay() {
 }
 
 void AApSlotDataSubsystem::SetSlotDataJson(FString slotDataJson) {
+	if (slotDataJson.IsEmpty())
+		return;
+
 	const TSharedRef<TJsonReader<>> reader = TJsonReaderFactory<>::Create(*slotDataJson);
 
 	FJsonSerializer serializer;
