@@ -1,6 +1,7 @@
 #include "Subsystem/ApSubsystem.h"
 #include "ApUtils.h"
 #include "Async/Async.h"
+#include "SessionSettings/SessionSettingsManager.h"
 
 DEFINE_LOG_CATEGORY(LogApSubsystem);
 
@@ -36,6 +37,10 @@ void AApSubsystem::ConnectToArchipelago() {
 	std::string const uri = TCHAR_TO_UTF8(*config.Url.TrimStartAndEnd());
 	std::string const user = TCHAR_TO_UTF8(*config.Login.TrimStartAndEnd());
 	std::string const password = TCHAR_TO_UTF8(*config.Password);
+
+	USessionSettingsManager* SessionSettings = GetWorld()->GetSubsystem<USessionSettingsManager>();
+	auto optionValueByName = SessionSettings->GetNameOptionValue("Archipelago.Connection.ServerURI");
+	auto optionValueByString = SessionSettings->GetOptionValue("Archipelago.Connection.ServerURI", FString());
 
 	AP_NetworkVersion apVersion;
 	apVersion.major = 0;
