@@ -41,6 +41,7 @@ void AApSubsystem::ConnectToArchipelago() {
 	USessionSettingsManager* SessionSettings = GetWorld()->GetSubsystem<USessionSettingsManager>();
 	auto optionValueByName = SessionSettings->GetNameOptionValue("Archipelago.Connection.ServerURI");
 	auto optionValueByString = SessionSettings->GetOptionValue("Archipelago.Connection.ServerURI", FString());
+	auto optionValueByInt = SessionSettings->GetIntOptionValue("Archipelago.Connection.ServerURI");
 
 	AP_NetworkVersion apVersion;
 	apVersion.major = 0;
