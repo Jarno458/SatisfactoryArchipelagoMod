@@ -39,9 +39,9 @@ void AApSubsystem::ConnectToArchipelago() {
 	std::string const password = TCHAR_TO_UTF8(*config.Password);
 
 	USessionSettingsManager* SessionSettings = GetWorld()->GetSubsystem<USessionSettingsManager>();
-	auto optionValueByName = SessionSettings->GetNameOptionValue("Archipelago.Connection.ServerURI");
-	auto optionValueByString = SessionSettings->GetOptionValue("Archipelago.Connection.ServerURI", FString());
-	auto optionValueByInt = SessionSettings->GetIntOptionValue("Archipelago.Connection.ServerURI");
+	FName SessionSettingServerURI = SessionSettings->GetNameOptionValue("Archipelago.Connection.ServerURI");
+	FName SessionSettingUserName = SessionSettings->GetNameOptionValue("Archipelago.Connection.UserName");
+	FName SessionSettingPassword = SessionSettings->GetNameOptionValue("Archipelago.Connection.Password");
 
 	AP_NetworkVersion apVersion;
 	apVersion.major = 0;
