@@ -5,7 +5,7 @@
 
 AApAliasCommand::AApAliasCommand() {
 	CommandName = TEXT("ap-alias");
-	Usage = TEXT("/ap-alias <new alias> - Sets your alias, which allows you to use commands with the alias rather than your provided slot name.");
+	Usage = FText::FromString(TEXT("/ap-alias <new alias> - Sets your alias, which allows you to use commands with the alias rather than your provided slot name.")).ToString();
 	Aliases.Add(TEXT("alias"));
 	MinNumberOfArguments = 1;
 }

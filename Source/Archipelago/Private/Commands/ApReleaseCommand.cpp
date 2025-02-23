@@ -5,7 +5,7 @@
 
 AApReleaseCommand::AApReleaseCommand() {
 	CommandName = TEXT("ap-release");
-	Usage = TEXT("/ap-release - attempts to send out all your locations to other players' worlds");
+	Usage = FText::FromString(TEXT("/ap-release - attempts to send out all your locations to other players' worlds")).ToString();
 	Aliases.Add(TEXT("release"));
 	Aliases.Add(TEXT("ap-forfeit"));
 	Aliases.Add(TEXT("forfeit"));

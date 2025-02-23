@@ -5,7 +5,7 @@
 
 AApCollectCommand::AApCollectCommand() {
 	CommandName = TEXT("ap-collect");
-	Usage = TEXT("/ap-collect - attempts to collect all of your items from inside other players' worlds");
+	Usage = FText::FromString(TEXT("/ap-collect - attempts to collect all of your items from inside other players' worlds")).ToString();
 	Aliases.Add(TEXT("collect"));
 }
 

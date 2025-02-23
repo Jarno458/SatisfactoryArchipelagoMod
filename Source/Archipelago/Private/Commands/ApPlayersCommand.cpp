@@ -5,7 +5,7 @@
 
 AApPlayersCommand::AApPlayersCommand() {
 	CommandName = TEXT("ap-players");
-	Usage = TEXT("/ap-players - Get information about connected Archipelago players");
+	Usage = FText::FromString(TEXT("/ap-players - Get information about connected Archipelago players")).ToString();
 	Aliases.Add(TEXT("players"));
 }
 

@@ -101,10 +101,6 @@ struct ARCHIPELAGO_API FApReceiveGift : public FApGift
 public:
 	UPROPERTY()
 	FString Id;
-	UPROPERTY()
-	int SenderSlot;
-	UPROPERTY()
-	int SenderTeam;
 };
 
 USTRUCT()

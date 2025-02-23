@@ -5,7 +5,7 @@
 
 AApHintCommand::AApHintCommand() {
 	CommandName = TEXT("ap-hint");
-	Usage = TEXT("/ap-hint <item-name> - attempt to hint where the specified item is located");
+	Usage = FText::FromString(TEXT("/ap-hint <item-name> - attempt to hint where the specified item is located")).ToString();
 	Aliases.Add(TEXT("hint"));
 }
 

@@ -6,7 +6,7 @@
 
 AResyncCommand::AResyncCommand() {
 	CommandName = TEXT("resync");
-	Usage = TEXT("/resync - resets the internal item duplication counter, save and reload the save afterwards");
+	Usage = FText::FromString(TEXT("/resync - resets the internal item duplication counter, save and reload the save afterwards")).ToString();
 	MinNumberOfArguments = 0;
 }
 

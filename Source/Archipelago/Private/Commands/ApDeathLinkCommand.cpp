@@ -5,7 +5,7 @@
 
 AApDeathLinkCommand::AApDeathLinkCommand() {
 	CommandName = TEXT("ap-deathlink");
-	Usage = TEXT("/ap-deathlink - list all clients that have deathlink enabled");
+	Usage = FText::FromString(TEXT("/ap-deathlink - list all clients that have deathlink enabled")).ToString();
 	Aliases.Add(TEXT("deathlink"));	
 	Aliases.Add(TEXT("status-deathlink"));
 }

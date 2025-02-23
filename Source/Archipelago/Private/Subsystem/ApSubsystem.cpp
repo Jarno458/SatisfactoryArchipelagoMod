@@ -546,20 +546,19 @@ TArray<FApReceiveGift> AApSubsystem::GetGifts() {
 		gift.ItemName = UApUtils::FStr(apGift.ItemName);
 		gift.Amount = apGift.Amount;
 		gift.ItemValue = apGift.ItemValue;
-		gift.Traits.SetNum(apGift.Traits.size());
+		gift.Traits;
 		
-		for (int i = 0; i < apGift.Traits.size(); i++)
-		{
-			const int64 enumValue = giftTraitEnum->GetValueByNameString(UApUtils::FStr(apGift.Traits[i].Trait));
+		for (const AP_GiftTrait& apTrait : apGift.Traits) {
+			const int64 enumValue = giftTraitEnum->GetValueByNameString(UApUtils::FStr(apTrait.Trait));
 			if (enumValue == INDEX_NONE)
 				continue;
 
 			FApGiftTrait trait;
 			trait.Trait = static_cast<EGiftTrait>(enumValue);
-			trait.Duration = apGift.Traits[i].Duration;
-			trait.Quality = apGift.Traits[i].Quality;
+			trait.Duration = apTrait.Duration;
+			trait.Quality = apTrait.Quality;
 
-			gift.Traits[i] = trait;
+			gift.Traits.Add(trait);
 		}
 
 		currentGifts.Add(gift);
