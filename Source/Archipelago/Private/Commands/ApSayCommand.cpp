@@ -5,7 +5,7 @@
 
 AApSayCommand::AApSayCommand() {
 	CommandName = TEXT("ap-say");
-	Usage = FText::FromString(TEXT("/ap-say <message> - send chat message to AP server")).ToString();
+	Usage = FText::FromString(TEXT("/ap-say <message> - send chat message to AP server"));
 	MinNumberOfArguments = 1;
 	Aliases.Add(TEXT("say"));
 }

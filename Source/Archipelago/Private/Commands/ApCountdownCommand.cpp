@@ -5,7 +5,7 @@
 
 AApCountdownCommand::AApCountdownCommand() {
 	CommandName = TEXT("ap-countdown");
-	Usage = FText::FromString(TEXT("/ap-countdown <seconds> - starts a countdown on the server that's broadcasted to all clients")).ToString();
+	Usage = FText::FromString(TEXT("/ap-countdown <seconds> - starts a countdown on the server that's broadcasted to all clients"));
 	MinNumberOfArguments = 1;
 	Aliases.Add(TEXT("countdown"));
 }
