@@ -5,7 +5,7 @@
 
 AApCollectCommand::AApCollectCommand() {
 	CommandName = TEXT("ap-collect");
-	Usage = FText::FromString(TEXT("/ap-collect - attempts to collect all of your items from inside other players' worlds"));
+	Usage = NSLOCTEXT("Archipelago", "ApCollectCommandUsage", "/ap-collect - attempts to collect all of your items from inside other players' worlds");
 	Aliases.Add(TEXT("collect"));
 }
 

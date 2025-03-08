@@ -329,7 +329,7 @@ void AApServerRandomizerSubsystem::ResetCurrentItemCounter() {
 void AApServerRandomizerSubsystem::ResetDuplicationCounter() {
 	lastProcessedItemIndex = 0;
 
-	FText message = FText::FromString(TEXT("Item duplication counter reset, please save your game and reload that save!"));
+	FText message = NSLOCTEXT("Archipelago", "ResetDuplicationCounterMessage", "Item duplication counter reset, please save your game and reload that save!");
 	ap->AddChatMessage(message, FLinearColor::Blue);
 }
 

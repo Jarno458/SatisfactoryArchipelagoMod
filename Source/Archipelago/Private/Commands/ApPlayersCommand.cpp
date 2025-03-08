@@ -5,7 +5,7 @@
 
 AApPlayersCommand::AApPlayersCommand() {
 	CommandName = TEXT("ap-players");
-	Usage = FText::FromString(TEXT("/ap-players - Get information about connected Archipelago players"));
+	Usage = NSLOCTEXT("Archipelago", "ApPlayersCommandUsage", "/ap-players - Get information about connected Archipelago players");
 	Aliases.Add(TEXT("players"));
 }
 

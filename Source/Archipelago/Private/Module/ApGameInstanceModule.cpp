@@ -22,3 +22,5 @@ void UApGameInstanceModule::YeetToMainMenu(APlayerController* player, FText reas
 	// LogGame: SendToMainMenu: Null player controller supplied
 	UE_LOG(LogApGameInstanceModule, Fatal, TEXT("Archipelago Initialization Failed: %s"), *reason.ToString());
 }
+
+#undef LOCTEXT_NAMESPACE
