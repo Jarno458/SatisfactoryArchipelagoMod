@@ -38,10 +38,10 @@ void AApMessagingSubsystem::LocalAddChatMessage(const FString& Message, const FL
 		return;
 	}
 	FChatMessageStruct MessageStruct;
-	MessageStruct.MessageString = Message;
+	MessageStruct.MessageText = FText::FromString(Message);
 	MessageStruct.MessageType = EFGChatMessageType::CMT_SystemMessage;
 	MessageStruct.ServerTimeStamp = GetWorld()->TimeSeconds;
-	MessageStruct.CachedColor = Color;
+	MessageStruct.MessageSenderColor = Color;
 	ChatManager->AddChatMessageToReceived(MessageStruct);
 
 	UE_LOG(LogApChat, Display, TEXT("Displaying Local Chat Message: %s"), *Message);
