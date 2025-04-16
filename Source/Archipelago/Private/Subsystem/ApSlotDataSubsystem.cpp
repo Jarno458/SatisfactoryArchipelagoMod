@@ -1,6 +1,7 @@
 #include "Subsystem/ApSlotDataSubsystem.h"
 #include "Net/UnrealNetwork.h"
 #include "PushModel.h"
+#include "Logging/StructuredLog.h"
 
 DEFINE_LOG_CATEGORY(LogApSlotDataSubsystem);
 
@@ -34,6 +35,7 @@ void AApSlotDataSubsystem::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&
 	replicationParams.bIsPushBased = true;
 
 	DOREPLIFETIME_WITH_PARAMS_FAST(AApSlotDataSubsystem, hubCostEntries, replicationParams);
+	DOREPLIFETIME_WITH_PARAMS_FAST(AApSlotDataSubsystem, starterRecipeIds, replicationParams);
 	DOREPLIFETIME(AApSlotDataSubsystem, Goals);
 }
 
@@ -41,13 +43,15 @@ void AApSlotDataSubsystem::BeginPlay() {
 	Super::BeginPlay();
 
 	if (!hasLoadedSlotData) {
-		UE_LOG(LogApSlotDataSubsystem, Error, TEXT("AApSlotDataSubsystem::BeginPlay() SlotData was not sucsesfully loaded in time"));
+		UE_LOGFMT(LogApSlotDataSubsystem, Error, "AApSlotDataSubsystem::BeginPlay() SlotData was not sucsesfully loaded in time");
 	}
 }
 
 void AApSlotDataSubsystem::SetSlotDataJson(FString slotDataJson) {
 	if (slotDataJson.IsEmpty())
 		return;
+
+	hasLoadedSlotData = false;
 
 	const TSharedRef<TJsonReader<>> reader = TJsonReaderFactory<>::Create(*slotDataJson);
 
@@ -56,7 +60,13 @@ void AApSlotDataSubsystem::SetSlotDataJson(FString slotDataJson) {
 
 	serializer.Deserialize(reader, parsedJson);
 	if (!parsedJson.IsValid()) {
-		hasLoadedSlotData = false;
+		UE_LOGFMT(LogApSlotDataSubsystem, Error, "AApSlotDataSubsystem::SetSlotDataJson() failed to parse slotdata: {0}", slotDataJson);
+		return;
+	}
+
+	int slotDataVersion = -1;
+	if (!parsedJson->TryGetNumberField("SlotDataVersion", slotDataVersion) || slotDataVersion < 1) {
+		UE_LOGFMT(LogApSlotDataSubsystem, Error, "AApSlotDataSubsystem::SetSlotDataJson() failed to parse slotdata of version {0}", slotDataVersion);
 		return;
 	}
 
@@ -76,27 +86,47 @@ void AApSlotDataSubsystem::SetSlotDataJson(FString slotDataJson) {
 
 		tierNumber++;
 	}
-
 	hubCostEntries = parsedHubCostEntries;
-
 	MARK_PROPERTY_DIRTY_FROM_NAME(AApSlotDataSubsystem, hubCostEntries, this);
 
 	ReconstructHubLayout();
 
 	TSharedPtr<FJsonObject> options = parsedJson->GetObjectField("Options");
 
+	TArray<TSharedPtr<FJsonValue>> starting_items_array = options->GetArrayField("StartingRecipies");
+	starterRecipeIds.SetNum(starting_items_array.Num());
+	for (size_t i = 0; i < starting_items_array.Num(); i++)
+	{
+		int64 itemId;
+		starterRecipeIds[i] = starting_items_array[i]->TryGetNumber(itemId);
+	}
+	MARK_PROPERTY_DIRTY_FROM_NAME(AApSlotDataSubsystem, starterRecipeIds, this);
+
+	//using Try methods as it allow for unsinged ints
 	int goalRequirement = options->GetIntegerField("GoalRequirement");
-	uint8 finalSpaceElevatorTier = options->GetIntegerField("FinalElevatorTier");
-	uint64 finalResourceSinkPoints; //using Try method as it allow for uint64
-	options->TryGetNumberField("FinalResourceSinkPoints", finalResourceSinkPoints);
+	bool requiresAnyGoal = goalRequirement == 0;
+
+	uint8 finalSpaceElevatorTier;
+	options->TryGetNumberField("FinalElevatorTier", finalSpaceElevatorTier);
+	uint8 finalExplorationCollectionAmount;
+	options->TryGetNumberField("FinalExplorationCollectionAmount", finalExplorationCollectionAmount);
+	uint64 finalResourceSinkPoints; 
+	options->TryGetNumberField("FinalResourceSinkPointsTotal", finalResourceSinkPoints);
+	uint64 finalResourceSinkPointsPerMinute;
+	options->TryGetNumberField("FinalResourceSinkPointsPerMinute", finalResourceSinkPointsPerMinute);
+
 	TArray<FString> goalSelection; 
 	options->TryGetStringArrayField("GoalSelection", goalSelection);
-
-	bool requiresAnyGoal = goalRequirement == 0;
 	bool isSpaceElevatorGoalEnabled = goalSelection.Contains("Space Elevator Tier");
-	bool isResourceSinkGoalEnabled = goalSelection.Contains("AWESOME Sink Points");
+	bool isResourceSinkGoalEnabled = goalSelection.Contains("AWESOME Sink Points (total)");
+	bool isResourceSinkPerMinuteGoalEnabled = goalSelection.Contains("AWESOME Sink Points (per minute)");
+	bool isExplorationGoalEnabled = goalSelection.Contains("Exploration Collectables");
+	bool isFicsmasGoalEnabled = goalSelection.Contains("Erect a FICSMAS Tree");
 
-	Goals = FApGoals(requiresAnyGoal, isResourceSinkGoalEnabled, isSpaceElevatorGoalEnabled, finalSpaceElevatorTier, finalResourceSinkPoints);
+	Goals = FApGoals(requiresAnyGoal, isResourceSinkGoalEnabled, isSpaceElevatorGoalEnabled, isResourceSinkPerMinuteGoalEnabled,
+		isExplorationGoalEnabled, isFicsmasGoalEnabled,
+		finalSpaceElevatorTier, finalResourceSinkPoints, finalResourceSinkPointsPerMinute, finalExplorationCollectionAmount);
+
 	NumberOfChecksPerMilestone = parsedJson->GetIntegerField("SlotsPerMilestone");
 	FreeSampleEquipment = options->GetIntegerField("FreeSampleEquipment");
 	FreeSampleBuildings = options->GetIntegerField("FreeSampleBuildings");
@@ -159,7 +189,11 @@ int AApSlotDataSubsystem::GetNumberOfMilestonesForTier(int tier) {
 	return 0;
 }
 
-//TODO fix is now fired when loading a fresh save
+TArray<int64> AApSlotDataSubsystem::GetStarterRecipeIds() {
+	return starterRecipeIds;
+}
+
+// is also fired when loading a fresh save
 void AApSlotDataSubsystem::PostLoadGame_Implementation(int32 saveVersion, int32 gameVersion) {
 	UE_LOG(LogApSlotDataSubsystem, Display, TEXT("AApSlotDataSubsystem::PostLoadGame_Implementation(saveVersion: %i, gameVersion: %i)"), saveVersion, gameVersion);
 

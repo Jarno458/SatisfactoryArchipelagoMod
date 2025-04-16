@@ -49,19 +49,33 @@ struct ARCHIPELAGO_API FApGoals
 
 public:
 	// Value constructor
-	FApGoals(bool anyGoal, bool resourceSinkGoal, bool spaceElevatorGoal, uint8 finalSpaceElevatorTier, uint64 finalResourceSinkPoints)
-		//current format <anyGoal:1>,<final_space_elevator_tier:3><undefined:26>,<resource_sink_goal:1>,<space_elevator_tier:1>
-		: data(((anyGoal ? 1 : 0) << 31) | ((finalSpaceElevatorTier) << 28) | ((resourceSinkGoal ? 1 : 0) << 1) | ((spaceElevatorGoal ? 1 : 0) << 0)),
-			finalResourceSinkPoints(finalResourceSinkPoints)
+	FApGoals(bool anyGoal, 
+		bool resourceSinkGoal, bool spaceElevatorGoal, bool resourceSinkPerMinuteGoal, bool explorationGoal, bool ficsmasGoal,
+		uint8 finalSpaceElevatorTier, uint64 finalResourceSinkPoints, uint64 perMinuteResourceSinkPoints, uint8 explorationGoalCollectionAmount)
+		//current format <anyGoal:1>,<final_space_elevator_tier:3><exploration_goal_amount:8><undefined:15>,<ficsmas_goal:1>,<exploration_goal:1>,<resource_sink_per_minute_goal:1>,<resource_sink_goal:1>,<space_elevator_tier:1>
+		: data(
+				  ((anyGoal ? 1 : 0) << 31) 
+				| ((finalSpaceElevatorTier & 0x7) << 28) 
+				| ((explorationGoalCollectionAmount) << 20) 
+				| ((ficsmasGoal ? 1 : 0) << 4)
+				| ((explorationGoal ? 1 : 0) << 3) 
+				| ((resourceSinkPerMinuteGoal ? 1 : 0) << 2) 
+				| ((resourceSinkGoal ? 1 : 0) << 1) 
+				| ((spaceElevatorGoal ? 1 : 0) << 0)
+			),
+			finalResourceSinkPoints(finalResourceSinkPoints),
+			perMinuteResourceSinkPoints(perMinuteResourceSinkPoints)
 	{
 	}
 	// Default constructor
 	FApGoals()
-		: data(0), finalResourceSinkPoints(0)
+		: data(0), finalResourceSinkPoints(0), perMinuteResourceSinkPoints(0)
 	{}
 	// Copy constructor
 	FApGoals(const FApGoals& Other)
-		: data(Other.data), finalResourceSinkPoints(Other.finalResourceSinkPoints)
+		: data(Other.data), 
+			finalResourceSinkPoints(Other.finalResourceSinkPoints), 
+			perMinuteResourceSinkPoints(Other.perMinuteResourceSinkPoints)
 	{}
 
 private:
@@ -71,12 +85,20 @@ private:
 	UPROPERTY(SaveGame)
 	uint64 finalResourceSinkPoints;
 
+	UPROPERTY(SaveGame)
+	uint64 perMinuteResourceSinkPoints;
+
 public:
 	FORCEINLINE bool const RequireAllGoals() const { return (data & 0x80000000) == 0; }
-	FORCEINLINE int const GetFinalSpaceElevatorTier() const { return (data & 0x70000000) >> 28; }
-	FORCEINLINE int64 const GetFinalResourceSinkPoints() const { return finalResourceSinkPoints; }
+	FORCEINLINE uint8 const GetFinalSpaceElevatorTier() const { return (data & 0x70000000) >> 28; }
+	FORCEINLINE uint8 const GetExplorationCollectionAmount() const { return (data & 0x0FF00000) >> 20; }
+	FORCEINLINE uint64 const GetFinalResourceSinkPoints() const { return finalResourceSinkPoints; }
+	FORCEINLINE uint64 const GePerMinuteResourceSinkPoints() const { return perMinuteResourceSinkPoints; }
 	FORCEINLINE bool const IsSpaceElevatorGoalEnabled() const { return (data & 0x00000001) > 0; }
 	FORCEINLINE bool const IsResourceSinkGoalEnabled() const { return (data & 0x00000002) > 0; }
+	FORCEINLINE bool const IsResourceSinkPerMinuteGoalEnabled() const { return (data & 0x00000004) > 0; }
+	FORCEINLINE bool const IsExplorationGoalEnabled() const { return (data & 0x00000008) > 0; }
+	FORCEINLINE bool const IsFicsmasGoalEnabled() const { return (data & 0x00000010) > 0; }
 };
 
 UCLASS()
@@ -118,6 +140,9 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	int GetNumberOfMilestonesForTier(int tier);
 
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	TArray<int64> GetStarterRecipeIds();
+
 	void SetSlotDataJson(FString slotDataJson);
 
 public:
@@ -143,6 +168,9 @@ private:
 
 	UPROPERTY(SaveGame, Replicated)
 	FApGoals Goals;
+
+	UPROPERTY(SaveGame, Replicated)
+	TArray<int64> starterRecipeIds;
 
 public:
 	UFUNCTION(BlueprintCallable, BlueprintPure)
