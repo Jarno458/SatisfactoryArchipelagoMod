@@ -120,37 +120,7 @@ bool AApServerRandomizerSubsystem::InitializeTick() {
 void AApServerRandomizerSubsystem::ScoutArchipelagoItems() {
 	UE_LOG(LogApServerRandomizerSubsystem, Display, TEXT("AApServerRandomizerSubsystem::ScoutArchipelagoItems()"));
 
-	TSet<int64> locations;
-
-	int maxMilestones = 5;
-	int maxSlots = 10;
-
-	int64 hubBaseId = 1338000;
-
-	for (int tier = 1; tier <= slotData->GetNumberOfHubTiers(); tier++) {
-		for (int milestone = 1; milestone <= maxMilestones; milestone++) {
-			for (int slot = 1; slot <= maxSlots; slot++) {
-				if (milestone <= slotData->GetNumberOfMilestonesForTier(tier) && slot <= slotData->NumberOfChecksPerMilestone)
-					locations.Add(hubBaseId);
-
-				hubBaseId++;
-			}
-		}
-	}
-
-	//mam locations
-	for (int l = 1338500; l <= 1338593; l++)
-		locations.Add(l);
-
-	//hardrive locations
-	for (int l = 1338600; l <= 1338699; l++)
-		locations.Add(l);
-	
-	//shop locations
-	for (int l = 1338700; l <= 1338709; l++)
-		locations.Add(l);
-
-	TMap<int64, FApNetworkItem> scoutResults = ap->ScoutLocation(locations);
+	TMap<int64, FApNetworkItem> scoutResults = ap->ScoutLocation(ap->GetAllLocations());
 
 	scoutedLocations.Empty();
 

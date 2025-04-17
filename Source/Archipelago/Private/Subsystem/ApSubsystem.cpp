@@ -2,6 +2,7 @@
 #include "ApUtils.h"
 #include "Async/Async.h"
 #include "SessionSettings/SessionSettingsManager.h"
+#include "Settings/SMLOptionsLibrary.h"
 
 DEFINE_LOG_CATEGORY(LogApSubsystem);
 
@@ -34,21 +35,20 @@ AApSubsystem* AApSubsystem::Get(class UWorld* world) {
 }
 
 void AApSubsystem::ConnectToArchipelago() {
-	std::string const uri = TCHAR_TO_UTF8(*config.Url.TrimStartAndEnd());
-	std::string const user = TCHAR_TO_UTF8(*config.Login.TrimStartAndEnd());
-	std::string const password = TCHAR_TO_UTF8(*config.Password);
-
-	/*
 	USessionSettingsManager* SessionSettings = GetWorld()->GetSubsystem<USessionSettingsManager>();
-	FString SessionSettingServerURI = SessionSettings->GetStringOptionValue("Archipelago.Connection.ServerURI");
-	FString SessionSettingUserName = SessionSettings->GetStringOptionValue("Archipelago.Connection.UserName");
-	FString SessionSettingPassword = SessionSettings->GetStringOptionValue("Archipelago.Connection.Password");
-	*/
+
+	FString uriFString = USMLOptionsLibrary::GetStringOptionValue(SessionSettings, "Archipelago.Connection.ServerURI").TrimStartAndEnd();
+	FString userFString = USMLOptionsLibrary::GetStringOptionValue(SessionSettings, "Archipelago.Connection.UserName").TrimStartAndEnd();
+	FString passwordFString = USMLOptionsLibrary::GetStringOptionValue(SessionSettings, "Archipelago.Connection.Password");
+
+	std::string const uri = TCHAR_TO_UTF8(*uriFString);
+	std::string const user = TCHAR_TO_UTF8(*userFString);
+	std::string const password = TCHAR_TO_UTF8(*passwordFString);
 
 	AP_NetworkVersion apVersion;
 	apVersion.major = 0;
-	apVersion.minor = 5;
-	apVersion.build = 1;
+	apVersion.minor = 6;
+	apVersion.build = 0;
 
 	AP_SetClientVersion(&apVersion);
 
@@ -616,6 +616,16 @@ TArray<FApPlayer> AApSubsystem::GetAllApPlayers() {
 	}
 
 	return players;
+}
+
+TSet<int64> AApSubsystem::GetAllLocations() {
+	TSet<int64> locations;
+
+	for (const int64 locationId : AP_GetAllLocations()) {
+		locations.Add(locationId);
+	}
+
+	return locations;
 }
 
 void AApSubsystem::MarkGameAsDone() {

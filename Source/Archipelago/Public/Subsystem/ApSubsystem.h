@@ -85,6 +85,7 @@ public:
 	void AcceptGift(TSet<FString> ids);
 	TMap<FApPlayer, FApTraitBits> GetAcceptedTraitsPerPlayer();
 	TArray<FApPlayer> GetAllApPlayers();
+	TSet<int64> GetAllLocations();
 
 	void MarkGameAsDone();
 	void Say(FString message);
