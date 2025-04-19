@@ -50,6 +50,7 @@ protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;
+	virtual void EndPlay(const EEndPlayReason::Type endPlayReason) override;
 
 	// Begin IFGSaveInterface
 	virtual void PreSaveGame_Implementation(int32 saveVersion, int32 gameVersion) override {};
@@ -105,6 +106,8 @@ private:
 
 	TArray<TSubclassOf<UFGSchematic>> hardcodedSchematics;
 
+	TSet<int64> hintedLocations;
+
 	TMap<TSubclassOf<class UFGSchematic>, TArray<FApNetworkItem>> locationsPerMilestone;
 	TMap<TSubclassOf<class UFGSchematic>, FApNetworkItem> locationPerMamNode;
 	TMap<TSubclassOf<class UFGSchematic>, FApNetworkItem> locationPerHardDrive;
@@ -113,6 +116,9 @@ private:
 
 	std::atomic_bool areRecipiesAndSchematicsInitialized;
 	std::atomic_bool hasLoadedRoomInfo;
+
+	bool harddriveRerollHookInitialized = false;
+	FDelegateHandle harddriveRerollHookHandler;
 
 	void ScoutArchipelagoItems();
 	void ParseScoutedItemsAndCreateRecipiesAndSchematics();
@@ -142,6 +148,8 @@ private:
 	void OnMamResearchTreeUnlocked(TSubclassOf<class UFGResearchTree> researchTree);
 	UFUNCTION() //required for event binding
 	void OnSchematicCompleted(TSubclassOf<class UFGSchematic> schematic);
+	UFUNCTION() //required for event binding
+	void OnUnclaimedHardDrivesUpdated();
 
 	void OnAvaiableSchematicsChanged();
 };

@@ -37,7 +37,7 @@ DECLARE_LOG_CATEGORY_EXTERN(LogApSubsystem, Log, All);
 #include "ApSubsystem.generated.h"
 
 UCLASS()
-class ARCHIPELAGO_API AApSubsystem : public AModSubsystem, public IFGSaveInterface
+class ARCHIPELAGO_API AApSubsystem : public AModSubsystem
 {
 	GENERATED_BODY()
 
@@ -50,16 +50,6 @@ protected:
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;
 	virtual void EndPlay(const EEndPlayReason::Type endPlayReason) override;
-
-	// Begin IFGSaveInterface
-	virtual void PreSaveGame_Implementation(int32 saveVersion, int32 gameVersion) override {};
-	virtual void PostSaveGame_Implementation(int32 saveVersion, int32 gameVersion) override {};
-	virtual void PreLoadGame_Implementation(int32 saveVersion, int32 gameVersion) override {};
-	virtual void PostLoadGame_Implementation(int32 saveVersion, int32 gameVersion) override;
-	virtual void GatherDependencies_Implementation(TArray<UObject*>& out_dependentObjects) override {};
-	virtual bool NeedTransform_Implementation() override { return false; };
-	virtual bool ShouldSave_Implementation() const override { return true; };
-	// End IFSaveInterface
 
 public:
 	// Get subsystem. Server-side only, null on clients
@@ -108,8 +98,6 @@ public:
 
 	void TriggerDeathLink();
 private:
-	static AApSubsystem* callbackTarget;
-
 	AApConnectionInfoSubsystem* connectionInfoSubsystem;
 
 	TSharedPtr<TPromise<TMap<int64, FApNetworkItem>>> locationScoutingPromise = nullptr;
@@ -120,16 +108,10 @@ private:
 	TArray<TFunction<void(FText)>> deathLinkReceivedCallbacks;
 	TArray<TFunction<void(void)>> onReconnectCallbacks;
 
-	static void SetReplyCallback(AP_SetReply setReply);
-	static void ItemClearCallback();
-	static void ItemReceivedCallback(int64 id, bool notify, bool isFromServer);
-	static void LocationCheckedCallback(int64 id);
-	static void LocationScoutedCallback(std::vector<AP_NetworkItem>);
-	static void ParseSlotData(std::string json);
-	static void DeathLinkReceivedCallback(std::string source, std::string cause);
-	static void LogFromAPCpp(std::string message);
+	void SetReplyCallback(AP_SetReply setReply);
+	void LocationScoutedCallback(std::vector<AP_NetworkItem>);
+	void DeathLinkReceivedCallback(std::string source, std::string cause);
 
-	UPROPERTY(SaveGame)
 	FApConfigurationStruct config;
 
 	TQueue<TTuple<int64, bool>> ReceivedItems;
@@ -146,8 +128,6 @@ private:
 	void TimeoutConnection();
 
 	void CheckConnectionState();
-	void ScoutArchipelagoItems();
-	void ParseScoutedItemsAndCreateRecipiesAndSchematics();
 	void LoadRoomInfo();
 
 	void ProcessReceivedItems();

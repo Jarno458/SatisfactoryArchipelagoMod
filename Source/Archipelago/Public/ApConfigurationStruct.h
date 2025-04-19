@@ -9,23 +9,11 @@ USTRUCT(BlueprintType)
 struct FApConfigurationStruct {
     GENERATED_BODY()
 public:
-    UPROPERTY(BlueprintReadWrite, SaveGame)
-    FString Url{};
-
-    UPROPERTY(BlueprintReadWrite, SaveGame)
-    FString Login{};
-
-    UPROPERTY(BlueprintReadWrite, SaveGame)
-    FString Password{};
-
-    UPROPERTY(BlueprintReadWrite, SaveGame)
+    UPROPERTY(BlueprintReadWrite)
     bool Enabled{};
 
     UPROPERTY(BlueprintReadWrite)
     bool Debugging{};
-
-    UPROPERTY(BlueprintReadWrite)
-    bool ForceOverride{};
 
 	 /* Retrieves active configuration value and returns object of this struct containing it */
     static FApConfigurationStruct GetActiveConfig(UWorld* WorldContext) {
@@ -34,10 +22,6 @@ public:
         UConfigManager* ConfigManager = WorldContext->GetGameInstance()->GetSubsystem<UConfigManager>();
         ConfigManager->FillConfigurationStruct(ConfigId, FDynamicStructInfo{FApConfigurationStruct::StaticStruct(), &ConfigStruct});
         return ConfigStruct;
-    }
-
-    bool IsLoaded() {
-       return !Url.IsEmpty();
     }
 };
 

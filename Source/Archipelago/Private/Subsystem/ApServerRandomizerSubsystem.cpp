@@ -64,7 +64,6 @@ void AApServerRandomizerSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase,
 		fgcheck(hardDriveGachaSubsystem)
 
 		FApConfigurationStruct config = ap->GetConfig();
-		fgcheck(config.IsLoaded()) //should be available from start of INITIALIZATION phase
 		if (!config.Enabled)
 			return;
 
@@ -253,7 +252,17 @@ void AApServerRandomizerSubsystem::BeginPlay() {
 
 	RManager->ResearchCompletedDelegate.AddDynamic(this, &AApServerRandomizerSubsystem::OnMamResearchCompleted);
 	RManager->ResearchTreeUnlockedDelegate.AddDynamic(this, &AApServerRandomizerSubsystem::OnMamResearchTreeUnlocked);
+	RManager->OnUnclaimedHardDrivesUpdated.AddDynamic(this, &AApServerRandomizerSubsystem::OnUnclaimedHardDrivesUpdated);
 	SManager->PurchasedSchematicDelegate.AddDynamic(this, &AApServerRandomizerSubsystem::OnSchematicCompleted);
+
+	if (!harddriveRerollHookInitialized) {
+		harddriveRerollHookHandler = SUBSCRIBE_METHOD_AFTER(AFGResearchManager::RerollHardDriveRewards, [this](const AFGResearchManager* self, AFGPlayerController* player, int32 hardDriveId) {
+			OnUnclaimedHardDrivesUpdated();
+		});
+
+		harddriveRerollHookInitialized = true;
+	}
+	void RerollHardDriveRewards(class AFGPlayerController* controller, int32 hardDriveID);
 }
 
 void AApServerRandomizerSubsystem::Tick(float DeltaTime) {
@@ -272,6 +281,15 @@ void AApServerRandomizerSubsystem::Tick(float DeltaTime) {
 		OnAvaiableSchematicsChanged();
 		lastGamePhase = phaseManager->GetCurrentGamePhase()->mGamePhase;
 	}
+}
+
+void AApServerRandomizerSubsystem::EndPlay(const EEndPlayReason::Type endPlayReason) {
+	UE_LOG(LogApSubsystem, Display, TEXT("AApServerRandomizerSubsystem::EndPlay(%i)"), endPlayReason);
+
+	Super::EndPlay(endPlayReason);
+
+	if (harddriveRerollHookHandler.IsValid())
+		UNSUBSCRIBE_METHOD(AFGResearchManager::RerollHardDriveRewards, harddriveRerollHookHandler);
 }
 
 void AApServerRandomizerSubsystem::ReceiveItem(int64 itemid, bool isFromServer) {
@@ -310,6 +328,7 @@ void AApServerRandomizerSubsystem::OnDeathLinkReceived(FText message) {
 	ap->AddChatMessage(message, FLinearColor::Red);
 }
 
+
 void AApServerRandomizerSubsystem::HandleDeathLink() {
 	if (IsRunningDedicatedServer())
 		return; // TODO make deathlink work for dedicated servers
@@ -326,19 +345,22 @@ void AApServerRandomizerSubsystem::HandleDeathLink() {
 
 	if (player->IsAliveAndWell()) {
 		awaitingHealty = false;
-	} else {
+	}
+	else {
 		if (!awaitingHealty) {
+			if (!instagib) {
+				ap->TriggerDeathLink();
+			}
 			awaitingHealty = true;
-
-			ap->TriggerDeathLink();
 		}
+	}
+	if (instagib) {
+		instagib = false;
 	}
 }
 
 void AApServerRandomizerSubsystem::HandleInstagib(AFGCharacterPlayer* player) {
 	if (instagib) {
-		instagib = false;
-
 		const TSubclassOf<UDamageType> damageType = TSubclassOf<UDamageType>(UDamageType::StaticClass());
 		FDamageEvent instagibDamageEvent = FDamageEvent(damageType);
 		player->TakeDamage(1333337, instagibDamageEvent, player->GetFGPlayerController(), player);
@@ -413,6 +435,39 @@ void AApServerRandomizerSubsystem::OnMamResearchTreeUnlocked(TSubclassOf<class U
 	OnAvaiableSchematicsChanged();
 }
 
+void AApServerRandomizerSubsystem::OnUnclaimedHardDrivesUpdated() {
+	UE_LOG(LogApServerRandomizerSubsystem, Display, TEXT("AApSubSystem::OnUnclaimedHardDrivesUpdated()"));
+
+	TSet<int64> locationHintsToPublish;
+
+	int currentPlayerSlot = connectionInfo->GetCurrentPlayerSlot();
+
+	TArray<UFGHardDrive*> unclaimedHarddrives;
+	RManager->GetUnclaimedHardDrives(unclaimedHarddrives);
+	for (const UFGHardDrive* pendingHarddrive : unclaimedHarddrives) {
+		if (!IsValid(pendingHarddrive))
+			continue;
+
+		TArray<TSubclassOf<UFGSchematic>> pendingSchematics;
+		pendingHarddrive->GetSchematics(pendingSchematics);
+
+		for (const TSubclassOf<UFGSchematic>& harddriveSchematic : pendingSchematics) {
+			if (!locationPerHardDrive.Contains(harddriveSchematic))
+				continue;
+
+			FApNetworkItem locationInfo = locationPerHardDrive[harddriveSchematic];
+			if (locationInfo.player != currentPlayerSlot
+				&& (locationInfo.flags & 0b011) > 0
+				&& !hintedLocations.Contains(locationInfo.location))
+				locationHintsToPublish.Add(locationInfo.location);
+		}
+	}
+
+	ap->CreateLocationHint(locationHintsToPublish);
+
+	hintedLocations.Append(locationHintsToPublish);
+}
+
 void AApServerRandomizerSubsystem::OnSchematicCompleted(TSubclassOf<class UFGSchematic> schematic) {
 	UE_LOG(LogApServerRandomizerSubsystem, Display, TEXT("AApSubSystem::OnSchematicCompleted(schematic)"));
 
@@ -472,30 +527,44 @@ void AApServerRandomizerSubsystem::OnAvaiableSchematicsChanged() {
 	for (const TPair<TSubclassOf<UFGSchematic>, TArray<FApNetworkItem>>& itemPerMilestone : locationsPerMilestone) {
 		if (UFGSchematic::GetTechTier(itemPerMilestone.Key) <= maxAvailableTechTier) {
 			for (const FApNetworkItem& item : itemPerMilestone.Value) {
-				if (item.player != currentPlayerSlot && (item.flags & 0b011) > 0)
-					locationHintsToPublish.Add(item.location);
+				if (item.player != currentPlayerSlot 
+					&& (item.flags & 0b011) > 0
+					&& !hintedLocations.Contains(item.location))
+						locationHintsToPublish.Add(item.location);
 			}
 		}
 	}
+
+	TArray<ESchematicType> types;
+	types.Add(ESchematicType::EST_Alternate);
+
+	TArray<TSubclassOf<UFGSchematic>> availableSchematics;
+	TArray<TSubclassOf<UFGSchematic>> availableNonPurchaseSchematics;
+	SManager->GetAvailableSchematicsOfTypes(types, availableSchematics);
+	SManager->GetAvailableNonPurchasedSchematicsOfTypes(types, availableSchematics);
 
 	if (SManager->IsSchematicPurchased(ItemSchematics[mappingSubsystem->GetMamItemId()])) {
 		for (const TPair<TSubclassOf<UFGSchematic>, FApNetworkItem>& itemPerMamNode : locationPerMamNode) {
 			if (itemPerMamNode.Value.player != currentPlayerSlot
 				&& (itemPerMamNode.Value.flags & 0b011) > 0
+				&& !hintedLocations.Contains(itemPerMamNode.Value.location)
 				&& RManager->CanResearchBeInitiated(itemPerMamNode.Key))
-
-				locationHintsToPublish.Add(itemPerMamNode.Value.location);
+					locationHintsToPublish.Add(itemPerMamNode.Value.location);
 		}
 	}
 
 	if (SManager->IsSchematicPurchased(ItemSchematics[mappingSubsystem->GetAwesomeShopItemId()])) {
 		for (const TPair<TSubclassOf<UFGSchematic>, FApNetworkItem>& itemPerShopNode : locationPerShopNode) {
-			if (itemPerShopNode.Value.player != currentPlayerSlot && (itemPerShopNode.Value.flags & 0b011) > 0)
-				locationHintsToPublish.Add(itemPerShopNode.Value.location);
+			if (itemPerShopNode.Value.player != currentPlayerSlot 
+				&& (itemPerShopNode.Value.flags & 0b011) > 0
+				&& !hintedLocations.Contains(itemPerShopNode.Value.location))
+					locationHintsToPublish.Add(itemPerShopNode.Value.location);
 		}
 	}
 
 	ap->CreateLocationHint(locationHintsToPublish);
+
+	hintedLocations.Append(locationHintsToPublish);
 }
 
 void AApServerRandomizerSubsystem::AwardItem(int64 itemid, bool isFromServer) {

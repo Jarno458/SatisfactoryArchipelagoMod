@@ -11,8 +11,6 @@ DEFINE_LOG_CATEGORY(LogApSubsystem);
 
 #define LOCTEXT_NAMESPACE "Archipelago"
 
-AApSubsystem* AApSubsystem::callbackTarget;
-
 AApSubsystem::AApSubsystem() {
 	PrimaryActorTick.bCanEverTick = true;
 	PrimaryActorTick.bStartWithTickEnabled = false;
@@ -37,9 +35,13 @@ AApSubsystem* AApSubsystem::Get(class UWorld* world) {
 void AApSubsystem::ConnectToArchipelago() {
 	USessionSettingsManager* SessionSettings = GetWorld()->GetSubsystem<USessionSettingsManager>();
 
-	FString uriFString = USMLOptionsLibrary::GetStringOptionValue(SessionSettings, "Archipelago.Connection.ServerURI").TrimStartAndEnd();
-	FString userFString = USMLOptionsLibrary::GetStringOptionValue(SessionSettings, "Archipelago.Connection.UserName").TrimStartAndEnd();
-	FString passwordFString = USMLOptionsLibrary::GetStringOptionValue(SessionSettings, "Archipelago.Connection.Password");
+	//FString uriFString = USMLOptionsLibrary::GetStringOptionValue(SessionSettings, "Archipelago.Connection.ServerURI").TrimStartAndEnd();
+	//FString userFString = USMLOptionsLibrary::GetStringOptionValue(SessionSettings, "Archipelago.Connection.UserName").TrimStartAndEnd();
+	//FString passwordFString = USMLOptionsLibrary::GetStringOptionValue(SessionSettings, "Archipelago.Connection.Password");
+
+	FString uriFString("localhost:38281");
+	FString userFString("JarnoSF");
+	FString passwordFString("");
 
 	std::string const uri = TCHAR_TO_UTF8(*uriFString);
 	std::string const user = TCHAR_TO_UTF8(*userFString);
@@ -54,16 +56,32 @@ void AApSubsystem::ConnectToArchipelago() {
 
 	AP_Init(uri.c_str(), "Satisfactory", user.c_str(), password.c_str());
 
-	callbackTarget = this;
+	AP_SetItemClearCallback([this]() {
+		ReceivedItems.Empty();
+		isReconnect = true;
+	});
+	AP_SetItemRecvCallback([this](int64 itemId, bool notify, bool isFromServer) {
+		ReceivedItems.Enqueue(TTuple<int64, bool>(itemId, isFromServer));
+	});
+	AP_SetLocationCheckedCallback([this](int64 locationId) { 
+		CheckedLocations.Enqueue(locationId);
+	});
+	AP_RegisterSetReplyCallback([this](AP_SetReply setPacket) {
+		SetReplyCallback(std::move(setPacket));
+	});
+	AP_SetLocationInfoCallback([this](std::vector<AP_NetworkItem> scoutedItems) {
+		LocationScoutedCallback(std::move(scoutedItems));
+	});
+	AP_SetDeathLinkRecvCallback([this](std::string source, std::string cause) {
+		DeathLinkReceivedCallback(source, cause);
+	});
+	AP_SetLoggingCallback([this](std::string message) {
+		UE_LOG(LogApSubsystem, Display, TEXT("LogFromAPCpp: %s"), *UApUtils::FStr(message));
+	});
+	AP_RegisterSlotDataRawCallback("Data", [this](std::string json) {
+		connectionInfoSubsystem->slotDataJson = UApUtils::FStr(json);
+	});
 
-	AP_SetItemClearCallback(AApSubsystem::ItemClearCallback);
-	AP_SetItemRecvCallback(AApSubsystem::ItemReceivedCallback);
-	AP_SetLocationCheckedCallback(AApSubsystem::LocationCheckedCallback);
-	AP_RegisterSetReplyCallback(AApSubsystem::SetReplyCallback);
-	AP_SetLocationInfoCallback(AApSubsystem::LocationScoutedCallback);
-	AP_SetDeathLinkRecvCallback(AApSubsystem::DeathLinkReceivedCallback);
-	AP_SetLoggingCallback(AApSubsystem::LogFromAPCpp);
-	AP_RegisterSlotDataRawCallback("Data", AApSubsystem::ParseSlotData);
 	AP_SetDeathLinkSupported(true);
 	AP_SetGiftingSupported(true);
 
@@ -81,16 +99,15 @@ void AApSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase) {
 	if (!HasAuthority())
 		UE_LOG(LogApSubsystem, Fatal, TEXT("AApSubsystem()::DispatchLifecycleEvent() Called without authority"));
 
-	if (config.IsLoaded() && !config.Enabled) {
-		UE_LOG(LogApSubsystem, Warning, TEXT("Archipelago manually disabled by user config"));
-		return;
-	}
-
 	if (phase == ELifecyclePhase::CONSTRUCTION) {
-		if (!config.IsLoaded())
-			config = FApConfigurationStruct::GetActiveConfig(GetWorld());
+		config = FApConfigurationStruct::GetActiveConfig(GetWorld());
 	}
 	else if (phase == ELifecyclePhase::INITIALIZATION) {
+		if (!config.Enabled) {
+			UE_LOG(LogApSubsystem, Warning, TEXT("Archipelago manually disabled by user config"));
+			return;
+		}
+
 		connectionInfoSubsystem = AApConnectionInfoSubsystem::Get(GetWorld());
 		fgcheck(connectionInfoSubsystem);
 
@@ -111,6 +128,9 @@ void AApSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase) {
 		}, 0.5);
 	}
 	else if (phase == ELifecyclePhase::POST_INITIALIZATION) {
+		if (!config.Enabled)
+			return;
+
 		SetActorTickEnabled(true);
 	}
 }
@@ -154,40 +174,8 @@ void AApSubsystem::EndPlay(const EEndPlayReason::Type endPlayReason) {
 	CallOnGameThread<void>([]() { AP_Shutdown(); });
 }
 
-void AApSubsystem::ItemClearCallback() {
-	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::ItemClearCallback()"));
-
-	if (!IsValid(callbackTarget))
-		return;
-
-	callbackTarget->ReceivedItems.Empty();
-	callbackTarget->isReconnect = true;
-}
-
-void AApSubsystem::ItemReceivedCallback(int64 item, bool notify, bool isFromServer) {
-	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::ItemReceivedCallback(%i, \"%s\")"), item, (notify ? TEXT("true") : TEXT("false")));
-
-	if (!IsValid(callbackTarget))
-		return;
-
-	TTuple<int64, bool> receivedItem = TTuple<int64, bool>(item, isFromServer);
-	callbackTarget->ReceivedItems.Enqueue(receivedItem);
-}
-
-void AApSubsystem::LocationCheckedCallback(int64 id) {
-	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::LocationCheckedCallback(%i)"), id);
-
-	if (!IsValid(callbackTarget))
-		return;
-
-	callbackTarget->CheckedLocations.Enqueue(id);
-}
-
 void AApSubsystem::DeathLinkReceivedCallback(std::string source, std::string cause) {
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::DeathLinkReceivedCallback()"));
-
-	if (!IsValid(callbackTarget))
-		return;
 
 	FText sourceString = UApUtils::FText(source);
 	FText causeString = UApUtils::FText(cause);
@@ -197,26 +185,20 @@ void AApSubsystem::DeathLinkReceivedCallback(std::string source, std::string cau
 	else
 		message = FText::Format(LOCTEXT("DeathLinkReceivedWithCause", "{0} has died because {1}"), sourceString, causeString);
 
-	callbackTarget->PendingDeathlinks.Enqueue(message);
+	PendingDeathlinks.Enqueue(message);
 }
 
 void AApSubsystem::SetReplyCallback(AP_SetReply setReply) {
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::SetReplyCallback(\"%s\")"), *UApUtils::FStr(setReply.key));
 
-	if (!IsValid(callbackTarget))
-		return;
-
 	FString key = UApUtils::FStr(setReply.key);
 
-	if (callbackTarget->dataStoreCallbacks.Contains(key))
-		callbackTarget->dataStoreCallbacks[key](setReply);
+	if (dataStoreCallbacks.Contains(key))
+		dataStoreCallbacks[key](setReply);
 }
 
 void AApSubsystem::LocationScoutedCallback(std::vector<AP_NetworkItem> scoutedLocations) {
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::LocationScoutedCallback(vector[%i])"), scoutedLocations.size());
-
-	if (!IsValid(callbackTarget))
-		return;
 
 	TMap<int64, FApNetworkItem> scoutedLocationsResult = TMap<int64, FApNetworkItem>();
 
@@ -233,25 +215,8 @@ void AApSubsystem::LocationScoutedCallback(std::vector<AP_NetworkItem> scoutedLo
 		scoutedLocationsResult.Add(location.location, location);
 	}
 
-	if (callbackTarget->locationScoutingPromise != nullptr)
-		callbackTarget->locationScoutingPromise->SetValue(scoutedLocationsResult);
-}
-
-void AApSubsystem::ParseSlotData(std::string json) {
-	FString jsonString = UApUtils::FStr(json);
-
-	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::ParseSlotData(\"%s\")"), *jsonString);
-
-	if (!IsValid(callbackTarget))
-		return;
-
-	callbackTarget->connectionInfoSubsystem->slotDataJson = jsonString;
-}
-
-void AApSubsystem::LogFromAPCpp(std::string message) {
-	FString mesageToLog = UApUtils::FStr(message);
-
-	UE_LOG(LogApSubsystem, Display, TEXT("LogFromAPCpp: %s"), *mesageToLog);
+	if (locationScoutingPromise != nullptr)
+		locationScoutingPromise->SetValue(scoutedLocationsResult);
 }
 
 void AApSubsystem::LoadRoomInfo() {
@@ -712,17 +677,6 @@ void AApSubsystem::CheckLocation(const TSet<int64>& locationIds) {
 	CallOnGameThread<void>([&locationsToCheck]() {
 		AP_SendItem(locationsToCheck);
 	});
-}
-
-//TODO fix is now fired when loading a fresh save
-void AApSubsystem::PostLoadGame_Implementation(int32 saveVersion, int32 gameVersion) {
-	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::PostLoadGame_Implementation(saveVersion: %i, gameVersion: %i)"), saveVersion, gameVersion);
-
-	FApConfigurationStruct modConfig = FApConfigurationStruct::GetActiveConfig(GetWorld());
-	if (!config.IsLoaded() || modConfig.ForceOverride)
-		config = modConfig;
-
-	config.Debugging = modConfig.Debugging;
 }
 
 void AApSubsystem::AbortGame(FText reason) {
