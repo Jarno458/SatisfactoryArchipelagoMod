@@ -56,7 +56,9 @@ void AApServerRandomizerSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase,
 		mappingSubsystem = AApMappingsSubsystem::Get(world);
 		fgcheck(mappingSubsystem)
 		RManager = AFGResearchManager::Get(world);
-		fgcheck(RManager)
+		fgcheck(RManager);
+		SManager = AFGSchematicManager::Get(world);
+		fgcheck(SManager);
 		unlockSubsystem = AFGUnlockSubsystem::Get(world);
 		fgcheck(unlockSubsystem)
 		hardDriveGachaSubsystem = AApHardDriveGachaSubsystem::Get(world);
@@ -223,10 +225,7 @@ void AApServerRandomizerSubsystem::ParseScoutedItemsAndCreateRecipiesAndSchemati
 		if (!ItemSchematics.Contains(itemId)) {
 			UE_LOGFMT(LogApServerRandomizerSubsystem, Error, "AApSubsystem::ParseScoutedItemsAndCreateRecipiesAndSchematics() Failed to find ItemSchematics for itemId {0}", itemId);
 		} else {
-			//TODO fix me
-			TSubclassOf<UFGSchematic> schematic = ItemSchematics[itemId];
-
-			//SManager->GiveAccessToSchematic(schematic, nullptr, ESchematicUnlockFlags::Force);
+			SManager->GiveAccessToSchematic(ItemSchematics[itemId], nullptr, ESchematicUnlockFlags::Force);
 		}
 	}
 
@@ -267,8 +266,6 @@ void AApServerRandomizerSubsystem::BeginPlay() {
 	Super::BeginPlay();
 
 	UWorld* world = GetWorld();
-	SManager = AFGSchematicManager::Get(world);
-	RManager = AFGResearchManager::Get(world);
 
 	portalSubsystem = AApPortalSubsystem::Get(world);
 	mappingSubsystem = AApMappingsSubsystem::Get(world);
