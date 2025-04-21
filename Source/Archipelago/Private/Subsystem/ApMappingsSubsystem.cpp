@@ -11,6 +11,9 @@ DEFINE_LOG_CATEGORY(LogApMappingsSubsystem);
 //TODO REMOVE
 #pragma optimize("", off)
 
+#define SINGLE_ITEM_START 1339000
+#define SINGLE_ITEM_OFFSET 1000
+
 int64 AApMappingsSubsystem::shopId = 0;
 int64 AApMappingsSubsystem::mamId = 0;
 TMap<TSubclassOf<UFGItemDescriptor>, int64> AApMappingsSubsystem::ItemClassToItemId;
@@ -87,9 +90,20 @@ void AApMappingsSubsystem::LoadItemMappings(TMap<int64, TSharedRef<FApItemBase>>
 		FApItem itemInfo;
 		itemInfo.Id = itemMapping.Key;
 		itemInfo.Descriptor = itemDescriptor;
-		itemInfo.Class = itemClass; 
+		itemInfo.Class = itemClass;
 
-		itemMap.Add(itemMapping.Key, MakeShared<FApItem>(itemInfo));
+		if (itemMapping.Key >= SINGLE_ITEM_START) {
+			itemInfo.stackSize = 1;
+		} else if (UApMappings::ItemIdToSpecailStackSize.Contains(itemMapping.Key)) {
+			itemInfo.stackSize = UApMappings::ItemIdToSpecailStackSize[itemMapping.Key];
+		} else {
+			itemInfo.stackSize = UFGItemDescriptor::GetStackSize(itemClass);
+		}
+
+		TSharedRef<FApItemBase> itemInfoRef = MakeShared<FApItem>(itemInfo);
+
+		itemMap.Add(itemMapping.Key, itemInfoRef);
+		itemMap.Add(itemMapping.Key + SINGLE_ITEM_OFFSET, itemInfoRef);
 
 		ItemClassToItemId.Add(itemClass, itemMapping.Key);
 	}
@@ -112,9 +126,9 @@ void AApMappingsSubsystem::LoadSpecialItemMappings(TMap<int64, TSharedRef<FApIte
 			case EApMappingsSpecialItemType::Toolbelt1:
 				specialItem.SpecialType = ESpecialItemType::Toolbelt1;
 				break;
-			case EApMappingsSpecialItemType::InventoryUpload:
-				specialItem.SpecialType = ESpecialItemType::InventoryUpload;
-				break;
+			//case EApMappingsSpecialItemType::InventoryUpload:
+			//	specialItem.SpecialType = ESpecialItemType::InventoryUpload;
+			//	break;
 		}
 
 		itemMap.Add(specialItemMapping.Key, MakeShared<FApSpecialItem>(specialItem));
@@ -246,7 +260,9 @@ UObject* AApMappingsSubsystem::FindAssetByName(const TMap<FName, const FAssetDat
 		UE_LOG(LogApMappingsSubsystem, Display, TEXT("AApMappingsSubsystem::FindAssetByName() attempting to load asset of name %s"), *assetName);
 
 		UBlueprintGeneratedClass* blueprint = LoadObject<UBlueprintGeneratedClass>(NULL, *assetName);
-		fgcheck(blueprint != nullptr);
+		if (blueprint == nullptr) {
+			UE_LOG(LogApMappingsSubsystem, Fatal, TEXT("AApMappingsSubsystem::FindAssetByName() failed to cast asset to UBlueprintGeneratedClass for %s"), *assetName);
+		}
 		return blueprint->GetDefaultObject();
 #else
 		int32 dotPos;
@@ -260,7 +276,11 @@ UObject* AApMappingsSubsystem::FindAssetByName(const TMap<FName, const FAssetDat
 	}
 
 	FName key = FName(*assetName);
-	fgcheck(assets.Contains(key));
+
+	if (!assets.Contains(key))
+	{
+		UE_LOG(LogApMappingsSubsystem, Fatal, TEXT("AApMappingsSubsystem::FindAssetByName() asset not found in assets array: %s"), *assetName);
+	}
 
 	FAssetData assetData = assets[key];
 
@@ -330,7 +350,8 @@ const TMap<FName, const FAssetData> AApMappingsSubsystem::GetRecipeAssets(IAsset
 	recipeAssets.Append(GetBlueprintAssetsIn(registery, "/Game/FactoryGame/Recipes", TArray<FString>{ "Recipe_" }));
 	recipeAssets.Append(GetBlueprintAssetsIn(registery, "/Game/FactoryGame/Equipment", TArray<FString>{ "Recipe_" }));
 	recipeAssets.Append(GetBlueprintAssetsIn(registery, "/Game/FactoryGame/Buildable/Factory", TArray<FString>{ "Recipe_" }));
-
+	recipeAssets.Append(GetBlueprintAssetsIn(registery, "/Game/FactoryGame/Buildable/Building", TArray<FString>{ "Recipe_" }));
+	
 	return recipeAssets;
 }
 
@@ -341,6 +362,10 @@ void AApMappingsSubsystem::InitializeAfterConnectingToAp() {
 void AApMappingsSubsystem::LoadNamesFromAP() {
 	for (TPair<int64, FString> itemMapping: UApMappings::ItemIdToGameItemDescriptor) {
 		FString name = ((AApSubsystem*)ap)->GetApItemName(itemMapping.Key);
+
+		//we dont want the Bundle: or Single: prefix here
+		const int cutLength = FString(TEXT("Bundle: ")).Len();
+		name = name.RightChop(cutLength);
 
 		NameToItemId.Add(name, itemMapping.Key);
 		ItemIdToName.Add(itemMapping.Key, name);

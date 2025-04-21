@@ -17,20 +17,7 @@ bool AApTrapSubsystem::SpawnItemTrap_Implementation(TSubclassOf<UFGItemDescripto
 }
 
 AApTrapSubsystem* AApTrapSubsystem::Get(UWorld* WorldContext) {
-	if (!WorldContext) {
-		return nullptr;
-	}
-		
-	TArray<AActor*> arr;
-	// Relies on the fact that nothing has spawned the C++ version before
-	// The blueprint one descends from this so it is found instead
-	// This would break if a C++ version was spawned or persisted via save game
-	UGameplayStatics::GetAllActorsOfClass(WorldContext, AApTrapSubsystem::StaticClass(), arr);
-	if (arr.IsValidIndex(0)) {
-		return Cast<AApTrapSubsystem>(arr[0]);
-	} else {
-		return nullptr;
-	}
+	return UApUtils::GetSubsystemActorIncludingParentClases<AApTrapSubsystem>(WorldContext);
 }
 
 AApTrapSubsystem* AApTrapSubsystem::Get() {

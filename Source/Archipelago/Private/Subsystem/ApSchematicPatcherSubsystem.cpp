@@ -5,6 +5,7 @@
 #include "Module/ApGameWorldModule.h"
 #include "Data/ApMappings.h"
 #include "PushModel.h"
+#include "ApUtils.h"
 
 DEFINE_LOG_CATEGORY(LogApSchematicPatcherSubsystem);
 
@@ -27,10 +28,7 @@ AApSchematicPatcherSubsystem* AApSchematicPatcherSubsystem::Get(class UObject* w
 }
 
 AApSchematicPatcherSubsystem* AApSchematicPatcherSubsystem::Get(class UWorld* world) {
-	USubsystemActorManager* SubsystemActorManager = world->GetSubsystem<USubsystemActorManager>();
-	fgcheck(SubsystemActorManager);
-
-	return SubsystemActorManager->GetSubsystemActor<AApSchematicPatcherSubsystem>();
+	return UApUtils::GetSubsystemActorIncludingParentClases<AApSchematicPatcherSubsystem>(world);
 }
 
 void AApSchematicPatcherSubsystem::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const {
@@ -42,6 +40,7 @@ void AApSchematicPatcherSubsystem::GetLifetimeReplicatedProps(TArray<FLifetimePr
 	DOREPLIFETIME_WITH_PARAMS_FAST(AApSchematicPatcherSubsystem, replicatedItemInfos, replicationParams);
 	DOREPLIFETIME_WITH_PARAMS_FAST(AApSchematicPatcherSubsystem, replicatedMilestones, replicationParams);
 	DOREPLIFETIME_WITH_PARAMS_FAST(AApSchematicPatcherSubsystem, replicatedCollectedLocations, replicationParams);
+	DOREPLIFETIME_WITH_PARAMS_FAST(AApSchematicPatcherSubsystem, replicatedStarterRecipes, replicationParams);
 }
 
 void AApSchematicPatcherSubsystem::BeginPlay() {
@@ -102,6 +101,7 @@ void AApSchematicPatcherSubsystem::Tick(float DeltaTime) {
 		|| connectionInfo->GetConnectionState() != EApConnectionState::Connected 
 		|| !receivedItemInfos
 		|| !receivedMilestones
+		|| !receivedStarterRecipes
 		|| !slotDataSubsystem->HasLoadedSlotData())
 			return;
 
@@ -110,6 +110,17 @@ void AApSchematicPatcherSubsystem::Tick(float DeltaTime) {
 
 		hasPatchedSchematics = true;
 	}
+}
+
+void AApSchematicPatcherSubsystem::Server_SetTier0Recipes(int currentPlayerId, const TArray<FApNetworkItem>& itemInfos) {
+	if (!HasAuthority())
+		return;
+
+	replicatedStarterRecipes = MakeReplicateable(currentPlayerId, itemInfos);
+
+	MARK_PROPERTY_DIRTY_FROM_NAME(AApSchematicPatcherSubsystem, replicatedStarterRecipes, this);
+
+	OnRep_StarterRecipesReplicated();
 }
 
 void AApSchematicPatcherSubsystem::Server_SetItemInfoPerSchematicId(int currentPlayerId, const TArray<FApNetworkItem>& itemInfo) {
@@ -180,6 +191,10 @@ void AApSchematicPatcherSubsystem::OnRep_MilestonesReplicated() {
 	receivedMilestones = true;
 }
 
+void AApSchematicPatcherSubsystem::OnRep_StarterRecipesReplicated() {
+	receivedStarterRecipes = true;
+}
+
 void AApSchematicPatcherSubsystem::OnRep_CollectedLocationsReplicated() {
 	for (int16 location : replicatedCollectedLocations) {
 		int64 location64 = location + ID_OFFSET;
@@ -205,6 +220,9 @@ void AApSchematicPatcherSubsystem::InitializeSchematicsBasedOnScoutedData() {
 	TArray<TSubclassOf<UFGSchematic>> hardcodedSchematics;
 	hardcodedSchematics.Append(apWorldModule->mSchematics);
 	hardcodedSchematics.Append(apWorldModule->mTreeNodeSchematics);
+
+
+	InitializeStarterRecipes();
 
 	TMap<int64, FApReplicatedItemInfo> replicatedItemInfoBySchematicId;
 	for (const FApReplicatedItemInfo& replicatedItemInfo : replicatedItemInfos) {
@@ -264,6 +282,19 @@ void AApSchematicPatcherSubsystem::InitializeSchematicsBasedOnScoutedData() {
 			}
 		}
 	}
+}
+
+void AApSchematicPatcherSubsystem::InitializeStarterRecipes() {
+	FContentLib_Schematic schematic = FContentLib_Schematic();
+
+	//got to clear entries from previus saves
+	UFGSchematic* factorySchematicCDO = Cast<UFGSchematic>(tierOSchematic->GetDefaultObject());
+	factorySchematicCDO->mUnlocks.Empty();
+
+	for (const FApReplicatedItemInfo& item : replicatedStarterRecipes)
+		schematic.InfoCards.Add(CreateUnlockInfoOnly(item));
+
+	UCLSchematicBPFLib::InitSchematicFromStruct(schematic, tierOSchematic, contentLibSubsystem);
 }
 
 void AApSchematicPatcherSubsystem::InitializeHubSchematic(TSubclassOf<UFGSchematic> factorySchematic, const TArray<FApReplicatedItemInfo>& items, const TMap<int64, int>& costs) {

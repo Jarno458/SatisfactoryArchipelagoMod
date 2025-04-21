@@ -59,6 +59,9 @@ struct ARCHIPELAGO_API FApItem : public FApItemBase
 
 	UPROPERTY()
 	TSubclassOf<UFGItemDescriptor> Class;
+
+	UPROPERTY()
+	int stackSize;
 };
 
 USTRUCT()

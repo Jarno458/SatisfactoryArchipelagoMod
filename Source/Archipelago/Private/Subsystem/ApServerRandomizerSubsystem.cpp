@@ -2,6 +2,7 @@
 #include "Engine\DamageEvents.h"
 #include "FGGamePhase.h"
 #include "FGCentralStorageSubsystem.h"
+#include "Logging/StructuredLog.h"
 
 #include "data/ApMappings.h"
 
@@ -32,14 +33,14 @@ AApServerRandomizerSubsystem* AApServerRandomizerSubsystem::Get(class UWorld* wo
 	return SubsystemActorManager->GetSubsystemActor<AApServerRandomizerSubsystem>();
 }
 
-void AApServerRandomizerSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase, const TArray<TSubclassOf<UFGSchematic>>& apHardcodedSchematics) {
-	UE_LOG(LogApServerRandomizerSubsystem, Display, TEXT("AApServerRandomizerSubsystem()::DispatchLifecycleEvent(%s)"), *UEnum::GetValueAsString(phase));
+void AApServerRandomizerSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase, const TArray<TSubclassOf<class UFGSchematic>>& apSchematics) {
+	UE_LOGFMT(LogApServerRandomizerSubsystem, Display, "AApServerRandomizerSubsystem()::DispatchLifecycleEvent({0})", UEnum::GetValueAsString(phase));
 
 	if (!HasAuthority())
-		UE_LOG(LogApServerRandomizerSubsystem, Fatal, TEXT("AApServerRandomizerSubsystem()::DispatchLifecycleEvent() Called without authority"));
+		UE_LOGFMT(LogApServerRandomizerSubsystem, Fatal, "AApServerRandomizerSubsystem()::DispatchLifecycleEvent() Called without authority");
 
 	if (phase == ELifecyclePhase::CONSTRUCTION) {
-		hardcodedSchematics = apHardcodedSchematics;
+		schematics = apSchematics;
 	}
 	else if (phase == ELifecyclePhase::INITIALIZATION) {
 		UWorld* world = GetWorld();
@@ -52,8 +53,6 @@ void AApServerRandomizerSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase,
 		fgcheck(connectionInfo);
 		slotData = AApSlotDataSubsystem::Get(world);
 		fgcheck(slotData);
-		schematicPatcher = AApSchematicPatcherSubsystem::Get(world);
-		fgcheck(schematicPatcher);
 		mappingSubsystem = AApMappingsSubsystem::Get(world);
 		fgcheck(mappingSubsystem)
 		RManager = AFGResearchManager::Get(world);
@@ -62,6 +61,8 @@ void AApServerRandomizerSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase,
 		fgcheck(unlockSubsystem)
 		hardDriveGachaSubsystem = AApHardDriveGachaSubsystem::Get(world);
 		fgcheck(hardDriveGachaSubsystem)
+		schematicPatcher = AApSchematicPatcherSubsystem::Get(world);
+		fgcheck(schematicPatcher);
 
 		FApConfigurationStruct config = ap->GetConfig();
 		if (!config.Enabled)
@@ -117,7 +118,7 @@ bool AApServerRandomizerSubsystem::InitializeTick() {
 }
 
 void AApServerRandomizerSubsystem::ScoutArchipelagoItems() {
-	UE_LOG(LogApServerRandomizerSubsystem, Display, TEXT("AApServerRandomizerSubsystem::ScoutArchipelagoItems()"));
+	UE_LOGFMT(LogApServerRandomizerSubsystem, Display, "AApServerRandomizerSubsystem::ScoutArchipelagoItems()");
 
 	TMap<int64, FApNetworkItem> scoutResults = ap->ScoutLocation(ap->GetAllLocations());
 
@@ -129,12 +130,12 @@ void AApServerRandomizerSubsystem::ScoutArchipelagoItems() {
 }
 
 void AApServerRandomizerSubsystem::ParseScoutedItemsAndCreateRecipiesAndSchematics() {
-	UE_LOG(LogApServerRandomizerSubsystem, Display, TEXT("AApSubsystem::ParseScoutedItemsAndCreateRecipiesAndSchematics()"));
+	UE_LOGFMT(LogApServerRandomizerSubsystem, Display, "AApSubsystem::ParseScoutedItemsAndCreateRecipiesAndSchematics()");
 
 	TMap<FString, TSubclassOf<UFGSchematic>> schematicsPerMilestone = TMap<FString, TSubclassOf<UFGSchematic>>();
 	TMap<int64, TSubclassOf<UFGSchematic>> schematicsPerLocation = TMap<int64, TSubclassOf<UFGSchematic>>();
 
-	for (const TSubclassOf<UFGSchematic>& schematic : hardcodedSchematics) {
+	for (const TSubclassOf<UFGSchematic>& schematic : schematics) {
 		//The magic, we store AP id's inside the menu priority, and we set techtier to -1 for item send by the server
 		int locationId = FMath::RoundToInt(UFGSchematic::GetMenuPriority(schematic));
 		if (locationId > 1338000) {
@@ -206,6 +207,30 @@ void AApServerRandomizerSubsystem::ParseScoutedItemsAndCreateRecipiesAndSchemati
 
 	int currentPlayer = connectionInfo->GetCurrentPlayerSlot();
 
+	TArray<FApNetworkItem> starterRecipes;
+	for (int64 itemId : slotData->starterRecipeIds) {
+		FApNetworkItem item;
+		item.item = itemId;
+		item.location = ID_OFFSET;
+		item.player = currentPlayer;
+		item.flags = 0b001;
+		item.itemName = ap->GetApItemName(itemId);
+		item.locationName = "";
+		item.playerName = "";
+
+		starterRecipes.Add(item);
+
+		if (!ItemSchematics.Contains(itemId)) {
+			UE_LOGFMT(LogApServerRandomizerSubsystem, Error, "AApSubsystem::ParseScoutedItemsAndCreateRecipiesAndSchematics() Failed to find ItemSchematics for itemId {0}", itemId);
+		} else {
+			//TODO fix me
+			TSubclassOf<UFGSchematic> schematic = ItemSchematics[itemId];
+
+			//SManager->GiveAccessToSchematic(schematic, nullptr, ESchematicUnlockFlags::Force);
+		}
+	}
+
+	schematicPatcher->Server_SetTier0Recipes(currentPlayer, starterRecipes);
 	schematicPatcher->Server_SetItemInfoPerSchematicId(currentPlayer, itemInfoPerSchematicId);
 	schematicPatcher->Server_SetItemInfoPerMilestone(currentPlayer, itemInfosPerMilestone);
 
@@ -215,7 +240,7 @@ void AApServerRandomizerSubsystem::ParseScoutedItemsAndCreateRecipiesAndSchemati
 void AApServerRandomizerSubsystem::FinalizeInitialization() {
 	//must be called before BeginPlay() and after connecting to AP as FreeSamples caches its exclude radioactive flag there
 	if (!UpdateFreeSamplesConfiguration()) {
-		UE_LOG(LogApServerRandomizerSubsystem, Error, TEXT("AApServerRandomizerSubsystem::FinalizeInitialization() Failed to update configuration of Free Samples"));
+		UE_LOGFMT(LogApServerRandomizerSubsystem, Error, "AApServerRandomizerSubsystem::FinalizeInitialization() Failed to update configuration of Free Samples");
 	}
 
 	TArray<TSubclassOf<class UFGResearchTree>> researchTrees;
@@ -237,7 +262,7 @@ void AApServerRandomizerSubsystem::FinalizeInitialization() {
 }
 
 void AApServerRandomizerSubsystem::BeginPlay() {
-	UE_LOG(LogApServerRandomizerSubsystem, Display, TEXT("AApServerRandomizerSubsystem::BeginPlay()"));
+	UE_LOGFMT(LogApServerRandomizerSubsystem, Display, "AApServerRandomizerSubsystem::BeginPlay()");
 
 	Super::BeginPlay();
 
@@ -284,7 +309,7 @@ void AApServerRandomizerSubsystem::Tick(float DeltaTime) {
 }
 
 void AApServerRandomizerSubsystem::EndPlay(const EEndPlayReason::Type endPlayReason) {
-	UE_LOG(LogApSubsystem, Display, TEXT("AApServerRandomizerSubsystem::EndPlay(%i)"), endPlayReason);
+	UE_LOGFMT(LogApSubsystem, Display, "AApServerRandomizerSubsystem::EndPlay({0})", UEnum::GetValueAsString(endPlayReason));
 
 	Super::EndPlay(endPlayReason);
 
@@ -309,7 +334,7 @@ void AApServerRandomizerSubsystem::ProcessReceivedItems() {
 }
 
 void AApServerRandomizerSubsystem::ResetCurrentItemCounter() {
-	UE_LOG(LogApServerRandomizerSubsystem, Display, TEXT("AApServerRandomizerSubsystem::ResetCurrentItemCounter()"));
+	UE_LOGFMT(LogApServerRandomizerSubsystem, Display, "AApServerRandomizerSubsystem::ResetCurrentItemCounter()");
 
 	currentItemIndex = 0;
 }
@@ -322,7 +347,7 @@ void AApServerRandomizerSubsystem::ResetDuplicationCounter() {
 }
 
 void AApServerRandomizerSubsystem::OnDeathLinkReceived(FText message) {
-	UE_LOG(LogApServerRandomizerSubsystem, Display, TEXT("AApServerRandomizerSubsystem::OnDeathLinkReceived()"));
+	UE_LOGFMT(LogApServerRandomizerSubsystem, Display, "AApServerRandomizerSubsystem::OnDeathLinkReceived({0})", message.ToString());
 	
 	instagib = true;
 	ap->AddChatMessage(message, FLinearColor::Red);
@@ -424,19 +449,19 @@ bool AApServerRandomizerSubsystem::UpdateFreeSamplesConfiguration() {
 }
 
 void AApServerRandomizerSubsystem::OnMamResearchCompleted(TSubclassOf<class UFGSchematic> schematic) {
-	UE_LOG(LogApServerRandomizerSubsystem, Display, TEXT("AApSubSystem::OnResearchCompleted(schematic)"));
+	UE_LOGFMT(LogApServerRandomizerSubsystem, Display, "AApSubSystem::OnResearchCompleted(schematic)");
 
 	OnAvaiableSchematicsChanged();
 }
 
 void AApServerRandomizerSubsystem::OnMamResearchTreeUnlocked(TSubclassOf<class UFGResearchTree> researchTree) {
-	UE_LOG(LogApServerRandomizerSubsystem, Display, TEXT("AApSubSystem::OnMamResearchTreeUnlocked(researchTree)"));
+	UE_LOGFMT(LogApServerRandomizerSubsystem, Display, "AApSubSystem::OnMamResearchTreeUnlocked(researchTree)");
 
 	OnAvaiableSchematicsChanged();
 }
 
 void AApServerRandomizerSubsystem::OnUnclaimedHardDrivesUpdated() {
-	UE_LOG(LogApServerRandomizerSubsystem, Display, TEXT("AApSubSystem::OnUnclaimedHardDrivesUpdated()"));
+	UE_LOGFMT(LogApServerRandomizerSubsystem, Display, "AApSubSystem::OnUnclaimedHardDrivesUpdated()");
 
 	TSet<int64> locationHintsToPublish;
 
@@ -469,7 +494,7 @@ void AApServerRandomizerSubsystem::OnUnclaimedHardDrivesUpdated() {
 }
 
 void AApServerRandomizerSubsystem::OnSchematicCompleted(TSubclassOf<class UFGSchematic> schematic) {
-	UE_LOG(LogApServerRandomizerSubsystem, Display, TEXT("AApSubSystem::OnSchematicCompleted(schematic)"));
+	UE_LOGFMT(LogApServerRandomizerSubsystem, Display, "AApSubSystem::OnSchematicCompleted(schematic)");
 
 	ESchematicType type = UFGSchematic::GetType(schematic);
 	TSet<FApNetworkItem*> itemsToUnlock;
@@ -569,36 +594,38 @@ void AApServerRandomizerSubsystem::OnAvaiableSchematicsChanged() {
 
 void AApServerRandomizerSubsystem::AwardItem(int64 itemid, bool isFromServer) {
 	if (ItemSchematics.Contains(itemid)) {
-		SManager->GiveAccessToSchematic(ItemSchematics[itemid], nullptr);
+		SManager->GiveAccessToSchematic(ItemSchematics[itemid], nullptr, ESchematicUnlockFlags::Force);
 	}
 	else if (auto trapName = UApMappings::ItemIdToTrap.Find(itemid)) {
 		trapSubsystem->SpawnTrap(*trapName, nullptr);
 	}
 	else if (mappingSubsystem->ApItems.Contains(itemid)) {
 		if (mappingSubsystem->ApItems[itemid]->Type == EItemType::Item) {
+			TSharedRef<FApItem> itemInfo = StaticCastSharedRef<FApItem>(mappingSubsystem->ApItems[itemid]);
+
 			if (isFromServer && !IsRunningDedicatedServer()) { //TODO fix rewarding starter inventory to newly spawned clients on dead servers
 				const AFGCharacterPlayer* player = GetLocalPlayer();
 				fgcheck(player);
 				UFGInventoryComponent* inventory = player->GetInventory();
-				TSubclassOf<UFGItemDescriptor> itemClass = StaticCastSharedRef<FApItem>(mappingSubsystem->ApItems[itemid])->Class;
-				int stackSize = UFGItemDescriptor::GetStackSize(itemClass);
-				FInventoryStack stack = FInventoryStack(stackSize, itemClass);
+				TSubclassOf<UFGItemDescriptor> itemClass = itemInfo->Class;
+				FInventoryStack stack = FInventoryStack(itemInfo->stackSize, itemClass);
 
 				int numAdded = inventory->AddStack(stack, true);
-				if (numAdded < stackSize)
-					portalSubsystem->Enqueue(itemClass, stackSize - numAdded);
+				if (numAdded < itemInfo->stackSize)
+					portalSubsystem->Enqueue(itemClass, itemInfo->stackSize - numAdded);
 			}
 			else {
-				TSubclassOf<UFGItemDescriptor> itemClass = StaticCastSharedRef<FApItem>(mappingSubsystem->ApItems[itemid])->Class;
-				int stackSize = UFGItemDescriptor::GetStackSize(itemClass);
-				portalSubsystem->Enqueue(itemClass, stackSize);
+				TSubclassOf<UFGItemDescriptor> itemClass = itemInfo->Class;
+				portalSubsystem->Enqueue(itemClass, itemInfo->stackSize);
 			}
 		}
 		else if (mappingSubsystem->ApItems[itemid]->Type == EItemType::Schematic) {
-			SManager->GiveAccessToSchematic(StaticCastSharedRef<FApSchematicItem>(mappingSubsystem->ApItems[itemid])->Class, nullptr);
+			TSharedRef<FApSchematicItem> schematicInfo = StaticCastSharedRef<FApSchematicItem>(mappingSubsystem->ApItems[itemid]);
+			SManager->GiveAccessToSchematic(schematicInfo->Class, nullptr, ESchematicUnlockFlags::Force);
 		}
 		else if (mappingSubsystem->ApItems[itemid]->Type == EItemType::Special) {
-			ESpecialItemType specialType = StaticCastSharedRef<FApSpecialItem>(mappingSubsystem->ApItems[itemid])->SpecialType;
+			TSharedRef<FApSpecialItem> specailItemInfo = StaticCastSharedRef<FApSpecialItem>(mappingSubsystem->ApItems[itemid]);
+			ESpecialItemType specialType = specailItemInfo->SpecialType;
 			switch (specialType) {
 			case ESpecialItemType::Inventory3:
 			case ESpecialItemType::Inventory6:
@@ -608,6 +635,7 @@ void AApServerRandomizerSubsystem::AwardItem(int64 itemid, bool isFromServer) {
 				unlockSubsystem->UnlockArmEquipmentSlots(1);
 				break;
 			case ESpecialItemType::InventoryUpload:
+				// TODO unlock system unlocks do not persist through death
 				unlockSubsystem->UnlockCentralStorageUploadSlots(5);
 			}
 		}

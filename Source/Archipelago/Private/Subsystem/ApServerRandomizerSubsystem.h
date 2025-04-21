@@ -67,7 +67,7 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Schematic", DisplayName = "Get Ap Server Side Randomizer Subsystem", Meta = (DefaultToSelf = "worldContext"))
 	static AApServerRandomizerSubsystem* Get(UObject* worldContext);
 
-	void DispatchLifecycleEvent(ELifecyclePhase phase, const TArray<TSubclassOf<UFGSchematic>>& apHardcodedSchematics);
+	void DispatchLifecycleEvent(ELifecyclePhase phase, const TArray<TSubclassOf<class UFGSchematic>>& schematics);
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FORCEINLINE bool IsInitialized() const { return areRecipiesAndSchematicsInitialized; };
@@ -104,7 +104,7 @@ private:
 	TQueue<TTuple<int64, bool>> ReceivedItems;
 	TQueue<int64> CheckedLocations;
 
-	TArray<TSubclassOf<UFGSchematic>> hardcodedSchematics;
+	TArray<TSubclassOf<UFGSchematic>> schematics;
 
 	TSet<int64> hintedLocations;
 

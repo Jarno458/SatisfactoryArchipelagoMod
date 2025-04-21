@@ -10,21 +10,8 @@ void AApMessagingSubsystem::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>
 	DOREPLIFETIME(AApMessagingSubsystem, OnJoinMessages);
 }
 
-AApMessagingSubsystem* AApMessagingSubsystem::Get(class UObject* worldContext) {
-	if (!worldContext) {
-		return nullptr;
-	}
-
-	TArray<AActor*> arr;
-	// Relies on the fact that nothing has spawned the C++ version before
-	// The blueprint one descends from this so it is found instead
-	// This would break if a C++ version was spawned or persisted via save game
-	UGameplayStatics::GetAllActorsOfClass(worldContext, AApMessagingSubsystem::StaticClass(), arr);
-	if (arr.IsValidIndex(0)) {
-		return Cast<AApMessagingSubsystem>(arr[0]);
-	} else {
-		return nullptr;
-	}
+AApMessagingSubsystem* AApMessagingSubsystem::Get(class UWorld* worldContext) {
+	return UApUtils::GetSubsystemActorIncludingParentClases<AApMessagingSubsystem>(worldContext);
 }
 
 void AApMessagingSubsystem::DisplayMessage_Implementation(const FString& Message, const FLinearColor& Color) {

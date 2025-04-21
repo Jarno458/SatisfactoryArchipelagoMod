@@ -159,6 +159,8 @@ public:
 	UPROPERTY(BlueprintReadOnly, SaveGame)
 	bool EnergyLink;
 
+	UPROPERTY(BlueprintReadOnly, SaveGame, Replicated)
+	TArray<int64> starterRecipeIds;
 private:
 	UPROPERTY(SaveGame, ReplicatedUsing = ReconstructHubLayout)
 	TArray<FApReplicatedHubLayoutEntry> hubCostEntries;
@@ -168,9 +170,6 @@ private:
 
 	UPROPERTY(SaveGame, Replicated)
 	FApGoals Goals;
-
-	UPROPERTY(SaveGame, Replicated)
-	TArray<int64> starterRecipeIds;
 
 public:
 	UFUNCTION(BlueprintCallable, BlueprintPure)

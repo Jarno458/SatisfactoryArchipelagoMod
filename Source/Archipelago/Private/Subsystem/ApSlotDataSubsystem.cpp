@@ -98,7 +98,8 @@ void AApSlotDataSubsystem::SetSlotDataJson(FString slotDataJson) {
 	for (size_t i = 0; i < starting_items_array.Num(); i++)
 	{
 		int64 itemId;
-		starterRecipeIds[i] = starting_items_array[i]->TryGetNumber(itemId);
+		starting_items_array[i]->TryGetNumber(itemId);
+		starterRecipeIds[i] = itemId;
 	}
 	MARK_PROPERTY_DIRTY_FROM_NAME(AApSlotDataSubsystem, starterRecipeIds, this);
 

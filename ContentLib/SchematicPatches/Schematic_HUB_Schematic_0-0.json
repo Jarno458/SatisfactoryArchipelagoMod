@@ -1,0 +1,10 @@
+//Game/FactoryGame/Schematics/Schematic_StartingRecipes.Schematic_StartingRecipes_C
+{
+    "$schema": "https://raw.githubusercontent.com/budak7273/ContentLib_Documentation/main/JsonSchemas/CL_Schematic.json",
+    "ClearRecipes": true,
+    "Recipes": [
+      "/Game/FactoryGame/Recipes/Buildings/Recipe_TradingPost.Recipe_TradingPost_C",
+      "/Game/FactoryGame/Recipes/Equipment/Recipe_XenoZapper.Recipe_XenoZapper_C",
+      "/Game/FactoryGame/Recipes/Buildings/Recipe_WorkBench.Recipe_WorkBench_C"
+    ]
+  }

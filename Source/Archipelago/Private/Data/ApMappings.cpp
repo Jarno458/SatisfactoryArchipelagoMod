@@ -146,7 +146,7 @@ const TMap<int64, const FString> UApMappings::ItemIdToGameItemDescriptor = {
 	//{1338153, TEXT("")}, //BoomBox
 	{1338154, TEXT("Desc_Chainsaw_C")},
 	{1338155, TEXT("Desc_NobeliskCluster_C")},
-	//{1338156, TEXT("Unused")},
+	{1338156, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Resource/Parts/IodineInfusedFilter/Desc_HazmatFilter.Desc_HazmatFilter'")},
 	{1338157, TEXT("BP_EquipmentDescriptorCup_C")},
 	{1338158, TEXT("BP_EquipmentDescriptorCupGold_C")},
 	{1338159, TEXT("Desc_Rebar_Explosive_C")},
@@ -178,14 +178,18 @@ const TMap<int64, const FString> UApMappings::ItemIdToGameItemDescriptor = {
 	{1338185, TEXT("BP_EqDescZipLine_C")},
 	{1338186, TEXT("BP_ItemDescriptorPortableMiner_C")},
 	{1338187, TEXT("Desc_Filter_C")},
-
+	// 1338188 - 1338191 specail EApMappingsSpecialItemType below
+	{1338192, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Resource/Environment/Crystal/Desc_CrystalShard.Desc_CrystalShard'")},
+	{1338193, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Prototype/WAT/Desc_WAT2.Desc_WAT2'")},
+	{1338194, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Prototype/WAT/Desc_WAT1.Desc_WAT1'")},
+	{1338195, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Resource/Environment/CrashSites/Desc_HardDrive.Desc_HardDrive'")},
 };
 
 const TMap<int64, const EApMappingsSpecialItemType> UApMappings::ItemIdToSpecialItemType = {
 	{1338188, EApMappingsSpecialItemType::Inventory3},
 	{1338189, EApMappingsSpecialItemType::Inventory6},
 	{1338190, EApMappingsSpecialItemType::Toolbelt1},
-	{1338191, EApMappingsSpecialItemType::InventoryUpload}
+	//{1338191, EApMappingsSpecialItemType::InventoryUpload}
 };
 
 const TMap<int64, const TArray<FString>> UApMappings::ItemIdToGameRecipe = {
@@ -450,6 +454,16 @@ const TMap<int64, const TArray<FString>> UApMappings::ItemIdToGameRecipe = {
 	{1338457, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/AlternateRecipes/New_Update9_Ingots/Recipe_Alternate_CateriumIngot_Tempered.Recipe_Alternate_CateriumIngot_Tempered'")}},
 	{1338458, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/AlternateRecipes/New_Update9_Ingots/Recipe_Alternate_CopperIngot_Tempered.Recipe_Alternate_CopperIngot_Tempered'")}},
 	//1.0
+	//1.1
+	{1338459, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/AlternateRecipes/New_Update9/Recipe_Alternate_SteelPipe_Iron.Recipe_Alternate_SteelPipe_Iron'")}},
+	{1338460, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/AlternateRecipes/Parts/Recipe_Alternate_Coal_2.Recipe_Alternate_Coal_2'")}},
+	{1338461, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/AlternateRecipes/Parts/Recipe_Alternate_Coal_1.Recipe_Alternate_Coal_1'")}},
+	{1338462, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/AlternateRecipes/New_Update4/Recipe_Alternate_SloppyAlumina.Recipe_Alternate_SloppyAlumina'")}},
+	{1338463, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/Equipment/Recipe_Hoverpack.Recipe_Hoverpack'")}},
+	{1338464, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/Equipment/Recipe_JetPack.Recipe_JetPack'")}},
+	{1338465, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/Equipment/Recipe_NobeliskDetonator.Recipe_NobeliskDetonator'")}},
+	{1338466, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/Equipment/Recipe_PortableMiner.Recipe_PortableMiner'")}},
+	//1.1
 };
 
 const TMap<int64, const TArray<FString>> UApMappings::ItemIdToGameBuilding = {
@@ -563,6 +577,14 @@ const TMap<int64, const TArray<FString>> UApMappings::ItemIdToGameBuilding = {
 	{1338727, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/Buildings/Recipe_AlienPowerBuilding.Recipe_AlienPowerBuilding'")}},
 	{1338728, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/Buildings/Recipe_CentralStorage.Recipe_CentralStorage'")}},
 	//1.0
+	//1.1
+	{1338729, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/Buildings/Recipe_ConveyorAttachmentMergerPriority.Recipe_ConveyorAttachmentMergerPriority'"), TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/Buildings/Recipe_ConveyorAttachmentMergerPriorityLift.Recipe_ConveyorAttachmentMergerPriorityLift'")}},
+	{1338730, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Buildable/Building/ConveyorHole/Recipe_ConveyorWallHole.Recipe_ConveyorWallHole'")}},
+	{1338731, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/Buildings/Recipe_ConveyorMonitor.Recipe_ConveyorMonitor'")}},
+	{1338732, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Buildable/Building/StackableShelf/Recipe_StackableShelf.Recipe_StackableShelf'")}},
+	//1338733 Schematic
+	//1338734 Schematic
+	//1.1
 
 	//1338750 - 1338766 schematics
 
@@ -580,7 +602,8 @@ const TMap<int64, const TArray<FString>> UApMappings::ItemIdToGameBuilding = {
 		 TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Buildable/Factory/Train/Station/Recipe_TrainPlatformEmpty.Recipe_TrainPlatformEmpty'"),
 		 TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Buildable/Factory/Train/Station/Recipe_TrainPlatformEmpty_02.Recipe_TrainPlatformEmpty_02'"),
 		 TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Buildable/Factory/Train/Signal/Recipe_RailroadBlockSignal.Recipe_RailroadBlockSignal'"),
-		 TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Buildable/Factory/Train/Signal/Recipe_RailroadPathSignal.Recipe_RailroadPathSignal'")}},
+		 TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Buildable/Factory/Train/Signal/Recipe_RailroadPathSignal.Recipe_RailroadPathSignal'"),
+		 TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Buildable/Factory/Train/EndStop/Recipe_RailroadEndStop.Recipe_RailroadEndStop'")}},
 	{ 1338802,
 		{TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/Vehicle/Train/Recipe_Locomotive.Recipe_Locomotive'"),
 		 TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/Vehicle/Train/Recipe_FreightWagon.Recipe_FreightWagon'"),
@@ -591,7 +614,8 @@ const TMap<int64, const TArray<FString>> UApMappings::ItemIdToGameBuilding = {
 		 TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Buildable/Factory/Train/Station/Recipe_TrainPlatformEmpty.Recipe_TrainPlatformEmpty'"),
 		 TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Buildable/Factory/Train/Station/Recipe_TrainPlatformEmpty_02.Recipe_TrainPlatformEmpty_02'"),
 		 TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Buildable/Factory/Train/Signal/Recipe_RailroadBlockSignal.Recipe_RailroadBlockSignal'"),
-		 TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Buildable/Factory/Train/Signal/Recipe_RailroadPathSignal.Recipe_RailroadPathSignal'")}},
+		 TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Buildable/Factory/Train/Signal/Recipe_RailroadPathSignal.Recipe_RailroadPathSignal'"),
+		 TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Buildable/Factory/Train/EndStop/Recipe_RailroadEndStop.Recipe_RailroadEndStop'")}},
 
 	{1338803,
 		{TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/Vehicle/Recipe_Tractor.Recipe_Tractor'"),
@@ -623,14 +647,20 @@ const TMap<int64, const TArray<FString>> UApMappings::ItemIdToGameBuilding = {
 	{1338812,
 		{TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/Buildings/Recipe_HyperTubeWallHole.Recipe_HyperTubeWallHole'")}},
 
+	{1338813,
+		{TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/Elevator/Recipe_Elevator.Recipe_Elevator'"),
+		 TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/Elevator/Recipe_ElevatorFloorStop.Recipe_ElevatorFloorStop'")}},
+
 	{1338999, {TEXT("Recipe_SpaceElevator")}}
 };
 
 const TMap<int64, const FString> UApMappings::ItemIdToGameSchematic = {
-	{1338628, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_Ladders.ResourceSink_Ladders")},
+	{1338191, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/Research/AlienTech_RS/Research_Alien_CentralInventory.Research_Alien_CentralInventory'")},
 
-	{1338623, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_BeamSet.ResourceSink_BeamSet")},
-	{1338653, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/Parts/Tier3/ResourceSink_SteelBeam.ResourceSink_SteelBeam")},
+	{1338628, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_Ladders.ResourceSink_Ladders'")},
+
+	{1338623, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_BeamSet.ResourceSink_BeamSet'")},
+	{1338653, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/Parts/Tier3/ResourceSink_SteelBeam.ResourceSink_SteelBeam'")},
 
 	{1338656, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_ConveyorLiftHole.ResourceSink_ConveyorLiftHole'")}},
 	{1338667, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_PipelineFloorHole.ResourceSink_PipelineFloorHole'")}},
@@ -674,6 +704,9 @@ const TMap<int64, const FString> UApMappings::ItemIdToGameSchematic = {
 	{1338720, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_Roofs_Basic.ResourceSink_Roofs_Basic'")},
 	{1338721, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_Roofs_Corners.ResourceSink_Roofs_Corners'")},
 
+	{1338733, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_BeamSet2.ResourceSink_BeamSet2'")}},
+	{1338734, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_VentilationBundle.ResourceSink_VentilationBundle'")}},
+
 	{1338750, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/Customizer/ResourceSink_Customizer_Asphalt_FoundationMaterial.ResourceSink_Customizer_Asphalt_FoundationMaterial'")},
 	{1338751, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/Customizer/ResourceSink_Customizer_Concrete_FoundationMaterial.ResourceSink_Customizer_Concrete_FoundationMaterial'")},
 	{1338752, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/Customizer/ResourceSink_Customizer_ConcreteWallMaterial.ResourceSink_Customizer_ConcreteWallMaterial'")},
@@ -703,6 +736,13 @@ const TMap<int64, const FString> UApMappings::ItemIdToGameSchematic = {
 	//1.0
 
 	{1338810, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_HyperTubeFloorHole.ResourceSink_HyperTubeFloorHole'")}
+};
+
+const TMap<int64, const int> UApMappings::ItemIdToSpecailStackSize = {
+	{1338192, 3}, //Bundle of Three: Power Shards
+	{1338193, 3}, //Bundle of Three: Mercer Spheres
+	{1338194, 4}, //Bundle of Four: Somersloops
+	{1338195, 3}  //Bundle of Three: Hard Drives
 };
 
 const TMap<int64, const FName> UApMappings::ItemIdToTrap = {

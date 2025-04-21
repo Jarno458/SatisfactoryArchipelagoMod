@@ -42,11 +42,8 @@ public:
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
 	void DisplayMessage(const FString& Message, const FLinearColor& Color);
 	
-	// C++ getter for the subsystem - the real one is implemented in Blueprint,
-	// so calling this function gets you the "real one" that inherits from the
-	// C++ class and not the C++ abstract class.
 	UFUNCTION(BlueprintPure, Category = "Archipelago", DisplayName = "GetArchipelagoMessagingSubsystem", Meta = (DefaultToSelf = "worldContext"))
-	static AApMessagingSubsystem* Get(class UObject* worldContext);
+	static AApMessagingSubsystem* Get(class UWorld* worldContext);
 
 	// Displays a chat message to the local client, you probably don't want to call this directly 
 	UFUNCTION(BlueprintCallable)

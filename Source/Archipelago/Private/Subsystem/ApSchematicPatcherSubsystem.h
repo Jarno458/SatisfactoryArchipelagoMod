@@ -100,20 +100,26 @@ public:
 	TArray<FApReplicatedItemInfo> items;
 };
 
-UCLASS()
+UCLASS(Abstract, Blueprintable)
 class ARCHIPELAGO_API AApSchematicPatcherSubsystem : public AModSubsystem
 {
 	GENERATED_BODY()
 
 public:
 	// Sets default values for this actor's properties
-	AApSchematicPatcherSubsystem ();
+	AApSchematicPatcherSubsystem();
 
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	TSubclassOf<class UFGSchematic> tierOSchematic;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	TSubclassOf<class UFGSchematic> explorationGoalSchematic;
 
 public:
 	static AApSchematicPatcherSubsystem* Get(class UWorld* world);
@@ -125,9 +131,11 @@ public:
 
 	bool IsCollected(int64 locationId) const { return collectedLocations.Contains(locationId); };
 
+	void Server_SetTier0Recipes(int currentPlayerId, const TArray<FApNetworkItem>& itemInfos);
 	void Server_SetItemInfoPerSchematicId(int currentPlayerId, const TArray<FApNetworkItem>& itemInfo);
-	void Server_SetItemInfoPerMilestone(int currentPlayerId, const TMap<int, TMap<int, TArray<FApNetworkItem>>>& itemsPerMilestone);
+	void Server_SetItemInfoPerMilestone(int currentPlayerId, const TMap<int,TMap<int,TArray<FApNetworkItem>>>& itemsPerMilestone);
 	void Server_Collect(TSet<int64> locations);
+
 private:
 	UPROPERTY(ReplicatedUsing = OnRep_ItemInfosReplicated)
 	TArray<FApReplicatedItemInfo> replicatedItemInfos;
@@ -137,6 +145,9 @@ private:
 
 	UPROPERTY(ReplicatedUsing = OnRep_CollectedLocationsReplicated)
 	TArray<int16> replicatedCollectedLocations;
+
+	UPROPERTY(ReplicatedUsing = OnRep_StarterRecipesReplicated)
+	TArray<FApReplicatedItemInfo> replicatedStarterRecipes;
 
 	UContentLibSubsystem* contentLibSubsystem;
 	AApConnectionInfoSubsystem* connectionInfo;
@@ -155,6 +166,7 @@ private:
 
 	bool receivedItemInfos = false;
 	bool receivedMilestones = false;
+	bool receivedStarterRecipes = false;
 	bool isInitialized = false;
 	bool hasPatchedSchematics = false;
 
@@ -163,6 +175,7 @@ private:
 	void Initialize();
 	void InitializeSchematicsBasedOnScoutedData();
 
+	void InitializeStarterRecipes();
 	void InitializeHubSchematic(TSubclassOf<UFGSchematic> factorySchematic, const TArray<FApReplicatedItemInfo>& items, const TMap<int64, int>& costs);
 	void InitializaSchematicForItem(TSubclassOf<UFGSchematic> factorySchematic, const FApReplicatedItemInfo& item, bool updateSchemaName);
 
@@ -183,6 +196,8 @@ private:
 	void OnRep_MilestonesReplicated();
 	UFUNCTION() //required for event hookup
 	void OnRep_CollectedLocationsReplicated();
+	UFUNCTION() //required for event hookup
+	void OnRep_StarterRecipesReplicated();
 	UFUNCTION() //required for event hookup
 	void OnClientSubsystemsValid();
 };

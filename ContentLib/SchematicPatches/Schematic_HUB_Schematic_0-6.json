@@ -1,0 +1,10 @@
+//Game/FactoryGame/Schematics/Tutorial/Schematic_Tutorial5.Schematic_Tutorial5_C
+{
+    "$schema": "https://raw.githubusercontent.com/budak7273/ContentLib_Documentation/main/JsonSchemas/CL_Schematic.json",
+    "ClearRecipes": true,
+    "Recipes": [
+      "/Game/FactoryGame/Recipes/Constructor/Recipe_Biomass_Wood.Recipe_Biomass_Wood_C",
+      "/Game/FactoryGame/Recipes/Constructor/Recipe_Biomass_Leaves.Recipe_Biomass_Leaves_C",
+      "/Game/FactoryGame/Recipes/Buildings/Recipe_GeneratorBiomass_Automated.Recipe_GeneratorBiomass_Automated_C"
+    ]
+  }

@@ -8,9 +8,7 @@
 
 DEFINE_LOG_CATEGORY(LogApGameWorldModule);
 
-UApGameWorldModule::UApGameWorldModule() {
-
-}
+UApGameWorldModule::UApGameWorldModule() {}
 
 void UApGameWorldModule::DispatchLifecycleEvent(ELifecyclePhase phase) {
 	Super::DispatchLifecycleEvent(phase);
@@ -23,10 +21,10 @@ void UApGameWorldModule::DispatchLifecycleEvent(ELifecyclePhase phase) {
 		return;
 	}
 
-	TArray<TSubclassOf<UFGSchematic>> hardcodedSchematics;
+	TArray<TSubclassOf<class UFGSchematic>> schematics;
 	if (phase == ELifecyclePhase::CONSTRUCTION) {
-		hardcodedSchematics.Append(mSchematics);
-		hardcodedSchematics.Append(mTreeNodeSchematics);
+		schematics.Append(mSchematics);
+		schematics.Append(mTreeNodeSchematics);
 	}
 
 	AApMappingsSubsystem* mappingsSubsystem = AApMappingsSubsystem::Get(world);
@@ -39,5 +37,5 @@ void UApGameWorldModule::DispatchLifecycleEvent(ELifecyclePhase phase) {
 
 	AApServerRandomizerSubsystem* apServerRandomizerSubsystem = AApServerRandomizerSubsystem::Get(world);
 	if (IsValid(apServerRandomizerSubsystem))
-		apServerRandomizerSubsystem->DispatchLifecycleEvent(phase, hardcodedSchematics);
+		apServerRandomizerSubsystem->DispatchLifecycleEvent(phase, schematics);
 }

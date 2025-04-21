@@ -35,13 +35,9 @@ AApSubsystem* AApSubsystem::Get(class UWorld* world) {
 void AApSubsystem::ConnectToArchipelago() {
 	USessionSettingsManager* SessionSettings = GetWorld()->GetSubsystem<USessionSettingsManager>();
 
-	//FString uriFString = USMLOptionsLibrary::GetStringOptionValue(SessionSettings, "Archipelago.Connection.ServerURI").TrimStartAndEnd();
-	//FString userFString = USMLOptionsLibrary::GetStringOptionValue(SessionSettings, "Archipelago.Connection.UserName").TrimStartAndEnd();
-	//FString passwordFString = USMLOptionsLibrary::GetStringOptionValue(SessionSettings, "Archipelago.Connection.Password");
-
-	FString uriFString("localhost:38281");
-	FString userFString("JarnoSF");
-	FString passwordFString("");
+	FString uriFString = USMLOptionsLibrary::GetStringOptionValue(SessionSettings, "Archipelago.Connection.ServerURI").TrimStartAndEnd();
+	FString userFString = USMLOptionsLibrary::GetStringOptionValue(SessionSettings, "Archipelago.Connection.UserName").TrimStartAndEnd();
+	FString passwordFString = USMLOptionsLibrary::GetStringOptionValue(SessionSettings, "Archipelago.Connection.Password");
 
 	std::string const uri = TCHAR_TO_UTF8(*uriFString);
 	std::string const user = TCHAR_TO_UTF8(*userFString);
@@ -403,7 +399,7 @@ void AApSubsystem::HandleAPMessages() {
 
 void AApSubsystem::SendChatMessage(const FString& Message, const FLinearColor& Color) {
 	UE_LOG(LogApSubsystem, Display, TEXT("Archipelago Cpp Chat Message: %s"), *Message);
-	AApMessagingSubsystem* messaging = AApMessagingSubsystem::Get(this);
+	AApMessagingSubsystem* messaging = AApMessagingSubsystem::Get(GetWorld());
 	fgcheck(messaging);
 	messaging->DisplayMessage(Message, Color);
 }
