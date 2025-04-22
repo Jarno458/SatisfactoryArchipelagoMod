@@ -221,7 +221,6 @@ void AApSchematicPatcherSubsystem::InitializeSchematicsBasedOnScoutedData() {
 	hardcodedSchematics.Append(apWorldModule->mSchematics);
 	hardcodedSchematics.Append(apWorldModule->mTreeNodeSchematics);
 
-
 	InitializeStarterRecipes();
 
 	TMap<int64, FApReplicatedItemInfo> replicatedItemInfoBySchematicId;
@@ -291,8 +290,30 @@ void AApSchematicPatcherSubsystem::InitializeStarterRecipes() {
 	UFGSchematic* factorySchematicCDO = Cast<UFGSchematic>(tierOSchematic->GetDefaultObject());
 	factorySchematicCDO->mUnlocks.Empty();
 
-	for (const FApReplicatedItemInfo& item : replicatedStarterRecipes)
+	for (const FApReplicatedItemInfo& item : replicatedStarterRecipes) {
+		int64 itemId = item.GetItemId();
+
 		schematic.InfoCards.Add(CreateUnlockInfoOnly(item));
+
+		if (mappingSubsystem->ApItems.Contains(itemId) && mappingSubsystem->ApItems[itemId]->Type == EItemType::Recipe) {
+			TSubclassOf<UFGRecipe> recipeClass = StaticCastSharedRef<FApRecipeItem>(mappingSubsystem->ApItems[itemId])->Recipes[0].Class;
+
+			FContentLib_Recipe recipe = FContentLib_Recipe();
+			recipe.BuildIn.Add("manual");
+
+			TArray<TSubclassOf<UObject>> producers = UFGRecipe::GetProducedIn(recipeClass);
+			for (const TSubclassOf<UObject>& buildingObject : producers) {
+				if (buildingObject->IsChildOf(AFGBuildable::StaticClass())) {
+					AFGBuildable* building = Cast<AFGBuildable>(buildingObject.GetDefaultObject());
+					if (building != nullptr && !building->IsA(AFGBuildableAutomatedWorkBench::StaticClass()))
+						recipe.BuildIn.Add(building->GetName().RightChop(FString("Default__").Len()));
+				}
+			}
+
+			UCLRecipeBPFLib::InitRecipeFromStruct(contentLibSubsystem, recipe, recipeClass, false, false, true);
+		}
+	}
+
 
 	UCLSchematicBPFLib::InitSchematicFromStruct(schematic, tierOSchematic, contentLibSubsystem);
 }
@@ -432,7 +453,7 @@ void AApSchematicPatcherSubsystem::UpdateInfoOnlyUnlockWithRecipeInfo(FContentLi
 	TArray<FString> BuildingArray;
 	TArray<TSubclassOf<UObject>> buildings;
 	recipe->GetProducedIn(buildings);
-	for (TSubclassOf<UObject>& buildingObject : buildings) {
+	for (const TSubclassOf<UObject>& buildingObject : buildings) {
 		if (buildingObject->IsChildOf(AFGBuildable::StaticClass())) {
 			AFGBuildable* building = Cast<AFGBuildable>(buildingObject.GetDefaultObject());
 			if (building != nullptr) {

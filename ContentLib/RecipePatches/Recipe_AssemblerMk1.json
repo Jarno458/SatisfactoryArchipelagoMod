@@ -1,0 +1,18 @@
+//Game/FactoryGame/Recipes/Buildings/Recipe_SmelterMk1.Recipe_SmelterMk1_C
+{
+    "$schema": "https://raw.githubusercontent.com/budak7273/ContentLib_Documentation/main/JsonSchemas/CL_Recipe.json",
+    "Ingredients": [
+        {
+            "Item": "Desc_IronPlateReinforced_C",
+            "Amount": 8
+        },
+        {
+            "Item": "Desc_IronScrew_C",
+            "Amount": 75
+        },
+        {
+            "Item": "Desc_Cable_C",
+            "Amount": 8
+        }
+    ]
+}
