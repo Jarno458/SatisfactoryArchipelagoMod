@@ -100,6 +100,25 @@ public:
 	TArray<FApReplicatedItemInfo> items;
 };
 
+USTRUCT(BlueprintType)
+struct ARCHIPELAGO_API FApAlternativeRecipes
+{
+	GENERATED_BODY()
+
+public:
+	FApAlternativeRecipes() : defaultRecipe(), shouldDefaultBeHandcraftable(), alternativeRecipes() {}
+
+public:
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	TSubclassOf<UFGRecipe> defaultRecipe;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	bool shouldDefaultBeHandcraftable;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	TArray<TSubclassOf<UFGRecipe>> alternativeRecipes;
+};
+
 UCLASS(Abstract, Blueprintable)
 class ARCHIPELAGO_API AApSchematicPatcherSubsystem : public AModSubsystem
 {
@@ -120,6 +139,9 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	TSubclassOf<class UFGSchematic> explorationGoalSchematic;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	TArray<FApAlternativeRecipes> alternativeStartingRecipes;
 
 public:
 	static AApSchematicPatcherSubsystem* Get(class UWorld* world);
@@ -176,6 +198,7 @@ private:
 	void InitializeSchematicsBasedOnScoutedData();
 
 	void InitializeStarterRecipes();
+	void SetHandcraftable(TSubclassOf<UFGRecipe> recipe, bool handcraftable);
 	void InitializeHubSchematic(TSubclassOf<UFGSchematic> factorySchematic, const TArray<FApReplicatedItemInfo>& items, const TMap<int64, int>& costs);
 	void InitializaSchematicForItem(TSubclassOf<UFGSchematic> factorySchematic, const FApReplicatedItemInfo& item, bool updateSchemaName);
 

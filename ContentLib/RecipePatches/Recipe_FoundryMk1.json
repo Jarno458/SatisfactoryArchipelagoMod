@@ -4,15 +4,15 @@
     "Ingredients": [
         {
             "Item": "Desc_IronPlateReinforced_C",
-            "Amount": 10
+            "Amount": 15
         },
         {
-            "Item": "Desc_Cable_C",
-            "Amount": 5
+            "Item": "Desc_IronRod_C",
+            "Amount": 100
         },
         {
             "Item": "Desc_Cement_C",
-            "Amount": 50
+            "Amount": 40
         }
     ]
 }

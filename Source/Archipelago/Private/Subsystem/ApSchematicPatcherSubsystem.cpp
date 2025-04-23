@@ -290,32 +290,60 @@ void AApSchematicPatcherSubsystem::InitializeStarterRecipes() {
 	UFGSchematic* factorySchematicCDO = Cast<UFGSchematic>(tierOSchematic->GetDefaultObject());
 	factorySchematicCDO->mUnlocks.Empty();
 
+	TSet<TSubclassOf<UFGRecipe>> starterRecipeClases;
+
 	for (const FApReplicatedItemInfo& item : replicatedStarterRecipes) {
 		int64 itemId = item.GetItemId();
 
 		schematic.InfoCards.Add(CreateUnlockInfoOnly(item));
-
+		
 		if (mappingSubsystem->ApItems.Contains(itemId) && mappingSubsystem->ApItems[itemId]->Type == EItemType::Recipe) {
 			TSubclassOf<UFGRecipe> recipeClass = StaticCastSharedRef<FApRecipeItem>(mappingSubsystem->ApItems[itemId])->Recipes[0].Class;
 
-			FContentLib_Recipe recipe = FContentLib_Recipe();
-			recipe.BuildIn.Add("manual");
-
-			TArray<TSubclassOf<UObject>> producers = UFGRecipe::GetProducedIn(recipeClass);
-			for (const TSubclassOf<UObject>& buildingObject : producers) {
-				if (buildingObject->IsChildOf(AFGBuildable::StaticClass())) {
-					AFGBuildable* building = Cast<AFGBuildable>(buildingObject.GetDefaultObject());
-					if (building != nullptr && !building->IsA(AFGBuildableAutomatedWorkBench::StaticClass()))
-						recipe.BuildIn.Add(building->GetName().RightChop(FString("Default__").Len()));
-				}
-			}
-
-			UCLRecipeBPFLib::InitRecipeFromStruct(contentLibSubsystem, recipe, recipeClass, false, false, true);
+			starterRecipeClases.Add(recipeClass);
 		}
 	}
 
-
 	UCLSchematicBPFLib::InitSchematicFromStruct(schematic, tierOSchematic, contentLibSubsystem);
+
+	for (const FApAlternativeRecipes& alternativeStarterRecipes : alternativeStartingRecipes) {
+		bool alternativeIsSelectedForStarting = false;
+
+		for (const TSubclassOf<UFGRecipe>& recipeClass : alternativeStarterRecipes.alternativeRecipes) {
+			if (starterRecipeClases.Contains(recipeClass)) {
+				alternativeIsSelectedForStarting = true;
+				break;
+			}
+		}
+
+		if (alternativeIsSelectedForStarting) {
+			SetHandcraftable(alternativeStarterRecipes.defaultRecipe, false);
+			for (const TSubclassOf<UFGRecipe>& recipeClass : alternativeStarterRecipes.alternativeRecipes)
+				SetHandcraftable(recipeClass, starterRecipeClases.Contains(recipeClass));
+		} else {
+			SetHandcraftable(alternativeStarterRecipes.defaultRecipe, alternativeStarterRecipes.shouldDefaultBeHandcraftable);
+			for (const TSubclassOf<UFGRecipe>& recipeClass : alternativeStarterRecipes.alternativeRecipes)
+				SetHandcraftable(recipeClass, false);
+		}
+	}
+}
+
+void AApSchematicPatcherSubsystem::SetHandcraftable(TSubclassOf<UFGRecipe> recipeClass, bool handcraftable) {
+	FContentLib_Recipe recipe = FContentLib_Recipe();
+
+	if (handcraftable)
+		recipe.BuildIn.Add("manual");
+
+	TArray<TSubclassOf<UObject>> producers = UFGRecipe::GetProducedIn(recipeClass);
+	for (const TSubclassOf<UObject>& buildingObject : producers) {
+		if (buildingObject->IsChildOf(AFGBuildable::StaticClass())) {
+			AFGBuildable* building = Cast<AFGBuildable>(buildingObject.GetDefaultObject());
+			if (building != nullptr && !building->IsA(AFGBuildableAutomatedWorkBench::StaticClass()))
+				recipe.BuildIn.Add(building->GetName().RightChop(FString("Default__").Len()));
+		}
+	}
+
+	UCLRecipeBPFLib::InitRecipeFromStruct(contentLibSubsystem, recipe, recipeClass, false, false, true);
 }
 
 void AApSchematicPatcherSubsystem::InitializeHubSchematic(TSubclassOf<UFGSchematic> factorySchematic, const TArray<FApReplicatedItemInfo>& items, const TMap<int64, int>& costs) {
