@@ -8,6 +8,7 @@
 #include "Subsystem/ApSubsystem.h"
 #include "Subsystem/ApConnectionInfoSubsystem.h"
 #include "Subsystem/ApSlotDataSubsystem.h"
+#include "Subsystem/ApSchematicPatcherSubsystem.h"
 
 #include "ApGoalSubsystem.generated.h"
 
@@ -19,10 +20,13 @@ class ARCHIPELAGO_API AApGoalSubsystem : public AModSubsystem
 private:
 	AFGGamePhaseManager* phaseManager;
 	AFGResourceSinkSubsystem* resourceSinkSubsystem;
+	AFGSchematicManager* schematicManager;
 
 	AApSubsystem* ap;
 	AApConnectionInfoSubsystem* connectionInfoSubsystem;
 	AApSlotDataSubsystem* slotData;
+
+	TSubclassOf<class UFGSchematic> explorationGoalSchematic;
 
 public:
 	AApGoalSubsystem();
@@ -39,4 +43,6 @@ private:
 
 	bool CheckSpaceElevatorGoal();
 	bool CheckResourceSinkPointsGoal();
+	bool CheckResourceSinkPointPerMinuteGoal();
+	bool CheckExplorationGoal();
 };

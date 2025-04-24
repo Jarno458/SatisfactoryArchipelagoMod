@@ -23,10 +23,14 @@ void AApGoalSubsystem::BeginPlay() {
 
 	phaseManager = AFGGamePhaseManager::Get(world);
 	resourceSinkSubsystem = AFGResourceSinkSubsystem::Get(world);
+	schematicManager = AFGSchematicManager::Get(world);
 
 	ap = AApSubsystem::Get(world);
 	connectionInfoSubsystem = AApConnectionInfoSubsystem::Get(world);
 	slotData = AApSlotDataSubsystem::Get(world);
+
+	AApSchematicPatcherSubsystem* schematicPatcher = AApSchematicPatcherSubsystem::Get(world);
+	explorationGoalSchematic = schematicPatcher->GetExplorationSchematic();
 }
 
 void AApGoalSubsystem::Tick(float DeltaTime) {
@@ -48,9 +52,15 @@ void AApGoalSubsystem::Tick(float DeltaTime) {
 
 bool AApGoalSubsystem::AreGoalsCompleted() {
 	if (slotData->RequireAllGoals())
-		return CheckSpaceElevatorGoal() && CheckResourceSinkPointsGoal();
+		return   CheckSpaceElevatorGoal() 
+				&& CheckResourceSinkPointsGoal()
+				&& CheckResourceSinkPointPerMinuteGoal()
+				&& CheckExplorationGoal();
 	else
-		return CheckSpaceElevatorGoal() || CheckResourceSinkPointsGoal();
+		return   CheckSpaceElevatorGoal() 
+				|| CheckResourceSinkPointsGoal()
+				|| CheckResourceSinkPointPerMinuteGoal()
+				|| CheckExplorationGoal();
 }
 
 bool AApGoalSubsystem::CheckSpaceElevatorGoal() {
@@ -61,4 +71,14 @@ bool AApGoalSubsystem::CheckSpaceElevatorGoal() {
 bool AApGoalSubsystem::CheckResourceSinkPointsGoal() {
 	return slotData->IsResourceSinkGoalEnabled()
 		&&	resourceSinkSubsystem->GetNumTotalPoints(EResourceSinkTrack::RST_Default) >= slotData->GetFinalResourceSinkPoints();
+}
+
+bool AApGoalSubsystem::CheckResourceSinkPointPerMinuteGoal() {
+	return slotData->IsResourceSinkPerMinuteGoalEnabled()
+		&& false; //TODO
+}
+
+bool AApGoalSubsystem::CheckExplorationGoal() {
+	return slotData->IsExplorationGoalEnabled()
+		&& schematicManager->IsSchematicPurchased(explorationGoalSchematic);
 }

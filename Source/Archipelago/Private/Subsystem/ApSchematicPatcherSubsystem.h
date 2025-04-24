@@ -153,6 +153,8 @@ public:
 
 	bool IsCollected(int64 locationId) const { return collectedLocations.Contains(locationId); };
 
+	FORCEINLINE TSubclassOf<class UFGSchematic> GetExplorationSchematic() const { return explorationGoalSchematic; }
+
 	void Server_SetTier0Recipes(int currentPlayerId, const TArray<FApNetworkItem>& itemInfos);
 	void Server_SetItemInfoPerSchematicId(int currentPlayerId, const TArray<FApNetworkItem>& itemInfo);
 	void Server_SetItemInfoPerMilestone(int currentPlayerId, const TMap<int,TMap<int,TArray<FApNetworkItem>>>& itemsPerMilestone);
@@ -199,7 +201,9 @@ private:
 
 	void InitializeStarterRecipes();
 	void SetHandcraftable(TSubclassOf<UFGRecipe> recipe, bool handcraftable);
+	void InitializeExplorationGoal();
 	void InitializeHubSchematic(TSubclassOf<UFGSchematic> factorySchematic, const TArray<FApReplicatedItemInfo>& items, const TMap<int64, int>& costs);
+	void InitializeHubSchematic(TSubclassOf<UFGSchematic> factorySchematic, const TArray<FContentLib_UnlockInfoOnly>& unlocks, const TMap<int64, int>& costs);
 	void InitializaSchematicForItem(TSubclassOf<UFGSchematic> factorySchematic, const FApReplicatedItemInfo& item, bool updateSchemaName);
 
 	FContentLib_UnlockInfoOnly CreateUnlockInfoOnly(const FApReplicatedItemInfo& item);

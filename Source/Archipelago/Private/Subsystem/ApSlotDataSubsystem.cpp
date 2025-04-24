@@ -35,6 +35,7 @@ void AApSlotDataSubsystem::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&
 	replicationParams.bIsPushBased = true;
 
 	DOREPLIFETIME_WITH_PARAMS_FAST(AApSlotDataSubsystem, hubCostEntries, replicationParams);
+	DOREPLIFETIME_WITH_PARAMS_FAST(AApSlotDataSubsystem, replicatedExplorationCost, replicationParams);
 	DOREPLIFETIME_WITH_PARAMS_FAST(AApSlotDataSubsystem, starterRecipeIds, replicationParams);
 	DOREPLIFETIME(AApSlotDataSubsystem, Goals);
 }
@@ -77,8 +78,10 @@ void AApSlotDataSubsystem::SetSlotDataJson(FString slotDataJson) {
 		for (TSharedPtr<FJsonValue> milestone : tier->AsArray()) {
 			for (TPair<FString, TSharedPtr<FJsonValue>> cost : milestone->AsObject()->Values) {
 				int64 itemId = FCString::Atoi64(*cost.Key);
+				int amount;
+				cost.Value->TryGetNumber(amount);
 
-				parsedHubCostEntries.Add(FApReplicatedHubLayoutEntry(tierNumber, milestoneNumber, itemId, cost.Value->AsNumber()));
+				parsedHubCostEntries.Add(FApReplicatedHubLayoutEntry(tierNumber, milestoneNumber, itemId, amount));
 			}
 
 			milestoneNumber++;
@@ -88,8 +91,19 @@ void AApSlotDataSubsystem::SetSlotDataJson(FString slotDataJson) {
 	}
 	hubCostEntries = parsedHubCostEntries;
 	MARK_PROPERTY_DIRTY_FROM_NAME(AApSlotDataSubsystem, hubCostEntries, this);
-
 	ReconstructHubLayout();
+
+	TArray<FApReplicatedCostAmount> parsedExplorationCosts;
+	for (TPair<FString, TSharedPtr<FJsonValue>> cost : parsedJson->GetObjectField("ExplorationCosts")->Values) {
+		int64 itemId = FCString::Atoi64(*cost.Key);
+		int amount;
+		cost.Value->TryGetNumber(amount);
+
+		parsedExplorationCosts.Add(FApReplicatedCostAmount(itemId, amount));
+	}
+	replicatedExplorationCost = parsedExplorationCosts;
+	MARK_PROPERTY_DIRTY_FROM_NAME(AApSlotDataSubsystem, replicatedExplorationCost, this);
+	ReconstructExplorationCost();
 
 	TSharedPtr<FJsonObject> options = parsedJson->GetObjectField("Options");
 
@@ -109,8 +123,6 @@ void AApSlotDataSubsystem::SetSlotDataJson(FString slotDataJson) {
 
 	uint8 finalSpaceElevatorTier;
 	options->TryGetNumberField("FinalElevatorTier", finalSpaceElevatorTier);
-	uint8 finalExplorationCollectionAmount;
-	options->TryGetNumberField("FinalExplorationCollectionAmount", finalExplorationCollectionAmount);
 	uint64 finalResourceSinkPoints; 
 	options->TryGetNumberField("FinalResourceSinkPointsTotal", finalResourceSinkPoints);
 	uint64 finalResourceSinkPointsPerMinute;
@@ -126,7 +138,7 @@ void AApSlotDataSubsystem::SetSlotDataJson(FString slotDataJson) {
 
 	Goals = FApGoals(requiresAnyGoal, isResourceSinkGoalEnabled, isSpaceElevatorGoalEnabled, isResourceSinkPerMinuteGoalEnabled,
 		isExplorationGoalEnabled, isFicsmasGoalEnabled,
-		finalSpaceElevatorTier, finalResourceSinkPoints, finalResourceSinkPointsPerMinute, finalExplorationCollectionAmount);
+		finalSpaceElevatorTier, finalResourceSinkPoints, finalResourceSinkPointsPerMinute);
 
 	NumberOfChecksPerMilestone = parsedJson->GetIntegerField("SlotsPerMilestone");
 	FreeSampleEquipment = options->GetIntegerField("FreeSampleEquipment");
@@ -160,6 +172,9 @@ void AApSlotDataSubsystem::ReconstructHubLayout() {
 	}
 }
 
+void AApSlotDataSubsystem::ReconstructExplorationCost() {
+
+}
 
 const TMap<int64, int> AApSlotDataSubsystem::GetCostsForMilestone(int tier, int milestone) {
 	int8 correctedTier = tier - 1;
@@ -174,6 +189,10 @@ const TMap<int64, int> AApSlotDataSubsystem::GetCostsForMilestone(int tier, int 
 	else {
 		return TMap<int64, int>();
 	}
+}
+
+const TMap<int64, int> AApSlotDataSubsystem::GetExplorationGoalCosts() {
+	return explorationCosts;
 }
 
 int AApSlotDataSubsystem::GetNumberOfHubTiers() {

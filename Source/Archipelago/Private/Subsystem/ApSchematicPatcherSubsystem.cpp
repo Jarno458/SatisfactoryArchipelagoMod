@@ -346,7 +346,37 @@ void AApSchematicPatcherSubsystem::SetHandcraftable(TSubclassOf<UFGRecipe> recip
 	UCLRecipeBPFLib::InitRecipeFromStruct(contentLibSubsystem, recipe, recipeClass, false, false, true);
 }
 
+void AApSchematicPatcherSubsystem::InitializeExplorationGoal() {
+	TArray<FContentLib_UnlockInfoOnly> unlocks;
+
+	if (slotDataSubsystem->IsExplorationGoalEnabled()) {
+		FContentLib_UnlockInfoOnly unlock;
+		unlock.mUnlockName = FText::FromString("Exploration Goal");
+
+		if (slotDataSubsystem->RequireAllGoals() == false)
+			unlock.mUnlockDescription = FText::FromString("This will unlock your Exploration Goal which will be enough to finish this world.");
+		else
+			unlock.mUnlockDescription = FText::FromString("This will unlock your Exploration Goal which is part of the goals to finish this world.");
+
+		unlock.CategoryIcon = TEXT("/Archipelago/Assets/SourceArt/ArchipelagoAssetPack/ArchipelagoIconWhite128.ArchipelagoIconWhite128");
+		unlock.BigIcon = unlock.SmallIcon = TEXT("/Game/FactoryGame/Buildable/Factory/Mam/UI/TXUI_UploadUpgrade_256.TXUI_UploadUpgrade_256");
+
+		unlocks.Add(unlock);
+	}
+
+	InitializeHubSchematic(explorationGoalSchematic, unlocks, slotDataSubsystem->GetExplorationGoalCosts());
+}
+
 void AApSchematicPatcherSubsystem::InitializeHubSchematic(TSubclassOf<UFGSchematic> factorySchematic, const TArray<FApReplicatedItemInfo>& items, const TMap<int64, int>& costs) {
+	TArray<FContentLib_UnlockInfoOnly> unlocks;
+
+	for (const FApReplicatedItemInfo& item : items)
+		unlocks.Add(CreateUnlockInfoOnly(item));
+
+	InitializeHubSchematic(factorySchematic, unlocks, costs);
+}
+
+void AApSchematicPatcherSubsystem::InitializeHubSchematic(TSubclassOf<UFGSchematic> factorySchematic, const TArray<FContentLib_UnlockInfoOnly>& unlocks, const TMap<int64, int>&costs) {
 	FContentLib_Schematic schematic = FContentLib_Schematic();
 
 	TMap<FString, int> costsByClassName;
@@ -362,12 +392,12 @@ void AApSchematicPatcherSubsystem::InitializeHubSchematic(TSubclassOf<UFGSchemat
 	UFGSchematic* factorySchematicCDO = Cast<UFGSchematic>(factorySchematic->GetDefaultObject());
 	factorySchematicCDO->mUnlocks.Empty();
 
-	if (items.IsEmpty()) {
+	if (unlocks.IsEmpty()) {
 		schematic.DependsOn.Add("Schematic_AP_lock"); //hide empty milestones
 	} else {
 		schematic.ClearDeps = true; //unhide if it was hidden
-		for (const FApReplicatedItemInfo& item : items)
-			schematic.InfoCards.Add(CreateUnlockInfoOnly(item));
+		for (const FContentLib_UnlockInfoOnly& unlock : unlocks)
+			schematic.InfoCards.Add(unlock);
 	}
 
 	UCLSchematicBPFLib::InitSchematicFromStruct(schematic, factorySchematic, contentLibSubsystem);
