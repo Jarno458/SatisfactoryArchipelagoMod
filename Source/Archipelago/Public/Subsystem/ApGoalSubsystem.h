@@ -12,6 +12,28 @@
 
 #include "ApGoalSubsystem.generated.h"
 
+USTRUCT(BlueprintType)
+struct ARCHIPELAGO_API FApExplorationGraphInfo
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(BlueprintReadWrite)
+	FText DisplayName;
+
+	UPROPERTY(BlueprintReadWrite)
+	FText FullName;
+
+	UPROPERTY(BlueprintReadWrite)
+	FText Description;
+
+	UPROPERTY(BlueprintReadWrite)
+	FLinearColor Color;
+
+	UPROPERTY(BlueprintReadWrite)
+	TArray<float> DataPoints;
+};
+
 UCLASS()
 class ARCHIPELAGO_API AApGoalSubsystem : public AModSubsystem
 {
@@ -35,8 +57,13 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
 	static AApGoalSubsystem* Get(class UWorld* world);
+	UFUNCTION(BlueprintPure, Category = "Schematic", DisplayName = "Get Ap Goal Subsystem", Meta = (DefaultToSelf = "worldContext"))
+	static AApGoalSubsystem* Get(UObject* worldContext);
 
 	bool AreGoalsCompleted();
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	FApExplorationGraphInfo GetExplorationGoalInfo(FString graphId, TArray<float> dataPoints, FText suffix, FLinearColor color);
 
 private:
 	bool hasSentGoal;

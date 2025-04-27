@@ -1,6 +1,9 @@
 #include "Subsystem/ApGoalSubsystem.h"
 #include "FGGamePhase.h"
 
+//TODO REMOVE
+#pragma optimize("", off)
+
 AApGoalSubsystem::AApGoalSubsystem() : Super() {
 	PrimaryActorTick.bCanEverTick = true;
 	PrimaryActorTick.bStartWithTickEnabled = true;
@@ -14,6 +17,12 @@ AApGoalSubsystem* AApGoalSubsystem::Get(UWorld* world) {
 	fgcheck(SubsystemActorManager);
 
 	return SubsystemActorManager->GetSubsystemActor<AApGoalSubsystem>();
+}
+
+AApGoalSubsystem* AApGoalSubsystem::Get(class UObject* worldContext) {
+	UWorld* world = GEngine->GetWorldFromContextObject(worldContext, EGetWorldErrorMode::Assert);
+
+	return Get(world);
 }
 
 void AApGoalSubsystem::BeginPlay() {
@@ -50,6 +59,23 @@ void AApGoalSubsystem::Tick(float DeltaTime) {
 	}
 }
 
+FApExplorationGraphInfo AApGoalSubsystem::GetExplorationGoalInfo(FString graphId, TArray<float> dataPoints, FText suffix, FLinearColor color) {
+	FApExplorationGraphInfo graph;
+
+	graph.DisplayName = FText::FromString(TEXT("ExplGoal"));
+	graph.FullName = FText::FromString(TEXT("Exploration Goal"));
+	graph.Description = FText::FromString(TEXT("Maintain your sink points above this line for 10 minutes to complete your exploration goal"));
+	graph.Color = FLinearColor::Red;
+	
+	graph.DataPoints.SetNum(dataPoints.Num());
+	
+	for (int i = 0; i < graph.DataPoints.Num(); i++) {
+		graph.DataPoints[i] = 1000.0f;
+	}
+
+	return graph;
+}
+
 bool AApGoalSubsystem::AreGoalsCompleted() {
 	if (slotData->RequireAllGoals())
 		return   CheckSpaceElevatorGoal() 
@@ -74,11 +100,25 @@ bool AApGoalSubsystem::CheckResourceSinkPointsGoal() {
 }
 
 bool AApGoalSubsystem::CheckResourceSinkPointPerMinuteGoal() {
-	return slotData->IsResourceSinkPerMinuteGoalEnabled()
-		&& false; //TODO
+	if (!slotData->IsResourceSinkPerMinuteGoalEnabled())
+		return false;
+
+	TArray<int32> pointHistory = resourceSinkSubsystem->GetGlobalPointHistory(EResourceSinkTrack::RST_Default);
+	if (pointHistory.Num() < 10)
+		return false;
+
+	for (int32 i = pointHistory.Num() - 1; i > pointHistory.Num() - 11; i--)
+	{
+		if (pointHistory[i] < slotData->GePerMinuteResourceSinkPoints())
+			return false;
+	}
+		
+	return true;
 }
 
 bool AApGoalSubsystem::CheckExplorationGoal() {
 	return slotData->IsExplorationGoalEnabled()
 		&& schematicManager->IsSchematicPurchased(explorationGoalSchematic);
 }
+
+#pragma optimize("", on)

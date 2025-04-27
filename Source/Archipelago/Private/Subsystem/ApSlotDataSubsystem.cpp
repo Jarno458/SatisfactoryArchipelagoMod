@@ -34,7 +34,7 @@ void AApSlotDataSubsystem::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&
 	FDoRepLifetimeParams replicationParams;
 	replicationParams.bIsPushBased = true;
 
-	DOREPLIFETIME_WITH_PARAMS_FAST(AApSlotDataSubsystem, hubCostEntries, replicationParams);
+	DOREPLIFETIME_WITH_PARAMS_FAST(AApSlotDataSubsystem, hubCostEntriesReplicated, replicationParams);
 	DOREPLIFETIME_WITH_PARAMS_FAST(AApSlotDataSubsystem, replicatedExplorationCost, replicationParams);
 	DOREPLIFETIME_WITH_PARAMS_FAST(AApSlotDataSubsystem, starterRecipeIds, replicationParams);
 	DOREPLIFETIME(AApSlotDataSubsystem, Goals);
@@ -43,7 +43,7 @@ void AApSlotDataSubsystem::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&
 void AApSlotDataSubsystem::BeginPlay() {
 	Super::BeginPlay();
 
-	if (!hasLoadedSlotData) {
+	if (!hasLoadedSlotData || !hasLoadedExplorationData) {
 		UE_LOGFMT(LogApSlotDataSubsystem, Error, "AApSlotDataSubsystem::BeginPlay() SlotData was not sucsesfully loaded in time");
 	}
 }
@@ -53,6 +53,7 @@ void AApSlotDataSubsystem::SetSlotDataJson(FString slotDataJson) {
 		return;
 
 	hasLoadedSlotData = false;
+	hasLoadedExplorationData = false;
 
 	const TSharedRef<TJsonReader<>> reader = TJsonReaderFactory<>::Create(*slotDataJson);
 
@@ -78,7 +79,7 @@ void AApSlotDataSubsystem::SetSlotDataJson(FString slotDataJson) {
 		for (TSharedPtr<FJsonValue> milestone : tier->AsArray()) {
 			for (TPair<FString, TSharedPtr<FJsonValue>> cost : milestone->AsObject()->Values) {
 				int64 itemId = FCString::Atoi64(*cost.Key);
-				int amount;
+				uint32 amount;
 				cost.Value->TryGetNumber(amount);
 
 				parsedHubCostEntries.Add(FApReplicatedHubLayoutEntry(tierNumber, milestoneNumber, itemId, amount));
@@ -89,14 +90,14 @@ void AApSlotDataSubsystem::SetSlotDataJson(FString slotDataJson) {
 
 		tierNumber++;
 	}
-	hubCostEntries = parsedHubCostEntries;
-	MARK_PROPERTY_DIRTY_FROM_NAME(AApSlotDataSubsystem, hubCostEntries, this);
+	hubCostEntriesReplicated = parsedHubCostEntries;
+	MARK_PROPERTY_DIRTY_FROM_NAME(AApSlotDataSubsystem, hubCostEntriesReplicated, this);
 	ReconstructHubLayout();
 
 	TArray<FApReplicatedCostAmount> parsedExplorationCosts;
 	for (TPair<FString, TSharedPtr<FJsonValue>> cost : parsedJson->GetObjectField("ExplorationCosts")->Values) {
 		int64 itemId = FCString::Atoi64(*cost.Key);
-		int amount;
+		uint32 amount;
 		cost.Value->TryGetNumber(amount);
 
 		parsedExplorationCosts.Add(FApReplicatedCostAmount(itemId, amount));
@@ -150,12 +151,13 @@ void AApSlotDataSubsystem::SetSlotDataJson(FString slotDataJson) {
 		EnergyLink = false;
 
 	hasLoadedSlotData = true;
+	hasLoadedExplorationData = true;
 }
 
 void AApSlotDataSubsystem::ReconstructHubLayout() {
 	//reconstruct hubLayout based on saved HubCostEntries
-	if (!hubCostEntries.IsEmpty()) {
-		for (const FApReplicatedHubLayoutEntry& hubCostEntry : hubCostEntries) {
+	if (!hubCostEntriesReplicated.IsEmpty()) {
+		for (const FApReplicatedHubLayoutEntry& hubCostEntry : hubCostEntriesReplicated) {
 			int tier = hubCostEntry.GetTier();
 			int milestone = hubCostEntry.GetMilestone();
 
@@ -173,7 +175,13 @@ void AApSlotDataSubsystem::ReconstructHubLayout() {
 }
 
 void AApSlotDataSubsystem::ReconstructExplorationCost() {
+	if (!replicatedExplorationCost.IsEmpty()) {
+		for (const FApReplicatedCostAmount& costEntry : replicatedExplorationCost) {
+			explorationCosts.Add(costEntry.GetItemId(), costEntry.GetAmount());
+		}
 
+		hasLoadedExplorationData = true;
+	}
 }
 
 const TMap<int64, int> AApSlotDataSubsystem::GetCostsForMilestone(int tier, int milestone) {

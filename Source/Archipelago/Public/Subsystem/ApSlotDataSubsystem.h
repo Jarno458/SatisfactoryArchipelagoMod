@@ -17,13 +17,13 @@ struct ARCHIPELAGO_API FApReplicatedHubLayoutEntry
 	GENERATED_BODY()
 public:
 	// Value constructor
-	FApReplicatedHubLayoutEntry(int tier, int milestone, int64 itemId, int amount)
+	FApReplicatedHubLayoutEntry(int tier, int milestone, int64 itemId, uint32 amount)
 		//current format <tier:4>,<milestone:4>,<itemId:24>,<amount:20>
 		: data(
-			  (((int64)tier) << 48) 
-			| (((int64)milestone) << 44) 
-			| (((int64)itemId) << 20) 
-			| (((int64)amount) << 0)
+			  (((uint64)tier) << 48) 
+			| (((uint64)milestone) << 44) 
+			| (((uint64)itemId) << 20) 
+			| (((uint64)amount) << 0)
 		)
 	{}	
 	// Default constructor
@@ -53,7 +53,7 @@ struct ARCHIPELAGO_API FApReplicatedCostAmount
 
 public:
 	// Value constructor
-	FApReplicatedCostAmount(int64 itemId, int amount)
+	FApReplicatedCostAmount(int64 itemId, uint32 amount)
 		//current format <itemId:12>,<amount:20>
 		: data(
 			  ((itemId - ID_OFFSET) << 20) 
@@ -75,7 +75,7 @@ private:
 
 public:
 	FORCEINLINE int64 const GetItemId() const { return ID_OFFSET + ((data & 0xFFF00000) >> 20); }
-	FORCEINLINE int const GetAmount() const { return (data & 0x000FFFFF) >> 0; }
+	FORCEINLINE uint32 const GetAmount() const { return (data & 0x000FFFFF) >> 0; }
 };
 
 USTRUCT()
@@ -121,13 +121,13 @@ private:
 	uint64 finalResourceSinkPoints;
 
 	UPROPERTY(SaveGame)
-	uint64 perMinuteResourceSinkPoints;
+	uint32 perMinuteResourceSinkPoints;
 
 public:
 	FORCEINLINE bool const RequireAllGoals() const { return (data & 0x80000000) == 0; }
 	FORCEINLINE uint8 const GetFinalSpaceElevatorTier() const { return (data & 0x70000000) >> 28; }
 	FORCEINLINE uint64 const GetFinalResourceSinkPoints() const { return finalResourceSinkPoints; }
-	FORCEINLINE uint64 const GePerMinuteResourceSinkPoints() const { return perMinuteResourceSinkPoints; }
+	FORCEINLINE uint32 const GePerMinuteResourceSinkPoints() const { return perMinuteResourceSinkPoints; }
 	FORCEINLINE bool const IsSpaceElevatorGoalEnabled() const { return (data & 0x00000001) > 0; }
 	FORCEINLINE bool const IsResourceSinkGoalEnabled() const { return (data & 0x00000002) > 0; }
 	FORCEINLINE bool const IsResourceSinkPerMinuteGoalEnabled() const { return (data & 0x00000004) > 0; }
@@ -163,7 +163,7 @@ public:
 	static AApSlotDataSubsystem* Get(UObject* worldContext);
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	FORCEINLINE bool HasLoadedSlotData() const { return hasLoadedSlotData; }
+	FORCEINLINE bool HasLoadedSlotData() const { return hasLoadedSlotData && hasLoadedExplorationData; }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	const TMap<int64, int> GetCostsForMilestone(int tier, int milestone);
@@ -200,7 +200,7 @@ public:
 	TArray<int64> starterRecipeIds;
 private:
 	UPROPERTY(SaveGame, ReplicatedUsing = ReconstructHubLayout)
-	TArray<FApReplicatedHubLayoutEntry> hubCostEntries;
+	TArray<FApReplicatedHubLayoutEntry> hubCostEntriesReplicated;
 	TArray<TArray<TMap<int64, int>>> hubLayout; //build based on hubCostEntries
 
 	UPROPERTY(SaveGame, ReplicatedUsing = ReconstructExplorationCost)
@@ -208,6 +208,7 @@ private:
 	TMap<int64, int> explorationCosts; //build based on replicatedExplorationCost
 
 	bool hasLoadedSlotData;
+	bool hasLoadedExplorationData;
 
 	UPROPERTY(SaveGame, Replicated)
 	FApGoals Goals;
@@ -223,7 +224,7 @@ public:
 	FORCEINLINE int64 const GetFinalResourceSinkPoints() const { return Goals.GetFinalResourceSinkPoints(); }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	FORCEINLINE int64 const GePerMinuteResourceSinkPoints() const { return Goals.GePerMinuteResourceSinkPoints(); }
+	FORCEINLINE int32 const GePerMinuteResourceSinkPoints() const { return Goals.GePerMinuteResourceSinkPoints(); }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FORCEINLINE bool const IsSpaceElevatorGoalEnabled() const { return Goals.IsSpaceElevatorGoalEnabled(); }
