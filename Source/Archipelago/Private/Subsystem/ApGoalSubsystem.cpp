@@ -40,15 +40,21 @@ void AApGoalSubsystem::BeginPlay() {
 
 	AApSchematicPatcherSubsystem* schematicPatcher = AApSchematicPatcherSubsystem::Get(world);
 	explorationGoalSchematic = schematicPatcher->GetExplorationSchematic();
+
+	countdownStartedTime = FDateTime::MinValue();
 }
 
 void AApGoalSubsystem::Tick(float DeltaTime) {
 	Super::Tick(DeltaTime);
 
-	if (hasSentGoal 
-		|| connectionInfoSubsystem->GetConnectionState() != EApConnectionState::Connected
+	if (connectionInfoSubsystem->GetConnectionState() != EApConnectionState::Connected
 		|| !slotData->HasLoadedSlotData())
-			return;
+		return;
+
+	UpdateResourceSinkPerMinuteGoal();
+
+	if (hasSentGoal)
+		return;
 
 	if (AreGoalsCompleted()) {
 		UE_LOG(LogApSubsystem, Display, TEXT("Sending goal completion to server"));
@@ -59,22 +65,100 @@ void AApGoalSubsystem::Tick(float DeltaTime) {
 	}
 }
 
-FApExplorationGraphInfo AApGoalSubsystem::GetExplorationGoalInfo(FString graphId, TArray<float> dataPoints, FText suffix, FLinearColor color) {
-	FApExplorationGraphInfo graph;
+TArray<FApGoalGraphInfo> AApGoalSubsystem::GetResourceSinkGoalGraphs(int nunDataPoints) {
+	TArray<FApGoalGraphInfo> graphs;
 
-	graph.DisplayName = FText::FromString(TEXT("ExplGoal"));
-	graph.FullName = FText::FromString(TEXT("Exploration Goal"));
-	graph.Description = FText::FromString(TEXT("Maintain your sink points above this line for 10 minutes to complete your exploration goal"));
-	graph.Color = FLinearColor::Red;
-	
-	graph.DataPoints.SetNum(dataPoints.Num());
-	
-	for (int i = 0; i < graph.DataPoints.Num(); i++) {
-		graph.DataPoints[i] = 1000.0f;
+	if (slotData->IsResourceSinkPerMinuteGoalEnabled()) {
+		FApGoalGraphInfo resourceSinkPerMinuteThresholdGraph;
+
+		FString remaining = GetPerMinuteSinkGoalRemainingTime().ToString(TEXT("%m:%s")).RightChop(1);
+		
+		resourceSinkPerMinuteThresholdGraph.Id = FString(TEXT("RSPMG"));
+		resourceSinkPerMinuteThresholdGraph.DisplayName = FText::FromString(FString::Format(TEXT("P/Min Goal ({0})"), { *remaining }));
+		resourceSinkPerMinuteThresholdGraph.Suffix = FText::FromString(TEXT("p/min"));
+		resourceSinkPerMinuteThresholdGraph.FullName = FText::FromString(TEXT("ResourceSink points per minute Threshold"));
+		resourceSinkPerMinuteThresholdGraph.Description = 
+			FText::FromString(TEXT("Maintain your standart points above this line for 10 minutes to complete your ResourceSink points per minute goal"));
+
+		if (countdownStartedTime.GetYear() > 2000)
+			resourceSinkPerMinuteThresholdGraph.Color = FLinearColor::Green;
+		else
+			resourceSinkPerMinuteThresholdGraph.Color = FLinearColor::Red;
+
+		resourceSinkPerMinuteThresholdGraph.DataPoints.SetNum(nunDataPoints);
+		for (int i = 0; i < nunDataPoints; i++) {
+			resourceSinkPerMinuteThresholdGraph.DataPoints[i] = slotData->GePerMinuteResourceSinkPoints();
+		}
+
+		graphs.Add(resourceSinkPerMinuteThresholdGraph);
 	}
 
-	return graph;
+	if (slotData->IsResourceSinkGoalEnabled()) {
+		FApGoalGraphInfo totalResourceSinkGoal;
+
+		int64 totalSinkPoints = resourceSinkSubsystem->GetNumTotalPoints(EResourceSinkTrack::RST_Default);
+		int64 finalSinkPoints = slotData->GetFinalResourceSinkPoints();
+
+		int64 remaining = finalSinkPoints - totalSinkPoints;
+		if (remaining < 0)
+			remaining = 0;
+
+		totalResourceSinkGoal.Id = FString(TEXT("TPG"));
+		totalResourceSinkGoal.DisplayName = FText::FromString(TEXT("Remaining for Goal"));
+		totalResourceSinkGoal.Suffix = FText::FromString(TEXT(""));
+		totalResourceSinkGoal.FullName = FText::FromString(TEXT("ResourceSink points per minute Threshold"));
+		totalResourceSinkGoal.Description =
+			FText::FromString(TEXT("Maintain your standart points above this line for 10 minutes to complete your ResourceSink points per minute goal"));
+
+		if (remaining == 0)
+			totalResourceSinkGoal.Color = FLinearColor::Green;
+		else
+			totalResourceSinkGoal.Color = FLinearColor::Blue;
+
+		totalResourceSinkGoal.DataPoints.SetNum(nunDataPoints);
+		for (int i = 0; i < nunDataPoints; i++) {
+			totalResourceSinkGoal.DataPoints[i] = remaining;
+		}
+
+		graphs.Add(totalResourceSinkGoal);
+	}
+
+	return graphs;
 }
+
+int AApGoalSubsystem::GetRemainingSecondsForResourceSinkPerMinuteGoal() {
+	return GetPerMinuteSinkGoalRemainingTime().GetTotalSeconds();
+}
+
+int AApGoalSubsystem::GetTotalSecondsForResourceSinkPerMinuteGoal() {
+	return totalResourceSinkPerMinuteDuration.GetTotalSeconds();
+}
+
+void AApGoalSubsystem::UpdateResourceSinkPerMinuteGoal() {
+	if (!slotData->IsResourceSinkPerMinuteGoalEnabled())
+		return;
+
+	if (hasCompletedResourceSinkPerMinute)
+		return;
+
+	int currentPointsPerMinute = 0;
+	TArray<int32> standartPointHistory = resourceSinkSubsystem->GetGlobalPointHistory(EResourceSinkTrack::RST_Default);
+	if (!standartPointHistory.IsEmpty())
+		currentPointsPerMinute = standartPointHistory[standartPointHistory.Num() - 1];
+
+	if (currentPointsPerMinute > slotData->GePerMinuteResourceSinkPoints()) {
+		if (countdownStartedTime.GetYear() < 2000) {
+			countdownStartedTime = FDateTime::UtcNow();
+		}
+		else if (GetPerMinuteSinkGoalRemainingTime().GetTicks() <= 0) {
+			hasCompletedResourceSinkPerMinute = true;
+		}
+	}
+	else {
+		countdownStartedTime = FDateTime::MinValue();
+	}
+}
+
 
 bool AApGoalSubsystem::AreGoalsCompleted() {
 	if (slotData->RequireAllGoals())
@@ -100,20 +184,16 @@ bool AApGoalSubsystem::CheckResourceSinkPointsGoal() {
 }
 
 bool AApGoalSubsystem::CheckResourceSinkPointPerMinuteGoal() {
-	if (!slotData->IsResourceSinkPerMinuteGoalEnabled())
-		return false;
+	return slotData->IsResourceSinkPerMinuteGoalEnabled()
+		&& hasCompletedResourceSinkPerMinute;
+}
 
-	TArray<int32> pointHistory = resourceSinkSubsystem->GetGlobalPointHistory(EResourceSinkTrack::RST_Default);
-	if (pointHistory.Num() < 10)
-		return false;
-
-	for (int32 i = pointHistory.Num() - 1; i > pointHistory.Num() - 11; i--)
-	{
-		if (pointHistory[i] < slotData->GePerMinuteResourceSinkPoints())
-			return false;
+FTimespan AApGoalSubsystem::GetPerMinuteSinkGoalRemainingTime() {
+	if (countdownStartedTime.GetYear() < 2000) {
+		return totalResourceSinkPerMinuteDuration;
 	}
-		
-	return true;
+	
+	return totalResourceSinkPerMinuteDuration - (FDateTime::UtcNow() - countdownStartedTime);
 }
 
 bool AApGoalSubsystem::CheckExplorationGoal() {

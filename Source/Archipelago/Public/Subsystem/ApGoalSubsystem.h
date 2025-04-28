@@ -9,20 +9,27 @@
 #include "Subsystem/ApConnectionInfoSubsystem.h"
 #include "Subsystem/ApSlotDataSubsystem.h"
 #include "Subsystem/ApSchematicPatcherSubsystem.h"
+#include "Misc/DateTime.h"
 
 #include "ApGoalSubsystem.generated.h"
 
 USTRUCT(BlueprintType)
-struct ARCHIPELAGO_API FApExplorationGraphInfo
+struct ARCHIPELAGO_API FApGoalGraphInfo
 {
 	GENERATED_BODY()
 
 public:
 	UPROPERTY(BlueprintReadWrite)
+	FString Id;
+
+	UPROPERTY(BlueprintReadWrite)
 	FText DisplayName;
 
 	UPROPERTY(BlueprintReadWrite)
 	FText FullName;
+
+	UPROPERTY(BlueprintReadWrite)
+	FText Suffix;
 
 	UPROPERTY(BlueprintReadWrite)
 	FText Description;
@@ -63,13 +70,31 @@ public:
 	bool AreGoalsCompleted();
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	FApExplorationGraphInfo GetExplorationGoalInfo(FString graphId, TArray<float> dataPoints, FText suffix, FLinearColor color);
+	TArray<FApGoalGraphInfo> GetResourceSinkGoalGraphs(int nunDataPoints);
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	int GetRemainingSecondsForResourceSinkPerMinuteGoal();
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	int GetTotalSecondsForResourceSinkPerMinuteGoal();
 
 private:
-	bool hasSentGoal;
+	const FTimespan totalResourceSinkPerMinuteDuration = FTimespan(0, 0, 10, 0, 0);
+
+	bool hasSentGoal = false;
+
+	UPROPERTY(SaveGame)
+	FDateTime countdownStartedTime;
+
+	UPROPERTY(SaveGame)
+	bool hasCompletedResourceSinkPerMinute = false;
 
 	bool CheckSpaceElevatorGoal();
 	bool CheckResourceSinkPointsGoal();
 	bool CheckResourceSinkPointPerMinuteGoal();
 	bool CheckExplorationGoal();
+
+	void UpdateResourceSinkPerMinuteGoal();
+
+	FTimespan GetPerMinuteSinkGoalRemainingTime();
 };
