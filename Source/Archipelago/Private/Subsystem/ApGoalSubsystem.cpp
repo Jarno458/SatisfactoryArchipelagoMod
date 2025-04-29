@@ -66,6 +66,10 @@ void AApGoalSubsystem::Tick(float DeltaTime) {
 }
 
 TArray<FApGoalGraphInfo> AApGoalSubsystem::GetResourceSinkGoalGraphs(int nunDataPoints) {
+	const FLinearColor completedColor(0, 0.9f, 0);
+	const FLinearColor perMinuteColor(0.7f, 0, 0.2f);
+	const FLinearColor totalColor(0.2f, 0, 0.7f);
+
 	TArray<FApGoalGraphInfo> graphs;
 
 	if (slotData->IsResourceSinkPerMinuteGoalEnabled()) {
@@ -81,9 +85,9 @@ TArray<FApGoalGraphInfo> AApGoalSubsystem::GetResourceSinkGoalGraphs(int nunData
 			FText::FromString(TEXT("Maintain your standart points above this line for 10 minutes to complete your ResourceSink points per minute goal"));
 
 		if (countdownStartedTime.GetYear() > 2000)
-			resourceSinkPerMinuteThresholdGraph.Color = FLinearColor::Green;
+			resourceSinkPerMinuteThresholdGraph.Color = completedColor;
 		else
-			resourceSinkPerMinuteThresholdGraph.Color = FLinearColor::Red;
+			resourceSinkPerMinuteThresholdGraph.Color = perMinuteColor;
 
 		resourceSinkPerMinuteThresholdGraph.DataPoints.SetNum(nunDataPoints);
 		for (int i = 0; i < nunDataPoints; i++) {
@@ -111,9 +115,9 @@ TArray<FApGoalGraphInfo> AApGoalSubsystem::GetResourceSinkGoalGraphs(int nunData
 			FText::FromString(TEXT("Maintain your standart points above this line for 10 minutes to complete your ResourceSink points per minute goal"));
 
 		if (remaining == 0)
-			totalResourceSinkGoal.Color = FLinearColor::Green;
+			totalResourceSinkGoal.Color = completedColor;
 		else
-			totalResourceSinkGoal.Color = FLinearColor::Blue;
+			totalResourceSinkGoal.Color = totalColor;
 
 		totalResourceSinkGoal.DataPoints.SetNum(nunDataPoints);
 		for (int i = 0; i < nunDataPoints; i++) {
