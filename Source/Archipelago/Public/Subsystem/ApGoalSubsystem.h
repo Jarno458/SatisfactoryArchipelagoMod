@@ -42,9 +42,30 @@ public:
 };
 
 UCLASS()
-class ARCHIPELAGO_API AApGoalSubsystem : public AModSubsystem
+class ARCHIPELAGO_API AApGoalSubsystem : public AModSubsystem, public IFGSaveInterface
 {
 	GENERATED_BODY()
+
+public:
+	AApGoalSubsystem();
+
+	virtual void BeginPlay() override;
+	virtual void Tick(float DeltaTime) override;
+	virtual void EndPlay(const EEndPlayReason::Type endPlayReason) override;
+
+	// Begin IFGSaveInterface
+	virtual void PreSaveGame_Implementation(int32 saveVersion, int32 gameVersion) override;
+	virtual void PostSaveGame_Implementation(int32 saveVersion, int32 gameVersion) override {};
+	virtual void PreLoadGame_Implementation(int32 saveVersion, int32 gameVersion) override {};
+	virtual void PostLoadGame_Implementation(int32 saveVersion, int32 gameVersion) override;
+	virtual void GatherDependencies_Implementation(TArray<UObject*>& out_dependentObjects) override {};
+	virtual bool NeedTransform_Implementation() override { return false; };
+	virtual bool ShouldSave_Implementation() const override { return true; };
+	// End IFSaveInterface
+
+	static AApGoalSubsystem* Get(class UWorld* world);
+	UFUNCTION(BlueprintPure, Category = "Schematic", DisplayName = "Get Ap Goal Subsystem", Meta = (DefaultToSelf = "worldContext"))
+	static AApGoalSubsystem* Get(UObject* worldContext);
 
 private:
 	AFGGamePhaseManager* phaseManager;
@@ -58,19 +79,10 @@ private:
 	TSubclassOf<class UFGSchematic> explorationGoalSchematic;
 
 public:
-	AApGoalSubsystem();
-
-	virtual void BeginPlay() override;
-	virtual void Tick(float DeltaTime) override;
-
-	static AApGoalSubsystem* Get(class UWorld* world);
-	UFUNCTION(BlueprintPure, Category = "Schematic", DisplayName = "Get Ap Goal Subsystem", Meta = (DefaultToSelf = "worldContext"))
-	static AApGoalSubsystem* Get(UObject* worldContext);
-
 	bool AreGoalsCompleted();
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	TArray<FApGoalGraphInfo> GetResourceSinkGoalGraphs(int nunDataPoints);
+	TArray<FApGoalGraphInfo> GetResourceSinkGoalGraphs();
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	int GetRemainingSecondsForResourceSinkPerMinuteGoal();
@@ -81,13 +93,25 @@ public:
 private:
 	const FTimespan totalResourceSinkPerMinuteDuration = FTimespan(0, 0, 10, 0, 0);
 
+	bool isInitilized = false;
+
 	bool hasSentGoal = false;
 
+	bool hooksInitialized = false;
+	FDelegateHandle hookHandler;
+
 	UPROPERTY(SaveGame)
+	TArray<float> totalRemainingPointHistory;
+
+	//UPROPERTY(SaveGame) //TODO fixme, only the remaining time should be saved not the start time as that could be days ago
+	int remainingSecondsForPerMinuteGoal;
+
 	FDateTime countdownStartedTime;
 
 	UPROPERTY(SaveGame)
 	bool hasCompletedResourceSinkPerMinute = false;
+
+	void InitializeTotalRemainingPointHistory();
 
 	bool CheckSpaceElevatorGoal();
 	bool CheckResourceSinkPointsGoal();
@@ -95,6 +119,9 @@ private:
 	bool CheckExplorationGoal();
 
 	void UpdateResourceSinkPerMinuteGoal();
+	void UpdateTotalRemainingPointHistory();
 
 	FTimespan GetPerMinuteSinkGoalRemainingTime();
+
+	int64 GetTotalRemainingPoints();
 };

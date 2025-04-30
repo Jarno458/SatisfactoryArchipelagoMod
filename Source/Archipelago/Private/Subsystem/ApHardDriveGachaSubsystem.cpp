@@ -48,7 +48,7 @@ void AApHardDriveGachaSubsystem::BeginPlay() {
 	fgcheck(SManager);
 	SManager->PurchasedSchematicDelegate.AddDynamic(this, &AApHardDriveGachaSubsystem::OnSchematicCompleted);
 
-	if (!hooksInitialized) {
+	if (!hooksInitialized && !WITH_EDITOR) {
 		hookHandler = SUBSCRIBE_METHOD(AFGResearchManager::GetAvailableAlternateSchematics, [this](auto& scope, const AFGResearchManager* self, TArray<TSubclassOf<UFGSchematic>> excludedSchematics, int32 numSchematics, TArray<TSubclassOf<UFGSchematic>>& out_schematics) {
 			return GetAvailableAlternateSchematics(scope, self, excludedSchematics, numSchematics, out_schematics);
 		});

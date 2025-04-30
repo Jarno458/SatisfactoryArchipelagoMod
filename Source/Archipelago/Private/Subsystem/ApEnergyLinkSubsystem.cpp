@@ -28,7 +28,7 @@ void AApEnergyLinkSubsystem::BeginPlay() {
 	apConnectionInfo = AApConnectionInfoSubsystem::Get(world);
 	fgcheck(apConnectionInfo);
 
-	if (!hooksInitialized) {
+	if (!hooksInitialized && !WITH_EDITOR) {
 		UE_LOG(LogApEnergyLink, Display, TEXT("Initializing hooks"));
 		AFGBuildablePowerStorage* bpscdo = GetMutableDefault<AFGBuildablePowerStorage>();
 		hookHandler = SUBSCRIBE_METHOD_VIRTUAL(AFGBuildablePowerStorage::BeginPlay, bpscdo, [this](auto& scope, AFGBuildablePowerStorage* self) {

@@ -1,5 +1,6 @@
 #include "Subsystem/ApGoalSubsystem.h"
 #include "FGGamePhase.h"
+#include "Patching/NativeHookManager.h"
 
 //TODO REMOVE
 #pragma optimize("", off)
@@ -42,6 +43,19 @@ void AApGoalSubsystem::BeginPlay() {
 	explorationGoalSchematic = schematicPatcher->GetExplorationSchematic();
 
 	countdownStartedTime = FDateTime::MinValue();
+
+	if (!hooksInitialized && !WITH_EDITOR) {
+		hookHandler = SUBSCRIBE_METHOD_AFTER(AFGResourceSinkSubsystem::CalculateAccumulatedPointsPastInterval, [this](AFGResourceSinkSubsystem* self) {
+			UpdateTotalRemainingPointHistory();
+		});
+
+		hooksInitialized = true;
+	}
+}
+
+void AApGoalSubsystem::EndPlay(const EEndPlayReason::Type endPlayReason) {
+	if (hookHandler.IsValid())
+		UNSUBSCRIBE_METHOD(AFGResourceSinkSubsystem::CalculateAccumulatedPointsPastInterval, hookHandler);
 }
 
 void AApGoalSubsystem::Tick(float DeltaTime) {
@@ -50,6 +64,12 @@ void AApGoalSubsystem::Tick(float DeltaTime) {
 	if (connectionInfoSubsystem->GetConnectionState() != EApConnectionState::Connected
 		|| !slotData->HasLoadedSlotData())
 		return;
+
+	if (!isInitilized) {
+		InitializeTotalRemainingPointHistory();
+
+		isInitilized = true;
+	}
 
 	UpdateResourceSinkPerMinuteGoal();
 
@@ -65,17 +85,22 @@ void AApGoalSubsystem::Tick(float DeltaTime) {
 	}
 }
 
-TArray<FApGoalGraphInfo> AApGoalSubsystem::GetResourceSinkGoalGraphs(int nunDataPoints) {
+TArray<FApGoalGraphInfo> AApGoalSubsystem::GetResourceSinkGoalGraphs() {
+	const FLinearColor perMinuteOnTrackColor(0, 0.5f, 0);
 	const FLinearColor completedColor(0, 0.9f, 0);
-	const FLinearColor perMinuteColor(0.7f, 0, 0.2f);
-	const FLinearColor totalColor(0.2f, 0, 0.7f);
+	const FLinearColor perMinuteColor(0.9f, 0, 0.2f);
+	const FLinearColor totalColor(0.1f, 0, 0.9f);
 
 	TArray<FApGoalGraphInfo> graphs;
 
 	if (slotData->IsResourceSinkPerMinuteGoalEnabled()) {
 		FApGoalGraphInfo resourceSinkPerMinuteThresholdGraph;
+		FString remaining;
 
-		FString remaining = GetPerMinuteSinkGoalRemainingTime().ToString(TEXT("%m:%s")).RightChop(1);
+		if (hasCompletedResourceSinkPerMinute)
+			remaining = TEXT("done");
+		else
+			remaining = GetPerMinuteSinkGoalRemainingTime().ToString(TEXT("%m:%s")).RightChop(1);
 		
 		resourceSinkPerMinuteThresholdGraph.Id = FString(TEXT("RSPMG"));
 		resourceSinkPerMinuteThresholdGraph.DisplayName = FText::FromString(FString::Format(TEXT("P/Min Goal ({0})"), { *remaining }));
@@ -84,13 +109,15 @@ TArray<FApGoalGraphInfo> AApGoalSubsystem::GetResourceSinkGoalGraphs(int nunData
 		resourceSinkPerMinuteThresholdGraph.Description = 
 			FText::FromString(TEXT("Maintain your standart points above this line for 10 minutes to complete your ResourceSink points per minute goal"));
 
-		if (countdownStartedTime.GetYear() > 2000)
+		if (hasCompletedResourceSinkPerMinute)
 			resourceSinkPerMinuteThresholdGraph.Color = completedColor;
+		else if (countdownStartedTime.GetYear() > 2000)
+			resourceSinkPerMinuteThresholdGraph.Color = perMinuteOnTrackColor;
 		else
 			resourceSinkPerMinuteThresholdGraph.Color = perMinuteColor;
 
-		resourceSinkPerMinuteThresholdGraph.DataPoints.SetNum(nunDataPoints);
-		for (int i = 0; i < nunDataPoints; i++) {
+		resourceSinkPerMinuteThresholdGraph.DataPoints.SetNum(resourceSinkSubsystem->mGlobalHistorySize);
+		for (int i = 0; i < resourceSinkPerMinuteThresholdGraph.DataPoints.Num(); i++) {
 			resourceSinkPerMinuteThresholdGraph.DataPoints[i] = slotData->GePerMinuteResourceSinkPoints();
 		}
 
@@ -100,13 +127,6 @@ TArray<FApGoalGraphInfo> AApGoalSubsystem::GetResourceSinkGoalGraphs(int nunData
 	if (slotData->IsResourceSinkGoalEnabled()) {
 		FApGoalGraphInfo totalResourceSinkGoal;
 
-		int64 totalSinkPoints = resourceSinkSubsystem->GetNumTotalPoints(EResourceSinkTrack::RST_Default);
-		int64 finalSinkPoints = slotData->GetFinalResourceSinkPoints();
-
-		int64 remaining = finalSinkPoints - totalSinkPoints;
-		if (remaining < 0)
-			remaining = 0;
-
 		totalResourceSinkGoal.Id = FString(TEXT("TPG"));
 		totalResourceSinkGoal.DisplayName = FText::FromString(TEXT("Remaining for Goal"));
 		totalResourceSinkGoal.Suffix = FText::FromString(TEXT(""));
@@ -114,15 +134,14 @@ TArray<FApGoalGraphInfo> AApGoalSubsystem::GetResourceSinkGoalGraphs(int nunData
 		totalResourceSinkGoal.Description =
 			FText::FromString(TEXT("Maintain your standart points above this line for 10 minutes to complete your ResourceSink points per minute goal"));
 
+		int64 remaining = GetTotalRemainingPoints();
+
 		if (remaining == 0)
 			totalResourceSinkGoal.Color = completedColor;
 		else
 			totalResourceSinkGoal.Color = totalColor;
 
-		totalResourceSinkGoal.DataPoints.SetNum(nunDataPoints);
-		for (int i = 0; i < nunDataPoints; i++) {
-			totalResourceSinkGoal.DataPoints[i] = remaining;
-		}
+		totalResourceSinkGoal.DataPoints = totalRemainingPointHistory;
 
 		graphs.Add(totalResourceSinkGoal);
 	}
@@ -163,6 +182,33 @@ void AApGoalSubsystem::UpdateResourceSinkPerMinuteGoal() {
 	}
 }
 
+void AApGoalSubsystem::InitializeTotalRemainingPointHistory() {
+	//if it didnt get set based on save game we will it current remaining points
+	if (totalRemainingPointHistory.IsEmpty()) {
+		int64 remaining = GetTotalRemainingPoints();
+
+		totalRemainingPointHistory.SetNum(resourceSinkSubsystem->mGlobalHistorySize); //should be 10
+		for (int i = 0; i < totalRemainingPointHistory.Num(); i++) {
+			totalRemainingPointHistory[i] = remaining;
+		}
+	}
+}
+
+void AApGoalSubsystem::UpdateTotalRemainingPointHistory() {
+	totalRemainingPointHistory.RemoveAt(0);
+	totalRemainingPointHistory.Add(GetTotalRemainingPoints());
+}
+
+int64 AApGoalSubsystem::GetTotalRemainingPoints() {
+	int64 totalSinkPoints = resourceSinkSubsystem->GetNumTotalPoints(EResourceSinkTrack::RST_Default);
+	int64 finalSinkPoints = slotData->GetFinalResourceSinkPoints();
+
+	int64 remaining = finalSinkPoints - totalSinkPoints;
+	if (remaining < 0)
+		remaining = 0;
+
+	return remaining;
+}
 
 bool AApGoalSubsystem::AreGoalsCompleted() {
 	if (slotData->RequireAllGoals())
@@ -203,6 +249,19 @@ FTimespan AApGoalSubsystem::GetPerMinuteSinkGoalRemainingTime() {
 bool AApGoalSubsystem::CheckExplorationGoal() {
 	return slotData->IsExplorationGoalEnabled()
 		&& schematicManager->IsSchematicPurchased(explorationGoalSchematic);
+}
+
+void AApGoalSubsystem::PreSaveGame_Implementation(int32 saveVersion, int32 gameVersion) {
+	remainingSecondsForPerMinuteGoal = GetRemainingSecondsForResourceSinkPerMinuteGoal();
+};
+
+void AApGoalSubsystem::PostLoadGame_Implementation(int32 saveVersion, int32 gameVersion) {
+	int totalSeconds = GetTotalSecondsForResourceSinkPerMinuteGoal();
+
+	if (remainingSecondsForPerMinuteGoal >= totalSeconds)
+		countdownStartedTime = FDateTime::MinValue();
+	else 
+		countdownStartedTime = FDateTime(FDateTime::UtcNow().GetTicks() - FTimespan(0, 0, remainingSecondsForPerMinuteGoal).GetTicks());
 }
 
 #pragma optimize("", on)

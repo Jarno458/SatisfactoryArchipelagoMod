@@ -28,6 +28,7 @@ void AApMessagingSubsystem::LocalAddChatMessage(const FString& Message, const FL
 	MessageStruct.MessageText = FText::FromString(Message);
 	MessageStruct.MessageType = EFGChatMessageType::CMT_CustomMessage;
 	MessageStruct.ServerTimeStamp = GetWorld()->TimeSeconds;
+	MessageStruct.MessageSender = FText::FromString(TEXT("AP"));
 	MessageStruct.MessageSenderColor = Color;
 	ChatManager->AddChatMessageToReceived(MessageStruct);
 

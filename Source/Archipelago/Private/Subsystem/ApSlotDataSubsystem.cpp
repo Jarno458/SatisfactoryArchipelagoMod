@@ -226,6 +226,7 @@ void AApSlotDataSubsystem::PostLoadGame_Implementation(int32 saveVersion, int32 
 	UE_LOG(LogApSlotDataSubsystem, Display, TEXT("AApSlotDataSubsystem::PostLoadGame_Implementation(saveVersion: %i, gameVersion: %i)"), saveVersion, gameVersion);
 
 	ReconstructHubLayout();
+	ReconstructExplorationCost();
 }
 
 #pragma optimize("", on)

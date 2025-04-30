@@ -222,6 +222,7 @@ void AApSchematicPatcherSubsystem::InitializeSchematicsBasedOnScoutedData() {
 	hardcodedSchematics.Append(apWorldModule->mTreeNodeSchematics);
 
 	InitializeStarterRecipes();
+	InitializeExplorationGoal();
 
 	TMap<int64, FApReplicatedItemInfo> replicatedItemInfoBySchematicId;
 	for (const FApReplicatedItemInfo& replicatedItemInfo : replicatedItemInfos) {
@@ -353,13 +354,14 @@ void AApSchematicPatcherSubsystem::InitializeExplorationGoal() {
 		FContentLib_UnlockInfoOnly unlock;
 		unlock.mUnlockName = FText::FromString("Exploration Goal");
 
-		if (slotDataSubsystem->RequireAllGoals() == false)
+		if (!slotDataSubsystem->RequireAllGoals())
 			unlock.mUnlockDescription = FText::FromString("This will unlock your Exploration Goal which will be enough to finish this world.");
 		else
 			unlock.mUnlockDescription = FText::FromString("This will unlock your Exploration Goal which is part of the goals to finish this world.");
 
 		unlock.CategoryIcon = TEXT("/Archipelago/Assets/SourceArt/ArchipelagoAssetPack/ArchipelagoIconWhite128.ArchipelagoIconWhite128");
-		unlock.BigIcon = unlock.SmallIcon = TEXT("/Game/FactoryGame/Buildable/Factory/Mam/UI/TXUI_UploadUpgrade_256.TXUI_UploadUpgrade_256");
+		unlock.SmallIcon = TEXT("/Game/FactoryGame/Buildable/Building/Decor/Statues/UI/TXUI_Award_CharGold_256.TXUI_Award_CharGold_64");
+		unlock.BigIcon = TEXT("/Game/FactoryGame/Buildable/Building/Decor/Statues/UI/TXUI_Award_CharGold_256.TXUI_Award_CharGold_256");
 
 		unlocks.Add(unlock);
 	}
