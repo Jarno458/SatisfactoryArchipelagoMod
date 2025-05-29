@@ -26,22 +26,31 @@ public:
 	// Sets default values for this actor's properties
 	AApEnergyLinkSubsystem();
 
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;
 	virtual void EndPlay(const EEndPlayReason::Type endPlayReason) override;
 
 public:
-	bool apInitialized = false;
+	bool isInitialized = false;
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	const bool IsEnergyLinkEnabled();
+	FORCEINLINE bool IsInitialized() const { return isInitialized; };
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	FORCEINLINE int64 GetCurrentServerStoredEnergy() const { return currentServerStorage; };
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	FORCEINLINE bool IsEnergyLinkEnabled() const { return energyLinkEnabled; };
 
 private:
 	bool hooksInitialized = false;
 	bool energyLinkEnabled = false;
 
-	long currentServerStorage = 0;
+	UPROPERTY(Replicated)
+	int64 currentServerStorage = 0;
 
 	float localStorage = 0.0f;
 

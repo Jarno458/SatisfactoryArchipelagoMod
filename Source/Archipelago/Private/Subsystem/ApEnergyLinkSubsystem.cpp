@@ -10,11 +10,20 @@ AApEnergyLinkSubsystem::AApEnergyLinkSubsystem()
 	PrimaryActorTick.bCanEverTick = true;
 	PrimaryActorTick.TickInterval = 1.0f;
 
-	ReplicationPolicy = ESubsystemReplicationPolicy::SpawnOnServer;
+	ReplicationPolicy = ESubsystemReplicationPolicy::SpawnOnServer_Replicate;
+}
+
+void AApEnergyLinkSubsystem::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const {
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(AApEnergyLinkSubsystem, currentServerStorage);
 }
 
 void AApEnergyLinkSubsystem::BeginPlay() {
 	Super::BeginPlay();
+
+	if (!HasAuthority())
+		return;
 		
 	UE_LOG(LogApEnergyLink, Display, TEXT("AEnergyLinkSubsystem:BeginPlay()"));
 
@@ -51,8 +60,11 @@ void AApEnergyLinkSubsystem::EndPlay(const EEndPlayReason::Type endPlayReason) {
 void AApEnergyLinkSubsystem::Tick(float DeltaTime) {
 	Super::Tick(DeltaTime);
 
-	if (!apInitialized && randomizerSubsystem->IsInitialized()) {
-		apInitialized = true;
+	if (!HasAuthority())
+		return;
+
+	if (!isInitialized && randomizerSubsystem->IsInitialized()) {
+		isInitialized = true;
 
 		if (!slotDataSubsystem->HasLoadedSlotData())
 			return;
@@ -67,12 +79,8 @@ void AApEnergyLinkSubsystem::Tick(float DeltaTime) {
 		}
 	}
 
-	if (apInitialized && energyLinkEnabled)
+	if (isInitialized && energyLinkEnabled)
 		EnergyLinkTick();
-}
-
-const bool AApEnergyLinkSubsystem::IsEnergyLinkEnabled() {
-	return energyLinkEnabled;
 }
 
 void AApEnergyLinkSubsystem::OnEnergyLinkValueChanged(AP_SetReply setReply) {
@@ -134,7 +142,7 @@ void AApEnergyLinkSubsystem::EnergyLinkTick() {
 }
 
 void AApEnergyLinkSubsystem::SendEnergyToServer(long amount) {
-	if (!apInitialized)
+	if (!isInitialized)
 		return;
 
 	ap->ModdifyEnergyLink(amount, energyLinkDefault);
