@@ -183,8 +183,8 @@ public:
 	void SetSlotDataJson(FString slotDataJson);
 
 public:
-	UPROPERTY(BlueprintReadOnly, SaveGame)
-	int NumberOfChecksPerMilestone;
+	//UPROPERTY(BlueprintReadOnly, SaveGame)
+	//int NumberOfChecksPerMilestone;
 	UPROPERTY(BlueprintReadOnly, SaveGame)
 	int FreeSampleEquipment;
 	UPROPERTY(BlueprintReadOnly, SaveGame)

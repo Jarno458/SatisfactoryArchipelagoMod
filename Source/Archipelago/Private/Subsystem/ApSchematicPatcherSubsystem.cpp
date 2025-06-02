@@ -97,15 +97,16 @@ void AApSchematicPatcherSubsystem::Tick(float DeltaTime) {
 			Client_ProcessCollectedLocations();
 	}
 
-	if (!isInitialized
-		|| connectionInfo->GetConnectionState() != EApConnectionState::Connected 
-		|| !receivedItemInfos
-		|| !receivedMilestones
-		|| !receivedStarterRecipes
-		|| !slotDataSubsystem->HasLoadedSlotData())
-			return;
+	EApConnectionState connectionState = connectionInfo->GetConnectionState();
 
-	if (!hasPatchedSchematics) {
+	if (!hasPatchedSchematics
+		&& isInitialized
+		&& (connectionState == EApConnectionState::Connected || connectionState == EApConnectionState::ConnectionFailed)
+		&& receivedItemInfos
+		&& receivedMilestones
+		&& receivedStarterRecipes
+		&& slotDataSubsystem->HasLoadedSlotData()) {
+
 		InitializeSchematicsBasedOnScoutedData();
 
 		hasPatchedSchematics = true;

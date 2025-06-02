@@ -141,7 +141,6 @@ void AApSlotDataSubsystem::SetSlotDataJson(FString slotDataJson) {
 		isExplorationGoalEnabled, isFicsmasGoalEnabled,
 		finalSpaceElevatorTier, finalResourceSinkPoints, finalResourceSinkPointsPerMinute);
 
-	NumberOfChecksPerMilestone = parsedJson->GetIntegerField("SlotsPerMilestone");
 	FreeSampleEquipment = options->GetIntegerField("FreeSampleEquipment");
 	FreeSampleBuildings = options->GetIntegerField("FreeSampleBuildings");
 	FreeSampleParts = options->GetIntegerField("FreeSampleParts");
