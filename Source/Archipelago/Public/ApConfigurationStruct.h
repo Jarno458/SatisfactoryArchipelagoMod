@@ -10,7 +10,7 @@ struct FApConfigurationStruct {
     GENERATED_BODY()
 public:
     UPROPERTY(BlueprintReadWrite)
-    bool Enabled{};
+    int Timeout{};
 
     UPROPERTY(BlueprintReadWrite)
     bool Debugging{};

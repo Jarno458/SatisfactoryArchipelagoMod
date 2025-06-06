@@ -99,11 +99,6 @@ void AApSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase) {
 		config = FApConfigurationStruct::GetActiveConfig(GetWorld());
 	}
 	else if (phase == ELifecyclePhase::INITIALIZATION) {
-		if (!config.Enabled) {
-			UE_LOG(LogApSubsystem, Warning, TEXT("Archipelago manually disabled by user config"));
-			return;
-		}
-
 		connectionInfoSubsystem = AApConnectionInfoSubsystem::Get(GetWorld());
 		fgcheck(connectionInfoSubsystem);
 
@@ -120,21 +115,18 @@ void AApSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase) {
 		FDateTime connectingStartedTime = FDateTime::Now();
 
 		FGenericPlatformProcess::ConditionalSleep([this, connectingStartedTime]() {
-			return InitializeTick(connectingStartedTime);
+			return InitializeTick(connectingStartedTime, config.Timeout);
 		}, 0.5);
 	}
 	else if (phase == ELifecyclePhase::POST_INITIALIZATION) {
-		if (!config.Enabled)
-			return;
-
 		SetActorTickEnabled(true);
 	}
 }
 
-bool AApSubsystem::InitializeTick(FDateTime connectingStartedTime) {
-	return CallOnGameThread<bool>([this, connectingStartedTime]() {
+bool AApSubsystem::InitializeTick(FDateTime connectingStartedTime, int timeout) {
+	return CallOnGameThread<bool>([this, connectingStartedTime, timeout]() {
 		if (connectionInfoSubsystem->ConnectionState == EApConnectionState::Connecting) {
-			if ((FDateTime::Now() - connectingStartedTime).GetSeconds() > 25)
+			if ((FDateTime::Now() - connectingStartedTime).GetSeconds() > timeout)
 				TimeoutConnection();
 			else
 				CheckConnectionState();

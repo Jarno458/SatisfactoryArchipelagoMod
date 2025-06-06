@@ -66,10 +66,6 @@ void AApServerRandomizerSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase,
 		schematicPatcher = AApSchematicPatcherSubsystem::Get(world);
 		fgcheck(schematicPatcher);
 
-		FApConfigurationStruct config = ap->GetConfig();
-		if (!config.Enabled)
-			return;
-
 		ap->SetItemReceivedCallback([this](int64 itemid, bool isFromServer) { ReceiveItem(itemid, isFromServer); });
 		ap->SetLocationCheckedCallback([this](int64 itemid) { CollectLocation(itemid); });
 		ap->SetDeathLinkReceivedCallback([this](FText message) { OnDeathLinkReceived(message); });

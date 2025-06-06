@@ -112,17 +112,17 @@ private:
 	void LocationScoutedCallback(std::vector<AP_NetworkItem>);
 	void DeathLinkReceivedCallback(std::string source, std::string cause);
 
-	FApConfigurationStruct config;
-
 	TQueue<TTuple<int64, bool>> ReceivedItems;
 	TQueue<int64> CheckedLocations;
 	TQueue<FText> PendingDeathlinks;
 	TQueue<TPair<FString, FLinearColor>> ChatMessageQueue;
 	std::atomic_bool isReconnect = false;
 
+	FApConfigurationStruct config;
+
 	bool canRecieveChat;
 
-	bool InitializeTick(FDateTime connectingStartedTime);
+	bool InitializeTick(FDateTime connectingStartedTime, int timeout);
 
 	void ConnectToArchipelago();
 	void TimeoutConnection();

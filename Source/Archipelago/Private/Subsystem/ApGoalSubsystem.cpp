@@ -195,7 +195,8 @@ void AApGoalSubsystem::InitializeTotalRemainingPointHistory() {
 }
 
 void AApGoalSubsystem::UpdateTotalRemainingPointHistory() {
-	totalRemainingPointHistory.RemoveAt(0);
+	if (!totalRemainingPointHistory.IsEmpty())
+		totalRemainingPointHistory.RemoveAt(0);
 	totalRemainingPointHistory.Add(GetTotalRemainingPoints());
 }
 
