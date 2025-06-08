@@ -9,6 +9,9 @@
 #include "Resources/FGBuildingDescriptor.h"
 #include "Resources/FGVehicleDescriptor.h"
 #include "FGVehicle.h"
+#include "AvailabilityDependencies/FGSchematicPurchasedDependency.h"
+#include "Unlocks/FGUnlockGiveItem.h"
+#include "FGSchematicCategory.h"
 
 #include "ApUtils.h"
 #endif
@@ -23,22 +26,61 @@ void UApEditorScripts::GenerateApItemSchematicBlueprints() {
 	RemoveEmptySchematics(worldModule);
 	RemoveSchematicsContaining(worldModule, "AP_ItemSchematics");
 
-	TMap<int64, TSharedRef<FApItemBase>> itemMap;
-	AApMappingsSubsystem::LoadRecipeMappings(itemMap);
+	TMap<int64, TSharedRef<FApItemBase>> recipeMap;
+	AApMappingsSubsystem::LoadRecipeMappings(recipeMap);
+
+	TMap<TSubclassOf<UFGItemDescriptor>, TSet<TSubclassOf<UFGSchematic>>> schematicsPerParts;
 
 	TSubclassOf<UFGSchematic> schematic;
-	for (TPair<int64, TSharedRef<FApItemBase>>& itemInfoMapping : itemMap) {
-		switch (itemInfoMapping.Value->Type)
+	for (const TPair<int64, TSharedRef<FApItemBase>>& itemInfoMapping : recipeMap) {
+		if (itemInfoMapping.Value->Type == EItemType::Recipe || itemInfoMapping.Value->Type == EItemType::Building)
 		{
-			case EItemType::Recipe:
-			case EItemType::Building:
-				schematic = CreateApItemSchematicBlueprintsForRecipe(itemInfoMapping.Key, StaticCastSharedRef<FApRecipeItem>(itemInfoMapping.Value));
-				worldModule->mSchematics.Add(schematic);
-				break;
+			const TSharedRef<FApRecipeItem> recipeItem = StaticCastSharedRef<FApRecipeItem>(itemInfoMapping.Value);
 
-			default:
-				break;
+			schematic = CreateApItemSchematicBlueprintsForRecipe(itemInfoMapping.Key, recipeItem);
+			worldModule->mSchematics.Add(schematic);
+
+			if (itemInfoMapping.Value->Type == EItemType::Recipe){
+				for (const FApRecipeInfo& recipeInfo : recipeItem->Recipes) {
+					for (const FItemAmount& productAmount : UFGRecipe::GetProducts(recipeInfo.Class)) {
+						if (!schematicsPerParts.Contains(productAmount.ItemClass))
+							schematicsPerParts.Add(productAmount.ItemClass, TSet<TSubclassOf<UFGSchematic>> { schematic });
+						else
+							schematicsPerParts[productAmount.ItemClass].Add(schematic);
+					}
+				}
+			}
 		}
+	}
+
+	TMap<int64, TSharedRef<FApItemBase>> itemMap;
+	AApMappingsSubsystem::LoadItemMappings(itemMap);
+
+	const TSharedRef<FApItem> couponItem = StaticCastSharedRef<FApItem>(itemMap[1338040]);
+	TSubclassOf<UFGItemDescriptor> couponClass = couponItem->Class;
+
+	for (const TPair<TSubclassOf<UFGItemDescriptor>, TSet<TSubclassOf<UFGSchematic>>>& schematicsPerPart : schematicsPerParts) {
+		TSubclassOf<UFGItemDescriptor> part = schematicsPerPart.Key;
+
+		UE_LOGFMT(LogApEditorScripts, Log, "UApEditorScripts::GenerateApItemSchematicBlueprints() Handleing shop part {0}", UFGItemDescriptor::GetItemName(part).ToString());
+
+		if (UFGItemDescriptor::GetForm(part) != EResourceForm::RF_SOLID)
+			continue;
+
+		if (!AApMappingsSubsystem::ItemClassToItemId.Contains(part)) {
+			UE_LOGFMT(LogApEditorScripts, Log, "UApEditorScripts::GenerateApItemSchematicBlueprints() part {0} isnt mapped to itemid", UFGItemDescriptor::GetItemName(part).ToString());
+		}
+		int64 itemId = AApMappingsSubsystem::ItemClassToItemId[part];
+
+		UE_LOGFMT(LogApEditorScripts, Log, "UApEditorScripts::GenerateApItemSchematicBlueprints() itemid {0}", itemId);
+
+		TSharedRef<FApItem> partItem = StaticCastSharedRef<FApItem>(itemMap[itemId]);
+
+		if (partItem->couponCost < 0)
+			continue;
+
+		schematic = CreateApShopSchematicForPart(couponClass, partItem, schematicsPerPart.Value);
+		worldModule->mSchematics.Add(schematic);
 	}
 
 	worldModule->MarkPackageDirty();
@@ -131,6 +173,82 @@ TSubclassOf<UFGSchematic> UApEditorScripts::CreateApItemSchematicBlueprintsForRe
 	for (FApRecipeInfo& recipeInfo : recipeItem->Recipes) {
 		UBPFContentLib::AddRecipeToUnlock(InnerBPClass, nullptr, recipeInfo.Class);
 	}
+
+	BP->MarkPackageDirty();
+
+	return InnerBPClass;
+}
+
+TSubclassOf<UFGSchematic> UApEditorScripts::CreateApShopSchematicForPart(TSubclassOf<UFGItemDescriptor> couponClass, TSharedRef<FApItem> part, TSet<TSubclassOf<UFGSchematic>> referencedReschematics) {
+	FText partName = UFGItemDescriptor::GetItemName(part->Class);
+
+	FName bpName(TEXT("AP_SHOP_") + partName.ToString().Replace(TEXT(" "), TEXT("_"), ESearchCase::CaseSensitive));
+	FString packagePath(TEXT("/Archipelago/Schematics/AP_ItemSchematics/") + bpName.ToString());
+
+	UPackage* Package = CreatePackage(*packagePath);
+	UBlueprint* BP = FKismetEditorUtilities::CreateBlueprint(UFGSchematic::StaticClass(), Package, bpName, BPTYPE_Normal, UBlueprint::StaticClass(), UBlueprintGeneratedClass::StaticClass());
+
+	FString PathName = BP->GetPathName();
+
+	UE_LOGFMT(LogApEditorScripts, Log, "Created new BP at path {0}", PathName);
+
+	if (!PathName.EndsWith("_C")) {
+		PathName.Append("_C");
+	}
+
+	TSubclassOf<UFGSchematic> InnerBPClass = LoadClass<UFGSchematic>(NULL, *PathName);
+	fgcheck(InnerBPClass != nullptr)
+	UFGSchematic* schematic = Cast<UFGSchematic>(InnerBPClass->GetDefaultObject());
+	fgcheck(schematic != nullptr)
+
+	//UBPFContentLib::AddGiveItemsToUnlock() cant use contentlib here due to its requirement of its subsystem
+	UClass* Class = FindObject<UClass>(FindPackage(nullptr, TEXT("/Game/")), TEXT("BP_UnlockGiveItem_C"), false);
+	if (!Class) {
+		Class = LoadObject<UClass>(nullptr, TEXT("/Game/FactoryGame/Unlocks/BP_UnlockGiveItem.BP_UnlockGiveItem_C"));
+		if (!Class) {
+			UE_LOGFMT(LogApEditorScripts, Fatal, "CL: Couldn't find BP_UnlockGiveItem wanting to Add to {0}", schematic->GetName());
+		}
+	}
+	UFGUnlockGiveItem* unlockRewardItem = NewObject<UFGUnlockGiveItem>(schematic, Class);
+
+	TArray<FItemAmount> itemsToGive{ FItemAmount(part->Class, part->stackSize) };
+	unlockRewardItem->SetmItemsToGive(itemsToGive);
+
+	TSubclassOf<UFGSchematicCategory> category;
+	TSubclassOf<UFGSchematicCategory> subCategory;
+
+	if (part->Id >= 1338150) {
+		category = LoadObject<UClass>(nullptr, TEXT("/Game/FactoryGame/Schematics/ResourceSinkShopCategories/SC_RSS_Equipment.SC_RSS_Equipment_C"));
+		subCategory = LoadObject<UClass>(nullptr, TEXT("/Game/FactoryGame/Schematics/ResourceSinkShopCategories/SC_RSS_Equipment2.SC_RSS_Equipment2_C"));
+	} else {
+		category = LoadObject<UClass>(nullptr, TEXT("/Game/FactoryGame/Schematics/ResourceSinkShopCategories/SC_RSS_Parts.SC_RSS_Parts_C"));
+		subCategory = LoadObject<UClass>(nullptr, TEXT("/Game/FactoryGame/Schematics/ResourceSinkShopCategories/SC_RSS_StandardParts.SC_RSS_StandardParts_C"));
+	}
+
+	UE_LOGFMT(LogApEditorScripts, Log, "building shop item: {0}", partName.ToString());
+
+	schematic->mDisplayName = partName;
+	schematic->mType = ESchematicType::EST_ResourceSink;
+	schematic->mSchematicCategory = category;
+	schematic->mSubCategories = TArray<TSubclassOf<UFGSchematicCategory>>{ subCategory };
+	schematic->mMenuPriority = 0; //this should probably be set in some logical fashion
+	schematic->mTechTier = 1;
+	schematic->mTimeToComplete = 0;
+	schematic->mHiddenUntilDependenciesMet = true;
+	schematic->mSchematicIcon.SetResourceObject(UFGItemDescriptor::GetBigIcon(part->Class));
+	schematic->mSmallSchematicIcon = UFGItemDescriptor::GetSmallIcon(part->Class);
+
+	TArray<FItemAmount> ticketCost { FItemAmount(couponClass, part->couponCost) };
+	schematic->mCost = ticketCost;
+
+	schematic->mUnlocks.Add(unlockRewardItem);
+
+	for (TSubclassOf<UFGSchematic> dependency : referencedReschematics) {
+		UBPFContentLib::AddSchematicToPurchaseDep(InnerBPClass, nullptr, dependency);
+	}
+
+	UFGSchematicPurchasedDependency* purchasedDepObject = Cast<UFGSchematicPurchasedDependency>(schematic->mSchematicDependencies[0]);
+	purchasedDepObject->SetmRequireAllSchematicsToBePurchased(false);
 
 	BP->MarkPackageDirty();
 

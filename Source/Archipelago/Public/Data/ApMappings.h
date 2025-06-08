@@ -27,4 +27,7 @@ public:
 	static const TMap<int64, const int> ItemIdToSpecailStackSize;
 	static const TMap<int64, const FName> ItemIdToTrap;
 
+#if WITH_EDITOR 
+	static const TMap<int64, int> ItemIdToCouponCost;
+#endif
 };

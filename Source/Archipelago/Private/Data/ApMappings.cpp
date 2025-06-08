@@ -136,7 +136,8 @@ const TMap<int64, const FString> UApMappings::ItemIdToGameItemDescriptor = {
 	{1338129, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Resource/Parts/Ficsonium/Desc_Ficsonium.Desc_Ficsonium'")},
 	{1338130, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Resource/Parts/FicsoniumFuelRod/Desc_FicsoniumFuelRod.Desc_FicsoniumFuelRod'")},
 	{1338131, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Resource/Parts/RocketFuel/Desc_PackagedRocketFuel.Desc_PackagedRocketFuel'")},
-	{1338131, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Resource/Parts/IonizedFuel/Desc_PackagedIonizedFuel.Desc_PackagedIonizedFuel'") },
+	{1338132, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Resource/Parts/IonizedFuel/Desc_PackagedIonizedFuel.Desc_PackagedIonizedFuel'") },
+	{1338133, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Resource/Parts/DarkMatter/Desc_DarkMatter.Desc_DarkMatter'") },
 	// 1.0
 	
 	//Enquipment/Ammo
@@ -739,6 +740,7 @@ const TMap<int64, const FString> UApMappings::ItemIdToGameSchematic = {
 };
 
 const TMap<int64, const int> UApMappings::ItemIdToSpecailStackSize = {
+	{1338082, 10}, //Bundle: Power Shards
 	{1338192, 3}, //Bundle of Three: Power Shards
 	{1338193, 3}, //Bundle of Three: Mercer Spheres
 	{1338194, 4}, //Bundle of Four: Somersloops
@@ -770,3 +772,99 @@ const TMap<int64, const FName> UApMappings::ItemIdToTrap = {
 	{1338920, FName(TEXT("CanOfBeans"))},
 	{1338921, FName(TEXT("Fart"))},
 };
+
+#if WITH_EDITOR 
+// -1 means dont sell
+const TMap<int64, int> UApMappings::ItemIdToCouponCost = {
+	//Parts
+	{1338001, 3}, //AI Limiter
+	{1338002, 2},
+	{1338007, 1},
+	{1338012, 3},
+	{1338014, 10}, //Neural-Quantum Processor
+	{1338015, 1},
+	{1338016, 1}, //Black Powder
+	{1338017, 2},
+	{1338020, 3},
+	{1338022, 10},
+	{1338023, 1},
+	{1338024, 6},
+	{1338025, 2}, //Concrete
+	{1338026, 5},
+	{1338029, 1},
+	{1338030, 2},
+	{1338032, 4},
+	{1338033, 4},
+	{1338034, 1},
+	{1338035, 1}, //Empty Fluid Tank
+	{1338036, 3}, //Encased Industrial Beam
+	{1338039, 3},
+	{1338042, 7},
+	{1338044, 3}, //Heatsink
+	{1338045, 6},
+	{1338046, 4},
+	{1338051, 1},
+	{1338052, 1},
+	{1338059, 4},
+	{1338060, 5},
+	{1338066, 2},
+	{1338067, 2},
+	{1338068, 1},
+	{1338069, 3},
+	{1338070, 4},
+	{1338071, 4},
+	{1338072, 2},
+	{1338073, 3},
+	{1338074, 4}, //Packaged Turno Fuel
+	{1338075, 1},
+	{1338076, 1},
+	{1338077, 1},
+	{1338082, 10}, //Power Shard
+	{1338084, 8},
+	{1338085, 25}, //Alien Power Matrix
+	{1338086, 2},
+	{1338087, 2},
+	{1338088, 7}, //Radio Control Unit
+	{1338090, 3},
+	{1338091, 3},
+	{1338092, 1},
+	{1338094, 1},
+	{1338095, 1},
+	{1338097, 2}, //Smokeless Powder
+	{1338098, 2}, //Solid Biofuel
+	{1338100, 3},
+	{1338102, 2},
+	{1338104, 1},
+	{1338106, 8},
+	{1338107, 9},
+	{1338109, 8},
+	{1338115, 1},
+	{1338122, 5},
+	{1338124, 5}, //Ficsite Trigon
+	{1338126, 4},
+	{1338131, 6},
+	{1338131, 8},
+
+	//Enquipment/Ammo
+	{1338155, 4},
+	{1338156, 5},
+	{1338157, 1},
+	{1338158, 1},
+	{1338159, 6},
+	{1338163, 2},
+	{1338165, 6},
+	{1338167, 4},
+	{1338169, 10},
+	{1338170, 2},
+	{1338172, 10},
+	{1338176, 2},
+	{1338177, 2},
+	{1338179, 2},
+	{1338180, 4},
+	{1338181, 2},
+	{1338182, 6},
+	{1338187, 3},
+};
+#endif
+
+

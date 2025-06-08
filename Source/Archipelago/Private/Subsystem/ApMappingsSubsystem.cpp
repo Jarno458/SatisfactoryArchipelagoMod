@@ -80,6 +80,17 @@ void AApMappingsSubsystem::LoadRecipeMappings(TMap<int64, TSharedRef<FApItemBase
 	LoadBuildingMappings(itemMap, recipeAssets);
 }
 
+void AApMappingsSubsystem::LoadItemMappings(TMap<int64, TSharedRef<FApItemBase>>& itemMap) {
+	FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+	IAssetRegistry& registery = AssetRegistryModule.Get();
+
+	registery.WaitForCompletion();
+
+	TMap<FName, const FAssetData> itemAssets = GetItemDescriptorAssets(registery);
+
+	LoadItemMappings(itemMap, itemAssets);
+}
+
 void AApMappingsSubsystem::LoadItemMappings(TMap<int64, TSharedRef<FApItemBase>>& itemMap, TMap<FName, const FAssetData>& itemDescriptorAssets) {
 	ItemClassToItemId.Empty();
 
@@ -99,6 +110,13 @@ void AApMappingsSubsystem::LoadItemMappings(TMap<int64, TSharedRef<FApItemBase>>
 		} else {
 			itemInfo.stackSize = UFGItemDescriptor::GetStackSize(itemClass);
 		}
+
+#if WITH_EDITOR 
+		if (UApMappings::ItemIdToCouponCost.Contains(itemMapping.Key))
+			itemInfo.couponCost = UApMappings::ItemIdToCouponCost[itemMapping.Key];
+		else
+			itemInfo.couponCost = -1;
+#endif
 
 		TSharedRef<FApItemBase> itemInfoRef = MakeShared<FApItem>(itemInfo);
 

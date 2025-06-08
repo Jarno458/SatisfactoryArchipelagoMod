@@ -62,6 +62,11 @@ struct ARCHIPELAGO_API FApItem : public FApItemBase
 
 	UPROPERTY()
 	int stackSize;
+
+#if WITH_EDITORONLY_DATA
+	UPROPERTY()
+	int couponCost;
+#endif
 };
 
 USTRUCT()
@@ -180,6 +185,7 @@ public:
 
 	static void LoadMappings(TMap<int64, TSharedRef<FApItemBase>>& itemMap);
 	static void LoadRecipeMappings(TMap<int64, TSharedRef<FApItemBase>>& itemMap);
+	static void LoadItemMappings(TMap<int64, TSharedRef<FApItemBase>>& itemMap);
 
 private:
 	static void LoadItemMappings(TMap<int64, TSharedRef<FApItemBase>>& itemMap, TMap<FName, const FAssetData>& itemDescriptorAssets);

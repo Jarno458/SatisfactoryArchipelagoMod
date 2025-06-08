@@ -33,6 +33,7 @@ public:
 
 private:
 	static TSubclassOf<UFGSchematic> CreateApItemSchematicBlueprintsForRecipe(int64 itemId, TSharedRef<FApRecipeItem> recipeItem);
+	static TSubclassOf<UFGSchematic> CreateApShopSchematicForPart(TSubclassOf<UFGItemDescriptor> couponClass, TSharedRef<FApItem> part, TSet<TSubclassOf<UFGSchematic>> referencedReschematics);
 
 	static UApGameWorldModule* GetWorldModule();
 
