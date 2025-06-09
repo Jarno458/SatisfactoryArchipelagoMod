@@ -1,0 +1,22 @@
+[
+	{
+		"Name": "NewRow",
+		"Class": "/Script/Engine.BlueprintGeneratedClass'/Game/FactoryGame/Resource/Parts/SpaceElevatorParts/Desc_SpaceElevatorPart_5.Desc_SpaceElevatorPart_5_C'",
+		"TagContainer":
+		{
+			"GameplayTags": [
+				{
+					"TagName": "Archipelago.GiftingTrait.Electronics"
+				}
+			],
+			"ParentTags": [
+				{
+					"TagName": "Archipelago.GiftingTrait"
+				},
+				{
+					"TagName": "Archipelago"
+				}
+			]
+		}
+	}
+]
