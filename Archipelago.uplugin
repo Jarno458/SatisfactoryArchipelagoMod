@@ -39,7 +39,7 @@
 		{
 			"Name": "FreeSamples",
 			"Enabled": true,
-			"SemVersion": "^1.4.2"
+			"SemVersion": "^2.0.0"
 		},
 		{
 			"Name": "FixClientResourceSinkPoints",
