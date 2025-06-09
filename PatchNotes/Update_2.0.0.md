@@ -5,7 +5,7 @@ Satisfactory 1.1 support. Incompatible with previous worlds. Post-goal progressi
 
 ## Critical Changes
 
-* **Complexly broke compatibility with all saves from 1.0 or games generated with apworld 1.0.3** (see below for why)
+* **Completely broke compatibility with all saves from 1.0 or games generated with apworld 1.0.3** (see below for why)
   * To keep playing a previous world, don't update the mod.
 * Altered the way the mod handles progression.
   * `final_elevator_tier` goal option now determines what milestones tiers exist
@@ -21,6 +21,7 @@ Satisfactory 1.1 support. Incompatible with previous worlds. Post-goal progressi
   * AWESOME Sink UI includes a threshold bar displaying the level and a timer displaying how long you have maintained the required points per minute.
 * New option: Randomize starting recipes
   * You can randomize the initial recipes that are available to you. This also opens up additional options for initial Iron Ingot, plate, etc. recipes.
+  * Recipes are made hand-craftable as needed even if they normally aren't in vanilla (ex. Copper Alloy Ingot).
 * New option: milestone cost multiplier
 * Added ability to hint the next recipe in Archipelago logic for a part with `!hint part_name`
   * Previous hinting functionality still exists via hinting for a specific recipe with `!hint Recipe: recipe_name`
@@ -36,10 +37,14 @@ APWorld:
 
 ## Changed Stuff
 
+* The option to randomize starting recipes allows playing through the game's tutorial.
+  This alters the tutorial Hub tiers as needed to accommodate randomized recipes.
 * Lowered build costs for the Assembler and Foundry to increase the variety of recipes that could be picked at the start of the game
 * Improve websocket security
 * Moved connection info input from Mod Configs to Mod Savegame Settings (session settings)
   * Now entered as you create the world
+* Temporarily removed [MAM Enhancer](https://ficsit.app/mod/MAMTips) dependency to get this update out sooner
+  * This means unlock info in the MAM is no longer displayed correctly, but it will be added back in a future update
 
 ## Fixed Stuff
 
