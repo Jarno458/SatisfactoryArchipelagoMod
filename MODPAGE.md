@@ -4,18 +4,19 @@ Experience Satisfactory in a whole new way by randomizing your game progression,
 
 This mod is a [randomizer](https://tvtropes.org/pmwiki/pmwiki.php/Main/VideoGameRandomizer),
 meaning it modifies your path of progression through the game,
-forcing you to employ different approaches to reach certain goals.
+requiring you to employ different approaches to reach your goals.
 The randomizer's logic system ensures that the game can still be finished, but the path to get there is different every time.
+You can also change when the game ends, such as finishing after only 2 space elevator shipments.
 
 The mod will shuffle around all things you unlock in the HUB, MAM, and even add a few new unlocks to the AWESOME Shop.
 You will have to look through all options available to you to find what to unlock next.
-For example, if you need an assembler to craft something but cant find where to get access to it,
+For example, if you need an assembler to craft something but can't find where to get access to it,
 you could try to unlock some more nodes in the MAM as it might be hiding there.
-
-[![Randomized](https://raw.githubusercontent.com/Jarno458/SatisfactoryArchipelagoMod/main/Docs/random.jpg)](https://raw.githubusercontent.com/Jarno458/SatisfactoryArchipelagoMod/main/Docs/random.jpg)
 
 The Archipelago randomizer allows progression from over 60 different games to be mixed,
 this is called a multi-world randomizer.
+
+[![Randomized](https://raw.githubusercontent.com/Jarno458/SatisfactoryArchipelagoMod/main/Docs/random.jpg)](https://raw.githubusercontent.com/Jarno458/SatisfactoryArchipelagoMod/main/Docs/random.jpg)
 
 ## Notable Features
 
@@ -30,6 +31,15 @@ Send and receive power from any compatible Archipelago game, such as other Satis
 
 Simply build a Power Storage building and hook it up to your power grid.
 Remember that Biomass Burners can't charge Power Storage buildings, the same as base game.
+
+### Multiple Goals
+
+Choose between one or more of the following goals to complete your game:
+
+- Space Elevator Shipments
+- AWESOME Sink Points Total
+- AWESOME Sink Points Per Minute
+- Exploration
 
 ## How to Setup
 
@@ -47,7 +57,7 @@ If you get stuck, ask for help in the [Archipelago Discord](https://discord.gg/a
 1. Download the Archipelago Client installer from the [Archipelago GitHub Releases](https://github.com/ArchipelagoMW/Archipelago/releases/latest)
 2. Run the installer
 3. Open the Archipelago Launcher
-4. Download the latest released apworld file from [here](https://github.com/Jarno458/SatisfactoryArchipelagoMod/releases)
+4. Download the latest apworld file from [the GitHub releases page](https://github.com/Jarno458/SatisfactoryArchipelagoMod/releases)
 5. Press the "Browse Files" button
 6. Place the downloaded apworld file into the `/lib/worlds` folder that the button took you to
 7. Close and reopen the Archipelago Launcher
@@ -57,9 +67,6 @@ If you get stuck, ask for help in the [Archipelago Discord](https://discord.gg/a
 11. Move your copy of the file to the `/Players` folder
 12. Return to the Archipelago Launcher and hit the `Generate` button
 13. Use the zip in the `/Output` folder for the next steps below.
-
-<!-- TODO remove me once local gen no longer needed -->
-<!-- You will also need to generate a game yourself by [downloading `Satisfactory` branch of the server-side code](https://github.com/Jarno458/Archipelago/tree/Satisfactory) and setting up the python files required to generate a game. -->
 
 <!-- 
 TODO once player options page is available:
