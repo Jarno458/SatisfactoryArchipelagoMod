@@ -1,0 +1,5 @@
+//Game/FactoryGame/Recipes/AlternateRecipes/New_Update9/Recipe_Alternate_SteelCastedPlate.Recipe_Alternate_SteelCastedPlate_C
+{
+    "$schema": "https://raw.githubusercontent.com/budak7273/ContentLib_Documentation/main/JsonSchemas/CL_Recipe.json",
+    "ManualManufacturingMultiplier": 1
+}

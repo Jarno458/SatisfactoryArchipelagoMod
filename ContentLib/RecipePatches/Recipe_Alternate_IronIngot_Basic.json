@@ -1,0 +1,5 @@
+//Game/FactoryGame/Recipes/AlternateRecipes/New_Update9_Ingots/Recipe_Alternate_IronIngot_Basic.Recipe_Alternate_IronIngot_Basic_C
+{
+    "$schema": "https://raw.githubusercontent.com/budak7273/ContentLib_Documentation/main/JsonSchemas/CL_Recipe.json",
+    "ManualManufacturingMultiplier": 0.5
+}

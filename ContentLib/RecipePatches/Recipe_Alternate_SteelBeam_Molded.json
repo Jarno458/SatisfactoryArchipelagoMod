@@ -1,0 +1,5 @@
+//Game/FactoryGame/Recipes/AlternateRecipes/New_Update9/Recipe_Alternate_SteelBeam_Molded.Recipe_Alternate_SteelBeam_Molded_C
+{
+    "$schema": "https://raw.githubusercontent.com/budak7273/ContentLib_Documentation/main/JsonSchemas/CL_Recipe.json",
+    "ManualManufacturingMultiplier": 0.5
+}

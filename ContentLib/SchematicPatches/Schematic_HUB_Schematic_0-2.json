@@ -3,6 +3,7 @@
     "$schema": "https://raw.githubusercontent.com/budak7273/ContentLib_Documentation/main/JsonSchemas/CL_Schematic.json",
     "ClearRecipes": true,
     "Recipes": [
-      "/Game/FactoryGame/Recipes/Buildings/Recipe_PowerLine.Recipe_PowerLine_C"
+      "/Game/FactoryGame/Recipes/Buildings/Recipe_PowerLine.Recipe_PowerLine_C",
+      "/Game/FactoryGame/Recipes/Constructor/Recipe_Cable.Recipe_Cable_C"
     ]
   }

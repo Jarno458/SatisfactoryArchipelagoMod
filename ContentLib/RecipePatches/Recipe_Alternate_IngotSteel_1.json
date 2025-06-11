@@ -1,0 +1,5 @@
+//Game/FactoryGame/Recipes/AlternateRecipes/Parts/Recipe_Alternate_IngotSteel_1.Recipe_Alternate_IngotSteel_1_C
+{
+    "$schema": "https://raw.githubusercontent.com/budak7273/ContentLib_Documentation/main/JsonSchemas/CL_Recipe.json",
+    "ManualManufacturingMultiplier": 2
+}
