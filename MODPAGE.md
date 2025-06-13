@@ -91,7 +91,7 @@ Keep this room page open and bookmark the tab, otherwise, you will lose access t
 
 Install this mod via the Mod Manager if you haven't already and fire up your game.
 
-Open the mod's config settings from the main menu - on the left, go to `Mods`, select `Archipelago` and in the connection settings enter the following:
+Create a **New Game** and click on `Mod Savegame Settings >`, select `Archipelago` and in the connection settings enter the following:
 
 - For URI, enter the connection URI as seen on the room page without the /connect part, so for example just `archipelago.gg:60282`
 - For Username, choose the `Player Name` you selected on the options-page or when creating your yaml file.
