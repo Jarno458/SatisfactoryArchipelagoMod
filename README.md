@@ -1,14 +1,23 @@
 # SatisfactoryArchipelagoMod
 
-TODO: Write this later™
+Archipelago connection mod for [Satisfactory](https://www.satisfactorygame.com/).
+Experience Satisfactory in a whole new way by randomizing your game progression, potentially bringing completely separate video games into the mix too!
 
-Learn more about Archipelago [here](https://archipelago.gg/).
+Learn more about Archipelago [on the Archipelago website](https://archipelago.gg/).
 
-## Installation
+Learn more about this mod by reading [the modpage on ficsit.app](https://ficsit.app/mod/Archipelago).
 
-Install this mod via the Satisfactory Mod Manager found on [ficsit.app](https://ficsit.app/mod/Archipelago).
+## Playing the Game
 
-TODO link to the AP docs on this instead once that is published
+For users new to Archipelago,
+follow the setup directions on [ficsit.app](https://ficsit.app/mod/Archipelago).
+
+For experienced users, or those looking for more information on how Archipelago changes Satisfactory,
+and how to configure the mod for multiplayer,
+see the [Satisfactory Archipelago info page](https://github.com/Jarno458/Archipelago/blob/Satisfactory/worlds/satisfactory/docs/en_Satisfactory.md)
+and [Satisfactory Archipelago setup guide](https://github.com/Jarno458/Archipelago/blob/Satisfactory/worlds/satisfactory/docs/setup_en.md).
+
+<!-- TODO link to the AP docs on this instead once that is published? -->
 
 ## Get Support
 
