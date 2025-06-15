@@ -1,0 +1,26 @@
+//Game/FactoryGame/Recipes/Buildings/Recipe_FrackingSmasher.Recipe_FrackingSmasher_C
+{
+    "$schema": "https://raw.githubusercontent.com/budak7273/ContentLib_Documentation/main/JsonSchemas/CL_Recipe.json",
+    "Ingredients": [
+        {
+            "Item": "Desc_SteelPipe",
+            "Amount": 100
+        },
+        {
+            "Item": "Desc_ModularFrameHeavy",
+            "Amount": 5
+        },
+        {
+            "Item": "Desc_Motor",
+            "Amount": 10
+        },
+        {
+            "Item": "Desc_IronPlateReinforced",
+            "Amount": 25
+        },
+        {
+            "Item": "Desc_CopperSheet",
+            "Amount": 50
+        }
+    ]
+}

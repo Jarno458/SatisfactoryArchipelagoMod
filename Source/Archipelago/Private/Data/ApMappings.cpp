@@ -381,7 +381,7 @@ const TMap<int64, const TArray<FString>> UApMappings::ItemIdToGameRecipe = {
 	{1338384, {TEXT("Recipe_GasTank")}}, // Empty Fluid Tank
 	{1338385, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/Packager/Recipe_PackagedAlumina.Recipe_PackagedAlumina'"), TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/Packager/Recipe_UnpackageAlumina.Recipe_UnpackageAlumina'"),}},
 	{1338386, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/OilRefinery/Recipe_Fuel.Recipe_Fuel'"), TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/OilRefinery/Recipe_UnpackageFuel.Recipe_UnpackageFuel'")}}, //Packaged Fuel
-	{1338387, {TEXT("Recipe_Alternate_DilutedPackagedFuel")}},
+	{1338387, {TEXT("Recipe_Alternate_DilutedPackagedFuel")}}, //Removed in AP world 2.1.0
 	{1338388, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/OilRefinery/Recipe_PackagedOilResidue.Recipe_PackagedOilResidue'"), TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/OilRefinery/Recipe_UnpackageOilResidue.Recipe_UnpackageOilResidue'")}},
 	{1338389, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/OilRefinery/Recipe_PackagedBiofuel.Recipe_PackagedBiofuel'"), TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/OilRefinery/Recipe_UnpackageBioFuel.Recipe_UnpackageBioFuel'")}},
 	{1338390, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/Packager/Recipe_PackagedNitricAcid.Recipe_PackagedNitricAcid'"), TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/Packager/Recipe_UnpackageNitricAcid.Recipe_UnpackageNitricAcid'")}},

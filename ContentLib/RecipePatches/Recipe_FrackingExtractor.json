@@ -1,0 +1,14 @@
+//Game/FactoryGame/Recipes/Buildings/Recipe_FrackingExtractor.Recipe_FrackingExtractor_C
+{
+    "$schema": "https://raw.githubusercontent.com/budak7273/ContentLib_Documentation/main/JsonSchemas/CL_Recipe.json",
+    "Ingredients": [
+        {
+            "Item": "Desc_SteelPlate",
+            "Amount": 10
+        },
+        {
+            "Item": "Desc_CopperSheet",
+            "Amount": 50
+        }
+    ]
+}
