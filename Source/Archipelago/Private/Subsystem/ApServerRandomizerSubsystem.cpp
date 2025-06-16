@@ -152,8 +152,11 @@ void AApServerRandomizerSubsystem::ParseScoutedItemsAndCreateRecipiesAndSchemati
 	TMap<int, TMap<int, TArray<FApNetworkItem>>> itemInfosPerMilestone;
 
 	for (const FApNetworkItem& location : scoutedLocations) {
-		if (location.locationName.StartsWith("Hub")) {
-			//location.locationName = "Hub 1-1, Item 1"
+		if (location.locationName.StartsWith("Hub")) { //example: location.locationName = "Hub 1-1, Item 1"
+
+			//TODO: if we put the ap ids, in menu priority of hub schematics
+			// this code could easely use the scouted location id to calculate things such as tier/milestone rather then string parse
+
 			FString milestoneName = location.locationName.Left(location.locationName.Find(","));
 
 			int delimeterPos;
@@ -161,6 +164,7 @@ void AApServerRandomizerSubsystem::ParseScoutedItemsAndCreateRecipiesAndSchemati
 			int tier = FCString::Atoi(*milestoneName.Mid(delimeterPos - 1, 1));
 			int milestone = FCString::Atoi(*milestoneName.Mid(delimeterPos + 1, 1));
 
+			//TODO: we dont need to load this, we already have it loaded
 			FString bpName = FString::Format(TEXT("/Archipelago/Schematics/AP_HubSchematics/AP_HUB_{0}_{1}.AP_HUB_{0}_{1}_C"), { tier, milestone });
 
 			TSubclassOf<UFGSchematic> schematic = LoadClass<UFGSchematic>(nullptr, *bpName);

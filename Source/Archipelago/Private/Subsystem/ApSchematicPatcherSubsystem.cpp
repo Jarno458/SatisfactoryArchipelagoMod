@@ -90,18 +90,10 @@ void AApSchematicPatcherSubsystem::Initialize() {
 void AApSchematicPatcherSubsystem::Tick(float DeltaTime) {
 	Super::Tick(DeltaTime);
 
-	if (hasPatchedSchematics) {
-		if (IsRunningDedicatedServer())
-			SetActorTickEnabled(false);
-		else
-			Client_ProcessCollectedLocations();
-	}
-
-	EApConnectionState connectionState = connectionInfo->GetConnectionState();
-
 	if (!hasPatchedSchematics
 		&& isInitialized
-		&& (connectionState == EApConnectionState::Connected || connectionState == EApConnectionState::ConnectionFailed)
+		&&   (connectionInfo->GetConnectionState() == EApConnectionState::Connected 
+			|| connectionInfo->GetConnectionState() == EApConnectionState::ConnectionFailed)
 		&& receivedItemInfos
 		&& receivedMilestones
 		&& receivedStarterRecipes
@@ -110,6 +102,13 @@ void AApSchematicPatcherSubsystem::Tick(float DeltaTime) {
 		InitializeSchematicsBasedOnScoutedData();
 
 		hasPatchedSchematics = true;
+	}
+
+	if (isInitialized && hasPatchedSchematics) {
+		if (IsRunningDedicatedServer())
+			SetActorTickEnabled(false);
+		else
+			Client_ProcessCollectedLocations();
 	}
 }
 
@@ -225,21 +224,21 @@ void AApSchematicPatcherSubsystem::InitializeSchematicsBasedOnScoutedData() {
 	InitializeStarterRecipes();
 	InitializeExplorationGoal();
 
-	TMap<int64, FApReplicatedItemInfo> replicatedItemInfoBySchematicId;
+	TMap<int64, FApReplicatedItemInfo> itemInfoBySchematicId;
 	for (const FApReplicatedItemInfo& replicatedItemInfo : replicatedItemInfos) {
-		replicatedItemInfoBySchematicId.Add(replicatedItemInfo.GetLocationId(), replicatedItemInfo);
+		itemInfoBySchematicId.Add(replicatedItemInfo.GetLocationId(), replicatedItemInfo);
 
 		if (!IsRunningDedicatedServer() && replicatedItemInfo.GetIsLocalPlayer())
 			client_locationsWithLocalItems.Add(replicatedItemInfo.GetLocationId());
 	}
 
-	TMap<int, TMap<int, TArray<FApReplicatedItemInfo>>> replicatedItemsPerMilestone;
+	TMap<int, TMap<int, TArray<FApReplicatedItemInfo>>> itemsPerMilestone;
 	for (const FApReplicatedMilestoneInfo& replicatedMilestone : replicatedMilestones) {
-		if (!replicatedItemsPerMilestone.Contains(replicatedMilestone.tier)) {
-			replicatedItemsPerMilestone.Add(replicatedMilestone.tier, TMap<int, TArray<FApReplicatedItemInfo>>());
+		if (!itemsPerMilestone.Contains(replicatedMilestone.tier)) {
+			itemsPerMilestone.Add(replicatedMilestone.tier, TMap<int, TArray<FApReplicatedItemInfo>>());
 		}
 
-		replicatedItemsPerMilestone[replicatedMilestone.tier].Add(replicatedMilestone.milestone, replicatedMilestone.items);
+		itemsPerMilestone[replicatedMilestone.tier].Add(replicatedMilestone.milestone, replicatedMilestone.items);
 
 		if (!IsRunningDedicatedServer()) {
 			for (const FApReplicatedItemInfo& itemInfo : replicatedMilestone.items) {
@@ -256,11 +255,11 @@ void AApSchematicPatcherSubsystem::InitializeSchematicsBasedOnScoutedData() {
 			bool isItemSchematic = UFGSchematic::GetTechTier(schematic) == -1;
 			bool isShop = UFGSchematic::GetType(schematic) == ESchematicType::EST_ResourceSink;
 
-			if (!isItemSchematic && replicatedItemInfoBySchematicId.Contains(locationId)) {
+			if (!isItemSchematic && itemInfoBySchematicId.Contains(locationId)) {
 				if (!IsRunningDedicatedServer())
 					client_collectableSchematicPerLocation.Add(locationId, schematic);
 
-				InitializaSchematicForItem(schematic, replicatedItemInfoBySchematicId[locationId], isShop);
+				InitializaSchematicForItem(schematic, itemInfoBySchematicId[locationId], isShop);
 			}
 		} else if (UFGSchematic::GetType(schematic) == ESchematicType::EST_Milestone) {
 			int tier = UFGSchematic::GetTechTier(schematic);
@@ -269,14 +268,14 @@ void AApSchematicPatcherSubsystem::InitializeSchematicsBasedOnScoutedData() {
 			if (tier <= 0 || milestone <= 0)
 				continue;
 
-			if (replicatedItemsPerMilestone.Contains(tier) && replicatedItemsPerMilestone[tier].Contains(milestone)) {
+			if (itemsPerMilestone.Contains(tier) && itemsPerMilestone[tier].Contains(milestone)) {
 				if (!IsRunningDedicatedServer()) {
-					for (const FApReplicatedItemInfo& itemInfo : replicatedItemsPerMilestone[tier][milestone]) {
+					for (const FApReplicatedItemInfo& itemInfo : itemsPerMilestone[tier][milestone]) {
 						client_collectableSchematicPerLocation.Add(itemInfo.GetLocationId(), schematic);
 					}
 				}
 
-				InitializeHubSchematic(schematic, replicatedItemsPerMilestone[tier][milestone], slotDataSubsystem->GetCostsForMilestone(tier, milestone));
+				InitializeHubSchematic(schematic, itemsPerMilestone[tier][milestone], slotDataSubsystem->GetCostsForMilestone(tier, milestone));
 			} else {
 				// I dont think this should ever happen, maybe we should yeet here
 				InitializeHubSchematic(schematic, TArray<FApReplicatedItemInfo>(), slotDataSubsystem->GetCostsForMilestone(tier, milestone));
