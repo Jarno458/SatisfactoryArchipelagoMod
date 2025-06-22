@@ -333,7 +333,7 @@ void AApSchematicPatcherSubsystem::SetHandcraftable(TSubclassOf<UFGRecipe> recip
 	FContentLib_Recipe recipe = FContentLib_Recipe();
 
 	if (handcraftable)
-		recipe.BuildIn.Add("manual");
+		recipe.BuildIn.Add("Default__BP_WorkBenchComponent_C");
 
 	TArray<TSubclassOf<UObject>> producers = UFGRecipe::GetProducedIn(recipeClass);
 	for (const TSubclassOf<UObject>& buildingObject : producers) {
