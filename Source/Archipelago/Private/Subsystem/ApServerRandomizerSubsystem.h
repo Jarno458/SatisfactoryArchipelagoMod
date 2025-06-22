@@ -28,6 +28,7 @@
 #include "Subsystem/ApSlotDataSubsystem.h"
 #include "Subsystem/ApSubsystem.h"
 #include "Subsystem/ApHardDriveGachaSubsystem.h"
+#include "Subsystem/ApMamTreeSubsystem.h"
 
 #include "ApUtils.h"
 
@@ -89,7 +90,7 @@ private:
 	AFGResearchManager* RManager;
 	AFGGamePhaseManager* phaseManager;
 	AFGUnlockSubsystem* unlockSubsystem;
-
+	
 	UModContentRegistry* contentRegistry;
 
 	AApSubsystem* ap;
@@ -100,6 +101,7 @@ private:
 	AApMappingsSubsystem* mappingSubsystem;
 	AApTrapSubsystem* trapSubsystem;
 	AApHardDriveGachaSubsystem* hardDriveGachaSubsystem;
+	AApMamTreeSubsystem* mamTreeSubsystem;
 
 	TQueue<TTuple<int64, bool>> ReceivedItems;
 	TQueue<int64> CheckedLocations;

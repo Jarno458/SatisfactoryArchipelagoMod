@@ -65,6 +65,8 @@ void AApServerRandomizerSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase,
 		fgcheck(hardDriveGachaSubsystem)
 		schematicPatcher = AApSchematicPatcherSubsystem::Get(world);
 		fgcheck(schematicPatcher);
+		mamTreeSubsystem = AApMamTreeSubsystem::Get(world);
+		fgcheck(mamTreeSubsystem);
 
 		ap->SetItemReceivedCallback([this](int64 itemid, bool isFromServer) { ReceiveItem(itemid, isFromServer); });
 		ap->SetLocationCheckedCallback([this](int64 itemid) { CollectLocation(itemid); });
@@ -565,12 +567,15 @@ void AApServerRandomizerSubsystem::OnAvaiableSchematicsChanged() {
 	SManager->GetAvailableSchematicsOfTypes(types, availableSchematics);
 	SManager->GetAvailableNonPurchasedSchematicsOfTypes(types, availableSchematics);
 
+	TSet<int64> visiableMamNodes = mamTreeSubsystem->GetVisibleMamNodeIds();
+
 	if (SManager->IsSchematicPurchased(ItemSchematics[mappingSubsystem->GetMamItemId()])) {
 		for (const TPair<TSubclassOf<UFGSchematic>, FApNetworkItem>& itemPerMamNode : locationPerMamNode) {
 			if (itemPerMamNode.Value.player != currentPlayerSlot
 				&& (itemPerMamNode.Value.flags & 0b011) > 0
 				&& !hintedLocations.Contains(itemPerMamNode.Value.location)
-				&& RManager->CanResearchBeInitiated(itemPerMamNode.Key))
+				//&& RManager->CanResearchBeInitiated(itemPerMamNode.Key) //This does not seem to ever be false in cpp
+				&& visiableMamNodes.Contains(itemPerMamNode.Value.location))
 					locationHintsToPublish.Add(itemPerMamNode.Value.location);
 		}
 	}
