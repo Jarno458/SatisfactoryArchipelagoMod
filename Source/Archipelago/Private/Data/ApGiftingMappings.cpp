@@ -108,7 +108,7 @@ const TMap<int64, TMap<EGiftTrait, float>> UApGiftingMappings::TraitsPerItemRati
 	{1338025, {{EGiftTrait::Stone, 1.0f},{EGiftTrait::Ore, 1.0f}}}, // Desc_Cement_C, //Concrete
 	{1338026, {{EGiftTrait::Silver, 1.0f}}}, // Desc_CoolingSystem_C, 
 	{1338027, {{EGiftTrait::Copper, 1.0f}}}, // Desc_CopperIngot_C, 
-	{1338028, {{EGiftTrait::Copper, 1.0f}}}, // Desc_OreCopper_C, //Copper Ore
+	{1338028, {{EGiftTrait::Copper, 1.0f},{EGiftTrait::Ore, 1.0f}}}, // Desc_OreCopper_C, //Copper Ore
 	{1338029, {{EGiftTrait::Copper, 1.0f}}}, // Desc_CopperDust_C, 
 	{1338030, {{EGiftTrait::Copper, 1.0f}}}, // Desc_CopperSheet_C, 
 	{1338031, {{EGiftTrait::Copper, 5.0f},{EGiftTrait::Statue, 1.0f}}}, // Desc_CharacterRunStatue_C, 
