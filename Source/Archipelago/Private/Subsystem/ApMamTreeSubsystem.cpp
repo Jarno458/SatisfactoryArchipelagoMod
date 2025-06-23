@@ -1,5 +1,6 @@
 #include "Subsystem/ApMamTreeSubsystem.h"
 #include "Subsystem/ApMappingsSubsystem.h"
+#include "ApUtils.h"
 
 DEFINE_LOG_CATEGORY(LogApMamTreeSubsystem);
 
@@ -13,10 +14,7 @@ AApMamTreeSubsystem::AApMamTreeSubsystem() : Super() {
 }
 
 AApMamTreeSubsystem* AApMamTreeSubsystem::Get(UWorld* world) {
-	USubsystemActorManager* SubsystemActorManager = world->GetSubsystem<USubsystemActorManager>();
-	fgcheck(SubsystemActorManager);
-
-	return SubsystemActorManager->GetSubsystemActor<AApMamTreeSubsystem>();
+	return UApUtils::GetSubsystemActorIncludingParentClases<AApMamTreeSubsystem>(world);
 }
 
 void AApMamTreeSubsystem::Initialize() {
