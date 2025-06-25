@@ -213,30 +213,31 @@ int64 AApGoalSubsystem::GetTotalRemainingPoints() {
 
 bool AApGoalSubsystem::AreGoalsCompleted() {
 	if (slotData->RequireAllGoals())
-		return   CheckSpaceElevatorGoal() 
-				&& CheckResourceSinkPointsGoal()
-				&& CheckResourceSinkPointPerMinuteGoal()
-				&& CheckExplorationGoal();
+		return   (!slotData->IsSpaceElevatorGoalEnabled() || CheckSpaceElevatorGoal())
+				&& (!slotData->IsResourceSinkGoalEnabled() || CheckResourceSinkPointsGoal())
+				&& (!slotData->IsResourceSinkPerMinuteGoalEnabled() || CheckResourceSinkPointPerMinuteGoal())
+				&& (!slotData->IsExplorationGoalEnabled() || CheckExplorationGoal());
 	else
-		return   CheckSpaceElevatorGoal() 
-				|| CheckResourceSinkPointsGoal()
-				|| CheckResourceSinkPointPerMinuteGoal()
-				|| CheckExplorationGoal();
+		return   (slotData->IsSpaceElevatorGoalEnabled() && CheckSpaceElevatorGoal())
+				|| (slotData->IsResourceSinkGoalEnabled() && CheckResourceSinkPointsGoal())
+				|| (slotData->IsResourceSinkPerMinuteGoalEnabled() && CheckResourceSinkPointPerMinuteGoal())
+				|| (slotData->IsExplorationGoalEnabled() && CheckExplorationGoal());
 }
 
 bool AApGoalSubsystem::CheckSpaceElevatorGoal() {
-	return slotData->IsSpaceElevatorGoalEnabled()
-		&& phaseManager->GetCurrentGamePhase()->mGamePhase >= slotData->GetFinalSpaceElevatorTier();
+	return phaseManager->GetCurrentGamePhase()->mGamePhase >= slotData->GetFinalSpaceElevatorTier();
 }
 
 bool AApGoalSubsystem::CheckResourceSinkPointsGoal() {
-	return slotData->IsResourceSinkGoalEnabled()
-		&&	resourceSinkSubsystem->GetNumTotalPoints(EResourceSinkTrack::RST_Default) >= slotData->GetFinalResourceSinkPoints();
+	return resourceSinkSubsystem->GetNumTotalPoints(EResourceSinkTrack::RST_Default) >= slotData->GetFinalResourceSinkPoints();
 }
 
 bool AApGoalSubsystem::CheckResourceSinkPointPerMinuteGoal() {
-	return slotData->IsResourceSinkPerMinuteGoalEnabled()
-		&& hasCompletedResourceSinkPerMinute;
+	return hasCompletedResourceSinkPerMinute;
+}
+
+bool AApGoalSubsystem::CheckExplorationGoal() {
+	return schematicManager->IsSchematicPurchased(explorationGoalSchematic);
 }
 
 FTimespan AApGoalSubsystem::GetPerMinuteSinkGoalRemainingTime() {
@@ -245,11 +246,6 @@ FTimespan AApGoalSubsystem::GetPerMinuteSinkGoalRemainingTime() {
 	}
 	
 	return totalResourceSinkPerMinuteDuration - (FDateTime::UtcNow() - countdownStartedTime);
-}
-
-bool AApGoalSubsystem::CheckExplorationGoal() {
-	return slotData->IsExplorationGoalEnabled()
-		&& schematicManager->IsSchematicPurchased(explorationGoalSchematic);
 }
 
 void AApGoalSubsystem::PreSaveGame_Implementation(int32 saveVersion, int32 gameVersion) {

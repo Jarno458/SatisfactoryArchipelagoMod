@@ -574,7 +574,6 @@ void AApServerRandomizerSubsystem::OnAvaiableSchematicsChanged() {
 			if (itemPerMamNode.Value.player != currentPlayerSlot
 				&& (itemPerMamNode.Value.flags & 0b011) > 0
 				&& !hintedLocations.Contains(itemPerMamNode.Value.location)
-				//&& RManager->CanResearchBeInitiated(itemPerMamNode.Key) //This does not seem to ever be false in cpp
 				&& visiableMamNodes.Contains(itemPerMamNode.Value.location))
 					locationHintsToPublish.Add(itemPerMamNode.Value.location);
 		}
