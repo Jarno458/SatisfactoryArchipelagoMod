@@ -90,6 +90,8 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	int GetTotalSecondsForResourceSinkPerMinuteGoal();
 
+
+
 private:
 	const FTimespan totalResourceSinkPerMinuteDuration = FTimespan(0, 0, 10, 0, 0);
 
@@ -103,13 +105,19 @@ private:
 	UPROPERTY(SaveGame)
 	TArray<float> totalRemainingPointHistory;
 
-	//UPROPERTY(SaveGame) //TODO fixme, only the remaining time should be saved not the start time as that could be days ago
+	UPROPERTY(SaveGame)
 	int remainingSecondsForPerMinuteGoal;
 
 	FDateTime countdownStartedTime;
 
 	UPROPERTY(SaveGame)
 	bool hasCompletedResourceSinkPerMinute = false;
+	/*UPROPERTY(Replicated) //we might need to replicate these as a client otherwise wont know when a goal is reached
+	bool hasCompletedResourceSinkTotal = false;
+	UPROPERTY(Replicated)
+	bool hasCompletedElevator = false;
+	UPROPERTY(Replicated)
+	bool hasCompletedExploration = false;*/
 
 	void InitializeTotalRemainingPointHistory();
 

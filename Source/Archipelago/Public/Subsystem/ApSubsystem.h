@@ -128,7 +128,6 @@ private:
 	void TimeoutConnection();
 
 	void CheckConnectionState();
-	void LoadRoomInfo();
 
 	void ProcessReceivedItems();
 	void ProcessCheckedLocations();
@@ -138,8 +137,6 @@ private:
 
 	// TODO do we want to keep this around or call AApMessagingSubsystem::DisplayMessage directly?
 	void SendChatMessage(const FString& Message, const FLinearColor& Color);
-
-	static void AbortGame(FText reason);
 
 	template<typename RetType>
 	RetType CallOnGameThread(TFunction<RetType()> InFunction);

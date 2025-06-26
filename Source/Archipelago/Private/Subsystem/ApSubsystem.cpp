@@ -131,13 +131,12 @@ bool AApSubsystem::InitializeTick(FDateTime connectingStartedTime, int timeout) 
 			else
 				CheckConnectionState();
 		}
-		if (connectionInfoSubsystem->ConnectionState == EApConnectionState::Connected) {
-			LoadRoomInfo();
-
+		if () {
 			return true;
 		}
 
-		return connectionInfoSubsystem->ConnectionState == EApConnectionState::ConnectionFailed;
+		return connectionInfoSubsystem->ConnectionState == EApConnectionState::Connected 
+			|| connectionInfoSubsystem->ConnectionState == EApConnectionState::ConnectionFailed;
 	});
 }
 
@@ -205,23 +204,6 @@ void AApSubsystem::LocationScoutedCallback(std::vector<AP_NetworkItem> scoutedLo
 
 	if (locationScoutingPromise != nullptr)
 		locationScoutingPromise->SetValue(scoutedLocationsResult);
-}
-
-void AApSubsystem::LoadRoomInfo() {
-	if (!IsInGameThread())
-		return;
-
-	AP_RoomInfo roomInfo;
-	AP_GetRoomInfo(&roomInfo);
-
-	FString seedName = UApUtils::FStr(roomInfo.seed_name);
-	if (connectionInfoSubsystem->roomSeed.IsEmpty())
-		connectionInfoSubsystem->roomSeed = seedName;
-	else if (connectionInfoSubsystem->roomSeed != seedName)
-		AbortGame(LOCTEXT("RoomSeedMissmatch", "Room seed does not match save's seed - this save does not belong to the multiworld you're connecting to. Ensure you're loading the right save file and check your connection details."));
-
-	connectionInfoSubsystem->currentPlayerTeam = AP_GetCurrentPlayerTeam();
-	connectionInfoSubsystem->currentPlayerSlot = AP_GetPlayerID();
 }
 
 void AApSubsystem::MonitorDataStoreValue(FString keyFString, TFunction<void()> callback) {
@@ -355,10 +337,26 @@ void AApSubsystem::CheckConnectionState() {
 		AP_ConnectionStatus status = AP_GetConnectionStatus();
 
 		if (status == AP_ConnectionStatus::Authenticated) {
-			connectionInfoSubsystem->ConnectionState = EApConnectionState::Connected;
-			connectionInfoSubsystem->ConnectionStateDescription = LOCTEXT("AuthSuccess", "Authentication succeeded.");
-			UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::Tick(), Successfully Authenticated"));
+			AP_RoomInfo roomInfo;
+			AP_GetRoomInfo(&roomInfo);
+
+			FString seedName = UApUtils::FStr(roomInfo.seed_name);
+			if (!connectionInfoSubsystem->roomSeed.IsEmpty() && connectionInfoSubsystem->roomSeed != seedName) {
+				AP_Shutdown();
+
+				connectionInfoSubsystem->ConnectionState = EApConnectionState::ConnectionFailed;
+				connectionInfoSubsystem->ConnectionStateDescription = LOCTEXT("SeedMissmatch", "Room seed does not match save's seed - this save does not belong to the multiworld you're connecting to. Ensure you're loading the right save file and check your connection details.");
+			} else {
+				connectionInfoSubsystem->roomSeed = seedName;
+				connectionInfoSubsystem->currentPlayerTeam = AP_GetCurrentPlayerTeam();
+				connectionInfoSubsystem->currentPlayerSlot = AP_GetPlayerID();
+				connectionInfoSubsystem->ConnectionState = EApConnectionState::Connected;
+				connectionInfoSubsystem->ConnectionStateDescription = LOCTEXT("AuthSuccess", "Authentication succeeded.");
+				UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::Tick(), Successfully Authenticated"));
+			}
 		} else if (status == AP_ConnectionStatus::ConnectionRefused) {
+			AP_Shutdown();
+
 			connectionInfoSubsystem->ConnectionState = EApConnectionState::ConnectionFailed;
 			connectionInfoSubsystem->ConnectionStateDescription = LOCTEXT("ConnectionRefused", "Connection refused by server. Check your connection details and load the save again.");
 			UE_LOG(LogApSubsystem, Error, TEXT("AApSubsystem::CheckConnectionState(), ConnectionRefused"));
@@ -397,6 +395,8 @@ void AApSubsystem::SendChatMessage(const FString& Message, const FLinearColor& C
 }
 
 void AApSubsystem::TimeoutConnection() {
+	AP_Shutdown();
+
 	connectionInfoSubsystem->ConnectionState = EApConnectionState::ConnectionFailed;
 	connectionInfoSubsystem->ConnectionStateDescription = LOCTEXT("AuthFailed", "Authentication failed. Check your connection details and load the save again.");
 	UE_LOG(LogApSubsystem, Error, TEXT("AApSubsystem::TimeoutConnectionIfNotConnected(), Authenticated Failed"));
@@ -665,18 +665,6 @@ void AApSubsystem::CheckLocation(const TSet<int64>& locationIds) {
 	CallOnGameThread<void>([&locationsToCheck]() {
 		AP_SendItem(locationsToCheck);
 	});
-}
-
-void AApSubsystem::AbortGame(FText reason) {
-	if (IsRunningDedicatedServer()) {
-		UE_LOG(LogApSubsystem, Fatal, TEXT("AApSubsystem::AbortGame(%s)"), *reason.ToString());
-	} else {
-		UWorld* world = GEngine->GameViewport->GetWorld();
-		UApGameInstanceModule* gameInstance = UApUtils::GetGameInstanceModule(world);
-		APlayerController* player = world->GetFirstPlayerController();
-
-		gameInstance->YeetToMainMenu(player, reason);
-	}
 }
 
 template<typename RetType>
