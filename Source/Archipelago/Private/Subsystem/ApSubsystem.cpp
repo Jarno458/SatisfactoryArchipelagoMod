@@ -131,9 +131,6 @@ bool AApSubsystem::InitializeTick(FDateTime connectingStartedTime, int timeout) 
 			else
 				CheckConnectionState();
 		}
-		if () {
-			return true;
-		}
 
 		return connectionInfoSubsystem->ConnectionState == EApConnectionState::Connected 
 			|| connectionInfoSubsystem->ConnectionState == EApConnectionState::ConnectionFailed;
