@@ -64,7 +64,17 @@ public class Archipelago : ModuleRules
         if (Target.Type == TargetRules.TargetType.Editor) {
             PublicDependencyModuleNames.AddRange(new string[] {/*"OnlineBlueprintSupport",*/ "AnimGraph", "UnrealEd" });
         }
+
         PublicDependencyModuleNames.AddRange(new string[] {"FactoryGame", "SML"});
+
+        if (Target.Type == TargetRules.TargetType.Server)
+        {
+            PublicDependencyModuleNames.Add("FactoryDedicatedServer");
+        }
+        else
+        {
+            PublicDependencyModuleNames.Add("FactoryDedicatedClient");
+        }
 
         CppStandard = CppStandardVersion.Cpp20;
     }

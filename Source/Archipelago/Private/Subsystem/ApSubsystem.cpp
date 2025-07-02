@@ -3,6 +3,8 @@
 #include "Async/Async.h"
 #include "SessionSettings/SessionSettingsManager.h"
 #include "Settings/SMLOptionsLibrary.h"
+#include "Logging/StructuredLog.h"
+#include "FGGameUserSettings.h"
 
 DEFINE_LOG_CATEGORY(LogApSubsystem);
 
@@ -148,6 +150,19 @@ void AApSubsystem::Tick(float DeltaTime) {
 	ProcessDeadlinks();
 
 	HandleAPMessages();
+
+	if (IsRunningDedicatedServer()) {
+		UFGGameUserSettings* serverSettingsManager = UFGGameUserSettings::GetFGGameUserSettings();
+
+		TArray<UFGUserSettingApplyType*> allSettings;
+		serverSettingsManager->GetAllUserSettings(allSettings);
+
+		float dummy = serverSettingsManager->GetFloatOptionValue("Archipelago.Connection.Float");
+		FString server = USMLOptionsLibrary::GetStringOptionValue(serverSettingsManager, "Archipelago.Connection.ServerURI");
+		FString user = USMLOptionsLibrary::GetStringOptionValue(serverSettingsManager, "Archipelago.Connection.UserName.Daddy");
+
+		UE_LOGFMT(LogApSubsystem, Display, "Setting Archipelago.Connection.Float: {0}, {1}, {2}", dummy, server, user);
+	}
 }
 
 void AApSubsystem::EndPlay(const EEndPlayReason::Type endPlayReason) {

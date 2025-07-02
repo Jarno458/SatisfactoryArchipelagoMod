@@ -3,6 +3,7 @@
 #include "FGGamePhase.h"
 #include "FGCentralStorageSubsystem.h"
 #include "Logging/StructuredLog.h"
+#include "FGGameUserSettings.h"
 
 #include "data/ApMappings.h"
 
