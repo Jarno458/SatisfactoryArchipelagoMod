@@ -6,6 +6,7 @@
 #include "Data/ApMappings.h"
 #include "PushModel.h"
 #include "ApUtils.h"
+#include "Logging/StructuredLog.h"
 
 DEFINE_LOG_CATEGORY(LogApSchematicPatcherSubsystem);
 
@@ -48,36 +49,75 @@ void AApSchematicPatcherSubsystem::BeginPlay() {
 
 	UE_LOG(LogApSchematicPatcherSubsystem, Display, TEXT("AApSchematicPatcherSubsystem::BeginPlay()"));
 
-	AGameStateBase* gameState = GetWorld()->GetGameState();
-
-	if (gameState->HasAuthority()) {
-		Initialize();
+	if (HasAuthority()) {
+		TryInitialize();
 	}
 	else {
-		if (AFGGameState* factoryGameState = Cast<AFGGameState>(gameState)) {
-			factoryGameState->mOnClientSubsystemsValid.AddDynamic(this, &AApSchematicPatcherSubsystem::OnClientSubsystemsValid);
+		if (AFGGameState* factoryGameState = Cast<AFGGameState>(GetWorld()->GetGameState())) {
+			factoryGameState->mOnClientSubsystemsValid.AddDynamic(this, &AApSchematicPatcherSubsystem::OnBaseGameSubsystemsAvailable);
 
 			if (factoryGameState->AreClientSubsystemsValid()) {
-				Initialize();
+				OnBaseGameSubsystemsAvailable();
 			}
+		}
+		else {
+			UE_LOG(LogApSchematicPatcherSubsystem, Fatal, TEXT("AApSchematicPatcherSubsystem::BeginPlay() client failed to get AFGGameState*"));
 		}
 	}
 }
 
-void AApSchematicPatcherSubsystem::OnClientSubsystemsValid() {
-	Initialize();
+void AApSchematicPatcherSubsystem::OnBaseGameSubsystemsAvailable() {
+	UE_LOG(LogApSchematicPatcherSubsystem, Display, TEXT("AApSchematicPatcherSubsystem::OnBaseGameSubsystemsAvailable()"));
+
+	baseGameSubsystemsAvailable = true;
+
+	TryInitialize();
 }
 
-void AApSchematicPatcherSubsystem::Initialize() {
+void AApSchematicPatcherSubsystem::OnRep_ConnectionInfoAvailable() {
+	UE_LOG(LogApSchematicPatcherSubsystem, Display, TEXT("AApSchematicPatcherSubsystem::OnRep_ConnectionInfoAvailable()"));
+
+	connectionInfoSubsustemAvailable = true;
+
+	TryInitialize();
+}
+
+void AApSchematicPatcherSubsystem::OnRep_SlotDataAvailable() {
+	UE_LOG(LogApSchematicPatcherSubsystem, Display, TEXT("AApSchematicPatcherSubsystem::OnRep_SlotDataAvailable()"));
+
+	slotDataSubsystemAvailable = true;
+
+	TryInitialize();
+}
+
+void AApSchematicPatcherSubsystem::TryInitialize() {
+	UE_LOG(LogApSchematicPatcherSubsystem, Display, TEXT("AApSchematicPatcherSubsystem::TryInitialize()"));
+
 	if (isInitialized)
 		return;
 
 	UWorld* world = GetWorld();
+	connectionInfo = AApConnectionInfoSubsystem::Get(world);
+	if (connectionInfo) //sometimes they are already avaialble before this subsystem is avaiable itzelf
+		connectionInfoSubsustemAvailable = true;
+
+	slotDataSubsystem = AApSlotDataSubsystem::Get(world);
+	if (slotDataSubsystem) //sometimes they are already avaialble before this subsystem is avaiable itzelf
+		slotDataSubsystemAvailable = true;
+
+	UE_LOGFMT(LogApSchematicPatcherSubsystem, Display, "AApSchematicPatcherSubsystem:: HasAuthority(): {0}", HasAuthority());
+	UE_LOGFMT(LogApSchematicPatcherSubsystem, Display, "AApSchematicPatcherSubsystem:: baseGameSubsystemsAvailable: {0}", baseGameSubsystemsAvailable);
+	UE_LOGFMT(LogApSchematicPatcherSubsystem, Display, "AApSchematicPatcherSubsystem:: connectionInfoSubsustemAvailable: {0}", connectionInfoSubsustemAvailable);
+	UE_LOGFMT(LogApSchematicPatcherSubsystem, Display, "AApSchematicPatcherSubsystem:: slotDataSubsystemAvailable: {0}", slotDataSubsystemAvailable);
+
+	if (!HasAuthority() && (!baseGameSubsystemsAvailable || !connectionInfoSubsustemAvailable || !slotDataSubsystemAvailable))
+		return;
+
+	UE_LOG(LogApSchematicPatcherSubsystem, Display, TEXT("AApSchematicPatcherSubsystem::Initialize()"));
+
 	contentLibSubsystem = world->GetGameInstance()->GetSubsystem<UContentLibSubsystem>();
 	fgcheck(contentLibSubsystem)
-	connectionInfo = AApConnectionInfoSubsystem::Get(world);
 	fgcheck(connectionInfo);
-	slotDataSubsystem = AApSlotDataSubsystem::Get(world);
 	fgcheck(slotDataSubsystem);
 	mappingSubsystem = AApMappingsSubsystem::Get(world);
 	fgcheck(mappingSubsystem)

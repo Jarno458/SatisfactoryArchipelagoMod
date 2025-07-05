@@ -173,10 +173,19 @@ private:
 	UPROPERTY(ReplicatedUsing = OnRep_StarterRecipesReplicated)
 	TArray<FApReplicatedItemInfo> replicatedStarterRecipes;
 
+	//on client available at game instance level
 	UContentLibSubsystem* contentLibSubsystem;
+
+	//on client replicated to check availability
+	UPROPERTY(ReplicatedUsing = OnRep_ConnectionInfoAvailable)
 	AApConnectionInfoSubsystem* connectionInfo;
+	UPROPERTY(ReplicatedUsing = OnRep_SlotDataAvailable)
 	AApSlotDataSubsystem* slotDataSubsystem;
+
+	//on client available locally
 	AApMappingsSubsystem* mappingSubsystem;
+
+	//on client available based on base game
 	AFGResearchManager* RManager;
 
 	TSet<int64> collectedLocations;
@@ -196,7 +205,14 @@ private:
 
 	TArray<FApReplicatedItemInfo> MakeReplicateable(int currentPlayerId, const TArray<FApNetworkItem>& itemInfo);
 
-	void Initialize();
+	bool baseGameSubsystemsAvailable = false;
+	bool connectionInfoSubsustemAvailable = false;
+	bool slotDataSubsystemAvailable = false;
+
+	void MarkBaseGameSubsystemsReady();
+
+
+	void TryInitialize();
 	void InitializeSchematicsBasedOnScoutedData();
 
 	void InitializeStarterRecipes();
@@ -226,6 +242,10 @@ private:
 	UFUNCTION() //required for event hookup
 	void OnRep_StarterRecipesReplicated();
 	UFUNCTION() //required for event hookup
-	void OnClientSubsystemsValid();
+	void OnBaseGameSubsystemsAvailable();
+	UFUNCTION() //required for event hookup
+	void OnRep_ConnectionInfoAvailable();
+	UFUNCTION() //required for event hookup
+	void OnRep_SlotDataAvailable();
 };
 
