@@ -1,6 +1,11 @@
 #include "Module/ApGameInstanceModule.h"
-#include "SessionSettings/SessionSettingsManager.h"
 #include "Settings/SMLOptionsLibrary.h"
+#include "Logging/StructuredLog.h"
+
+#if UE_SERVER
+#include "Controller/FGServerStateController.h"
+#include "Controller/FGServerManagementController.h"
+#endif
 
 DEFINE_LOG_CATEGORY(LogApGameInstanceModule);
 
@@ -11,7 +16,7 @@ DEFINE_LOG_CATEGORY(LogApGameInstanceModule);
 
 UApGameInstanceModule::UApGameInstanceModule()
 {
-	UE_LOG(LogApGameInstanceModule, Display, TEXT("UApGameInstanceModule::UApGameInstanceModule()"));
+	UE_LOGFMT(LogApGameInstanceModule, Display, "UApGameInstanceModule::UApGameInstanceModule()");
 }
 
 void UApGameInstanceModule::DispatchLifecycleEvent(ELifecyclePhase phase) {
@@ -19,104 +24,114 @@ void UApGameInstanceModule::DispatchLifecycleEvent(ELifecyclePhase phase) {
 
 	if (phase == ELifecyclePhase::CONSTRUCTION && !WITH_EDITOR) {
 #if UE_SERVER
-		SUBSCRIBE_METHOD(UFGServerStateController::Handler_GetServerOptions, [this](auto& scope, const UFGServerStateController* self, TMap<FString, FString>& OutServerOptions, TMap<FString, FString>& OutPendingServerOptions) {
-			return Server_GetOptions(scope, self, OutServerOptions, OutPendingServerOptions);
+		SUBSCRIBE_METHOD(UFGServerStateController::Handler_GetServerOptions, [this](auto& func, const UFGServerStateController* self, TMap<FString, FString>& OutServerOptions, TMap<FString, FString>& OutPendingServerOptions) {
+			func(self, OutServerOptions, OutPendingServerOptions);
+			DediServer_GetOptions(OutServerOptions, OutPendingServerOptions);
 		});
-		SUBSCRIBE_METHOD(UFGServerManagementController::Handler_ApplyServerOptions, [this](auto& scope, const UFGServerManagementController* self, const TMap<FString, FString>& UpdatedServerOptions) {
-			return Server_ApplyOptions(scope, self, UpdatedServerOptions);
-		});
-#else
-		SUBSCRIBE_METHOD(UFGServerObjectOptionAdapter::ReceiveServerSettings, [this](auto& scope, UFGServerObjectOptionAdapter* self, const TMap<FString, FString>& InServerSettings, const TMap<FString, FString>& PendingServerOptions) {
-			return Client_ReceiveServerSettings(scope, self, InServerSettings, PendingServerOptions);
-		});
-		SUBSCRIBE_METHOD(UFGServerObjectOptionAdapter::WriteChangedSettings, [this](auto& scope, UFGServerObjectOptionAdapter* self, TMap<FString, FString>& OutServerSettings) {
-			return Client_WriteChangedSettings(scope, self, OutServerSettings);
+		SUBSCRIBE_METHOD(UFGServerManagementController::Handler_ApplyServerOptions, [this](auto& func, const UFGServerManagementController* self, const TMap<FString, FString>& UpdatedServerOptions) {
+			func(self, UpdatedServerOptions);
+			DediServer_ApplyOptions(UpdatedServerOptions);
 		});
 #endif
+
+		SUBSCRIBE_METHOD(UFGUserSettingApplyType::VariantAsString, UApGameInstanceModule::VariantAsString);
+		SUBSCRIBE_METHOD(UFGUserSettingApplyType::StringAsVariant, UApGameInstanceModule::StringAsVariant);
 	}
 }
 
-#if UE_SERVER
-void UApGameInstanceModule::Server_GetOptions(
-	TCallScope<void(*)(const UFGServerStateController*, TMap<FString, FString>&, TMap<FString, FString>&)>& Scope,
-	const UFGServerStateController* self, TMap<FString, FString>& OutServerOptions, TMap<FString, FString>& OutPendingServerOptions) {
-	UE_LOG(LogApGameInstanceModule, Display, TEXT("UApGameInstanceModule::Server::GetServerOptions()"));
+void UApGameInstanceModule::DediServer_GetOptions(TMap<FString, FString>& OutServerOptions, TMap<FString, FString>& OutPendingServerOptions) {
+	if (!IsRunningDedicatedServer())
+		UE_LOGFMT(LogApGameInstanceModule, Fatal, "UApGameInstanceModule::DediServer_GetOptions() called outside of dedicated server");
 
-	Scope(self, OutServerOptions, OutPendingServerOptions);
+	//handle conversion from session settings to sever options
 
 	UWorld* world = GetWorld();
 	fgcheck(world);
 
-	USessionSettingsManager* sessionSettings = GetWorld()->GetSubsystem<USessionSettingsManager>();
+	USessionSettingsManager* sessionSettings = world->GetSubsystem<USessionSettingsManager>();
 	fgcheck(sessionSettings);
 
-	FString uri = USMLOptionsLibrary::GetStringOptionValue(sessionSettings, "Archipelago.Connection.ServerURI").TrimStartAndEnd();
-	FString user = USMLOptionsLibrary::GetStringOptionValue(sessionSettings, "Archipelago.Connection.UserName").TrimStartAndEnd();
-	FString password = USMLOptionsLibrary::GetStringOptionValue(sessionSettings, "Archipelago.Connection.Password");
-
-	OutServerOptions["Archipelago.Connection.ServerURI"] = uri;
-	OutServerOptions["Archipelago.Connection.UserName"] = user;
-	OutServerOptions["Archipelago.Connection.Password"] = password;
+	DediServer_CopySettingFromSessionSettings(sessionSettings, "Archipelago.Connection.ServerURI", OutServerOptions, OutPendingServerOptions);
+	DediServer_CopySettingFromSessionSettings(sessionSettings, "Archipelago.Connection.UserName", OutServerOptions, OutPendingServerOptions);
+	DediServer_CopySettingFromSessionSettings(sessionSettings, "Archipelago.Connection.Password", OutServerOptions, OutPendingServerOptions);
 }
 
-void UApGameInstanceModule::Server_ApplyOptions(
-	TCallScope<void(*)(const UFGServerManagementController*, const TMap<FString, FString>&)>& Scope,
-	const UFGServerManagementController* self, const TMap<FString, FString>& UpdatedServerOptions) {
-	UE_LOG(LogApGameInstanceModule, Display, TEXT("UApGameInstanceModule::Server::ApplyServerOptions()"));
+void UApGameInstanceModule::DediServer_ApplyOptions(const TMap<FString, FString>& UpdatedServerOptions) {
+	if (!IsRunningDedicatedServer())
+		UE_LOGFMT(LogApGameInstanceModule, Fatal, "UApGameInstanceModule::DediServer_ApplyOptions() called outside of dedicated server");
 
 	UWorld* world = GetWorld();
 	fgcheck(world);
 
-	USessionSettingsManager* sessionSettings = GetWorld()->GetSubsystem<USessionSettingsManager>();
+	USessionSettingsManager* sessionSettings = world->GetSubsystem<USessionSettingsManager>();
 	fgcheck(sessionSettings);
 
-	if (UpdatedServerOptions.Contains("Archipelago.Connection.ServerURI"))
-		USMLOptionsLibrary::SetStringOptionValue(sessionSettings, "Archipelago.Connection.ServerURI", UpdatedServerOptions["Archipelago.Connection.ServerURI"]);
-	if (UpdatedServerOptions.Contains("Archipelago.Connection.UserName"))
-		USMLOptionsLibrary::SetStringOptionValue(sessionSettings, "Archipelago.Connection.UserName", UpdatedServerOptions["Archipelago.Connection.UserName"]);
-	if (UpdatedServerOptions.Contains("Archipelago.Connection.Password"))
-		USMLOptionsLibrary::SetStringOptionValue(sessionSettings, "Archipelago.Connection.Password", UpdatedServerOptions["Archipelago.Connection.Password"]);
-
-	Scope(self, UpdatedServerOptions);
+	DediServer_CopySettingToSessionSettings(sessionSettings, "Archipelago.Connection.ServerURI", UpdatedServerOptions);
+	DediServer_CopySettingToSessionSettings(sessionSettings, "Archipelago.Connection.UserName", UpdatedServerOptions);
+	DediServer_CopySettingToSessionSettings(sessionSettings, "Archipelago.Connection.Password", UpdatedServerOptions);
 }
 
-#else
+void UApGameInstanceModule::DediServer_CopySettingFromSessionSettings(const USessionSettingsManager* sessionSettings, const FString& cvar, TMap<FString, FString>& OutServerOptions, TMap<FString, FString>& OutPendingServerOptions) {
+	if(!IsRunningDedicatedServer())
+		UE_LOGFMT(LogApGameInstanceModule, Fatal, "UApGameInstanceModule::DediServer_CopySettingFromSessionSettings() called outside of dedicated server");
+	
+	UFGUserSettingApplyType* setting = sessionSettings->FindSessionSetting(cvar);
+	UFGUserSettingApplyType_RequireSessionRestart* applyType = Cast<UFGUserSettingApplyType_RequireSessionRestart>(setting);
 
-void UApGameInstanceModule::Client_ReceiveServerSettings(
-	TCallScope<void(*)(UFGServerObjectOptionAdapter*, const TMap<FString, FString>&, const TMap<FString, FString>&)>& Scope,
-	UFGServerObjectOptionAdapter* self, const TMap<FString, FString>& InServerSettings, const TMap<FString, FString>& PendingServerOptions) {
-	UE_LOG(LogApGameInstanceModule, Display, TEXT("UApGameInstanceModule::Client::ReceiveServerSettings()"));
+	FString current = applyType->GetAppliedValue().GetValue<FString>();
 
-	auto debug = 5;
+	OutServerOptions[cvar] = current;
 
-	Scope(self, InServerSettings, PendingServerOptions);
+	FVariant perndingVariant = applyType->GetPendingAppliedValue();
+	if (!perndingVariant.IsEmpty()) {
+		FString pendingValue = perndingVariant.GetValue<FString>();
 
-	if (InServerSettings.Contains("Archipelago.Connection.ServerURI"))
-		USMLOptionsLibrary::SetStringOptionValue(self, "Archipelago.Connection.ServerURI", InServerSettings["Archipelago.Connection.ServerURI"]);
-	if (InServerSettings.Contains("Archipelago.Connection.UserName"))
-		USMLOptionsLibrary::SetStringOptionValue(self, "Archipelago.Connection.UserName", InServerSettings["Archipelago.Connection.UserName"]);
-	if (InServerSettings.Contains("Archipelago.Connection.Password"))
-		USMLOptionsLibrary::SetStringOptionValue(self, "Archipelago.Connection.Password", InServerSettings["Archipelago.Connection.Password"]);
+		if (current != pendingValue)
+		{
+			if (OutPendingServerOptions.Contains(cvar))
+				OutPendingServerOptions[cvar] = pendingValue;
+			else
+				OutPendingServerOptions.Add(cvar, pendingValue);
+		}
+	}
 
-	auto debug2 = 6;
+	TArray<FString> out_debugData;
+	applyType->GetDebugData(out_debugData);
+	UE_LOGFMT(LogApGameInstanceModule, Display, "UApGameInstanceModule::Server::GetServerOptions() applyType: {0}", out_debugData[0]);
 }
 
-void UApGameInstanceModule::Client_WriteChangedSettings(
-	TCallScope<void(*)(UFGServerObjectOptionAdapter*, TMap<FString, FString>&)>& Scope,
-	UFGServerObjectOptionAdapter* self, TMap<FString, FString>& OutServerSettings) {
+void UApGameInstanceModule::DediServer_CopySettingToSessionSettings(const USessionSettingsManager* sessionSettings, const FString& cvar, const TMap<FString, FString>& UpdatedServerOptions) {
+	if (!IsRunningDedicatedServer())
+		UE_LOGFMT(LogApGameInstanceModule, Fatal, "UApGameInstanceModule::DediServer_CopySettingToSessionSettings() called outside of dedicated server");
 
-	UE_LOG(LogApGameInstanceModule, Display, TEXT("UApGameInstanceModule::Client::WriteChangedSettings()"));
+	if (UpdatedServerOptions.Contains(cvar)) {
+		UFGUserSettingApplyType* setting = sessionSettings->FindSessionSetting(cvar);
+		UFGUserSettingApplyType_RequireSessionRestart* applyType = Cast<UFGUserSettingApplyType_RequireSessionRestart>(setting);
 
-	Scope(self, OutServerSettings);
+		applyType->ForceSetPendingAppliedValue(UpdatedServerOptions[cvar]);
+		//the above line does not correctly apply the value of session restart so for now we just hard set the current value
+		applyType->ForceSetValue(UpdatedServerOptions[cvar], false);
 
-	if (OutServerSettings.Contains("Archipelago.Connection.ServerURI"))
-		OutServerSettings["Archipelago.Connection.ServerURI"] = self->GetOptionDisplayValueTyped<FString>("Archipelago.Connection.ServerURI");
-	if (OutServerSettings.Contains("Archipelago.Connection.UserName"))
-		OutServerSettings["Archipelago.Connection.UserName"] = self->GetOptionDisplayValueTyped<FString>("Archipelago.Connection.UserName");
-	if (OutServerSettings.Contains("Archipelago.Connection.Password"))
-		OutServerSettings["Archipelago.Connection.Password"] = self->GetOptionDisplayValueTyped<FString>("Archipelago.Connection.Password");
+		if (!cvar.Contains("Password", ESearchCase::CaseSensitive)) {
+			TArray<FString> out_debugData;
+			applyType->GetDebugData(out_debugData);
+			UE_LOGFMT(LogApGameInstanceModule, Display, "UApGameInstanceModule::Server::ApplyServerOptions() applyType: {0}", out_debugData[0]);
+		}
+	}
 }
-#endif
+
+
+void UApGameInstanceModule::VariantAsString(TCallScope<FString(*)(const FVariant&)>& Scope, const FVariant& variant) {
+	if (variant.GetType() == EVariantTypes::String)
+		Scope.Override(variant.GetValue<FString>());
+}
+
+void UApGameInstanceModule::StringAsVariant(TCallScope<bool(*)(const FString&, EVariantTypes, FVariant&)>& Scope, const FString& string, EVariantTypes variantType, FVariant& outVariant) {
+	if (variantType == EVariantTypes::String) {
+		outVariant = FVariant(string);
+		Scope.Override(true);
+	}
+}
 
 #pragma optimize("", on)
 

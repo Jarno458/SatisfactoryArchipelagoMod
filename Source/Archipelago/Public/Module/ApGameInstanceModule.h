@@ -7,13 +7,10 @@
 #include "ApBlueprintDataBridge.h"
 #include "Module/GameInstanceModule.h"
 #include "Patching/NativeHookManager.h"
+#include "SessionSettings/SessionSettingsManager.h"
 
-#if UE_SERVER
-#include "Controller/FGServerStateController.h"
-#include "Controller/FGServerManagementController.h"
-#else
-#include "FGServerObjectOptionInterface.h"
-#endif
+#include "Misc/Variant.h"
+#include "Settings/FGUserSettingApplyType.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(LogApGameInstanceModule, Log, All);
 
@@ -37,11 +34,12 @@ public:
 	virtual void DispatchLifecycleEvent(ELifecyclePhase Phase) override;
 
 private:
-#if UE_SERVER
-	void Server_GetOptions(TCallScope<void(*)(const UFGServerStateController*, TMap<FString, FString>&, TMap<FString, FString>&)>& Scope, const UFGServerStateController* self, TMap<FString, FString>& OutServerOptions, TMap<FString, FString>& OutPendingServerOptions);
-	void Server_ApplyOptions(TCallScope<void(*)(const UFGServerManagementController*, const TMap<FString, FString>&)>& Scope, const UFGServerManagementController* self, const TMap<FString, FString>& UpdatedServerOptions);
-#else
-	void Client_ReceiveServerSettings(TCallScope<void(*)(UFGServerObjectOptionAdapter*, const TMap<FString, FString>&, const TMap<FString, FString>&)>& Scope, UFGServerObjectOptionAdapter* self, const TMap<FString, FString>& InServerSettings, const TMap<FString, FString>& PendingServerOptions);
-	void Client_WriteChangedSettings(TCallScope<void(*)(UFGServerObjectOptionAdapter*, TMap<FString, FString>&)>& Scope, UFGServerObjectOptionAdapter* self, TMap<FString, FString>& OutServerSettings);
-#endif
+	void DediServer_GetOptions(TMap<FString, FString>& OutServerOptions, TMap<FString, FString>& OutPendingServerOptions);
+	void DediServer_ApplyOptions(const TMap<FString, FString>& UpdatedServerOptions);
+
+	void DediServer_CopySettingFromSessionSettings(const USessionSettingsManager* sessionSettings, const FString& cvar, TMap<FString, FString>& OutServerOptions, TMap<FString, FString>& OutPendingServerOptions);
+	void DediServer_CopySettingToSessionSettings(const USessionSettingsManager* sessionSettings, const FString& cvar, const TMap<FString, FString>& UpdatedServerOptions);
+
+	static void VariantAsString(TCallScope<FString(*)(const FVariant&)>& Scope, const FVariant& variant);
+	static void StringAsVariant(TCallScope<bool(*)(const FString&, EVariantTypes, FVariant&)>& Scope, const FString& string, EVariantTypes variantType, FVariant& outVariant);
 };
