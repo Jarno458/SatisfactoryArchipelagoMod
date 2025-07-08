@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Math/BigInt.h"
 
 #include "Subsystem/ModSubsystem.h"
 #include "Subsystem/SubsystemActorManager.h"
@@ -16,6 +17,20 @@
 DECLARE_LOG_CATEGORY_EXTERN(LogApEnergyLink, Log, All);
 
 #include "ApEnergyLinkSubsystem.generated.h"
+
+#define ENERGYLINK_MULTIPLIER 100000
+
+UENUM(BlueprintType)
+enum class EApEnergyLinkSuffix : uint8 {
+	Mega UMETA(DisplayName = "Mw"),
+	Giga UMETA(DisplayName = "Gw"),
+	Tera UMETA(DisplayName = "Tw"),
+	Peta UMETA(DisplayName = "Pw"),
+	Exa UMETA(DisplayName = "Ew"),
+	Zetta UMETA(DisplayName = "Zw"),
+	Yotta UMETA(DisplayName = "Yw"),
+	Overflow UMETA(DisplayName = "Overflow")
+};
 
 UCLASS(Blueprintable)
 class ARCHIPELAGO_API AApEnergyLinkSubsystem : public AModSubsystem
@@ -40,17 +55,29 @@ public:
 	FORCEINLINE bool IsInitialized() const { return isInitialized; };
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	FORCEINLINE int64 GetCurrentServerStoredEnergy() const { return currentServerStorage; };
+	FORCEINLINE bool IsEnergyLinkEnabled() const { return energyLinkEnabled; };
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	FORCEINLINE bool IsEnergyLinkEnabled() const { return energyLinkEnabled; };
+	FORCEINLINE int GetCurrentServerStoredEnergy() const { return replicatedServerStorage; };
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	FORCEINLINE EApEnergyLinkSuffix GetCurrentServerStoredEnergySuffix() const { return replicatedServerStorageSuffix; };
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	FORCEINLINE float GetGlobalChargeRate() const { return replicatedGlobalChargeRatePerSecond; };
 
 private:
 	bool hooksInitialized = false;
 	bool energyLinkEnabled = false;
 
+	float currentServerStorage = 0;
+
 	UPROPERTY(Replicated)
-	int64 currentServerStorage = 0;
+	uint16 replicatedServerStorage = 0;
+	UPROPERTY(Replicated)
+	EApEnergyLinkSuffix replicatedServerStorageSuffix = EApEnergyLinkSuffix::Mega;
+	UPROPERTY(Replicated)
+	float replicatedGlobalChargeRatePerSecond = 0;
 
 	float localStorage = 0.0f;
 
@@ -67,6 +94,5 @@ private:
 	void SendEnergyToServer(long amount);
 	void OnEnergyLinkValueChanged(AP_SetReply setReply);
 
-	const long maxPowerStorage = 999999;
-	FString energyLinkDefault = "0";
+	static int256 Int256FromDecimal(FString decimal);
 };

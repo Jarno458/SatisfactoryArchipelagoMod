@@ -249,13 +249,13 @@ void AApSubsystem::MonitorDataStoreValue(FString keyFString, AP_DataType dataTyp
 	});
 }
 
-void AApSubsystem::ModdifyEnergyLink(long amount, FString defaultValueFString) {
-	CallOnGameThread<void>([this, amount, defaultValueFString]() {
+void AApSubsystem::ModdifyEnergyLink(long amount) {
+	CallOnGameThread<void>([this, amount]() {
 		AP_SetServerDataRequest sendEnergyLinkUpdate;
 		sendEnergyLinkUpdate.key = "EnergyLink" + std::to_string(connectionInfoSubsystem->currentPlayerTeam);
 
 		std::string valueToAdd = std::to_string(amount);
-		std::string defaultValue = TCHAR_TO_UTF8(*defaultValueFString);
+		std::string defaultValue = std::string("0");
 
 		AP_DataStorageOperation add;
 		add.operation = "add";

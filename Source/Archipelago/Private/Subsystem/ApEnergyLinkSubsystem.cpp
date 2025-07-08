@@ -1,9 +1,14 @@
 #include "Subsystem/ApEnergyLinkSubsystem.h"
 #include "ApUtils.h"
+#include "Misc/Char.h"
+#include "Logging/StructuredLog.h"
 
 DEFINE_LOG_CATEGORY(LogApEnergyLink);
 
 #define LOCTEXT_NAMESPACE "Archipelago"
+
+//TODO REMOVE
+#pragma optimize("", off)
 
 AApEnergyLinkSubsystem::AApEnergyLinkSubsystem()
 {
@@ -16,7 +21,9 @@ AApEnergyLinkSubsystem::AApEnergyLinkSubsystem()
 void AApEnergyLinkSubsystem::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-	DOREPLIFETIME(AApEnergyLinkSubsystem, currentServerStorage);
+	DOREPLIFETIME(AApEnergyLinkSubsystem, replicatedServerStorage);
+	DOREPLIFETIME(AApEnergyLinkSubsystem, replicatedServerStorageSuffix);
+	DOREPLIFETIME(AApEnergyLinkSubsystem, replicatedGlobalChargeRatePerSecond);
 }
 
 void AApEnergyLinkSubsystem::BeginPlay() {
@@ -25,7 +32,7 @@ void AApEnergyLinkSubsystem::BeginPlay() {
 	if (!HasAuthority())
 		return;
 		
-	UE_LOG(LogApEnergyLink, Display, TEXT("AEnergyLinkSubsystem:BeginPlay()"));
+	UE_LOGFMT(LogApEnergyLink, Display, "AEnergyLinkSubsystem:BeginPlay()");
 
 	UWorld* world = GetWorld();
 	ap = AApSubsystem::Get(world);
@@ -38,10 +45,9 @@ void AApEnergyLinkSubsystem::BeginPlay() {
 	fgcheck(apConnectionInfo);
 
 	if (!hooksInitialized && !WITH_EDITOR) {
-		UE_LOG(LogApEnergyLink, Display, TEXT("Initializing hooks"));
 		AFGBuildablePowerStorage* bpscdo = GetMutableDefault<AFGBuildablePowerStorage>();
 		hookHandler = SUBSCRIBE_METHOD_VIRTUAL(AFGBuildablePowerStorage::BeginPlay, bpscdo, [this](auto& scope, AFGBuildablePowerStorage* self) {
-			UE_LOG(LogApEnergyLink, Display, TEXT("AFGBuildablePowerStorage::BeginPlay()"));
+			UE_LOGFMT(LogApEnergyLink, Display, "AFGBuildablePowerStorage::BeginPlay()");
 
 			if (!PowerStorages.Contains(self)) {
 				PowerStorages.Add(self);
@@ -72,8 +78,7 @@ void AApEnergyLinkSubsystem::Tick(float DeltaTime) {
 		energyLinkEnabled = slotDataSubsystem->EnergyLink;
 
 		if (apConnectionInfo->GetConnectionState() == EApConnectionState::Connected && energyLinkEnabled) {
-			UE_LOG(LogApEnergyLink, Display, TEXT("Setting MonitorDataStoreValue OnEnergyLinkValueChanged"));
-			ap->MonitorDataStoreValue(FString("EnergyLink") + UApUtils::FStr(apConnectionInfo->GetCurrentPlayerTeam()), AP_DataType::Raw, energyLinkDefault, [&](AP_SetReply setReply) {
+			ap->MonitorDataStoreValue(FString("EnergyLink") + UApUtils::FStr(apConnectionInfo->GetCurrentPlayerTeam()), AP_DataType::Raw, "0", [&](AP_SetReply setReply) {
 				OnEnergyLinkValueChanged(setReply);
 			});
 		}
@@ -84,15 +89,59 @@ void AApEnergyLinkSubsystem::Tick(float DeltaTime) {
 }
 
 void AApEnergyLinkSubsystem::OnEnergyLinkValueChanged(AP_SetReply setReply) {
-	std::string valueStr = (*(std::string*)setReply.value).c_str();
+	//example 54737402054455566
+	std::string valueCstr = (*(std::string*)setReply.value);
+	FString rawValue = UApUtils::FStr(valueCstr).TrimStartAndEnd();
 
-	if (valueStr.length() > 6 || valueStr.length() == 0)
-		currentServerStorage = maxPowerStorage;
-	else
-	{
-		long l = stol(valueStr);
-		currentServerStorage = l;
+	FString intergerValueString;
+	if (rawValue.IsEmpty()) {
+		intergerValueString = "0";
 	}
+	else {
+		//cut off decimals, should not happen, but we cant trust other games
+
+		if (rawValue.Contains(".")) {
+			UE_LOGFMT(LogApEnergyLink, Error, "AApEnergyLinkSubsystem::OnEnergyLinkValueChanged() received non numeric input {0}", rawValue);
+			intergerValueString = rawValue.Left(rawValue.Find(".", ESearchCase::IgnoreCase, ESearchDir::FromEnd));
+		}
+		else {
+			intergerValueString = rawValue;
+		}
+
+		if (!intergerValueString.IsNumeric()) {
+			UE_LOGFMT(LogApEnergyLink, Error, "AApEnergyLinkSubsystem::OnEnergyLinkValueChanged() received non numeric input {0}", intergerValueString);
+			return;
+		}
+	}
+
+	//int256 is max python can store
+	int256 serverValue = Int256FromDecimal(intergerValueString);
+
+	//should never happen, but we cant trust other games
+	if (serverValue < 0)
+		serverValue = 0;
+	
+	int256 remainder;
+	serverValue.DivideWithRemainder(ENERGYLINK_MULTIPLIER, remainder);
+
+	int256 valueForClient = serverValue;
+	int devisions = 0;
+	while (valueForClient > 10000) {
+		valueForClient /= 1000;
+		devisions++;
+	}
+	if (devisions >= 7) {
+		replicatedServerStorage = 0;
+		replicatedServerStorageSuffix = EApEnergyLinkSuffix::Overflow;
+	}
+	else {
+		replicatedServerStorage = valueForClient.ToInt() + ((float)remainder.ToInt() / ENERGYLINK_MULTIPLIER);
+		replicatedServerStorageSuffix = static_cast<EApEnergyLinkSuffix>(devisions);
+	}
+
+	// if there is enough energy to keep us going for an other minute then we dont need to know the exact value
+	if (serverValue > 99900)
+		currentServerStorage = 99900.0f;
 }
 
 void AApEnergyLinkSubsystem::EnergyLinkTick() {
@@ -111,12 +160,13 @@ void AApEnergyLinkSubsystem::EnergyLinkTick() {
 
 		float chargePerSecond = powerStorage->GetNetPowerInput();
 		if (chargePerSecond != 0.0f)
-			chargePerSecond /= 60 * 60;
+			chargePerSecond /= 60;
 
 		totalChargePerSecond += chargePerSecond;
 	}
 
 	localStorage += totalChargePerSecond;
+	replicatedGlobalChargeRatePerSecond = totalChargePerSecond * 60;
 
 	for (AFGBuildablePowerStorage* powerStorageToRemove : scheduledForRemoval) {
 		if (powerStorageToRemove)
@@ -133,11 +183,23 @@ void AApEnergyLinkSubsystem::EnergyLinkTick() {
 		SendEnergyToServer((long)chargeToSend);
 	}
 
+	float individualStorage = currentServerStorage;
+	if (individualStorage > 1000)
+		individualStorage = 1000.0f;
+
+	float maxStorage = 10000.0f;
+	if (currentServerStorage + 100.0f >  maxStorage)
+		maxStorage = currentServerStorage + 100;
+
 	for (AFGBuildablePowerStorage* powerStorage : PowerStorages) {
-		powerStorage->mPowerStoreCapacity = maxPowerStorage;
-		powerStorage->mBatteryInfo->mPowerStoreCapacity = maxPowerStorage * 2; //make sure it keeps charging even if at max
-		powerStorage->mPowerStore = (float)currentServerStorage + localStorage;
-		powerStorage->mBatteryInfo->mPowerStore = (float)currentServerStorage + localStorage;
+		//current building stored power
+		powerStorage->mPowerStore = currentServerStorage + localStorage;
+		//current building capacity
+		powerStorage->mPowerStoreCapacity = 9999.0f;
+		//gird capacity
+		powerStorage->mBatteryInfo->mPowerStoreCapacity = 100000.0f;
+		//grid stored power
+		powerStorage->mBatteryInfo->mPowerStore = currentServerStorage + localStorage;
 	}
 }
 
@@ -145,45 +207,44 @@ void AApEnergyLinkSubsystem::SendEnergyToServer(long amount) {
 	if (!isInitialized)
 		return;
 
-	ap->ModdifyEnergyLink(amount, energyLinkDefault);
+	ap->ModdifyEnergyLink(amount * ENERGYLINK_MULTIPLIER);
 }
 
-	//Called for UI, percentage from 0.0f to 100.0f of how full specific power storage is
-	/*SUBSCRIBE_METHOD(AFGBuildablePowerStorage::GetPowerStore, [](auto& scope, const AFGBuildablePowerStorage* self) {
-		float f = scope(self);
-		UE_LOG(LogApSubsystem, Display, TEXT("AFGBuildablePowerStorage::GetPowerStore(): %f"), f);
-	});*/
+int256 AApEnergyLinkSubsystem::Int256FromDecimal(FString decimal) {
+	bool negative = false;
+	if (decimal.StartsWith(TEXT("-"))) {
+		negative = true;
+		decimal = decimal.RightChop(1);
+	}
 
-	/*SUBSCRIBE_METHOD(AFGBuildablePowerStorage::IndicatorLevelChanged, [](auto& scope, AFGBuildablePowerStorage* self, uint8 indicatorLevel) {
-		UE_LOG(LogApSubsystem, Display, TEXT("AFGBuildablePowerStorage::IndicatorLevelChanged(indicatorLevel: %d)"), indicatorLevel);
-	});*/
+	FString reverse = decimal.Reverse();
 
-	//Called when status of individual power storage changes, idle / charging / draining etc
-	/*SUBSCRIBE_METHOD(AFGBuildablePowerStorage::StatusChanged, [](auto& scope, AFGBuildablePowerStorage* self, EBatteryStatus newStatus) {
-		UE_LOG(LogApSubsystem, Display, TEXT("AFGBuildablePowerStorage::StatusChanged(newStatus: %d)"), newStatus);
-	});*/
+	int256 total = 0;
+	int multiplier = 0;
 
-	/*SUBSCRIBE_METHOD(AFGBuildablePowerStorage::GetPowerStoreCapacity, [](auto& scope, const AFGBuildablePowerStorage* self) {
-		float f = scope(self);
-		UE_LOG(LogApSubsystem, Display, TEXT("AFGBuildablePowerStorage::GetPowerStoreCapacity(): %f"), f);
-	});*/
+	for (TCHAR c : reverse) {
+		if (!FChar::IsDigit(c)) {
+			UE_LOGFMT(LogApEnergyLink, Error, "AApEnergyLinkSubsystem::Int256FromDecimal() received non numeric input {0} in string {1}", c, decimal);
+			total = 0;
+		}
 
-	/*SUBSCRIBE_METHOD(AFGBuildablePowerStorage::GetPowerStorePercent, [](auto& scope, const AFGBuildablePowerStorage* self) {
-		//float f = scope(self);
-		//UE_LOG(LogApSubsystem, Display, TEXT("AFGBuildablePowerStorage::GetPowerStorePercent(): %f"), f);
-	});*/
+		int256 multiplierValue = int256::One;
+		for (int i = 0; i < multiplier; i++) {
+			multiplierValue *= 10;
+		}
+				
+		total += (multiplierValue * FChar::ConvertCharDigitToInt(c));
+		multiplier++;
+	}
 
-	//Called for UI, current charge added or drained from the grid for specific power storage
-	/*SUBSCRIBE_METHOD(AFGBuildablePowerStorage::GetNetPowerInput, [](auto& scope, const AFGBuildablePowerStorage* self) {
-		//float f = scope(self);
-		//UE_LOG(LogApSubsystem, Display, TEXT("AFGBuildablePowerStorage::GetNetPowerInput(): %f"), f);
-	});*/
+	if (negative)
+		total *= -1;
 
-	//Called repeatingly for indicator at the outside
-	/*SUBSCRIBE_METHOD(AFGBuildablePowerStorage::CalculateIndicatorLevel, [](auto& scope, const AFGBuildablePowerStorage* self) {
-		//float f = scope(self);
-		//UE_LOG(LogApSubsystem, Display, TEXT("AFGBuildablePowerStorage::CalculateIndicatorLevel(): %f"), f);
-		scope.Override(5.0f);
-	});*/
+	UE_LOGFMT(LogApEnergyLink, VeryVerbose, "AApEnergyLinkSubsystem::Int256FromDecimal() validation, input: {0} > hex: {1} > validation: {2}", decimal, total.ToString(), FParse::HexNumber(*total.ToString()));
+
+	return total;
+}
+
+#pragma optimize("", on)
 
 #undef LOCTEXT_NAMESPACE

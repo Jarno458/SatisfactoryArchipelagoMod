@@ -61,7 +61,7 @@ public:
 
 	void MonitorDataStoreValue(FString keyFString, TFunction<void()> callback);
 	void MonitorDataStoreValue(FString keyFString, AP_DataType dataType, FString defaultValueFString, TFunction<void(AP_SetReply)> callback);
-	void ModdifyEnergyLink(long amount, FString defaultValueFString);
+	void ModdifyEnergyLink(long amount);
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FApConfigurationStruct GetConfig() const { return config; };
