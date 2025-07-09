@@ -2,6 +2,7 @@
 #include "ApUtils.h"
 #include "Misc/Char.h"
 #include "Logging/StructuredLog.h"
+#include "EngineUtils.h"
 
 DEFINE_LOG_CATEGORY(LogApEnergyLink);
 
@@ -21,9 +22,9 @@ AApEnergyLinkSubsystem::AApEnergyLinkSubsystem()
 void AApEnergyLinkSubsystem::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-	DOREPLIFETIME(AApEnergyLinkSubsystem, replicatedServerStorage);
+	DOREPLIFETIME(AApEnergyLinkSubsystem, replicatedServerStorageJoules);
 	DOREPLIFETIME(AApEnergyLinkSubsystem, replicatedServerStorageSuffix);
-	DOREPLIFETIME(AApEnergyLinkSubsystem, replicatedGlobalChargeRatePerSecond);
+	DOREPLIFETIME(AApEnergyLinkSubsystem, replicatedGlobalChargeRateMegaWattHour);
 }
 
 void AApEnergyLinkSubsystem::BeginPlay() {
@@ -43,24 +44,6 @@ void AApEnergyLinkSubsystem::BeginPlay() {
 	fgcheck(randomizerSubsystem);
 	apConnectionInfo = AApConnectionInfoSubsystem::Get(world);
 	fgcheck(apConnectionInfo);
-
-	if (!hooksInitialized && !WITH_EDITOR) {
-		AFGBuildablePowerStorage* bpscdo = GetMutableDefault<AFGBuildablePowerStorage>();
-		hookHandler = SUBSCRIBE_METHOD_VIRTUAL(AFGBuildablePowerStorage::BeginPlay, bpscdo, [this](auto& scope, AFGBuildablePowerStorage* self) {
-			UE_LOGFMT(LogApEnergyLink, Display, "AFGBuildablePowerStorage::BeginPlay()");
-
-			if (!PowerStorages.Contains(self)) {
-				PowerStorages.Add(self);
-			}
-		});
-
-		hooksInitialized = true;
-	}
-}
-
-void AApEnergyLinkSubsystem::EndPlay(const EEndPlayReason::Type endPlayReason) {
-	if (hookHandler.IsValid())
-		UNSUBSCRIBE_METHOD(AFGBuildablePowerStorage::BeginPlay, hookHandler);
 }
 
 void AApEnergyLinkSubsystem::Tick(float DeltaTime) {
@@ -70,10 +53,10 @@ void AApEnergyLinkSubsystem::Tick(float DeltaTime) {
 		return;
 
 	if (!isInitialized && randomizerSubsystem->IsInitialized()) {
-		isInitialized = true;
-
 		if (!slotDataSubsystem->HasLoadedSlotData())
 			return;
+
+		isInitialized = true;
 
 		energyLinkEnabled = slotDataSubsystem->EnergyLink;
 
@@ -85,7 +68,7 @@ void AApEnergyLinkSubsystem::Tick(float DeltaTime) {
 	}
 
 	if (isInitialized && energyLinkEnabled)
-		EnergyLinkTick();
+		EnergyLinkTick(DeltaTime);
 }
 
 void AApEnergyLinkSubsystem::OnEnergyLinkValueChanged(AP_SetReply setReply) {
@@ -115,91 +98,88 @@ void AApEnergyLinkSubsystem::OnEnergyLinkValueChanged(AP_SetReply setReply) {
 	}
 
 	//int256 is max python can store
-	int256 serverValue = Int256FromDecimal(intergerValueString);
+	int256 serverValueJoules = Int256FromDecimal(intergerValueString);
 
 	//should never happen, but we cant trust other games
-	if (serverValue < 0)
-		serverValue = 0;
+	if (serverValueJoules < 0)
+		serverValueJoules = 0;
 	
-	int256 remainder;
-	serverValue.DivideWithRemainder(ENERGYLINK_MULTIPLIER, remainder);
-
-	int256 valueForClient = serverValue;
+	int256 valueForClientJoules = serverValueJoules;
 	int devisions = 0;
-	while (valueForClient > 10000) {
-		valueForClient /= 1000;
+	while (valueForClientJoules > 10000 && devisions < 7) {
+		valueForClientJoules /= 1000;
 		devisions++;
 	}
 	if (devisions >= 7) {
-		replicatedServerStorage = 0;
-		replicatedServerStorageSuffix = EApEnergyLinkSuffix::Overflow;
+		replicatedServerStorageJoules = 0;
+		replicatedServerStorageSuffix = EApUnitSuffix::Overflow;
 	}
 	else {
-		replicatedServerStorage = valueForClient.ToInt() + ((float)remainder.ToInt() / ENERGYLINK_MULTIPLIER);
-		replicatedServerStorageSuffix = static_cast<EApEnergyLinkSuffix>(devisions);
+		// since this is interger division, it wont show decimals ever
+		replicatedServerStorageJoules = valueForClientJoules.ToInt();
+		replicatedServerStorageSuffix = static_cast<EApUnitSuffix>(devisions);
 	}
+
+	int256 serverValueMegaWattHour = serverValueJoules / (ENERGYLINK_MULTIPLIER * 3600);
 
 	// if there is enough energy to keep us going for an other minute then we dont need to know the exact value
-	if (serverValue > 99900)
-		currentServerStorage = 99900.0f;
+	if (serverValueMegaWattHour > 99900)
+		serverAvailableMegaWattHour = 99900;
+	else
+		serverAvailableMegaWattHour = serverValueMegaWattHour.ToInt();
 }
 
-void AApEnergyLinkSubsystem::EnergyLinkTick() {
-	//TODO move to power update tick
+void AApEnergyLinkSubsystem::EnergyLinkTick(float deltaTime) {
+	double totalChargeMegaWattSecond = 0.0f;
 
-	float totalChargePerSecond = 0.0f;
-
-	TArray<AFGBuildablePowerStorage*> scheduledForRemoval;
-
-	for (AFGBuildablePowerStorage* powerStorage : PowerStorages) {
+	for (TActorIterator<AFGBuildablePowerStorage> actorItterator(GetWorld()); actorItterator; ++actorItterator)	{
+		AFGBuildablePowerStorage* powerStorage = *actorItterator;
 		if (!IsValid(powerStorage))
-		{
-			scheduledForRemoval.Add(powerStorage);
 			continue;
+
+		// since this runs every second we are only intrested in how much power was gained last second
+		totalChargeMegaWattSecond += powerStorage->GetNetPowerInput() / 3600;
+	}
+
+	localAvailableMegaWattSecond += totalChargeMegaWattSecond * 3600;
+
+	if (localAvailableMegaWattSecond < 0 && serverAvailableMegaWattHour == 0) {
+		localAvailableMegaWattSecond = 0.0f; //trip powah
+	}
+	else {
+		if (localAvailableMegaWattSecond > 4 || localAvailableMegaWattSecond < -4) {
+			//apply 25% cut by deviding by 4 and only sending 3 times that
+			float intergerPart;
+			long remainder = modff(localAvailableMegaWattSecond / 4, &intergerPart);
+
+			localAvailableMegaWattSecond = (remainder * 4);
+
+			//we can only send full intergers
+			SendEnergyToServer(intergerPart * 3);
 		}
-
-		float chargePerSecond = powerStorage->GetNetPowerInput();
-		if (chargePerSecond != 0.0f)
-			chargePerSecond /= 60;
-
-		totalChargePerSecond += chargePerSecond;
 	}
 
-	localStorage += totalChargePerSecond;
-	replicatedGlobalChargeRatePerSecond = totalChargePerSecond * 60;
-
-	for (AFGBuildablePowerStorage* powerStorageToRemove : scheduledForRemoval) {
-		if (powerStorageToRemove)
-			PowerStorages.Remove(powerStorageToRemove);
-	}
-
-	if (localStorage < 0 && currentServerStorage == 0)
-		localStorage = 0.0f; //trip powah
-	else if (localStorage > 1 || localStorage < -1) {
-		float chargeToSend;
-
-		localStorage = modff(localStorage, &chargeToSend);
-
-		SendEnergyToServer((long)chargeToSend);
-	}
-
-	float individualStorage = currentServerStorage;
+	float individualStorage = serverAvailableMegaWattHour;
 	if (individualStorage > 1000)
 		individualStorage = 1000.0f;
 
 	float maxStorage = 10000.0f;
-	if (currentServerStorage + 100.0f >  maxStorage)
-		maxStorage = currentServerStorage + 100;
+	if (serverAvailableMegaWattHour + 100.0f >  maxStorage)
+		maxStorage = serverAvailableMegaWattHour + 100;
 
-	for (AFGBuildablePowerStorage* powerStorage : PowerStorages) {
+	for (TActorIterator<AFGBuildablePowerStorage> actorItterator(GetWorld()); actorItterator; ++actorItterator) {
+		AFGBuildablePowerStorage* powerStorage = *actorItterator;
+		if (!IsValid(powerStorage))
+			continue;
+
 		//current building stored power
-		powerStorage->mPowerStore = currentServerStorage + localStorage;
+		powerStorage->mPowerStore = serverAvailableMegaWattHour + localAvailableMegaWattSecond;
 		//current building capacity
 		powerStorage->mPowerStoreCapacity = 9999.0f;
 		//gird capacity
 		powerStorage->mBatteryInfo->mPowerStoreCapacity = 100000.0f;
 		//grid stored power
-		powerStorage->mBatteryInfo->mPowerStore = currentServerStorage + localStorage;
+		powerStorage->mBatteryInfo->mPowerStore = serverAvailableMegaWattHour + localAvailableMegaWattSecond;
 	}
 }
 

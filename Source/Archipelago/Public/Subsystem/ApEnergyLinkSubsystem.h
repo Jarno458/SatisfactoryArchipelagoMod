@@ -18,17 +18,18 @@ DECLARE_LOG_CATEGORY_EXTERN(LogApEnergyLink, Log, All);
 
 #include "ApEnergyLinkSubsystem.generated.h"
 
-#define ENERGYLINK_MULTIPLIER 100000
+//1000 = conversation ratio
+#define ENERGYLINK_MULTIPLIER 1000000
 
 UENUM(BlueprintType)
-enum class EApEnergyLinkSuffix : uint8 {
-	Mega UMETA(DisplayName = "Mw"),
-	Giga UMETA(DisplayName = "Gw"),
-	Tera UMETA(DisplayName = "Tw"),
-	Peta UMETA(DisplayName = "Pw"),
-	Exa UMETA(DisplayName = "Ew"),
-	Zetta UMETA(DisplayName = "Zw"),
-	Yotta UMETA(DisplayName = "Yw"),
+enum class EApUnitSuffix : uint8 {
+	Deci,
+	Kilo,
+	Mega,
+	Giga,
+	Tera,
+	Peta,
+	Exa,
 	Overflow UMETA(DisplayName = "Overflow")
 };
 
@@ -46,7 +47,6 @@ public:
 protected:
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;
-	virtual void EndPlay(const EEndPlayReason::Type endPlayReason) override;
 
 public:
 	bool isInitialized = false;
@@ -58,39 +58,40 @@ public:
 	FORCEINLINE bool IsEnergyLinkEnabled() const { return energyLinkEnabled; };
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	FORCEINLINE int GetCurrentServerStoredEnergy() const { return replicatedServerStorage; };
+	FORCEINLINE int GetCurrentServerStoredEnergy() const { return replicatedServerStorageJoules; };
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	FORCEINLINE EApEnergyLinkSuffix GetCurrentServerStoredEnergySuffix() const { return replicatedServerStorageSuffix; };
+	FORCEINLINE EApUnitSuffix GetCurrentServerStoredEnergySuffix() const { return replicatedServerStorageSuffix; };
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	FORCEINLINE float GetGlobalChargeRate() const { return replicatedGlobalChargeRatePerSecond; };
+	FORCEINLINE float GetGlobalChargeRate() const { return replicatedGlobalChargeRateMegaWattHour; };
 
 private:
 	bool hooksInitialized = false;
 	bool energyLinkEnabled = false;
 
-	float currentServerStorage = 0;
+	//int is enough as we hard cap this value
+	int serverAvailableMegaWattHour = 0;
+	double localAvailableMegaWattSecond = 0.0f;
 
 	UPROPERTY(Replicated)
-	uint16 replicatedServerStorage = 0;
+	float replicatedServerStorageJoules = 0;
 	UPROPERTY(Replicated)
-	EApEnergyLinkSuffix replicatedServerStorageSuffix = EApEnergyLinkSuffix::Mega;
+	EApUnitSuffix replicatedServerStorageSuffix = EApUnitSuffix::Deci;
 	UPROPERTY(Replicated)
-	float replicatedGlobalChargeRatePerSecond = 0;
+	float replicatedGlobalChargeRateMegaWattHour = 0;
 
-	float localStorage = 0.0f;
+	FDelegateHandle beginPlayHookHandler;
+	FDelegateHandle endPlayHookHandler;
 
-	FDelegateHandle hookHandler;
-
-	TArray<AFGBuildablePowerStorage*> PowerStorages;
+	//TArray<AFGBuildablePowerStorage*> PowerStorages;
 
 	AApSubsystem* ap;
 	AApServerRandomizerSubsystem* randomizerSubsystem;
 	AApSlotDataSubsystem* slotDataSubsystem;
 	AApConnectionInfoSubsystem* apConnectionInfo;
 
-	void EnergyLinkTick();
+	void EnergyLinkTick(float deltaTime);
 	void SendEnergyToServer(long amount);
 	void OnEnergyLinkValueChanged(AP_SetReply setReply);
 
