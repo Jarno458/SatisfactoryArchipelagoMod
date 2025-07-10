@@ -5,9 +5,9 @@
 
 #include "Subsystem/ModSubsystem.h"
 #include "Subsystem/SubsystemActorManager.h"
-#include "Patching/NativeHookManager.h"
 #include "FGPowerInfoComponent.h"
 #include "Buildables/FGBuildablePowerStorage.h"
+#include "FGPowerCircuit.h"
 
 #include "Subsystem/ApSubsystem.h"
 #include "Subsystem/ApServerRandomizerSubsystem.h"
@@ -18,8 +18,7 @@ DECLARE_LOG_CATEGORY_EXTERN(LogApEnergyLink, Log, All);
 
 #include "ApEnergyLinkSubsystem.generated.h"
 
-//1000 = conversation ratio
-#define ENERGYLINK_MULTIPLIER 1000000
+#define ENERGYLINK_MULTIPLIER 1000
 
 UENUM(BlueprintType)
 enum class EApUnitSuffix : uint8 {
@@ -46,6 +45,7 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type endPlayReason) override;
 	virtual void Tick(float DeltaTime) override;
 
 public:
@@ -70,9 +70,13 @@ private:
 	bool hooksInitialized = false;
 	bool energyLinkEnabled = false;
 
+	mutable FCriticalSection localStorageLock;
+
+	FDelegateHandle hookHandlerBatteryTick;
+
 	//int is enough as we hard cap this value
 	int serverAvailableMegaWattHour = 0;
-	double localAvailableMegaWattSecond = 0.0f;
+	double localAvailableMegaJoule = 0.0f;
 
 	UPROPERTY(Replicated)
 	float replicatedServerStorageJoules = 0;
@@ -84,16 +88,18 @@ private:
 	FDelegateHandle beginPlayHookHandler;
 	FDelegateHandle endPlayHookHandler;
 
-	//TArray<AFGBuildablePowerStorage*> PowerStorages;
-
 	AApSubsystem* ap;
 	AApServerRandomizerSubsystem* randomizerSubsystem;
 	AApSlotDataSubsystem* slotDataSubsystem;
 	AApConnectionInfoSubsystem* apConnectionInfo;
 
 	void EnergyLinkTick(float deltaTime);
+	void TickPowerCircuits(UFGPowerCircuitGroup* instance, float deltaTime);
+
+	void HandleExcessEnergy();
 	void SendEnergyToServer(long amount);
 	void OnEnergyLinkValueChanged(AP_SetReply setReply);
 
 	static int256 Int256FromDecimal(FString decimal);
+
 };

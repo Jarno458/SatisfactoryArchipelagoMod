@@ -3,6 +3,7 @@
 #include "Misc/Char.h"
 #include "Logging/StructuredLog.h"
 #include "EngineUtils.h"
+#include "Misc/ScopeLock.h"
 
 DEFINE_LOG_CATEGORY(LogApEnergyLink);
 
@@ -44,6 +45,19 @@ void AApEnergyLinkSubsystem::BeginPlay() {
 	fgcheck(randomizerSubsystem);
 	apConnectionInfo = AApConnectionInfoSubsystem::Get(world);
 	fgcheck(apConnectionInfo);
+
+	if (!hooksInitialized && !WITH_EDITOR) {
+		hookHandlerBatteryTick = SUBSCRIBE_METHOD_AFTER(UFGPowerCircuitGroup::TickBatteries, [this](float returnValue, UFGPowerCircuitGroup* self, float deltaTime, const float netPowerProduction, bool isFuseTriggered) {
+			TickBatteries(self, deltaTime);
+		});
+
+		hooksInitialized = true;
+	}
+}
+
+void AApEnergyLinkSubsystem::EndPlay(const EEndPlayReason::Type endPlayReason) {
+	if (hookHandlerBatteryTick.IsValid())
+		UNSUBSCRIBE_METHOD(UFGPowerCircuitGroup::TickBatteries, hookHandlerBatteryTick);
 }
 
 void AApEnergyLinkSubsystem::Tick(float DeltaTime) {
@@ -129,36 +143,28 @@ void AApEnergyLinkSubsystem::OnEnergyLinkValueChanged(AP_SetReply setReply) {
 		serverAvailableMegaWattHour = serverValueMegaWattHour.ToInt();
 }
 
-void AApEnergyLinkSubsystem::EnergyLinkTick(float deltaTime) {
-	double totalChargeMegaWattSecond = 0.0f;
+void AApEnergyLinkSubsystem::TickPowerCircuits(UFGPowerCircuitGroup* instance, float deltaTime) {
+	double netMegaJoules = 0.0f;
 
-	for (TActorIterator<AFGBuildablePowerStorage> actorItterator(GetWorld()); actorItterator; ++actorItterator)	{
-		AFGBuildablePowerStorage* powerStorage = *actorItterator;
-		if (!IsValid(powerStorage))
+	if (!isInitialized
+		|| !energyLinkEnabled
+		|| !IsValid(instance)) //still, gets called for cirquits without batteries
+		return;
+
+	for (UFGPowerCircuit* cicuit : instance->mCircuits) {
+		if (!IsValid(cicuit)
+			|| cicuit->IsFuseTriggered()
+			|| !cicuit->HasBatteries())
 			continue;
 
-		// since this runs every second we are only intrested in how much power was gained last second
-		totalChargeMegaWattSecond += powerStorage->GetNetPowerInput() / 3600;
+		netMegaJoules += deltaTime * cicuit->GetmBatterySumPowerInput();
 	}
 
-	localAvailableMegaWattSecond += totalChargeMegaWattSecond * 3600;
+	UE::TScopeLock<FCriticalSection> lock(localStorageLock);
+	localAvailableMegaJoule += netMegaJoules;
+}
 
-	if (localAvailableMegaWattSecond < 0 && serverAvailableMegaWattHour == 0) {
-		localAvailableMegaWattSecond = 0.0f; //trip powah
-	}
-	else {
-		if (localAvailableMegaWattSecond > 4 || localAvailableMegaWattSecond < -4) {
-			//apply 25% cut by deviding by 4 and only sending 3 times that
-			float intergerPart;
-			long remainder = modff(localAvailableMegaWattSecond / 4, &intergerPart);
-
-			localAvailableMegaWattSecond = (remainder * 4);
-
-			//we can only send full intergers
-			SendEnergyToServer(intergerPart * 3);
-		}
-	}
-
+void AApEnergyLinkSubsystem::EnergyLinkTick(float deltaTime) {
 	float individualStorage = serverAvailableMegaWattHour;
 	if (individualStorage > 1000)
 		individualStorage = 1000.0f;
@@ -173,13 +179,31 @@ void AApEnergyLinkSubsystem::EnergyLinkTick(float deltaTime) {
 			continue;
 
 		//current building stored power
-		powerStorage->mPowerStore = serverAvailableMegaWattHour + localAvailableMegaWattSecond;
+		powerStorage->mPowerStore = serverAvailableMegaWattHour + localAvailableMegaJoule;
 		//current building capacity
 		powerStorage->mPowerStoreCapacity = 9999.0f;
 		//gird capacity
 		powerStorage->mBatteryInfo->mPowerStoreCapacity = 100000.0f;
 		//grid stored power
-		powerStorage->mBatteryInfo->mPowerStore = serverAvailableMegaWattHour + localAvailableMegaWattSecond;
+		powerStorage->mBatteryInfo->mPowerStore = serverAvailableMegaWattHour + localAvailableMegaJoule;
+	}
+}
+
+void AApEnergyLinkSubsystem::HandleExcessEnergy() {
+	UE::TScopeLock<FCriticalSection> lock(localStorageLock);
+
+	if (localAvailableMegaJoule <= 0 && serverAvailableMegaWattHour == 0) {
+		localAvailableMegaJoule = 0.0f; //trip powah
+	}
+	else if (localAvailableMegaJoule > 4 || localAvailableMegaJoule < -4) {
+		//apply 25% cut by deviding by 4 and only sending 3 times that
+		float intergerPart;
+		long remainder = modff(localAvailableMegaJoule / 4, &intergerPart);
+
+		localAvailableMegaJoule = (remainder * 4);
+
+		//we can only send full intergers
+		SendEnergyToServer(intergerPart * 3);
 	}
 }
 
