@@ -82,7 +82,9 @@ private:
 	FDelegateHandle hookHandlerBatteryTick;
 
 	//int is enough as we hard cap this value
+	UPROPERTY(SaveGame)
 	int serverAvailableMegaWattHour = 0;
+	UPROPERTY(SaveGame)
 	double localAvailableMegaJoule = 0.0f;
 
 	UPROPERTY(Replicated)

@@ -1,9 +1,11 @@
+#include "EngineUtils.h"
+#include "Misc/Char.h"
+#include "Misc/ScopeLock.h"
+
 #include "Subsystem/ApEnergyLinkSubsystem.h"
 #include "ApUtils.h"
-#include "Misc/Char.h"
+
 #include "Logging/StructuredLog.h"
-#include "EngineUtils.h"
-#include "Misc/ScopeLock.h"
 
 DEFINE_LOG_CATEGORY(LogApEnergyLink);
 
@@ -226,28 +228,38 @@ void AApEnergyLinkSubsystem::SendEnergyToServer(long amount) {
 
 TArray<FApGraphInfo> AApEnergyLinkSubsystem::GetEnergyLinkGraphs(UFGPowerCircuit* circuit) {
 	const FLinearColor circuitChargeColor(0.2f, 0.5f, 0.1f);
-	const FLinearColor circuitDrainColor(0.5f, 0.2f, 0.1f);
+	const FLinearColor circuitDrainColor(0.7f, 0.3f, 0.1f);
 
 	TArray<FApGraphInfo> graphs;
 
-	if (!isInitialized || !energyLinkEnabled)
+	if (!isInitialized || !energyLinkEnabled || !IsValid(circuit))
 		return graphs;
 	
 	FApGraphInfo cirquitEnergyLinkGraph;
 	FString remaining;
 
 	cirquitEnergyLinkGraph.Id = FString(TEXT("EL"));
-	cirquitEnergyLinkGraph.DisplayName = FText::FromString(TEXT("EnergyLink "));
+	
 	cirquitEnergyLinkGraph.Suffix = FText::FromString(TEXT("MW"));
 	cirquitEnergyLinkGraph.FullName = FText::FromString(TEXT("Enerylink Charge/Drain"));
 	cirquitEnergyLinkGraph.Description = FText::FromString(TEXT("How much power is added or drained from the EnergyLink"));
 
-	float charge = circuit->GetmBatterySumPowerInput();
 
-	if (charge > 0)
+	float charge = 0.0f;
+	
+	if (!circuit->IsFuseTriggered())
+		charge = circuit->GetmBatterySumPowerInput();
+
+	if (charge >= 0) {
 		cirquitEnergyLinkGraph.Color = circuitChargeColor;
-	else
+		cirquitEnergyLinkGraph.DisplayName = FText::FromString(TEXT("EnergyLink Charging"));
+	}
+	else {
 		cirquitEnergyLinkGraph.Color = circuitDrainColor;
+		cirquitEnergyLinkGraph.DisplayName = FText::FromString(TEXT("EnergyLink Draining"));
+		charge = charge * -1;
+	}
+
 
 	cirquitEnergyLinkGraph.DataPoints.SetNum(10);
 	for (int i = 0; i < cirquitEnergyLinkGraph.DataPoints.Num(); i++) {
