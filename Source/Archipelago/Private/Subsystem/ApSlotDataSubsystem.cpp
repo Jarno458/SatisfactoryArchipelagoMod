@@ -5,9 +5,6 @@
 
 DEFINE_LOG_CATEGORY(LogApSlotDataSubsystem);
 
-//TODO REMOVE
-#pragma optimize("", off)
-
 AApSlotDataSubsystem::AApSlotDataSubsystem() {
 	PrimaryActorTick.bCanEverTick = false;
 	PrimaryActorTick.bStartWithTickEnabled = false;
@@ -227,5 +224,3 @@ void AApSlotDataSubsystem::PostLoadGame_Implementation(int32 saveVersion, int32 
 	ReconstructHubLayout();
 	ReconstructExplorationCost();
 }
-
-#pragma optimize("", on)

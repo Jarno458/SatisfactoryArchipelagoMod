@@ -13,6 +13,7 @@
 #include "Subsystem/ApServerRandomizerSubsystem.h"
 #include "Subsystem/ApSlotDataSubsystem.h"
 #include "Subsystem/ApConnectionInfoSubsystem.h"
+#include "Data/ApGraphs.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(LogApEnergyLink, Log, All);
 
@@ -38,8 +39,11 @@ class ARCHIPELAGO_API AApEnergyLinkSubsystem : public AModSubsystem
 	GENERATED_BODY()
 
 public:
-	// Sets default values for this actor's properties
 	AApEnergyLinkSubsystem();
+
+	static AApEnergyLinkSubsystem* Get(class UWorld* world);
+	UFUNCTION(BlueprintPure, Category = "Schematic", DisplayName = "Get Energy Link Subsystem", Meta = (DefaultToSelf = "worldContext"))
+	static AApEnergyLinkSubsystem* Get(UObject* worldContext);
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
@@ -65,6 +69,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FORCEINLINE float GetGlobalChargeRate() const { return replicatedGlobalChargeRateMegaWattHour; };
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	TArray<FApGraphInfo> GetEnergyLinkGraphs(UFGPowerCircuit* circuit);
 
 private:
 	bool hooksInitialized = false;

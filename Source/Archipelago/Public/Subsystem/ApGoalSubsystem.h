@@ -9,37 +9,10 @@
 #include "Subsystem/ApConnectionInfoSubsystem.h"
 #include "Subsystem/ApSlotDataSubsystem.h"
 #include "Subsystem/ApSchematicPatcherSubsystem.h"
+#include "Data/ApGraphs.h"
 #include "Misc/DateTime.h"
 
 #include "ApGoalSubsystem.generated.h"
-
-USTRUCT(BlueprintType)
-struct ARCHIPELAGO_API FApGoalGraphInfo
-{
-	GENERATED_BODY()
-
-public:
-	UPROPERTY(BlueprintReadWrite)
-	FString Id;
-
-	UPROPERTY(BlueprintReadWrite)
-	FText DisplayName;
-
-	UPROPERTY(BlueprintReadWrite)
-	FText FullName;
-
-	UPROPERTY(BlueprintReadWrite)
-	FText Suffix;
-
-	UPROPERTY(BlueprintReadWrite)
-	FText Description;
-
-	UPROPERTY(BlueprintReadWrite)
-	FLinearColor Color;
-
-	UPROPERTY(BlueprintReadWrite)
-	TArray<float> DataPoints;
-};
 
 UCLASS()
 class ARCHIPELAGO_API AApGoalSubsystem : public AModSubsystem, public IFGSaveInterface
@@ -82,7 +55,7 @@ public:
 	bool AreGoalsCompleted();
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	TArray<FApGoalGraphInfo> GetResourceSinkGoalGraphs();
+	TArray<FApGraphInfo> GetResourceSinkGoalGraphs();
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	int GetRemainingSecondsForResourceSinkPerMinuteGoal();

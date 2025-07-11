@@ -17,37 +17,21 @@ public class Archipelago : ModuleRules
             "DeveloperSettings",
             "PhysicsCore",
             "InputCore",
-            //"OnlineSubsystem", "OnlineSubsystemUtils", "OnlineSubsystemNull",
-            //"SignificanceManager",
             "GeometryCollectionEngine",
-            //"ChaosVehiclesCore", "ChaosVehicles", "ChaosSolverEngine",
             "AnimGraphRuntime",
-            //"AkAudio",
             "AssetRegistry",
             "NavigationSystem",
-            //"ReplicationGraph",
             "AIModule",
             "GameplayTasks",
             "SlateCore", "Slate", "UMG",
-            //"InstancedSplines",
             "RenderCore",
             "CinematicCamera",
             "Foliage",
-            //"Niagara",
             "EnhancedInput",
-            //"GameplayCameras",
-            //"TemplateSequence",
             "NetCore",
             "GameplayTags",
             "Json", "JsonUtilities",
             "AssetRegistry"
-        });
-
-        // FactoryGame plugins
-        PublicDependencyModuleNames.AddRange(new string[] {
-            //"AbstractInstance",
-            //"InstancedSplinesComponent",
-            //"SignificanceISPC"
         });
 
         // Header stubs
@@ -55,6 +39,7 @@ public class Archipelago : ModuleRules
             "DummyHeaders",
         });
 
+        // Mod code depdencies
         PrivateDependencyModuleNames.AddRange(new string[] { 
             "ContentLib",
             "FreeSamples",
@@ -62,7 +47,7 @@ public class Archipelago : ModuleRules
         });
 
         if (Target.Type == TargetRules.TargetType.Editor) {
-            PublicDependencyModuleNames.AddRange(new string[] {/*"OnlineBlueprintSupport",*/ "AnimGraph", "UnrealEd" });
+            PublicDependencyModuleNames.AddRange(new string[] { "AnimGraph", "UnrealEd" });
         }
 
         PublicDependencyModuleNames.AddRange(new string[] {"FactoryGame", "SML"});
@@ -73,9 +58,12 @@ public class Archipelago : ModuleRules
         }
         else
         {
-            PublicDependencyModuleNames.Add("FactoryDedicatedClient");
+            //not using client specific code atm
+            //PublicDependencyModuleNames.Add("FactoryDedicatedClient");
         }
 
         CppStandard = CppStandardVersion.Cpp20;
+        //UseUnityBuild = false;
+        OptimizeCode = CodeOptimization.Never;
     }
 }

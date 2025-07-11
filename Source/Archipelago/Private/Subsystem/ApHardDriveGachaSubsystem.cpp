@@ -6,9 +6,6 @@
 
 DEFINE_LOG_CATEGORY(LogApHardDriveGachaSubsystem);
 
-//TODO REMOVE
-#pragma optimize("", off)
-
 AApHardDriveGachaSubsystem::AApHardDriveGachaSubsystem() : Super() {
 	PrimaryActorTick.bCanEverTick = false;
 
@@ -157,6 +154,4 @@ void AApHardDriveGachaSubsystem::OnSchematicCompleted(TSubclassOf<class UFGSchem
 
 	apHardDriveSchematics.Remove(schematic);
 }
-
-#pragma optimize("", on)
 

@@ -10,9 +10,6 @@
 
 DEFINE_LOG_CATEGORY(LogApSchematicPatcherSubsystem);
 
-//TODO REMOVE
-#pragma optimize("", off)
-
 #define LOCTEXT_NAMESPACE "Archipelago"
 
 AApSchematicPatcherSubsystem::AApSchematicPatcherSubsystem() {
@@ -703,7 +700,5 @@ void AApSchematicPatcherSubsystem::Client_Collect(UFGUnlock* unlock, bool isLoca
 		}
 	}
 }
-
-#pragma optimize("", on)
 
 #undef LOCTEXT_NAMESPACE

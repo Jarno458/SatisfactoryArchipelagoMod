@@ -9,9 +9,6 @@
 
 DEFINE_LOG_CATEGORY(LogApClientConfigurationSubsystem);
 
-//TODO REMOVE
-#pragma optimize("", off)
-
 AApClientConfigurationSubsystem* AApClientConfigurationSubsystem::Get(class UWorld* world) {
 	USubsystemActorManager* SubsystemActorManager = world->GetSubsystem<USubsystemActorManager>();
 	fgcheck(SubsystemActorManager);
@@ -110,5 +107,3 @@ void AApClientConfigurationSubsystem::LockMamEnhancerSpoilerConfiguration() {
 		ConfigManager->ReloadModConfigurations();
 	}
 }
-
-#pragma optimize("", on)

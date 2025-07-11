@@ -8,9 +8,6 @@
 
 DEFINE_LOG_CATEGORY(LogApSubsystem);
 
-//TODO REMOVE
-#pragma optimize("", off)
-
 #define LOCTEXT_NAMESPACE "Archipelago"
 
 AApSubsystem::AApSubsystem() {
@@ -688,7 +685,5 @@ void AApSubsystem::CallOnGameThread(TFunction<void()> InFunction) {
 		InFunction();
 	});
 }
-
-#pragma optimize("", on)
 
 #undef LOCTEXT_NAMESPACE

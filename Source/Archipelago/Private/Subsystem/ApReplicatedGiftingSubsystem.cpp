@@ -5,9 +5,6 @@
 
 DEFINE_LOG_CATEGORY(LogApReplicatedGiftingSubsystem);
 
-//TODO REMOVE
-#pragma optimize("", off)
-
 AApReplicatedGiftingSubsystem* AApReplicatedGiftingSubsystem::Get(UObject* worldContext) {
 	UWorld* world = GEngine->GetWorldFromContextObject(worldContext, EGetWorldErrorMode::Assert);
 
@@ -335,5 +332,3 @@ void AApReplicatedGiftingSubsystem::OnRep_AcceptedGiftTraitsPerPlayerReplicated(
 
 	AcceptedGiftTraitsPerPlayer = replicated;
 }
-
-#pragma optimize("", on)

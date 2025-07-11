@@ -2,9 +2,6 @@
 #include "FGGamePhase.h"
 #include "Patching/NativeHookManager.h"
 
-//TODO REMOVE
-#pragma optimize("", off)
-
 AApGoalSubsystem::AApGoalSubsystem() : Super() {
 	PrimaryActorTick.bCanEverTick = true;
 	PrimaryActorTick.bStartWithTickEnabled = true;
@@ -85,16 +82,16 @@ void AApGoalSubsystem::Tick(float DeltaTime) {
 	}
 }
 
-TArray<FApGoalGraphInfo> AApGoalSubsystem::GetResourceSinkGoalGraphs() {
+TArray<FApGraphInfo> AApGoalSubsystem::GetResourceSinkGoalGraphs() {
 	const FLinearColor perMinuteOnTrackColor(0, 0.5f, 0);
 	const FLinearColor completedColor(0, 0.9f, 0);
 	const FLinearColor perMinuteColor(0.9f, 0, 0.2f);
 	const FLinearColor totalColor(0.1f, 0, 0.9f);
 
-	TArray<FApGoalGraphInfo> graphs;
+	TArray<FApGraphInfo> graphs;
 
 	if (slotData->IsResourceSinkPerMinuteGoalEnabled()) {
-		FApGoalGraphInfo resourceSinkPerMinuteThresholdGraph;
+		FApGraphInfo resourceSinkPerMinuteThresholdGraph;
 		FString remaining;
 
 		if (hasCompletedResourceSinkPerMinute)
@@ -125,7 +122,7 @@ TArray<FApGoalGraphInfo> AApGoalSubsystem::GetResourceSinkGoalGraphs() {
 	}
 
 	if (slotData->IsResourceSinkGoalEnabled()) {
-		FApGoalGraphInfo totalResourceSinkGoal;
+		FApGraphInfo totalResourceSinkGoal;
 
 		totalResourceSinkGoal.Id = FString(TEXT("TPG"));
 		totalResourceSinkGoal.DisplayName = FText::FromString(TEXT("Remaining for Goal"));
@@ -260,5 +257,3 @@ void AApGoalSubsystem::PostLoadGame_Implementation(int32 saveVersion, int32 game
 	else 
 		countdownStartedTime = FDateTime(FDateTime::UtcNow().GetTicks() - FTimespan(0, 0, remainingSecondsForPerMinuteGoal).GetTicks());
 }
-
-#pragma optimize("", on)

@@ -22,24 +22,10 @@ class ARCHIPELAGO_API AApMamTreeSubsystem : public AModSubsystem
 public:
 	AApMamTreeSubsystem();
 
-	virtual void BeginPlay() override;
-
 	static AApMamTreeSubsystem* Get(class UWorld* world);
-
-	void Initialize();
 
 	UFUNCTION(BlueprintImplementableEvent)
 	TSet<int64> GetVisibleMamNodeIds() const;
-
-protected:
-
-
-private:
-
-	//UFUNCTION() //required for event binding
-	//void OnSchematicCompleted(TSubclassOf<class UFGSchematic> schematic);
-
-
 };
 
 #pragma optimize("", on)

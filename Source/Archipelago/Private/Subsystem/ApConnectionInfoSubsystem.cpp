@@ -3,9 +3,6 @@
 
 DEFINE_LOG_CATEGORY(LogApConnectionInfoSubsystem);
 
-//TODO REMOVE
-#pragma optimize("", off)
-
 #define LOCTEXT_NAMESPACE "Archipelago"
 
 AApConnectionInfoSubsystem::AApConnectionInfoSubsystem() {
@@ -39,7 +36,5 @@ void AApConnectionInfoSubsystem::GetLifetimeReplicatedProps(TArray<FLifetimeProp
 	DOREPLIFETIME(AApConnectionInfoSubsystem, currentPlayerTeam);
 	DOREPLIFETIME(AApConnectionInfoSubsystem, currentPlayerSlot);
 }
-
-#pragma optimize("", on)
 
 #undef LOCTEXT_NAMESPACE

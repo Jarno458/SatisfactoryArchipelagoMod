@@ -9,9 +9,6 @@
 
 DEFINE_LOG_CATEGORY(LogApServerRandomizerSubsystem);
 
-//TODO REMOVE
-#pragma optimize("", off)
-
 #define LOCTEXT_NAMESPACE "Archipelago"
 
 AApServerRandomizerSubsystem::AApServerRandomizerSubsystem() {
@@ -709,7 +706,5 @@ AFGCharacterPlayer* AApServerRandomizerSubsystem::GetLocalPlayer() {
 	const AFGPlayerController* playerController = UFGBlueprintFunctionLibrary::GetLocalPlayerController(GetWorld());
 	return Cast<AFGCharacterPlayer>(playerController->GetControlledCharacter());
 }
-
-#pragma optimize("", on)
 
 #undef LOCTEXT_NAMESPACE

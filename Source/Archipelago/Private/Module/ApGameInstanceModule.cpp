@@ -11,9 +11,6 @@ DEFINE_LOG_CATEGORY(LogApGameInstanceModule);
 
 #define LOCTEXT_NAMESPACE "Archipelago"
 
-//TODO REMOVE
-#pragma optimize("", off)
-
 UApGameInstanceModule::UApGameInstanceModule()
 {
 	UE_LOGFMT(LogApGameInstanceModule, Display, "UApGameInstanceModule::UApGameInstanceModule()");
@@ -120,7 +117,6 @@ void UApGameInstanceModule::DediServer_CopySettingToSessionSettings(const USessi
 	}
 }
 
-
 void UApGameInstanceModule::VariantAsString(TCallScope<FString(*)(const FVariant&)>& Scope, const FVariant& variant) {
 	if (variant.GetType() == EVariantTypes::String)
 		Scope.Override(variant.GetValue<FString>());
@@ -132,7 +128,5 @@ void UApGameInstanceModule::StringAsVariant(TCallScope<bool(*)(const FString&, E
 		Scope.Override(true);
 	}
 }
-
-#pragma optimize("", on)
 
 #undef LOCTEXT_NAMESPACE

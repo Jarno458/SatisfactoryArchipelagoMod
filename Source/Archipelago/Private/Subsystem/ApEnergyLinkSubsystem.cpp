@@ -9,15 +9,25 @@ DEFINE_LOG_CATEGORY(LogApEnergyLink);
 
 #define LOCTEXT_NAMESPACE "Archipelago"
 
-//TODO REMOVE
-#pragma optimize("", off)
-
 AApEnergyLinkSubsystem::AApEnergyLinkSubsystem()
 {
 	PrimaryActorTick.bCanEverTick = true;
 	PrimaryActorTick.TickInterval = 1.0f;
 
 	ReplicationPolicy = ESubsystemReplicationPolicy::SpawnOnServer_Replicate;
+}
+
+AApEnergyLinkSubsystem* AApEnergyLinkSubsystem::Get(UWorld* world) {
+	USubsystemActorManager* SubsystemActorManager = world->GetSubsystem<USubsystemActorManager>();
+	fgcheck(SubsystemActorManager);
+
+	return SubsystemActorManager->GetSubsystemActor<AApEnergyLinkSubsystem>();
+}
+
+AApEnergyLinkSubsystem* AApEnergyLinkSubsystem::Get(class UObject* worldContext) {
+	UWorld* world = GEngine->GetWorldFromContextObject(worldContext, EGetWorldErrorMode::Assert);
+
+	return Get(world);
 }
 
 void AApEnergyLinkSubsystem::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const {
@@ -47,8 +57,8 @@ void AApEnergyLinkSubsystem::BeginPlay() {
 	fgcheck(apConnectionInfo);
 
 	if (!hooksInitialized && !WITH_EDITOR) {
-		hookHandlerBatteryTick = SUBSCRIBE_METHOD_AFTER(UFGPowerCircuitGroup::TickBatteries, [this](float returnValue, UFGPowerCircuitGroup* self, float deltaTime, const float netPowerProduction, bool isFuseTriggered) {
-			TickBatteries(self, deltaTime);
+		hookHandlerBatteryTick = SUBSCRIBE_METHOD_AFTER(UFGPowerCircuitGroup::TickPowerCircuitGroup, [this](UFGPowerCircuitGroup* self, float deltaTime) {
+			TickPowerCircuits(self, deltaTime);
 		});
 
 		hooksInitialized = true;
@@ -57,7 +67,7 @@ void AApEnergyLinkSubsystem::BeginPlay() {
 
 void AApEnergyLinkSubsystem::EndPlay(const EEndPlayReason::Type endPlayReason) {
 	if (hookHandlerBatteryTick.IsValid())
-		UNSUBSCRIBE_METHOD(UFGPowerCircuitGroup::TickBatteries, hookHandlerBatteryTick);
+		UNSUBSCRIBE_METHOD(UFGPowerCircuitGroup::TickPowerCircuitGroup, hookHandlerBatteryTick);
 }
 
 void AApEnergyLinkSubsystem::Tick(float DeltaTime) {
@@ -214,6 +224,41 @@ void AApEnergyLinkSubsystem::SendEnergyToServer(long amount) {
 	ap->ModdifyEnergyLink(amount * ENERGYLINK_MULTIPLIER);
 }
 
+TArray<FApGraphInfo> AApEnergyLinkSubsystem::GetEnergyLinkGraphs(UFGPowerCircuit* circuit) {
+	const FLinearColor circuitChargeColor(0.2f, 0.5f, 0.1f);
+	const FLinearColor circuitDrainColor(0.5f, 0.2f, 0.1f);
+
+	TArray<FApGraphInfo> graphs;
+
+	if (!isInitialized || !energyLinkEnabled)
+		return graphs;
+	
+	FApGraphInfo cirquitEnergyLinkGraph;
+	FString remaining;
+
+	cirquitEnergyLinkGraph.Id = FString(TEXT("EL"));
+	cirquitEnergyLinkGraph.DisplayName = FText::FromString(TEXT("EnergyLink "));
+	cirquitEnergyLinkGraph.Suffix = FText::FromString(TEXT("MW"));
+	cirquitEnergyLinkGraph.FullName = FText::FromString(TEXT("Enerylink Charge/Drain"));
+	cirquitEnergyLinkGraph.Description = FText::FromString(TEXT("How much power is added or drained from the EnergyLink"));
+
+	float charge = circuit->GetmBatterySumPowerInput();
+
+	if (charge > 0)
+		cirquitEnergyLinkGraph.Color = circuitChargeColor;
+	else
+		cirquitEnergyLinkGraph.Color = circuitDrainColor;
+
+	cirquitEnergyLinkGraph.DataPoints.SetNum(10);
+	for (int i = 0; i < cirquitEnergyLinkGraph.DataPoints.Num(); i++) {
+		cirquitEnergyLinkGraph.DataPoints[i] = charge;
+	}
+
+	graphs.Add(cirquitEnergyLinkGraph);
+	
+	return graphs;
+}
+
 int256 AApEnergyLinkSubsystem::Int256FromDecimal(FString decimal) {
 	bool negative = false;
 	if (decimal.StartsWith(TEXT("-"))) {
@@ -248,7 +293,5 @@ int256 AApEnergyLinkSubsystem::Int256FromDecimal(FString decimal) {
 
 	return total;
 }
-
-#pragma optimize("", on)
 
 #undef LOCTEXT_NAMESPACE

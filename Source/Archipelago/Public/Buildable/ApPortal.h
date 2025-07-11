@@ -9,8 +9,7 @@
 #include "FGFactoryConnectionComponent.h"
 #include "FGPowerInfoComponent.h"
 
-//#include "Subsystem/ApPortalSubsystem.h" set inside cpp to avoid circular dep
-//#include "Subsystem/ApReplicatedGiftingSubsystem.h"
+#include "Subsystem/ModSubsystem.h"
 #include "Data/ApTypes.h"
 
 #include "ApPortal.generated.h"
@@ -51,7 +50,6 @@ public:
 	FORCEINLINE bool CanReceiveOutput() const { return camReceiveOutput; };
 
 	bool TrySetOutput(FInventoryItem item);
-	//FInventoryItem TryStealOutput();
 
 	virtual bool CanProduce_Implementation() const override;
 

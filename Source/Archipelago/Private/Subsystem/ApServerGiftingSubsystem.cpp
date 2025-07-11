@@ -3,9 +3,6 @@
 
 DEFINE_LOG_CATEGORY(LogApServerGiftingSubsystem);
 
-//TODO REMOVE
-#pragma optimize("", off)
-
 AApServerGiftingSubsystem* AApServerGiftingSubsystem::Get(UObject* worldContext) {
 	UWorld* world = GEngine->GetWorldFromContextObject(worldContext, EGetWorldErrorMode::Assert);
 
@@ -276,5 +273,3 @@ uint32 AApServerGiftingSubsystem::GetTraitsHash(TArray<FApGiftTrait>& traits) {
 
 	return totalHash;
 }
-
-#pragma optimize("", on)
