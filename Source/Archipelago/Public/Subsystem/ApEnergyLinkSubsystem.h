@@ -10,9 +10,6 @@
 #include "FGPowerCircuit.h"
 
 #include "Subsystem/ApSubsystem.h"
-#include "Subsystem/ApServerRandomizerSubsystem.h"
-#include "Subsystem/ApSlotDataSubsystem.h"
-#include "Subsystem/ApConnectionInfoSubsystem.h"
 #include "Data/ApGraphs.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(LogApEnergyLink, Log, All);
@@ -21,16 +18,29 @@ DECLARE_LOG_CATEGORY_EXTERN(LogApEnergyLink, Log, All);
 
 #define ENERGYLINK_MULTIPLIER 1000
 
+//apply 25% cut so 3/4
+#define ENERGYLINK_COST_NUMERATOR 3
+#define ENERGYLINK_COST_DENOMINATOR 4
+
+
 UENUM(BlueprintType)
 enum class EApUnitSuffix : uint8 {
-	Deci,
-	Kilo,
-	Mega,
-	Giga,
-	Tera,
-	Peta,
-	Exa,
+	Deci UMETA(DisplayName = "Deci"),
+	Kilo UMETA(DisplayName = "Kilo"),
+	Mega UMETA(DisplayName = "Mega"),
+	Giga UMETA(DisplayName = "Giga"),
+	Tera UMETA(DisplayName = "Tera"),
+	Peta UMETA(DisplayName = "Peta"),
+	Exa UMETA(DisplayName = "Exa"),
 	Overflow UMETA(DisplayName = "Overflow")
+};
+
+UENUM(BlueprintType)
+enum class EApEnergyLinkState : uint8 {
+	Initializing UMETA(DisplayName = "Initializing"),
+	Disabled UMETA(DisplayName = "Disabled"),
+	Enabled UMETA(DisplayName = "Enabled"),
+	Unavailable UMETA(DisplayName = "Unavailable")
 };
 
 UCLASS(Blueprintable)
@@ -53,13 +63,8 @@ protected:
 	virtual void Tick(float DeltaTime) override;
 
 public:
-	bool isInitialized = false;
-
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	FORCEINLINE bool IsInitialized() const { return isInitialized; };
-
-	UFUNCTION(BlueprintCallable, BlueprintPure)
-	FORCEINLINE bool IsEnergyLinkEnabled() const { return energyLinkEnabled; };
+	FORCEINLINE EApEnergyLinkState GetEnergyLinkState() const { return energyLinkState; };
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FORCEINLINE int GetCurrentServerStoredEnergy() const { return replicatedServerStorageJoules; };
@@ -68,18 +73,20 @@ public:
 	FORCEINLINE EApUnitSuffix GetCurrentServerStoredEnergySuffix() const { return replicatedServerStorageSuffix; };
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	FORCEINLINE float GetGlobalChargeRate() const { return replicatedGlobalChargeRateMegaWattHour; };
+	FORCEINLINE float GetGlobalChargeRate() const { return replicatedGlobalChargeRateMegaWatt; };
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	TArray<FApGraphInfo> GetEnergyLinkGraphs(UFGPowerCircuit* circuit);
+	TArray<FApGraphInfo> GetEnergyLinkGraphs(UFGPowerCircuit* circuit) const;
 
 private:
+	UPROPERTY(Replicated)
+	EApEnergyLinkState energyLinkState = EApEnergyLinkState::Initializing;
 	bool hooksInitialized = false;
-	bool energyLinkEnabled = false;
 
 	mutable FCriticalSection localStorageLock;
 
-	FDelegateHandle hookHandlerBatteryTick;
+	FDelegateHandle hookHandlerPowerCircuitTick;
+	FDelegateHandle hookHandlerCircuitSubsystemTick;
 
 	//int is enough as we hard cap this value
 	UPROPERTY(SaveGame)
@@ -92,20 +99,18 @@ private:
 	UPROPERTY(Replicated)
 	EApUnitSuffix replicatedServerStorageSuffix = EApUnitSuffix::Deci;
 	UPROPERTY(Replicated)
-	float replicatedGlobalChargeRateMegaWattHour = 0;
+	float replicatedGlobalChargeRateMegaWatt = 0;
+	float globalChargeRateMegaWattRunningTotal = 0;
 
 	FDelegateHandle beginPlayHookHandler;
 	FDelegateHandle endPlayHookHandler;
 
 	AApSubsystem* ap;
-	AApServerRandomizerSubsystem* randomizerSubsystem;
-	AApSlotDataSubsystem* slotDataSubsystem;
-	AApConnectionInfoSubsystem* apConnectionInfo;
 
 	void EnergyLinkTick(float deltaTime);
 	void TickPowerCircuits(UFGPowerCircuitGroup* instance, float deltaTime);
 
-	void HandleExcessEnergy();
+	double ProcessLocalStorage();
 	void SendEnergyToServer(long amount);
 	void OnEnergyLinkValueChanged(AP_SetReply setReply);
 

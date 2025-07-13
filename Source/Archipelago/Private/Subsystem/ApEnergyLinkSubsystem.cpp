@@ -1,8 +1,14 @@
+#include "Subsystem/ApEnergyLinkSubsystem.h"
+
 #include "EngineUtils.h"
 #include "Misc/Char.h"
 #include "Misc/ScopeLock.h"
 
-#include "Subsystem/ApEnergyLinkSubsystem.h"
+#include "FGCircuitSubsystem.h"
+
+#include "Subsystem/ApSlotDataSubsystem.h"
+#include "Subsystem/ApConnectionInfoSubsystem.h"
+#include "Subsystem/ApServerRandomizerSubsystem.h"
 #include "ApUtils.h"
 
 #include "Logging/StructuredLog.h"
@@ -14,7 +20,7 @@ DEFINE_LOG_CATEGORY(LogApEnergyLink);
 AApEnergyLinkSubsystem::AApEnergyLinkSubsystem()
 {
 	PrimaryActorTick.bCanEverTick = true;
-	PrimaryActorTick.TickInterval = 1.0f;
+	PrimaryActorTick.TickInterval = 10.0f;
 
 	ReplicationPolicy = ESubsystemReplicationPolicy::SpawnOnServer_Replicate;
 }
@@ -35,9 +41,10 @@ AApEnergyLinkSubsystem* AApEnergyLinkSubsystem::Get(class UObject* worldContext)
 void AApEnergyLinkSubsystem::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
+	DOREPLIFETIME(AApEnergyLinkSubsystem, energyLinkState);
 	DOREPLIFETIME(AApEnergyLinkSubsystem, replicatedServerStorageJoules);
 	DOREPLIFETIME(AApEnergyLinkSubsystem, replicatedServerStorageSuffix);
-	DOREPLIFETIME(AApEnergyLinkSubsystem, replicatedGlobalChargeRateMegaWattHour);
+	DOREPLIFETIME(AApEnergyLinkSubsystem, replicatedGlobalChargeRateMegaWatt);
 }
 
 void AApEnergyLinkSubsystem::BeginPlay() {
@@ -48,19 +55,20 @@ void AApEnergyLinkSubsystem::BeginPlay() {
 		
 	UE_LOGFMT(LogApEnergyLink, Display, "AEnergyLinkSubsystem:BeginPlay()");
 
-	UWorld* world = GetWorld();
-	ap = AApSubsystem::Get(world);
+	ap = AApSubsystem::Get(GetWorld());
 	fgcheck(ap);
-	slotDataSubsystem = AApSlotDataSubsystem::Get(world);
-	fgcheck(slotDataSubsystem);
-	randomizerSubsystem = AApServerRandomizerSubsystem::Get(world);
-	fgcheck(randomizerSubsystem);
-	apConnectionInfo = AApConnectionInfoSubsystem::Get(world);
-	fgcheck(apConnectionInfo);
 
 	if (!hooksInitialized && !WITH_EDITOR) {
-		hookHandlerBatteryTick = SUBSCRIBE_METHOD_AFTER(UFGPowerCircuitGroup::TickPowerCircuitGroup, [this](UFGPowerCircuitGroup* self, float deltaTime) {
+		hookHandlerPowerCircuitTick = SUBSCRIBE_METHOD_AFTER(UFGPowerCircuitGroup::TickPowerCircuitGroup, [this](UFGPowerCircuitGroup* self, float deltaTime) {
 			TickPowerCircuits(self, deltaTime);
+		});
+		AFGCircuitSubsystem* SampleObject = GetMutableDefault<AFGCircuitSubsystem>(); // For UObject derived classes, use SUBSCRIBE_UOBJECT_METHOD instead
+		hookHandlerCircuitSubsystemTick = SUBSCRIBE_METHOD_VIRTUAL(AFGCircuitSubsystem::Tick, SampleObject, [this](auto& func, AFGCircuitSubsystem* self, float deltaTime) {
+			globalChargeRateMegaWattRunningTotal = 0;
+
+			func(self, deltaTime);
+
+			replicatedGlobalChargeRateMegaWatt = globalChargeRateMegaWattRunningTotal;
 		});
 
 		hooksInitialized = true;
@@ -68,8 +76,10 @@ void AApEnergyLinkSubsystem::BeginPlay() {
 }
 
 void AApEnergyLinkSubsystem::EndPlay(const EEndPlayReason::Type endPlayReason) {
-	if (hookHandlerBatteryTick.IsValid())
-		UNSUBSCRIBE_METHOD(UFGPowerCircuitGroup::TickPowerCircuitGroup, hookHandlerBatteryTick);
+	if (hookHandlerPowerCircuitTick.IsValid())
+		UNSUBSCRIBE_METHOD(UFGPowerCircuitGroup::TickPowerCircuitGroup, hookHandlerPowerCircuitTick);
+	if (hookHandlerCircuitSubsystemTick.IsValid())
+		UNSUBSCRIBE_METHOD(AFGCircuitSubsystem::Tick, hookHandlerCircuitSubsystemTick);
 }
 
 void AApEnergyLinkSubsystem::Tick(float DeltaTime) {
@@ -78,23 +88,39 @@ void AApEnergyLinkSubsystem::Tick(float DeltaTime) {
 	if (!HasAuthority())
 		return;
 
-	if (!isInitialized && randomizerSubsystem->IsInitialized()) {
-		if (!slotDataSubsystem->HasLoadedSlotData())
+	if (energyLinkState == EApEnergyLinkState::Initializing) {
+		UWorld* world = GetWorld();
+
+		AApSlotDataSubsystem* slotDataSubsystem = AApSlotDataSubsystem::Get(world);
+		AApConnectionInfoSubsystem* apConnectionInfo = AApConnectionInfoSubsystem::Get(world);
+		AApServerRandomizerSubsystem* apRandoSubsystem = AApServerRandomizerSubsystem::Get(world);
+
+		if (!IsValid(slotDataSubsystem) 
+			|| !IsValid(apConnectionInfo) 
+			|| !IsValid(apRandoSubsystem) 
+			|| !slotDataSubsystem->HasLoadedSlotData()
+			|| !apRandoSubsystem->IsInitialized())
 			return;
 
-		isInitialized = true;
+		if (slotDataSubsystem->EnergyLink) {
+			EApConnectionState connectionState = apConnectionInfo->GetConnectionState();
+			if (connectionState == EApConnectionState::Connecting || connectionState == EApConnectionState::NotYetAttempted) {
+				energyLinkState = EApEnergyLinkState::Initializing;
+			} else if (connectionState == EApConnectionState::Connected) {
+				energyLinkState = EApEnergyLinkState::Enabled;
+			} else {
+				energyLinkState = EApEnergyLinkState::Unavailable;
+			}
+		} else {
+			energyLinkState = EApEnergyLinkState::Disabled;
+		}
 
-		energyLinkEnabled = slotDataSubsystem->EnergyLink;
-
-		if (apConnectionInfo->GetConnectionState() == EApConnectionState::Connected && energyLinkEnabled) {
+		if (energyLinkState == EApEnergyLinkState::Enabled) {
 			ap->MonitorDataStoreValue(FString("EnergyLink") + UApUtils::FStr(apConnectionInfo->GetCurrentPlayerTeam()), AP_DataType::Raw, "0", [&](AP_SetReply setReply) {
 				OnEnergyLinkValueChanged(setReply);
 			});
 		}
 	}
-
-	if (isInitialized && energyLinkEnabled)
-		EnergyLinkTick(DeltaTime);
 }
 
 void AApEnergyLinkSubsystem::OnEnergyLinkValueChanged(AP_SetReply setReply) {
@@ -146,6 +172,8 @@ void AApEnergyLinkSubsystem::OnEnergyLinkValueChanged(AP_SetReply setReply) {
 		replicatedServerStorageSuffix = static_cast<EApUnitSuffix>(devisions);
 	}
 
+	// correct conversion from energylink's J to battery capacity MWh * 1.000.000 * 3600, 
+	// however for balance reasons use a different conversion here (dont tell the players)
 	int256 serverValueMegaWattHour = serverValueJoules / (ENERGYLINK_MULTIPLIER * 3600);
 
 	// if there is enough energy to keep us going for an other minute then we dont need to know the exact value
@@ -158,9 +186,8 @@ void AApEnergyLinkSubsystem::OnEnergyLinkValueChanged(AP_SetReply setReply) {
 void AApEnergyLinkSubsystem::TickPowerCircuits(UFGPowerCircuitGroup* instance, float deltaTime) {
 	double netMegaJoules = 0.0f;
 
-	if (!isInitialized
-		|| !energyLinkEnabled
-		|| !IsValid(instance)) //still, gets called for cirquits without batteries
+	if (energyLinkState != EApEnergyLinkState::Enabled
+		|| !IsValid(instance))
 		return;
 
 	for (UFGPowerCircuit* cicuit : instance->mCircuits) {
@@ -169,14 +196,19 @@ void AApEnergyLinkSubsystem::TickPowerCircuits(UFGPowerCircuitGroup* instance, f
 			|| !cicuit->HasBatteries())
 			continue;
 
-		netMegaJoules += deltaTime * cicuit->GetmBatterySumPowerInput();
+
+		netMegaJoules += deltaTime * cicuit->GetmBatterySumPowerInput(); // MW * timePassedInSeconds = MJ
 	}
+
+	globalChargeRateMegaWattRunningTotal += netMegaJoules;
 
 	UE::TScopeLock<FCriticalSection> lock(localStorageLock);
 	localAvailableMegaJoule += netMegaJoules;
 }
 
 void AApEnergyLinkSubsystem::EnergyLinkTick(float deltaTime) {
+	double localAvailableMegaWattHour = ProcessLocalStorage();
+
 	float individualStorage = serverAvailableMegaWattHour;
 	if (individualStorage > 1000)
 		individualStorage = 1000.0f;
@@ -191,83 +223,106 @@ void AApEnergyLinkSubsystem::EnergyLinkTick(float deltaTime) {
 			continue;
 
 		//current building stored power
-		powerStorage->mPowerStore = serverAvailableMegaWattHour + localAvailableMegaJoule;
+		powerStorage->mPowerStore = serverAvailableMegaWattHour + localAvailableMegaWattHour;
 		//current building capacity
 		powerStorage->mPowerStoreCapacity = 9999.0f;
 		//gird capacity
 		powerStorage->mBatteryInfo->mPowerStoreCapacity = 100000.0f;
 		//grid stored power
-		powerStorage->mBatteryInfo->mPowerStore = serverAvailableMegaWattHour + localAvailableMegaJoule;
+		powerStorage->mBatteryInfo->mPowerStore = serverAvailableMegaWattHour + localAvailableMegaWattHour;
 	}
 }
 
-void AApEnergyLinkSubsystem::HandleExcessEnergy() {
+double AApEnergyLinkSubsystem::ProcessLocalStorage() {
 	UE::TScopeLock<FCriticalSection> lock(localStorageLock);
 
 	if (localAvailableMegaJoule <= 0 && serverAvailableMegaWattHour == 0) {
 		localAvailableMegaJoule = 0.0f; //trip powah
 	}
-	else if (localAvailableMegaJoule > 4 || localAvailableMegaJoule < -4) {
-		//apply 25% cut by deviding by 4 and only sending 3 times that
+	else if (localAvailableMegaJoule != 0.0f) {
 		float intergerPart;
-		long remainder = modff(localAvailableMegaJoule / 4, &intergerPart);
+		long remainder = modff(localAvailableMegaJoule / ENERGYLINK_COST_DENOMINATOR, &intergerPart); //splits int and decimal parts
 
-		localAvailableMegaJoule = (remainder * 4);
+		localAvailableMegaJoule = (remainder * ENERGYLINK_COST_DENOMINATOR);
 
 		//we can only send full intergers
-		SendEnergyToServer(intergerPart * 3);
+		SendEnergyToServer(intergerPart * ENERGYLINK_COST_NUMERATOR);
 	}
+
+	return localAvailableMegaJoule / 3600; // MJ > MWh
 }
 
-void AApEnergyLinkSubsystem::SendEnergyToServer(long amount) {
-	if (!isInitialized)
+void AApEnergyLinkSubsystem::SendEnergyToServer(long amountMegaJoule) {
+	if (energyLinkState != EApEnergyLinkState::Enabled)
 		return;
 
-	ap->ModdifyEnergyLink(amount * ENERGYLINK_MULTIPLIER);
+	// correct conversion from MJ to energylink's J is * 1.000.000, 
+	// however for balance reasons use a different conversion here (dont tell the players)
+	ap->ModdifyEnergyLink(amountMegaJoule * ENERGYLINK_MULTIPLIER); 
 }
 
-TArray<FApGraphInfo> AApEnergyLinkSubsystem::GetEnergyLinkGraphs(UFGPowerCircuit* circuit) {
+TArray<FApGraphInfo> AApEnergyLinkSubsystem::GetEnergyLinkGraphs(UFGPowerCircuit* circuit) const {
 	const FLinearColor circuitChargeColor(0.2f, 0.5f, 0.1f);
 	const FLinearColor circuitDrainColor(0.7f, 0.3f, 0.1f);
 
 	TArray<FApGraphInfo> graphs;
 
-	if (!isInitialized || !energyLinkEnabled || !IsValid(circuit))
+	if (energyLinkState != EApEnergyLinkState::Enabled || !IsValid(circuit) || !circuit->HasBatteries())
 		return graphs;
 	
-	FApGraphInfo cirquitEnergyLinkGraph;
-	FString remaining;
+	FPowerCircuitStats powerGraph;
+	circuit->GetStats(powerGraph);
 
-	cirquitEnergyLinkGraph.Id = FString(TEXT("EL"));
-	
-	cirquitEnergyLinkGraph.Suffix = FText::FromString(TEXT("MW"));
-	cirquitEnergyLinkGraph.FullName = FText::FromString(TEXT("Enerylink Charge/Drain"));
-	cirquitEnergyLinkGraph.Description = FText::FromString(TEXT("How much power is added or drained from the EnergyLink"));
+	TArray<float> batteryDataPoints;
+	powerGraph.GetPoints<&FPowerGraphPoint::BatteryPowerInput>(batteryDataPoints);
 
+	TArray<float> chargeDataPoints;
+	TArray<float> drainDataPoints;
 
-	float charge = 0.0f;
-	
-	if (!circuit->IsFuseTriggered())
-		charge = circuit->GetmBatterySumPowerInput();
+	bool hasCharged = false;
+	bool hasDrained = false;
 
-	if (charge >= 0) {
-		cirquitEnergyLinkGraph.Color = circuitChargeColor;
-		cirquitEnergyLinkGraph.DisplayName = FText::FromString(TEXT("EnergyLink Charging"));
-	}
-	else {
-		cirquitEnergyLinkGraph.Color = circuitDrainColor;
-		cirquitEnergyLinkGraph.DisplayName = FText::FromString(TEXT("EnergyLink Draining"));
-		charge = charge * -1;
-	}
+	for (float dataPoint : batteryDataPoints) {
+		if (dataPoint >= 0.0f) {
+			hasCharged = true;
 
+			chargeDataPoints.Add(dataPoint);
+			drainDataPoints.Add(0.0f);
+		} else {
+			hasDrained = true;
 
-	cirquitEnergyLinkGraph.DataPoints.SetNum(10);
-	for (int i = 0; i < cirquitEnergyLinkGraph.DataPoints.Num(); i++) {
-		cirquitEnergyLinkGraph.DataPoints[i] = charge;
+			chargeDataPoints.Add(0.0f);
+			drainDataPoints.Add(dataPoint * -1);
+		}
 	}
 
-	graphs.Add(cirquitEnergyLinkGraph);
-	
+	if (hasCharged) {
+		FApGraphInfo graph;
+
+		graph.Id = FString(TEXT("ELC"));
+		graph.Suffix = FText::FromString(TEXT("MW"));
+		graph.FullName = FText::FromString(TEXT("Enerylink Charge"));
+		graph.Description = FText::FromString(TEXT("How much power is added to the EnergyLink"));
+		graph.Color = circuitChargeColor;
+		graph.DisplayName = FText::FromString(TEXT("EnergyLink Charging"));
+		graph.DataPoints = chargeDataPoints;
+
+		graphs.Add(graph);
+	}
+	if (hasDrained) {
+		FApGraphInfo graph;
+
+		graph.Id = FString(TEXT("ELD"));
+		graph.Suffix = FText::FromString(TEXT("MW"));
+		graph.FullName = FText::FromString(TEXT("Enerylink Drain"));
+		graph.Description = FText::FromString(TEXT("How much power is drained from the EnergyLink"));
+		graph.Color = circuitDrainColor;
+		graph.DisplayName = FText::FromString(TEXT("EnergyLink Draining"));
+		graph.DataPoints = drainDataPoints;
+
+		graphs.Add(graph);
+	}
+
 	return graphs;
 }
 
@@ -305,5 +360,4 @@ int256 AApEnergyLinkSubsystem::Int256FromDecimal(FString decimal) {
 
 	return total;
 }
-
 #undef LOCTEXT_NAMESPACE
