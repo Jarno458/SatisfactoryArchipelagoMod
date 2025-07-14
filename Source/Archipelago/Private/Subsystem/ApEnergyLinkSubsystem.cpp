@@ -4,8 +4,6 @@
 #include "Misc/Char.h"
 #include "Misc/ScopeLock.h"
 
-#include "FGCircuitSubsystem.h"
-
 #include "Subsystem/ApSlotDataSubsystem.h"
 #include "Subsystem/ApConnectionInfoSubsystem.h"
 #include "Subsystem/ApServerRandomizerSubsystem.h"
@@ -20,7 +18,7 @@ DEFINE_LOG_CATEGORY(LogApEnergyLink);
 AApEnergyLinkSubsystem::AApEnergyLinkSubsystem()
 {
 	PrimaryActorTick.bCanEverTick = true;
-	PrimaryActorTick.TickInterval = 10.0f;
+	PrimaryActorTick.TickInterval = 1.0f;
 
 	ReplicationPolicy = ESubsystemReplicationPolicy::SpawnOnServer_Replicate;
 }
@@ -44,8 +42,18 @@ void AApEnergyLinkSubsystem::GetLifetimeReplicatedProps(TArray<FLifetimeProperty
 	DOREPLIFETIME(AApEnergyLinkSubsystem, energyLinkState);
 	DOREPLIFETIME(AApEnergyLinkSubsystem, replicatedServerStorageJoules);
 	DOREPLIFETIME(AApEnergyLinkSubsystem, replicatedServerStorageSuffix);
-	DOREPLIFETIME(AApEnergyLinkSubsystem, replicatedGlobalChargeRateMegaWatt);
+
+	//TODO should be FGReplicated, however that does not work across different actors, so instead we only replicate once every tick of this subsystem
+	FDoRepLifetimeParams replicationParams;
+	replicationParams.bIsPushBased = true;
+	DOREPLIFETIME_WITH_PARAMS_FAST(AApEnergyLinkSubsystem, replicatedGlobalChargeRateMegaWatt, replicationParams);
 }
+
+/*
+void AApEnergyLinkSubsystem::GetConditionalReplicatedProps(const AFGBuildablePowerStorage* self, TArray<FFGCondReplicatedProperty>& outProps) const {
+	FG_DOREPCONDITIONAL(ThisClass, replicatedGlobalChargeRateMegaWatt);
+}
+*/
 
 void AApEnergyLinkSubsystem::BeginPlay() {
 	Super::BeginPlay();
@@ -62,14 +70,16 @@ void AApEnergyLinkSubsystem::BeginPlay() {
 		hookHandlerPowerCircuitTick = SUBSCRIBE_METHOD_AFTER(UFGPowerCircuitGroup::TickPowerCircuitGroup, [this](UFGPowerCircuitGroup* self, float deltaTime) {
 			TickPowerCircuits(self, deltaTime);
 		});
-		AFGCircuitSubsystem* SampleObject = GetMutableDefault<AFGCircuitSubsystem>(); // For UObject derived classes, use SUBSCRIBE_UOBJECT_METHOD instead
-		hookHandlerCircuitSubsystemTick = SUBSCRIBE_METHOD_VIRTUAL(AFGCircuitSubsystem::Tick, SampleObject, [this](auto& func, AFGCircuitSubsystem* self, float deltaTime) {
-			globalChargeRateMegaWattRunningTotal = 0;
-
-			func(self, deltaTime);
-
-			replicatedGlobalChargeRateMegaWatt = globalChargeRateMegaWattRunningTotal;
+		AFGCircuitSubsystem* circuitSubsystem = GetMutableDefault<AFGCircuitSubsystem>(); // For UObject derived classes, use SUBSCRIBE_UOBJECT_METHOD instead
+		hookHandlerCircuitSubsystemTick = SUBSCRIBE_METHOD_VIRTUAL(AFGCircuitSubsystem::Tick, circuitSubsystem, [this](auto& func, AFGCircuitSubsystem* self, float deltaTime) {
+			TickCircuitSubsystem(func, self, deltaTime);
 		});
+		/*
+		AFGBuildablePowerStorage* powerStorage = GetMutableDefault<AFGBuildablePowerStorage>(); // For UObject derived classes, use SUBSCRIBE_UOBJECT_METHOD instead
+		hookHandlerPowerStorageGetConditionalReplicatedProps = SUBSCRIBE_METHOD_VIRTUAL_AFTER(AFGBuildablePowerStorage::GetConditionalReplicatedProps, powerStorage, [this](const AFGBuildablePowerStorage* self, TArray<FFGCondReplicatedProperty>& outProps) {
+			GetConditionalReplicatedProps(self, outProps);
+		});
+		*/
 
 		hooksInitialized = true;
 	}
@@ -80,6 +90,8 @@ void AApEnergyLinkSubsystem::EndPlay(const EEndPlayReason::Type endPlayReason) {
 		UNSUBSCRIBE_METHOD(UFGPowerCircuitGroup::TickPowerCircuitGroup, hookHandlerPowerCircuitTick);
 	if (hookHandlerCircuitSubsystemTick.IsValid())
 		UNSUBSCRIBE_METHOD(AFGCircuitSubsystem::Tick, hookHandlerCircuitSubsystemTick);
+	//if (hookHandlerPowerStorageGetConditionalReplicatedProps.IsValid())
+	//	UNSUBSCRIBE_METHOD(AFGBuildablePowerStorage::GetConditionalReplicatedProps, hookHandlerPowerStorageGetConditionalReplicatedProps);
 }
 
 void AApEnergyLinkSubsystem::Tick(float DeltaTime) {
@@ -108,11 +120,14 @@ void AApEnergyLinkSubsystem::Tick(float DeltaTime) {
 				energyLinkState = EApEnergyLinkState::Initializing;
 			} else if (connectionState == EApConnectionState::Connected) {
 				energyLinkState = EApEnergyLinkState::Enabled;
+				PrimaryActorTick.TickInterval = 5.0f;
 			} else {
 				energyLinkState = EApEnergyLinkState::Unavailable;
+				PrimaryActorTick.TickInterval = 5.0f;
 			}
 		} else {
 			energyLinkState = EApEnergyLinkState::Disabled;
+			SetActorTickEnabled(false);
 		}
 
 		if (energyLinkState == EApEnergyLinkState::Enabled) {
@@ -120,6 +135,9 @@ void AApEnergyLinkSubsystem::Tick(float DeltaTime) {
 				OnEnergyLinkValueChanged(setReply);
 			});
 		}
+	}
+	else if (energyLinkState == EApEnergyLinkState::Enabled) {
+		EnergyLinkTick(DeltaTime);
 	}
 }
 
@@ -183,8 +201,16 @@ void AApEnergyLinkSubsystem::OnEnergyLinkValueChanged(AP_SetReply setReply) {
 		serverAvailableMegaWattHour = serverValueMegaWattHour.ToInt();
 }
 
+void AApEnergyLinkSubsystem::TickCircuitSubsystem(TCallScope<void(*)(AFGCircuitSubsystem*, float)>& func, AFGCircuitSubsystem* self, float deltaTime) {
+	globalChargeRateMegaWattRunningTotal = 0;
+
+	func(self, deltaTime);
+
+	replicatedGlobalChargeRateMegaWatt = globalChargeRateMegaWattRunningTotal;
+}
+
 void AApEnergyLinkSubsystem::TickPowerCircuits(UFGPowerCircuitGroup* instance, float deltaTime) {
-	double netMegaJoules = 0.0f;
+	double netMegaWatt = 0.0f;
 
 	if (energyLinkState != EApEnergyLinkState::Enabled
 		|| !IsValid(instance))
@@ -197,13 +223,13 @@ void AApEnergyLinkSubsystem::TickPowerCircuits(UFGPowerCircuitGroup* instance, f
 			continue;
 
 
-		netMegaJoules += deltaTime * cicuit->GetmBatterySumPowerInput(); // MW * timePassedInSeconds = MJ
+		netMegaWatt += cicuit->GetmBatterySumPowerInput(); 
 	}
 
-	globalChargeRateMegaWattRunningTotal += netMegaJoules;
+	globalChargeRateMegaWattRunningTotal += netMegaWatt;
 
 	UE::TScopeLock<FCriticalSection> lock(localStorageLock);
-	localAvailableMegaJoule += netMegaJoules;
+	localAvailableMegaJoule += deltaTime * netMegaWatt; // MW * timePassedInSeconds = MJ
 }
 
 void AApEnergyLinkSubsystem::EnergyLinkTick(float deltaTime) {
@@ -213,9 +239,9 @@ void AApEnergyLinkSubsystem::EnergyLinkTick(float deltaTime) {
 	if (individualStorage > 1000)
 		individualStorage = 1000.0f;
 
-	float maxStorage = 10000.0f;
-	if (serverAvailableMegaWattHour + 100.0f >  maxStorage)
-		maxStorage = serverAvailableMegaWattHour + 100;
+	float maxStorage = 90.0f;
+	if (serverAvailableMegaWattHour + 10.0f >  maxStorage)
+		maxStorage = serverAvailableMegaWattHour + 10;
 
 	for (TActorIterator<AFGBuildablePowerStorage> actorItterator(GetWorld()); actorItterator; ++actorItterator) {
 		AFGBuildablePowerStorage* powerStorage = *actorItterator;
@@ -225,12 +251,15 @@ void AApEnergyLinkSubsystem::EnergyLinkTick(float deltaTime) {
 		//current building stored power
 		powerStorage->mPowerStore = serverAvailableMegaWattHour + localAvailableMegaWattHour;
 		//current building capacity
-		powerStorage->mPowerStoreCapacity = 9999.0f;
+		powerStorage->mPowerStoreCapacity = serverAvailableMegaWattHour + localAvailableMegaWattHour + 100.0f;
 		//gird capacity
-		powerStorage->mBatteryInfo->mPowerStoreCapacity = 100000.0f;
+		powerStorage->mBatteryInfo->mPowerStoreCapacity = serverAvailableMegaWattHour + localAvailableMegaWattHour + 100.0f;
 		//grid stored power
 		powerStorage->mBatteryInfo->mPowerStore = serverAvailableMegaWattHour + localAvailableMegaWattHour;
 	}
+
+	//hack to not have to constantly send this to all clients
+	MARK_PROPERTY_DIRTY_FROM_NAME(AApEnergyLinkSubsystem, replicatedGlobalChargeRateMegaWatt, this);
 }
 
 double AApEnergyLinkSubsystem::ProcessLocalStorage() {
@@ -263,7 +292,7 @@ void AApEnergyLinkSubsystem::SendEnergyToServer(long amountMegaJoule) {
 
 TArray<FApGraphInfo> AApEnergyLinkSubsystem::GetEnergyLinkGraphs(UFGPowerCircuit* circuit) const {
 	const FLinearColor circuitChargeColor(0.2f, 0.5f, 0.1f);
-	const FLinearColor circuitDrainColor(0.7f, 0.3f, 0.1f);
+	const FLinearColor circuitDrainColor(0.7f, 0.5f, 0.1f);
 
 	TArray<FApGraphInfo> graphs;
 

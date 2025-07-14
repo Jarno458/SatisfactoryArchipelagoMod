@@ -5,9 +5,11 @@
 
 #include "Subsystem/ModSubsystem.h"
 #include "Subsystem/SubsystemActorManager.h"
+#include "Patching/NativeHookManager.h"
 #include "FGPowerInfoComponent.h"
 #include "Buildables/FGBuildablePowerStorage.h"
 #include "FGPowerCircuit.h"
+#include "FGCircuitSubsystem.h"
 
 #include "Subsystem/ApSubsystem.h"
 #include "Data/ApGraphs.h"
@@ -87,6 +89,7 @@ private:
 
 	FDelegateHandle hookHandlerPowerCircuitTick;
 	FDelegateHandle hookHandlerCircuitSubsystemTick;
+	FDelegateHandle hookHandlerPowerStorageGetConditionalReplicatedProps;
 
 	//int is enough as we hard cap this value
 	UPROPERTY(SaveGame)
@@ -98,6 +101,7 @@ private:
 	float replicatedServerStorageJoules = 0;
 	UPROPERTY(Replicated)
 	EApUnitSuffix replicatedServerStorageSuffix = EApUnitSuffix::Deci;
+	//UPROPERTY(meta=(FGReplicated))
 	UPROPERTY(Replicated)
 	float replicatedGlobalChargeRateMegaWatt = 0;
 	float globalChargeRateMegaWattRunningTotal = 0;
@@ -109,6 +113,8 @@ private:
 
 	void EnergyLinkTick(float deltaTime);
 	void TickPowerCircuits(UFGPowerCircuitGroup* instance, float deltaTime);
+	void TickCircuitSubsystem(TCallScope<void(*)(AFGCircuitSubsystem*, float)>& func, AFGCircuitSubsystem* self, float deltaTime);
+	//void GetConditionalReplicatedProps(const AFGBuildablePowerStorage* self, TArray<FFGCondReplicatedProperty>& outProps) const;
 
 	double ProcessLocalStorage();
 	void SendEnergyToServer(long amount);
