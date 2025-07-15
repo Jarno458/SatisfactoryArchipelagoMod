@@ -40,20 +40,15 @@ void AApEnergyLinkSubsystem::GetLifetimeReplicatedProps(TArray<FLifetimeProperty
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(AApEnergyLinkSubsystem, energyLinkState);
-	DOREPLIFETIME(AApEnergyLinkSubsystem, replicatedServerStorageJoules);
+	DOREPLIFETIME(AApEnergyLinkSubsystem, replicatedServerStorageMegaWattHour);
 	DOREPLIFETIME(AApEnergyLinkSubsystem, replicatedServerStorageSuffix);
 
-	//TODO should be FGReplicated, however that does not work across different actors, so instead we only replicate once every tick of this subsystem
+	//should be FGReplicated, however that does not work across different actors, so instead we only replicate once every tick of this subsystem
 	FDoRepLifetimeParams replicationParams;
 	replicationParams.bIsPushBased = true;
 	DOREPLIFETIME_WITH_PARAMS_FAST(AApEnergyLinkSubsystem, replicatedGlobalChargeRateMegaWatt, replicationParams);
+	DOREPLIFETIME_WITH_PARAMS_FAST(AApEnergyLinkSubsystem, replicatedServerStorageJoules, replicationParams);
 }
-
-/*
-void AApEnergyLinkSubsystem::GetConditionalReplicatedProps(const AFGBuildablePowerStorage* self, TArray<FFGCondReplicatedProperty>& outProps) const {
-	FG_DOREPCONDITIONAL(ThisClass, replicatedGlobalChargeRateMegaWatt);
-}
-*/
 
 void AApEnergyLinkSubsystem::BeginPlay() {
 	Super::BeginPlay();
@@ -74,12 +69,10 @@ void AApEnergyLinkSubsystem::BeginPlay() {
 		hookHandlerCircuitSubsystemTick = SUBSCRIBE_METHOD_VIRTUAL(AFGCircuitSubsystem::Tick, circuitSubsystem, [this](auto& func, AFGCircuitSubsystem* self, float deltaTime) {
 			TickCircuitSubsystem(func, self, deltaTime);
 		});
-		/*
-		AFGBuildablePowerStorage* powerStorage = GetMutableDefault<AFGBuildablePowerStorage>(); // For UObject derived classes, use SUBSCRIBE_UOBJECT_METHOD instead
-		hookHandlerPowerStorageGetConditionalReplicatedProps = SUBSCRIBE_METHOD_VIRTUAL_AFTER(AFGBuildablePowerStorage::GetConditionalReplicatedProps, powerStorage, [this](const AFGBuildablePowerStorage* self, TArray<FFGCondReplicatedProperty>& outProps) {
-			GetConditionalReplicatedProps(self, outProps);
+		hookHandlerGetTimeUntilFull = SUBSCRIBE_METHOD(UFGPowerCircuit::GetTimeToBatteriesFull, [this](TCallScope<float(*)(const UFGPowerCircuit*)>& func, const UFGPowerCircuit* self) {
+			//we are never full
+			func.Override(0.0f);
 		});
-		*/
 
 		hooksInitialized = true;
 	}
@@ -90,8 +83,8 @@ void AApEnergyLinkSubsystem::EndPlay(const EEndPlayReason::Type endPlayReason) {
 		UNSUBSCRIBE_METHOD(UFGPowerCircuitGroup::TickPowerCircuitGroup, hookHandlerPowerCircuitTick);
 	if (hookHandlerCircuitSubsystemTick.IsValid())
 		UNSUBSCRIBE_METHOD(AFGCircuitSubsystem::Tick, hookHandlerCircuitSubsystemTick);
-	//if (hookHandlerPowerStorageGetConditionalReplicatedProps.IsValid())
-	//	UNSUBSCRIBE_METHOD(AFGBuildablePowerStorage::GetConditionalReplicatedProps, hookHandlerPowerStorageGetConditionalReplicatedProps);
+	if (hookHandlerGetTimeUntilFull.IsValid())
+		UNSUBSCRIBE_METHOD(AFGBuildablePowerStorage::GetTimeUntilFull, hookHandlerGetTimeUntilFull);
 }
 
 void AApEnergyLinkSubsystem::Tick(float DeltaTime) {
@@ -167,36 +160,37 @@ void AApEnergyLinkSubsystem::OnEnergyLinkValueChanged(AP_SetReply setReply) {
 		}
 	}
 
+	replicatedServerStorageJoules = intergerValueString;
+
 	//int256 is max python can store
-	int256 serverValueJoules = Int256FromDecimal(intergerValueString);
+	// correct conversion from energylink's J to battery capacity MWh * 1.000.000 * 3600, 
+	// however for balance reasons use a different conversion here (dont tell the players)
+	int256 serverValueMegaWattHour = Int256FromDecimal(intergerValueString) / (ENERGYLINK_MULTIPLIER * 3600);
 
 	//should never happen, but we cant trust other games
-	if (serverValueJoules < 0)
-		serverValueJoules = 0;
+	if (serverValueMegaWattHour < 0)
+		serverValueMegaWattHour = 0;
 	
-	int256 valueForClientJoules = serverValueJoules;
-	int devisions = 0;
-	while (valueForClientJoules > 10000 && devisions < 7) {
-		valueForClientJoules /= 1000;
+	//TODO handle Wh/kWh
+	int256 valueForClientMegaWattHour = serverValueMegaWattHour;
+	int devisions = (int)EApUnitSuffix::Mega;
+	while (valueForClientMegaWattHour > 10000 && devisions < 7) {
+		valueForClientMegaWattHour /= 1000;
 		devisions++;
 	}
 	if (devisions >= 7) {
-		replicatedServerStorageJoules = 0;
+		replicatedServerStorageMegaWattHour = 0;
 		replicatedServerStorageSuffix = EApUnitSuffix::Overflow;
 	}
 	else {
 		// since this is interger division, it wont show decimals ever
-		replicatedServerStorageJoules = valueForClientJoules.ToInt();
+		replicatedServerStorageMegaWattHour = valueForClientMegaWattHour.ToInt();
 		replicatedServerStorageSuffix = static_cast<EApUnitSuffix>(devisions);
 	}
 
-	// correct conversion from energylink's J to battery capacity MWh * 1.000.000 * 3600, 
-	// however for balance reasons use a different conversion here (dont tell the players)
-	int256 serverValueMegaWattHour = serverValueJoules / (ENERGYLINK_MULTIPLIER * 3600);
-
 	// if there is enough energy to keep us going for an other minute then we dont need to know the exact value
-	if (serverValueMegaWattHour > 99900)
-		serverAvailableMegaWattHour = 99900;
+	if (serverValueMegaWattHour > (ENERGYLINK_STORE_CAPACITY - 100))
+		serverAvailableMegaWattHour = (ENERGYLINK_STORE_CAPACITY - 100);
 	else
 		serverAvailableMegaWattHour = serverValueMegaWattHour.ToInt();
 }
@@ -235,13 +229,9 @@ void AApEnergyLinkSubsystem::TickPowerCircuits(UFGPowerCircuitGroup* instance, f
 void AApEnergyLinkSubsystem::EnergyLinkTick(float deltaTime) {
 	double localAvailableMegaWattHour = ProcessLocalStorage();
 
-	float individualStorage = serverAvailableMegaWattHour;
-	if (individualStorage > 1000)
-		individualStorage = 1000.0f;
-
-	float maxStorage = 90.0f;
-	if (serverAvailableMegaWattHour + 10.0f >  maxStorage)
-		maxStorage = serverAvailableMegaWattHour + 10;
+	float stored = serverAvailableMegaWattHour + localAvailableMegaWattHour;
+	if (serverAvailableMegaWattHour + localAvailableMegaWattHour > ENERGYLINK_STORE_CAPACITY)
+		serverAvailableMegaWattHour -= localAvailableMegaWattHour;
 
 	for (TActorIterator<AFGBuildablePowerStorage> actorItterator(GetWorld()); actorItterator; ++actorItterator) {
 		AFGBuildablePowerStorage* powerStorage = *actorItterator;
@@ -249,17 +239,20 @@ void AApEnergyLinkSubsystem::EnergyLinkTick(float deltaTime) {
 			continue;
 
 		//current building stored power
-		powerStorage->mPowerStore = serverAvailableMegaWattHour + localAvailableMegaWattHour;
-		//current building capacity
-		powerStorage->mPowerStoreCapacity = serverAvailableMegaWattHour + localAvailableMegaWattHour + 100.0f;
-		//gird capacity
-		powerStorage->mBatteryInfo->mPowerStoreCapacity = serverAvailableMegaWattHour + localAvailableMegaWattHour + 100.0f;
+		powerStorage->mPowerStore = stored;
 		//grid stored power
-		powerStorage->mBatteryInfo->mPowerStore = serverAvailableMegaWattHour + localAvailableMegaWattHour;
+		powerStorage->mBatteryInfo->mPowerStore = stored;
+
+		// serverAvailableMegaWattHour is capped at 99900.0f
+		//current building capacity
+		powerStorage->mPowerStoreCapacity = ENERGYLINK_STORE_CAPACITY;
+		//gird capacity
+		powerStorage->mBatteryInfo->mPowerStoreCapacity = ENERGYLINK_STORE_CAPACITY;
 	}
 
 	//hack to not have to constantly send this to all clients
 	MARK_PROPERTY_DIRTY_FROM_NAME(AApEnergyLinkSubsystem, replicatedGlobalChargeRateMegaWatt, this);
+	MARK_PROPERTY_DIRTY_FROM_NAME(AApEnergyLinkSubsystem, replicatedServerStorageJoules, this);
 }
 
 double AApEnergyLinkSubsystem::ProcessLocalStorage() {
@@ -292,7 +285,7 @@ void AApEnergyLinkSubsystem::SendEnergyToServer(long amountMegaJoule) {
 
 TArray<FApGraphInfo> AApEnergyLinkSubsystem::GetEnergyLinkGraphs(UFGPowerCircuit* circuit) const {
 	const FLinearColor circuitChargeColor(0.2f, 0.5f, 0.1f);
-	const FLinearColor circuitDrainColor(0.7f, 0.5f, 0.1f);
+	const FLinearColor circuitDrainColor(1.0f, 0.2f, 0.1f);
 
 	TArray<FApGraphInfo> graphs;
 

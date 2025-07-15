@@ -24,6 +24,8 @@ DECLARE_LOG_CATEGORY_EXTERN(LogApEnergyLink, Log, All);
 #define ENERGYLINK_COST_NUMERATOR 3
 #define ENERGYLINK_COST_DENOMINATOR 4
 
+#define ENERGYLINK_STORE_CAPACITY 99999.0f
+
 
 UENUM(BlueprintType)
 enum class EApUnitSuffix : uint8 {
@@ -69,7 +71,10 @@ public:
 	FORCEINLINE EApEnergyLinkState GetEnergyLinkState() const { return energyLinkState; };
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	FORCEINLINE int GetCurrentServerStoredEnergy() const { return replicatedServerStorageJoules; };
+	FORCEINLINE int GetCurrentServerStoredEnergy() const { return replicatedServerStorageMegaWattHour; };
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	FORCEINLINE FString GetActualServerStoredJoules() const { return replicatedServerStorageJoules; };
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FORCEINLINE EApUnitSuffix GetCurrentServerStoredEnergySuffix() const { return replicatedServerStorageSuffix; };
@@ -89,7 +94,7 @@ private:
 
 	FDelegateHandle hookHandlerPowerCircuitTick;
 	FDelegateHandle hookHandlerCircuitSubsystemTick;
-	FDelegateHandle hookHandlerPowerStorageGetConditionalReplicatedProps;
+	FDelegateHandle hookHandlerGetTimeUntilFull;
 
 	//int is enough as we hard cap this value
 	UPROPERTY(SaveGame)
@@ -98,10 +103,11 @@ private:
 	double localAvailableMegaJoule = 0.0f;
 
 	UPROPERTY(Replicated)
-	float replicatedServerStorageJoules = 0;
+	FString replicatedServerStorageJoules = "0";
+	UPROPERTY(Replicated)
+	float replicatedServerStorageMegaWattHour = 0;
 	UPROPERTY(Replicated)
 	EApUnitSuffix replicatedServerStorageSuffix = EApUnitSuffix::Deci;
-	//UPROPERTY(meta=(FGReplicated))
 	UPROPERTY(Replicated)
 	float replicatedGlobalChargeRateMegaWatt = 0;
 	float globalChargeRateMegaWattRunningTotal = 0;
@@ -114,7 +120,6 @@ private:
 	void EnergyLinkTick(float deltaTime);
 	void TickPowerCircuits(UFGPowerCircuitGroup* instance, float deltaTime);
 	void TickCircuitSubsystem(TCallScope<void(*)(AFGCircuitSubsystem*, float)>& func, AFGCircuitSubsystem* self, float deltaTime);
-	//void GetConditionalReplicatedProps(const AFGBuildablePowerStorage* self, TArray<FFGCondReplicatedProperty>& outProps) const;
 
 	double ProcessLocalStorage();
 	void SendEnergyToServer(long amount);
