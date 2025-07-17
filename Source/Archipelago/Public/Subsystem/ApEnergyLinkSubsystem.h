@@ -19,13 +19,8 @@ DECLARE_LOG_CATEGORY_EXTERN(LogApEnergyLink, Log, All);
 #include "ApEnergyLinkSubsystem.generated.h"
 
 #define ENERGYLINK_MULTIPLIER 1000
-
-//apply 25% cut so 3/4
-#define ENERGYLINK_COST_NUMERATOR 3
-#define ENERGYLINK_COST_DENOMINATOR 4
-
+#define ENERYLINK_DEPOSIT_REDUCTION_FACTOR 0.75f
 #define ENERGYLINK_STORE_CAPACITY 99999.0f
-
 
 UENUM(BlueprintType)
 enum class EApUnitSuffix : uint8 {
@@ -94,11 +89,10 @@ private:
 
 	FDelegateHandle hookHandlerPowerCircuitTick;
 	FDelegateHandle hookHandlerCircuitSubsystemTick;
-	FDelegateHandle hookHandlerGetTimeUntilFull;
 
 	//int is enough as we hard cap this value
 	UPROPERTY(SaveGame)
-	int serverAvailableMegaWattHour = 0;
+	double serverAvailableMegaWattHour = 0.0f;
 	UPROPERTY(SaveGame)
 	double localAvailableMegaJoule = 0.0f;
 

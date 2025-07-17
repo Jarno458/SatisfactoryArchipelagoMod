@@ -69,10 +69,6 @@ void AApEnergyLinkSubsystem::BeginPlay() {
 		hookHandlerCircuitSubsystemTick = SUBSCRIBE_METHOD_VIRTUAL(AFGCircuitSubsystem::Tick, circuitSubsystem, [this](auto& func, AFGCircuitSubsystem* self, float deltaTime) {
 			TickCircuitSubsystem(func, self, deltaTime);
 		});
-		hookHandlerGetTimeUntilFull = SUBSCRIBE_METHOD(UFGPowerCircuit::GetTimeToBatteriesFull, [this](TCallScope<float(*)(const UFGPowerCircuit*)>& func, const UFGPowerCircuit* self) {
-			//we are never full
-			func.Override(0.0f);
-		});
 
 		hooksInitialized = true;
 	}
@@ -83,8 +79,6 @@ void AApEnergyLinkSubsystem::EndPlay(const EEndPlayReason::Type endPlayReason) {
 		UNSUBSCRIBE_METHOD(UFGPowerCircuitGroup::TickPowerCircuitGroup, hookHandlerPowerCircuitTick);
 	if (hookHandlerCircuitSubsystemTick.IsValid())
 		UNSUBSCRIBE_METHOD(AFGCircuitSubsystem::Tick, hookHandlerCircuitSubsystemTick);
-	if (hookHandlerGetTimeUntilFull.IsValid())
-		UNSUBSCRIBE_METHOD(AFGBuildablePowerStorage::GetTimeUntilFull, hookHandlerGetTimeUntilFull);
 }
 
 void AApEnergyLinkSubsystem::Tick(float DeltaTime) {
@@ -145,7 +139,6 @@ void AApEnergyLinkSubsystem::OnEnergyLinkValueChanged(AP_SetReply setReply) {
 	}
 	else {
 		//cut off decimals, should not happen, but we cant trust other games
-
 		if (rawValue.Contains(".")) {
 			UE_LOGFMT(LogApEnergyLink, Error, "AApEnergyLinkSubsystem::OnEnergyLinkValueChanged() received non numeric input {0}", rawValue);
 			intergerValueString = rawValue.Left(rawValue.Find(".", ESearchCase::IgnoreCase, ESearchDir::FromEnd));
@@ -165,24 +158,38 @@ void AApEnergyLinkSubsystem::OnEnergyLinkValueChanged(AP_SetReply setReply) {
 	//int256 is max python can store
 	// correct conversion from energylink's J to battery capacity MWh * 1.000.000 * 3600, 
 	// however for balance reasons use a different conversion here (dont tell the players)
-	int256 serverValueMegaWattHour = Int256FromDecimal(intergerValueString) / (ENERGYLINK_MULTIPLIER * 3600);
+	int256 remainder;
+	int256 serverValueMegaWattHour = Int256FromDecimal(intergerValueString);
+	serverValueMegaWattHour.DivideWithRemainder(ENERGYLINK_MULTIPLIER * 3600, remainder);
+
+	double remainderMegaWattHour = (double)remainder.ToInt() / (ENERGYLINK_MULTIPLIER * 3600);
 
 	//should never happen, but we cant trust other games
-	if (serverValueMegaWattHour < 0)
+	if (serverValueMegaWattHour.IsNegative()) {
 		serverValueMegaWattHour = 0;
-	
-	//TODO handle Wh/kWh
-	int256 valueForClientMegaWattHour = serverValueMegaWattHour;
-	int devisions = (int)EApUnitSuffix::Mega;
+		remainderMegaWattHour = 0;
+	}
+
+	int256 valueForClientMegaWattHour;
+	int devisions;
+
+	if (serverValueMegaWattHour > 0) {
+		valueForClientMegaWattHour = serverValueMegaWattHour;
+		devisions = (int)EApUnitSuffix::Mega;
+	} else if (remainderMegaWattHour > 0) {
+		valueForClientMegaWattHour = 1000000.0f * remainderMegaWattHour;
+		devisions = (int)EApUnitSuffix::Deci;
+	}
+
 	while (valueForClientMegaWattHour > 10000 && devisions < 7) {
 		valueForClientMegaWattHour /= 1000;
 		devisions++;
 	}
+
 	if (devisions >= 7) {
 		replicatedServerStorageMegaWattHour = 0;
 		replicatedServerStorageSuffix = EApUnitSuffix::Overflow;
-	}
-	else {
+	} else {
 		// since this is interger division, it wont show decimals ever
 		replicatedServerStorageMegaWattHour = valueForClientMegaWattHour.ToInt();
 		replicatedServerStorageSuffix = static_cast<EApUnitSuffix>(devisions);
@@ -192,7 +199,7 @@ void AApEnergyLinkSubsystem::OnEnergyLinkValueChanged(AP_SetReply setReply) {
 	if (serverValueMegaWattHour > (ENERGYLINK_STORE_CAPACITY - 100))
 		serverAvailableMegaWattHour = (ENERGYLINK_STORE_CAPACITY - 100);
 	else
-		serverAvailableMegaWattHour = serverValueMegaWattHour.ToInt();
+		serverAvailableMegaWattHour = serverValueMegaWattHour.ToInt() + remainderMegaWattHour;
 }
 
 void AApEnergyLinkSubsystem::TickCircuitSubsystem(TCallScope<void(*)(AFGCircuitSubsystem*, float)>& func, AFGCircuitSubsystem* self, float deltaTime) {
@@ -216,8 +223,14 @@ void AApEnergyLinkSubsystem::TickPowerCircuits(UFGPowerCircuitGroup* instance, f
 			|| !cicuit->HasBatteries())
 			continue;
 
+		float sumPowerInput = cicuit->GetmBatterySumPowerInput();
 
-		netMegaWatt += cicuit->GetmBatterySumPowerInput(); 
+		netMegaWatt += sumPowerInput;
+
+		if (sumPowerInput > 0.0f)
+			cicuit->SetmTimeToBatteriesFull(0.0f);
+
+		cicuit->SetmBatterySumPowerStoreCapacity(0.0f);
 	}
 
 	globalChargeRateMegaWattRunningTotal += netMegaWatt;
@@ -262,13 +275,11 @@ double AApEnergyLinkSubsystem::ProcessLocalStorage() {
 		localAvailableMegaJoule = 0.0f; //trip powah
 	}
 	else if (localAvailableMegaJoule != 0.0f) {
-		float intergerPart;
-		long remainder = modff(localAvailableMegaJoule / ENERGYLINK_COST_DENOMINATOR, &intergerPart); //splits int and decimal parts
+		int wholeIntsToSend = (int)(localAvailableMegaJoule * ENERYLINK_DEPOSIT_REDUCTION_FACTOR);
 
-		localAvailableMegaJoule = (remainder * ENERGYLINK_COST_DENOMINATOR);
+		localAvailableMegaJoule -= wholeIntsToSend * (1 / ENERYLINK_DEPOSIT_REDUCTION_FACTOR);
 
-		//we can only send full intergers
-		SendEnergyToServer(intergerPart * ENERGYLINK_COST_NUMERATOR);
+		SendEnergyToServer(wholeIntsToSend);
 	}
 
 	return localAvailableMegaJoule / 3600; // MJ > MWh

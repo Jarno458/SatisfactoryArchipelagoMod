@@ -92,9 +92,11 @@ void UApGameInstanceModule::DediServer_CopySettingFromSessionSettings(const USes
 		}
 	}
 
-	TArray<FString> out_debugData;
-	applyType->GetDebugData(out_debugData);
-	UE_LOGFMT(LogApGameInstanceModule, Display, "UApGameInstanceModule::Server::GetServerOptions() applyType: {0}", out_debugData[0]);
+	if (!cvar.Contains("Password", ESearchCase::CaseSensitive)) {
+		TArray<FString> out_debugData;
+		applyType->GetDebugData(out_debugData);
+		UE_LOGFMT(LogApGameInstanceModule, Display, "UApGameInstanceModule::Server::GetServerOptions() applyType: {0}", out_debugData[0]);
+	}
 }
 
 void UApGameInstanceModule::DediServer_CopySettingToSessionSettings(const USessionSettingsManager* sessionSettings, const FString& cvar, const TMap<FString, FString>& UpdatedServerOptions) {
@@ -112,7 +114,7 @@ void UApGameInstanceModule::DediServer_CopySettingToSessionSettings(const USessi
 		if (!cvar.Contains("Password", ESearchCase::CaseSensitive)) {
 			TArray<FString> out_debugData;
 			applyType->GetDebugData(out_debugData);
-			UE_LOGFMT(LogApGameInstanceModule, Display, "UApGameInstanceModule::Server::ApplyServerOptions() applyType: {0}", out_debugData[0]);
+			UE_LOGFMT(LogApGameInstanceModule, Log, "UApGameInstanceModule::Server::ApplyServerOptions() applyType: {0}", out_debugData[0]);
 		}
 	}
 }
