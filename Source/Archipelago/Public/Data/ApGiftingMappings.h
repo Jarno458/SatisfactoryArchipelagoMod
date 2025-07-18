@@ -4,6 +4,7 @@
 
 #include "ApGiftingMappings.generated.h"
 
+// EGiftTrait is an interget value between 0 and 64
 UENUM(BlueprintType)
 enum class EGiftTrait : uint8
 {
@@ -56,7 +57,15 @@ enum class EGiftTrait : uint8
 	Platinum,
 	DarkMatter,
 	SpaceMineral,
-	Statue
+	Statue,
+
+	//new traits
+	Copy,
+	Teleport,
+	Angular,
+	Liquid,
+	RangedWeapon,
+	MeleeWeapon,
 };
 ENUM_RANGE_BY_FIRST_AND_LAST(EGiftTrait, EGiftTrait::Electronics, EGiftTrait::Statue)
 

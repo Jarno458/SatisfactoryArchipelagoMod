@@ -23,6 +23,12 @@ const TMap<EGiftTrait, EGiftTrait> UApGiftingMappings::TraitParents = {
 	{EGiftTrait::Fruit, EGiftTrait::Food},
 	{EGiftTrait::Food, EGiftTrait::Consumable},
 	{EGiftTrait::Diamond, EGiftTrait::Mineral},
+	{EGiftTrait::Water, EGiftTrait::Liquid},
+	{EGiftTrait::Oil, EGiftTrait::Liquid},
+	{EGiftTrait::Fuel, EGiftTrait::Liquid},
+	{EGiftTrait::Bomb, EGiftTrait::RangedWeapon},
+	{EGiftTrait::MeleeWeapon, EGiftTrait::Weapon},
+	{EGiftTrait::RangedWeapon, EGiftTrait::Weapon},
 };
 
 const TMap<EGiftTrait, int64> UApGiftingMappings::TraitDefaultItemIds = {
@@ -75,8 +81,16 @@ const TMap<EGiftTrait, int64> UApGiftingMappings::TraitDefaultItemIds = {
 	{EGiftTrait::Platinum, 1338123}, // Desc_FicsiteIngot
 	{EGiftTrait::DarkMatter, 1338127}, // Biochemical Sculptor
 	{EGiftTrait::SpaceMineral, 1338125}, // Desc_SAMIngot
-	{EGiftTrait::Statue, 1338064} // Desc_DoggoStatue_C
+	{EGiftTrait::Statue, 1338064}, // Desc_DoggoStatue_C
 	//1.0
+	// newly added
+	{EGiftTrait::Copy, 1338127 }, // Bioschemial sculptor
+	{EGiftTrait::Teleport, 1338107}, // Superposition oscilator
+	{EGiftTrait::Angular, 1338124}, // Fixshite trigon
+	{EGiftTrait::Liquid, 1338075}, // Desc_PackagedWater_C,
+	{EGiftTrait::MeleeWeapon, 1338183}, // Xeno Basher
+	{EGiftTrait::RangedWeapon, 1338159} // Explosive rebar ammo
+	// newly added
 };
 
 const TMap<int64, TMap<EGiftTrait, float>> UApGiftingMappings::TraitsPerItemRatings = {
@@ -102,7 +116,7 @@ const TMap<int64, TMap<EGiftTrait, float>> UApGiftingMappings::TraitsPerItemRati
 	{1338019, {{EGiftTrait::Gold, 1.0f},{EGiftTrait::Ore, 1.0f}}}, // Desc_OreGold_C, //Caterium Ore
 	{1338020, {{EGiftTrait::Electronics, 1.0f},{EGiftTrait::Plastic, 0.1f}}}, // Desc_CircuitBoard_C, 
 	{1338021, {{EGiftTrait::Coal, 1.0f},{EGiftTrait::Ore, 1.0f}}}, // Desc_Coal_C, 
-	{1338022, {{EGiftTrait::Iron, 0.2f},{EGiftTrait::Stone, 0.2f},{EGiftTrait::Copper, 0.2f}, {EGiftTrait::DarkMatter, 0.4f}}}, //Desc_SingularityCell
+	{1338022, {{EGiftTrait::Iron, 0.2f},{EGiftTrait::Stone, 0.2f},{EGiftTrait::Copper, 0.2f},{EGiftTrait::DarkMatter, 0.4f},{EGiftTrait::Teleport, 0.5f}}}, //Desc_SingularityCell_C
 	{1338023, {{EGiftTrait::Coal, 1.0f}}}, // Desc_CompactedCoal_C, 
 	{1338024, {{EGiftTrait::Electronics, 1.0f},{EGiftTrait::Plastic, 0.5f}}}, // Desc_Computer_C, 
 	{1338025, {{EGiftTrait::Stone, 1.0f},{EGiftTrait::Ore, 1.0f}}}, // Desc_Cement_C, //Concrete
@@ -187,7 +201,7 @@ const TMap<int64, TMap<EGiftTrait, float>> UApGiftingMappings::TraitsPerItemRati
 	{1338104, {{EGiftTrait::Steel, 1.0f}}}, // Desc_SteelPipe_C, 
 	{1338105, {{EGiftTrait::Bomb, 1.0f}}}, // Desc_Sulfur_C, 
 	{1338106, {{EGiftTrait::Electronics, 1.0f}}}, // Desc_ComputerSuper_C, 
-	{1338107, {{EGiftTrait::Electronics, 1.0f}}}, // Desc_QuantumOscillator_C, 
+	{1338107, {{EGiftTrait::Electronics, 1.0f}, {EGiftTrait::Teleport, 0.5f}}}, // Desc_QuantumOscillator_C, // Superposition Oscillator
 	{1338108, {{EGiftTrait::Silver, 0.3f},{EGiftTrait::Electronics, 0.3f},{EGiftTrait::Steel, 0.4f},{EGiftTrait::Speed, 1.0f}}}, // Desc_SpaceElevatorPart_8_C, //Thermal Propulsion Rocket
 	{1338109, {{EGiftTrait::Electronics, 0.5f},{EGiftTrait::Steel, 0.5f}}}, // Desc_MotorLightweight_C, 
 	{1338110, {{EGiftTrait::Grass, 1.0f},{EGiftTrait::Resource, 0.1f}}}, // Desc_HogParts_C, 
@@ -206,10 +220,10 @@ const TMap<int64, TMap<EGiftTrait, float>> UApGiftingMappings::TraitsPerItemRati
 	{1338121, {{EGiftTrait::Diamond, 1.0f},{EGiftTrait::Coal, 0.5f}}}, // Desc_Diamond, 
 	{1338122, {{EGiftTrait::Diamond, 1.0f}}}, // Desc_TimeCrystal, 
 	{1338123, {{EGiftTrait::Platinum, 1.0f},{EGiftTrait::SpaceMineral, 0.5f}}}, // Desc_FicsiteIngot, 
-	{1338124, {{EGiftTrait::Platinum, 1.0f},{EGiftTrait::SpaceMineral, 0.5f}}}, // Desc_FicsiteMesh, 
+	{1338124, {{EGiftTrait::Platinum, 1.0f},{EGiftTrait::SpaceMineral, 0.5f},{EGiftTrait::Angular, 0.5f}}}, // Desc_FicsiteMesh, //Ficsite Trigon
 	{1338125, {{EGiftTrait::SpaceMineral, 1.0f}}}, // Desc_SAMIngot, 
 	{1338126, {{EGiftTrait::SpaceMineral, 1.0f},{EGiftTrait::Copper, 0.1f},{EGiftTrait::Steel, 0.1f}}}, // Desc_SAMFluctuator, 
-	{1338127, {{EGiftTrait::Electronics, 1.0f},{EGiftTrait::Platinum, 1.0f},{EGiftTrait::SpaceMineral, 0.5f}}}, // Biochemical Sculptor
+	{1338127, {{EGiftTrait::Electronics, 1.0f},{EGiftTrait::Platinum, 1.0f},{EGiftTrait::SpaceMineral, 0.5f},{EGiftTrait::Copy, 0.1f}}}, // Biochemical Sculptor
 	{1338128, {{EGiftTrait::Silver, 0.3f},{EGiftTrait::Electronics, 0.3f},{EGiftTrait::Steel, 0.4f},{EGiftTrait::Speed, 1.0f},{EGiftTrait::DarkMatter, 2.0f}}}, // Ballistic Warp Drive
 	{1338129, {{EGiftTrait::Radioactive, 20.0f},{EGiftTrait::Damage, 20.0f},{EGiftTrait::DarkMatter, 2.0f}}}, // Desc_Ficsonium
 	{1338130, {{EGiftTrait::Radioactive, 20.0f},{EGiftTrait::Damage, 20.0f},{EGiftTrait::DarkMatter, 2.0f},{EGiftTrait::Platinum, 1.0f},{EGiftTrait::SpaceMineral, 0.5f}} }, // Desc_FicsoniumFuelRod
@@ -221,21 +235,21 @@ const TMap<int64, TMap<EGiftTrait, float>> UApGiftingMappings::TraitsPerItemRati
 	{1338150, {{EGiftTrait::Vegetable, 1.0f},{EGiftTrait::Heal, 1.0f}}}, // Desc_Shroom_C, //Bacon Agaric
 	{1338151, {{EGiftTrait::Seed, 1.0f},{EGiftTrait::Heal, 1.0f}}}, // Desc_Nut_C, 
 	{1338152, {{EGiftTrait::Tool, 1.0f},{EGiftTrait::Speed, 1.0f}}}, // BP_EquipmentDescriptorJumpingStilts_C, 
-	{1338153, {{EGiftTrait::Weapon, 1.0f},{EGiftTrait::Buff, 1.0f}}}, //BoomBox
-	{1338154, {{EGiftTrait::Weapon, 1.0f}}}, // Desc_Chainsaw_C, 
-	{1338155, {{EGiftTrait::Bomb, 1.0f}}}, // Desc_NobeliskCluster_C, 
+	{1338153, {{EGiftTrait::RangedWeapon, 1.0f},{EGiftTrait::Buff, 1.0f}}}, //BoomBox
+	{1338154, {{EGiftTrait::MeleeWeapon, 1.0f}}}, // Desc_Chainsaw_C, 
+	{1338155, {{EGiftTrait::RangedWeapon, 1.0f}}}, // Desc_NobeliskCluster_C, 
 	//{1338156, {{ }}}, // Unused, 
 	{1338157, {{EGiftTrait::Speed, 1.0f}}}, // BP_EquipmentDescriptorCup_C, 
 	{1338158, {{EGiftTrait::Speed, 1.0f},{EGiftTrait::Gold, 1.0f}}}, // BP_EquipmentDescriptorCupGold_C, 
-	{1338159, {{EGiftTrait::Weapon, 1.0f}}}, // Desc_Rebar_Explosive_C, 
+	{1338159, {{EGiftTrait::RangedWeapon, 1.0f}}}, // Desc_Rebar_Explosive_C, 
 	{1338160, {{EGiftTrait::Tool, 1.0f},{EGiftTrait::Speed, 1.0f}}}, // Desc_GolfCart_C, 
 	{1338161, {{EGiftTrait::Tool, 1.0f},{EGiftTrait::Speed, 1.0f}}}, // Desc_GolfCartGold_C, 
 	{1338162, {{EGiftTrait::Tool, 1.0f}}}, // BP_EquipmentDescriptorGasmask_C, 
 	{1338163, {{EGiftTrait::Bomb, 1.0f}}}, // Desc_NobeliskGas_C, 
 	{1338164, {{EGiftTrait::Armor, 1.0f}}}, // BP_EquipmentDescriptorHazmatSuit_C, 
-	{1338165, {{EGiftTrait::Weapon, 1.0f}}}, // Desc_CartridgeSmartProjectile_C, 
+	{1338165, {{EGiftTrait::RangedWeapon, 1.0f}}}, // Desc_CartridgeSmartProjectile_C, 
 	{1338166, {{EGiftTrait::Tool, 1.0f},{EGiftTrait::Speed, 1.0f}}}, // BP_EquipmentDescriptorHoverPack_C, 
-	{1338167, {{EGiftTrait::Weapon, 1.0f}}}, // Desc_SpikedRebar_C, 
+	{1338167, {{EGiftTrait::RangedWeapon, 1.0f}}}, // Desc_SpikedRebar_C, 
 	{1338168, {{EGiftTrait::Tool, 1.0f},{EGiftTrait::Speed, 1.0f}}}, // BP_EquipmentDescriptorJetPack_C, 
 	{1338169, {{EGiftTrait::Heal, 1.0f}}}, // Desc_Medkit_C, 
 	{1338170, {{EGiftTrait::Bomb, 1.0f}}}, // Desc_NobeliskExplosive_C, 
@@ -245,14 +259,14 @@ const TMap<int64, TMap<EGiftTrait, float>> UApGiftingMappings::TraitsPerItemRati
 	{1338174, {{EGiftTrait::Fruit, 1.0f},{EGiftTrait::Heal, 1.0f}}}, // Desc_Berry_C, 
 	{1338175, {{EGiftTrait::Tool, 1.0f},{EGiftTrait::Slowness, 1.0f}}}, // Desc_Parachute_C, 
 	{1338176, {{EGiftTrait::Bomb, 1.0f}}}, // Desc_NobeliskShockwave_C, 
-	{1338177, {{EGiftTrait::Weapon, 1.0f}}}, // Desc_RebarGunProjectile_C, 
-	{1338178, {{EGiftTrait::Weapon, 1.0f}}}, // BP_EquipmentDescriptorRifle_C, 
-	{1338179, {{EGiftTrait::Weapon, 1.0f}}}, // Desc_CartridgeStandard_C, 
-	{1338180, {{EGiftTrait::Weapon, 1.0f}}}, // Desc_Rebar_Spreadshot_C, 
-	{1338181, {{EGiftTrait::Weapon, 1.0f}}}, // Desc_Rebar_Stunshot_C, 
-	{1338182, {{EGiftTrait::Weapon, 1.0f}}}, // Desc_CartridgeChaos_C, 
-	{1338183, {{EGiftTrait::Weapon, 1.0f}}}, // BP_EquipmentDescriptorStunSpear_C, 
-	{1338184, {{EGiftTrait::Weapon, 1.0f}}}, // BP_EquipmentDescriptorShockShank_C, 
+	{1338177, {{EGiftTrait::RangedWeapon, 1.0f}}}, // Desc_RebarGunProjectile_C, 
+	{1338178, {{EGiftTrait::RangedWeapon, 1.0f}}}, // BP_EquipmentDescriptorRifle_C, 
+	{1338179, {{EGiftTrait::RangedWeapon, 1.0f}}}, // Desc_CartridgeStandard_C, 
+	{1338180, {{EGiftTrait::RangedWeapon, 1.0f}}}, // Desc_Rebar_Spreadshot_C, 
+	{1338181, {{EGiftTrait::RangedWeapon, 1.0f}}}, // Desc_Rebar_Stunshot_C, 
+	{1338182, {{EGiftTrait::RangedWeapon, 1.0f}}}, // Desc_CartridgeChaos_C, 
+	{1338183, {{EGiftTrait::MeleeWeapon, 1.0f}}}, // BP_EquipmentDescriptorStunSpear_C, 
+	{1338184, {{EGiftTrait::MeleeWeapon, 1.0f}}}, // BP_EquipmentDescriptorShockShank_C, 
 	{1338185, {{EGiftTrait::Tool, 1.0f},{EGiftTrait::Speed, 1.0f}}}, // BP_EqDescZipLine_C, 
 	{1338186, {{EGiftTrait::Tool, 1.0f}}}, // BP_ItemDescriptorPortableMiner_C,
 };
