@@ -129,29 +129,7 @@ void AApEnergyLinkSubsystem::Tick(float DeltaTime) {
 }
 
 void AApEnergyLinkSubsystem::OnEnergyLinkValueChanged(AP_SetReply setReply) {
-	//example 54737402054455566
-	std::string valueCstr = (*(std::string*)setReply.value);
-	FString rawValue = UApUtils::FStr(valueCstr).TrimStartAndEnd();
-
-	FString intergerValueString;
-	if (rawValue.IsEmpty()) {
-		intergerValueString = "0";
-	}
-	else {
-		//cut off decimals, should not happen, but we cant trust other games
-		if (rawValue.Contains(".")) {
-			UE_LOGFMT(LogApEnergyLink, Error, "AApEnergyLinkSubsystem::OnEnergyLinkValueChanged() received non numeric input {0}", rawValue);
-			intergerValueString = rawValue.Left(rawValue.Find(".", ESearchCase::IgnoreCase, ESearchDir::FromEnd));
-		}
-		else {
-			intergerValueString = rawValue;
-		}
-
-		if (!intergerValueString.IsNumeric()) {
-			UE_LOGFMT(LogApEnergyLink, Error, "AApEnergyLinkSubsystem::OnEnergyLinkValueChanged() received non numeric input {0}", intergerValueString);
-			return;
-		}
-	}
+	FString intergerValueString = YankParseValueString(setReply);
 
 	replicatedServerStorageJoules = intergerValueString;
 
@@ -200,6 +178,70 @@ void AApEnergyLinkSubsystem::OnEnergyLinkValueChanged(AP_SetReply setReply) {
 		serverAvailableMegaWattHour = (ENERGYLINK_STORE_CAPACITY - 100);
 	else
 		serverAvailableMegaWattHour = serverValueMegaWattHour.ToInt() + remainderMegaWattHour;
+}
+
+FString AApEnergyLinkSubsystem::YankParseValueString(AP_SetReply& setReply) {
+	//example 54737402054455566
+
+	// this breaks on really long values due to internal conversion to double
+	//std::string valueCstr = (*(std::string*)setReply.value);
+
+	FString intergerValueString = "0";
+
+	FString rawPacket = UApUtils::FStr(*setReply.raw);
+
+	//destroy opperators
+	int32 opperatorStart = rawPacket.Find(TEXT("\"operations\":[{"));
+	if (opperatorStart == INDEX_NONE) {
+		UE_LOGFMT(LogApEnergyLink, Error, "AApEnergyLinkSubsystem::OnEnergyLinkValueChanged() opperator not found in packet: {0}", rawPacket);
+		return intergerValueString;
+	}
+	int32 opperatorEnd = rawPacket.Find(TEXT("}],"), ESearchCase::IgnoreCase, ESearchDir::FromStart, opperatorStart);
+	if (opperatorEnd == INDEX_NONE) {
+		UE_LOGFMT(LogApEnergyLink, Error, "AApEnergyLinkSubsystem::OnEnergyLinkValueChanged() opperator end not found in packet: {0}", rawPacket);
+		return intergerValueString;
+	}
+
+	FString reducedRawPacket = rawPacket.Left(opperatorStart) + rawPacket.Right(rawPacket.Len() - opperatorEnd);
+
+	//find value
+	FString valueKey = FString(TEXT("\"value\":"));
+	int32 valueStart = reducedRawPacket.Find(valueKey) + valueKey.Len();
+	if (valueStart == INDEX_NONE) {
+		UE_LOGFMT(LogApEnergyLink, Error, "AApEnergyLinkSubsystem::OnEnergyLinkValueChanged() value not found in packet: {0}", reducedRawPacket);
+		return intergerValueString;
+	}
+	int32 valueEnd = reducedRawPacket.Find(TEXT(","), ESearchCase::IgnoreCase, ESearchDir::FromStart, valueStart);
+	if (valueEnd == INDEX_NONE)
+		valueEnd = reducedRawPacket.Find(TEXT("}"), ESearchCase::IgnoreCase, ESearchDir::FromStart, valueStart);
+	if (valueEnd == INDEX_NONE) {
+		UE_LOGFMT(LogApEnergyLink, Error, "AApEnergyLinkSubsystem::OnEnergyLinkValueChanged() value end not found packet: {0}", reducedRawPacket);
+		return intergerValueString;
+	}
+
+	FString rawValue = reducedRawPacket.Mid(valueStart, valueEnd - valueStart).TrimStartAndEnd();
+	UE_LOGFMT(LogApEnergyLink, Log, "AApEnergyLinkSubsystem::OnEnergyLinkValueChanged() new energylink value: {0}", rawValue);
+
+	if (rawValue.IsEmpty()) {
+		intergerValueString = "0";
+	}
+	else {
+		//cut off decimals, should not happen, but we cant trust other games
+		if (rawValue.Contains(".")) {
+			UE_LOGFMT(LogApEnergyLink, Error, "AApEnergyLinkSubsystem::OnEnergyLinkValueChanged() received non numeric input {0}", rawValue);
+			intergerValueString = rawValue.Left(rawValue.Find(".", ESearchCase::IgnoreCase, ESearchDir::FromEnd));
+		}
+		else {
+			intergerValueString = rawValue;
+		}
+
+		if (!intergerValueString.IsNumeric()) {
+			UE_LOGFMT(LogApEnergyLink, Error, "AApEnergyLinkSubsystem::OnEnergyLinkValueChanged() received non numeric input {0}", intergerValueString);
+			return intergerValueString;
+		}
+	}
+
+	return intergerValueString;
 }
 
 void AApEnergyLinkSubsystem::TickCircuitSubsystem(TCallScope<void(*)(AFGCircuitSubsystem*, float)>& func, AFGCircuitSubsystem* self, float deltaTime) {

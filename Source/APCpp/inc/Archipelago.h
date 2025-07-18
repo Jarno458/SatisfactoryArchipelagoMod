@@ -194,6 +194,8 @@ struct AP_SetServerDataRequest {
 };
 
 struct AP_SetReply {
+    int slot;
+    std::string* raw;
     std::string key;
     void* original_value;
     void* value;

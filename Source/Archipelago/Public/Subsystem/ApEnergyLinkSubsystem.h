@@ -118,6 +118,7 @@ private:
 	double ProcessLocalStorage();
 	void SendEnergyToServer(long amount);
 	void OnEnergyLinkValueChanged(AP_SetReply setReply);
+	FString YankParseValueString(AP_SetReply& setReply);
 
 	static int256 Int256FromDecimal(FString decimal);
 
