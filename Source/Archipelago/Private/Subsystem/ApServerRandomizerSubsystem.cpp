@@ -93,8 +93,11 @@ bool AApServerRandomizerSubsystem::InitializeTick() {
 	EApConnectionState connectionState = connectionInfo->GetConnectionState();
 
 	if (connectionState == EApConnectionState::Connected) {
-		if (!slotData->HasLoadedSlotData())
-			slotData->SetSlotDataJson(connectionInfo->GetSlotDataJson());
+		if (!slotData->HasLoadedSlotData()) {
+			if (!slotData->SetSlotDataJson(connectionInfo->GetSlotDataJson())) {
+				//TODO: Fail connection
+			}
+		}
 
 		if (scoutedLocations.IsEmpty() && slotData->HasLoadedSlotData())
 			ScoutArchipelagoItems();

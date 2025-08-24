@@ -180,7 +180,8 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	TArray<int64> GetStarterRecipeIds();
 
-	void SetSlotDataJson(FString slotDataJson);
+	//Returns false if slot data could not parsed
+	bool SetSlotDataJson(FString slotDataJson);
 
 public:
 	//UPROPERTY(BlueprintReadOnly, SaveGame)

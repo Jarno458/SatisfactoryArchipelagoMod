@@ -66,6 +66,9 @@ public:
 	FORCEINLINE EApEnergyLinkState GetEnergyLinkState() const { return energyLinkState; };
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
+	FORCEINLINE float GetEnergyLinkDepositReductionCost() const { return ENERYLINK_DEPOSIT_REDUCTION_FACTOR; };
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FORCEINLINE int GetCurrentServerStoredEnergy() const { return replicatedServerStorageMegaWattHour; };
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)

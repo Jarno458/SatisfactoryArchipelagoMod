@@ -15,6 +15,9 @@ public:
     UPROPERTY(BlueprintReadWrite)
     bool Debugging{};
 
+    UPROPERTY(BlueprintReadWrite)
+    bool SaveMode{};
+
 	 /* Retrieves active configuration value and returns object of this struct containing it */
     static FApConfigurationStruct GetActiveConfig(UWorld* WorldContext) {
         FApConfigurationStruct ConfigStruct{};

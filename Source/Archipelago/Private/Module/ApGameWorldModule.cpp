@@ -27,10 +27,12 @@ void UApGameWorldModule::DispatchLifecycleEvent(ELifecyclePhase phase) {
 		schematics.Append(mTreeNodeSchematics);
 	}
 
+	//sequence dependant, 
 	AApMappingsSubsystem* mappingsSubsystem = AApMappingsSubsystem::Get(world);
 	if (IsValid(mappingsSubsystem))
 		mappingsSubsystem->DispatchLifecycleEvent(phase);
 
+	//sequence dependant, AApSubsystem must receive events before AApServerRandomizerSubsystem
 	AApSubsystem* apSubsystem = AApSubsystem::Get(world);
 	if (IsValid(apSubsystem))
 		apSubsystem->DispatchLifecycleEvent(phase);
@@ -38,4 +40,5 @@ void UApGameWorldModule::DispatchLifecycleEvent(ELifecyclePhase phase) {
 	AApServerRandomizerSubsystem* apServerRandomizerSubsystem = AApServerRandomizerSubsystem::Get(world);
 	if (IsValid(apServerRandomizerSubsystem))
 		apServerRandomizerSubsystem->DispatchLifecycleEvent(phase, schematics);
+	//
 }

@@ -288,6 +288,8 @@ void AApEnergyLinkSubsystem::EnergyLinkTick(float deltaTime) {
 	if (serverAvailableMegaWattHour + localAvailableMegaWattHour > ENERGYLINK_STORE_CAPACITY)
 		serverAvailableMegaWattHour -= localAvailableMegaWattHour;
 
+	//TODO if globalChargeRateMegaWattRunningTotal > 0 then a fuse should not pop
+
 	for (TActorIterator<AFGBuildablePowerStorage> actorItterator(GetWorld()); actorItterator; ++actorItterator) {
 		AFGBuildablePowerStorage* powerStorage = *actorItterator;
 		if (!IsValid(powerStorage))
@@ -311,20 +313,32 @@ void AApEnergyLinkSubsystem::EnergyLinkTick(float deltaTime) {
 }
 
 double AApEnergyLinkSubsystem::ProcessLocalStorage() {
-	UE::TScopeLock<FCriticalSection> lock(localStorageLock);
+	int wholeIntsToSend = 0;
+	double returnValue = 0.0f;
 
-	if (localAvailableMegaJoule <= 0 && serverAvailableMegaWattHour == 0) {
-		localAvailableMegaJoule = 0.0f; //trip powah
+	{
+		UE::TScopeLock<FCriticalSection> lock(localStorageLock);
+
+		if (localAvailableMegaJoule <= 0 && serverAvailableMegaWattHour == 0) {
+			localAvailableMegaJoule = 0.0f; //trip powah
+			returnValue = 0.0f;
+		}
+		else if (localAvailableMegaJoule != 0.0f) {
+			wholeIntsToSend = (int)(localAvailableMegaJoule * ENERYLINK_DEPOSIT_REDUCTION_FACTOR);
+
+			localAvailableMegaJoule -= wholeIntsToSend * (1 / ENERYLINK_DEPOSIT_REDUCTION_FACTOR);
+
+			returnValue = localAvailableMegaJoule / 3600; // MJ > MWh
+		}
+		else {
+			returnValue = localAvailableMegaJoule / 3600; // MJ > MWh
+		}
 	}
-	else if (localAvailableMegaJoule != 0.0f) {
-		int wholeIntsToSend = (int)(localAvailableMegaJoule * ENERYLINK_DEPOSIT_REDUCTION_FACTOR);
 
-		localAvailableMegaJoule -= wholeIntsToSend * (1 / ENERYLINK_DEPOSIT_REDUCTION_FACTOR);
-
+	if (wholeIntsToSend != 0)
 		SendEnergyToServer(wholeIntsToSend);
-	}
 
-	return localAvailableMegaJoule / 3600; // MJ > MWh
+	return returnValue;
 }
 
 void AApEnergyLinkSubsystem::SendEnergyToServer(long amountMegaJoule) {

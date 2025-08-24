@@ -45,9 +45,9 @@ void AApSlotDataSubsystem::BeginPlay() {
 	}
 }
 
-void AApSlotDataSubsystem::SetSlotDataJson(FString slotDataJson) {
+bool AApSlotDataSubsystem::SetSlotDataJson(FString slotDataJson) {
 	if (slotDataJson.IsEmpty())
-		return;
+		return false;
 
 	hasLoadedSlotData = false;
 	hasLoadedExplorationData = false;
@@ -60,13 +60,13 @@ void AApSlotDataSubsystem::SetSlotDataJson(FString slotDataJson) {
 	serializer.Deserialize(reader, parsedJson);
 	if (!parsedJson.IsValid()) {
 		UE_LOGFMT(LogApSlotDataSubsystem, Error, "AApSlotDataSubsystem::SetSlotDataJson() failed to parse slotdata: {0}", slotDataJson);
-		return;
+		return false;
 	}
 
 	int slotDataVersion = -1;
 	if (!parsedJson->TryGetNumberField("SlotDataVersion", slotDataVersion) || slotDataVersion < 1) {
 		UE_LOGFMT(LogApSlotDataSubsystem, Error, "AApSlotDataSubsystem::SetSlotDataJson() failed to parse slotdata of version {0}", slotDataVersion);
-		return;
+		return false;
 	}
 
 	TArray<FApReplicatedHubLayoutEntry> parsedHubCostEntries;
@@ -148,6 +148,8 @@ void AApSlotDataSubsystem::SetSlotDataJson(FString slotDataJson) {
 
 	hasLoadedSlotData = true;
 	hasLoadedExplorationData = true;
+
+	return true;
 }
 
 void AApSlotDataSubsystem::ReconstructHubLayout() {

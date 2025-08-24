@@ -484,6 +484,11 @@ bool AApSubsystem::SendGift(FApSendGift giftToSend) {
 }
 
 TArray<FApReceiveGift> AApSubsystem::GetGifts() {
+	if (config.SaveMode) {
+		UE_LOG(LogApSubsystem, Warning, TEXT("AApSubsystem::GetGifts() called in Save Mode, ignoring request"));
+		return TArray<FApReceiveGift>();
+	}
+
 	std::vector<AP_Gift> gifts = CallOnGameThread<std::vector<AP_Gift>>([]() { return AP_CheckGifts(); });
 
 	static const UEnum* giftTraitEnum = StaticEnum<EGiftTrait>();
@@ -578,6 +583,11 @@ TSet<int64> AApSubsystem::GetAllLocations() {
 }
 
 void AApSubsystem::MarkGameAsDone() {
+	if (config.SaveMode) {
+		UE_LOG(LogApSubsystem, Warning, TEXT("AApSubsystem::MarkGameAsDone() called in Save Mode, ignoring request"));
+		return;
+	}
+
 	CallOnGameThread<void>([]() { AP_StoryComplete(); });
 }
 
@@ -632,6 +642,11 @@ void AApSubsystem::CreateLocationHint(int64 locationId, bool spam) {
 void AApSubsystem::CreateLocationHint(const TSet<int64>& locationIds, bool spam) {
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::CreateLocationHint(set: %i, %s)"), locationIds.Num(), spam ? TEXT("true") : TEXT("false"));
 
+	if (config.SaveMode) {
+		UE_LOG(LogApSubsystem, Warning, TEXT("AApSubsystem::CreateLocationHint() called in Save Mode, ignoring request"));
+		return;
+	}
+
 	std::set<int64> locationsToHint;
 
 	for (int64 locationId : locationIds) {
@@ -651,6 +666,11 @@ void AApSubsystem::CheckLocation(int64 locationId) {
 
 void AApSubsystem::CheckLocation(const TSet<int64>& locationIds) {
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::CheckLocation(set: %i)"), locationIds.Num());
+
+	if (config.SaveMode) {
+		UE_LOG(LogApSubsystem, Warning, TEXT("AApSubsystem::CheckLocation() called in Save Mode, ignoring request"));
+		return;
+	}
 
 	std::set<int64> locationsToCheck;
 
