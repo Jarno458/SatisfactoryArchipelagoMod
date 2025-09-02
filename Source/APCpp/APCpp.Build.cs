@@ -24,7 +24,8 @@ public class APCpp : ModuleRules
         }
         else if (Target.Platform == UnrealTargetPlatform.Linux)
         {
-            throw new Exception("Not Supported Platform");
+            PublicAdditionalLibraries.AddRange(Directory.EnumerateFiles(LibFolder, "*.a"));
+            PublicAdditionalLibraries.AddRange(Directory.EnumerateFiles(Path.Combine(LibFolder, "mbedtls"), "*.a"));
         }
     }
 }
