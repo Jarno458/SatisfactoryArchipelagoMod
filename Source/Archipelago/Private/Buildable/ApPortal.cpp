@@ -6,8 +6,6 @@
 #pragma optimize("", off)
 
 AApPortal::AApPortal() : Super() {
-	//mPowerInfoClass = UFGPowerInfoComponent::StaticClass();
-
 	bReplicates = true;
 
 	mPowerConsumption = 10;
@@ -31,41 +29,16 @@ void AApPortal::BeginPlay() {
 	portalSubsystem = AApPortalSubsystem::Get(world);
 	replicatedGiftingSubsystem = AApReplicatedGiftingSubsystem::Get(world);
 
-	mPowerInfo->OnHasPowerChanged.BindUFunction(this, "CheckPower");
-
 	for (UFGFactoryConnectionComponent* connection : GetConnectionComponents()) {
 		if (connection->GetDirection() == EFactoryConnectionDirection::FCD_INPUT)
 			input = connection;
 		else
 			output = connection;
 	}
-
-	CheckPower(false);
 }
 
 bool AApPortal::CanProduce_Implementation() const {
 	return HasPower();
-}
-
-void AApPortal::CheckPower(bool newHasPower) {
-	if (!HasAuthority())
-		return;
-
-	if (IsValid(this) && Factory_HasPower()) {
-		((AApPortalSubsystem*)portalSubsystem)->RegisterPortal(this);
-	} else {
-		if (!IsValid(this)) {
-			((AApPortalSubsystem*)portalSubsystem)->UnRegisterPortal(this, FInventoryItem::NullInventoryItem);
-			return;
-		}
-		
-		FScopeTryLock lock(&outputLock);
-		if (lock.IsLocked()) {
-			((AApPortalSubsystem*)portalSubsystem)->UnRegisterPortal(this, nextItemToOutput);
-		} else {
-			((AApPortalSubsystem*)portalSubsystem)->UnRegisterPortal(this, FInventoryItem::NullInventoryItem);
-		}
-	}
 }
 
 void AApPortal::Factory_Tick(float dt) {
@@ -75,6 +48,16 @@ void AApPortal::Factory_Tick(float dt) {
 		return;
 
 	camReceiveOutput = IsValid(this) && CanProduce() && IsValid(output) && output->IsConnected();
+
+	if (!camReceiveOutput) {
+		FScopeTryLock lock(&outputLock);
+		if (lock.IsLocked()) {
+			if (nextItemToOutput.IsValid())
+				((AApPortalSubsystem*)portalSubsystem)->ReQueue(nextItemToOutput);
+
+			nextItemToOutput = FInventoryItem::NullInventoryItem;
+		}
+	}
 }
 
 bool AApPortal::TrySetOutput(FInventoryItem item) {
@@ -133,8 +116,9 @@ bool AApPortal::Factory_PeekOutput_Implementation(const class UFGFactoryConnecti
 bool AApPortal::Factory_GrabOutput_Implementation(class UFGFactoryConnectionComponent* connection, FInventoryItem& out_item, float& out_OffsetBeyond, TSubclassOf<UFGItemDescriptor> type) {
 	out_OffsetBeyond = 0;
 	
-	if (!Factory_HasPower())
+	if (!Factory_HasPower()) {
 		return false;
+	}
 
 	//hardlock we need to yield some output here
 	FScopeTryLock lock(&outputLock);
@@ -143,7 +127,6 @@ bool AApPortal::Factory_GrabOutput_Implementation(class UFGFactoryConnectionComp
 		nextItemToOutput = FInventoryItem::NullInventoryItem;
 		return true;
 	} else {
-		out_item = FInventoryItem::NullInventoryItem;
 		return false;
 	}
 }

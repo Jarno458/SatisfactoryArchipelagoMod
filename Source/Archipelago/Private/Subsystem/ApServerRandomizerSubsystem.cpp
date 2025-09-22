@@ -5,7 +5,7 @@
 #include "Logging/StructuredLog.h"
 #include "FGGameUserSettings.h"
 
-#include "data/ApMappings.h"
+#include "Data/ApMappings.h"
 
 DEFINE_LOG_CATEGORY(LogApServerRandomizerSubsystem);
 
@@ -93,12 +93,6 @@ bool AApServerRandomizerSubsystem::InitializeTick() {
 	EApConnectionState connectionState = connectionInfo->GetConnectionState();
 
 	if (connectionState == EApConnectionState::Connected) {
-		if (!slotData->HasLoadedSlotData()) {
-			if (!slotData->SetSlotDataJson(connectionInfo->GetSlotDataJson())) {
-				//TODO: Fail connection
-			}
-		}
-
 		if (scoutedLocations.IsEmpty() && slotData->HasLoadedSlotData())
 			ScoutArchipelagoItems();
 

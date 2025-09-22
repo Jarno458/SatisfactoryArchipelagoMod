@@ -1,4 +1,5 @@
 #include "Subsystem/ApSubsystem.h"
+#include "Subsystem/ApSlotDataSubsystem.h"
 #include "ApUtils.h"
 #include "Async/Async.h"
 #include "SessionSettings/SessionSettingsManager.h"
@@ -72,9 +73,6 @@ void AApSubsystem::ConnectToArchipelago() {
 	});
 	AP_SetLoggingCallback([this](std::string message) {
 		UE_LOG(LogApSubsystem, Display, TEXT("LogFromAPCpp: %s"), *UApUtils::FStr(message));
-	});
-	AP_RegisterSlotDataRawCallback("Data", [this](std::string json) {
-		connectionInfoSubsystem->slotDataJson = UApUtils::FStr(json);
 	});
 
 	AP_SetDeathLinkSupported(true);
@@ -347,8 +345,25 @@ void AApSubsystem::CheckConnectionState() {
 				connectionInfoSubsystem->currentPlayerTeam = AP_GetCurrentPlayerTeam();
 				connectionInfoSubsystem->currentPlayerSlot = AP_GetPlayerID();
 				connectionInfoSubsystem->ConnectionState = EApConnectionState::Connected;
-				connectionInfoSubsystem->ConnectionStateDescription = LOCTEXT("AuthSuccess", "Authentication succeeded.");
-				UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::Tick(), Successfully Authenticated"));
+
+				AApSlotDataSubsystem* slotDataSubsystem = AApSlotDataSubsystem::Get(GetWorld());
+				fgcheck(slotDataSubsystem);
+
+				//TODO: i dont like this dependency graph where ApSubsystem depends on ApSlotDataSubsystem which depends on ApSubsystem
+				if (!slotDataSubsystem->HasLoadedSlotData()) {
+					AP_Shutdown();
+
+					connectionInfoSubsystem->ConnectionState = EApConnectionState::ConnectionFailed;
+
+					if (slotDataSubsystem->GetSlotDataState() == EApSlotDataState::Failed) {
+						connectionInfoSubsystem->ConnectionStateDescription = slotDataSubsystem->GetLastError();
+					}
+
+					UE_LOG(LogApSubsystem, Error, TEXT("AApSubsystem::CheckConnectionState(), Failed to load slotdata"));
+				} else {
+					connectionInfoSubsystem->ConnectionStateDescription = LOCTEXT("AuthSuccess", "Authentication succeeded.");
+					UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::Tick(), Successfully Authenticated"));
+				}
 			}
 		} else if (status == AP_ConnectionStatus::ConnectionRefused) {
 			AP_Shutdown();
@@ -408,7 +423,7 @@ void AApSubsystem::SetGiftBoxState(bool open, const TSet<FString>& acceptedTrait
 
 		std::vector<std::string> desiredTriats;
 
-		for (const FString trait : acceptedTraits)
+		for (const FString& trait : acceptedTraits)
 			desiredTriats.push_back(TCHAR_TO_UTF8(*trait));
 
 		AP_GiftBoxProperties giftbox;
@@ -611,7 +626,7 @@ FApNetworkItem AApSubsystem::ScoutLocation(int64 locationId) {
 TMap<int64, FApNetworkItem> AApSubsystem::ScoutLocation(const TSet<int64>& locationIds) {
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::ScoutLocation(set: %i)"), locationIds.Num());
 
-	std::set<int64> locationsToScout;
+	std::set<int64_t> locationsToScout;
 
 	for (int64 locationId : locationIds) {
 		locationsToScout.insert(locationId);
@@ -647,7 +662,7 @@ void AApSubsystem::CreateLocationHint(const TSet<int64>& locationIds, bool spam)
 		return;
 	}
 
-	std::set<int64> locationsToHint;
+	std::set<int64_t> locationsToHint;
 
 	for (int64 locationId : locationIds) {
 		locationsToHint.insert(locationId);
@@ -672,7 +687,7 @@ void AApSubsystem::CheckLocation(const TSet<int64>& locationIds) {
 		return;
 	}
 
-	std::set<int64> locationsToCheck;
+	std::set<int64_t> locationsToCheck;
 
 	for (int64 locationId : locationIds) {
 		locationsToCheck.insert(locationId);
@@ -680,6 +695,13 @@ void AApSubsystem::CheckLocation(const TSet<int64>& locationIds) {
 
 	CallOnGameThread<void>([&locationsToCheck]() {
 		AP_SendItem(locationsToCheck);
+	});
+}
+
+FString AApSubsystem::GetSlotDataJson() {
+	return CallOnGameThread<FString>([]() {
+		std::string slotData = AP_GetSlotData();
+		return UApUtils::FStr(slotData);
 	});
 }
 

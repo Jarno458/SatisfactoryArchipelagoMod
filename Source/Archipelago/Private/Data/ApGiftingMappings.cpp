@@ -13,7 +13,8 @@ const TMap<EGiftTrait, EGiftTrait> UApGiftingMappings::TraitParents = {
 	{EGiftTrait::Metal, EGiftTrait::Material},
 	{EGiftTrait::Speed, EGiftTrait::Buff},
 	{EGiftTrait::Grass, EGiftTrait::Material},
-	{EGiftTrait::Bomb, EGiftTrait::Weapon},
+	{EGiftTrait::Bomb, EGiftTrait::Explosive},
+	{EGiftTrait::Explosive, EGiftTrait::RangedWeapon},
 	{EGiftTrait::Stone, EGiftTrait::Material},
 	{EGiftTrait::Ore, EGiftTrait::Mineral},
 	{EGiftTrait::Damage, EGiftTrait::Trap},
@@ -26,7 +27,6 @@ const TMap<EGiftTrait, EGiftTrait> UApGiftingMappings::TraitParents = {
 	{EGiftTrait::Water, EGiftTrait::Liquid},
 	{EGiftTrait::Oil, EGiftTrait::Liquid},
 	{EGiftTrait::Fuel, EGiftTrait::Liquid},
-	{EGiftTrait::Bomb, EGiftTrait::RangedWeapon},
 	{EGiftTrait::MeleeWeapon, EGiftTrait::Weapon},
 	{EGiftTrait::RangedWeapon, EGiftTrait::Weapon},
 };
@@ -89,8 +89,15 @@ const TMap<EGiftTrait, int64> UApGiftingMappings::TraitDefaultItemIds = {
 	{EGiftTrait::Angular, 1338124}, // Fixshite trigon
 	{EGiftTrait::Liquid, 1338075}, // Desc_PackagedWater_C,
 	{EGiftTrait::MeleeWeapon, 1338183}, // Xeno Basher
-	{EGiftTrait::RangedWeapon, 1338159} // Explosive rebar ammo
+	{EGiftTrait::RangedWeapon, 1338159}, // Explosive rebar ammo
 	// newly added
+	// newly newly added
+	{EGiftTrait::Neutralizing, 1338187}, // Desc_Filter_C
+	{EGiftTrait::Explosive, 1338097}, // Desc_GunpowderMK2_C, //Smokeless Powder
+	{EGiftTrait::Pipe, 1338104}, // Desc_SteelPipe_C,
+	{EGiftTrait::Insect, 1338118}, // Desc_StingerParts_C,
+	{EGiftTrait::Energy, 1338082}, // // Desc_CrystalShard_C, //Power Shard
+	//
 };
 
 const TMap<int64, TMap<EGiftTrait, float>> UApGiftingMappings::TraitsPerItemRatings = {
@@ -176,10 +183,10 @@ const TMap<int64, TMap<EGiftTrait, float>> UApGiftingMappings::TraitsPerItemRati
 	{1338079, {{EGiftTrait::Radioactive, 2.0f},{EGiftTrait::Damage, 2.0f}}}, // Desc_PlutoniumPellet_C, 
 	{1338080, {{EGiftTrait::Chemicals, 1.0f},{EGiftTrait::Radioactive, 20.0f},{EGiftTrait::Damage, 20.0f}}}, // Desc_PlutoniumWaste_C, 
 	{1338081, {{EGiftTrait::Material, 1.0f}}}, // Desc_PolymerResin_C, 
-	{1338082, {{EGiftTrait::Artifact,1.0f},{EGiftTrait::Speed,1.0f}}}, // Desc_CrystalShard_C, //Power Shard
+	{1338082, {{EGiftTrait::Artifact,1.0f},{EGiftTrait::Speed,1.0f},{EGiftTrait::Energy, 1.0f}}}, // Desc_CrystalShard_C, //Power Shard
 	{1338083, {{EGiftTrait::Gold, 5.0f},{EGiftTrait::Statue, 1.0f}}}, // Desc_SpaceGiraffeStatue_C, 
 	{1338084, {{EGiftTrait::Silver, 0.4f},{EGiftTrait::Electronics, 0.6f}, {EGiftTrait::Container, 0.5f}}}, // Desc_PressureConversionCube_C, 
-	{1338085, {{EGiftTrait::Artifact,1000.0f},{EGiftTrait::Speed,1000.0f},{EGiftTrait::DarkMatter, 1000.0f},{EGiftTrait::SpaceMineral, 1000.0f}}}, // Desc_AlienPowerFuel, 
+	{1338085, {{EGiftTrait::Artifact,100.0f},{EGiftTrait::Speed,100.0f},{EGiftTrait::DarkMatter, 100.0f},{EGiftTrait::SpaceMineral, 100.0f},{EGiftTrait::Energy, 100.0f}}}, // Desc_AlienPowerFuel, 
 	{1338086, {{EGiftTrait::Crystal, 1.0f}}}, // Desc_QuartzCrystal_C, 
 	{1338087, {{EGiftTrait::Copper, 1.0f}}}, // Desc_HighSpeedWire_C, 
 	{1338088, {{EGiftTrait::Electronics, 1.0f}}}, // Desc_ModularFrameLightweight_C, //Radio Control Unit
@@ -198,7 +205,7 @@ const TMap<int64, TMap<EGiftTrait, float>> UApGiftingMappings::TraitsPerItemRati
 	{1338101, {{EGiftTrait::Silver, 50.0f}}}, // Desc_Hog_Statue_C, 
 	{1338102, {{EGiftTrait::Steel, 1.0f}}}, // Desc_SteelPlate_C, 
 	{1338103, {{EGiftTrait::Steel, 1.0f}}}, // Desc_SteelIngot_C, 
-	{1338104, {{EGiftTrait::Steel, 1.0f}}}, // Desc_SteelPipe_C, 
+	{1338104, {{EGiftTrait::Steel, 1.0f},{EGiftTrait::Pipe, 1.0f}}}, // Desc_SteelPipe_C, 
 	{1338105, {{EGiftTrait::Bomb, 1.0f}}}, // Desc_Sulfur_C, 
 	{1338106, {{EGiftTrait::Electronics, 1.0f}}}, // Desc_ComputerSuper_C, 
 	{1338107, {{EGiftTrait::Electronics, 1.0f}, {EGiftTrait::Teleport, 0.5f}}}, // Desc_QuantumOscillator_C, // Superposition Oscillator
@@ -212,7 +219,7 @@ const TMap<int64, TMap<EGiftTrait, float>> UApGiftingMappings::TraitsPerItemRati
 	{1338115, {{EGiftTrait::Copper, 1.0f}}}, // Desc_Wire_C, 
 	{1338116, {{EGiftTrait::Wood, 1.0}}}, // Desc_Wood_C, 
 	{1338117, {{EGiftTrait::Grass, 1.0f},{EGiftTrait::Resource, 0.1f}}}, // Desc_SpitterParts_C, 
-	{1338118, {{EGiftTrait::Grass, 1.0f},{EGiftTrait::Resource, 0.1f}}}, // Desc_StingerParts_C, 
+	{ 1338118, {{EGiftTrait::Grass, 1.0f},{EGiftTrait::Resource, 0.1f},{EGiftTrait::Insect, 1.0f}}}, // Desc_StingerParts_C, 
 	{1338119, {{EGiftTrait::Grass, 1.0f},{EGiftTrait::Resource, 0.1f}}}, // Desc_HatcherParts_C, 
 
 	// 1.0
@@ -237,8 +244,8 @@ const TMap<int64, TMap<EGiftTrait, float>> UApGiftingMappings::TraitsPerItemRati
 	{1338152, {{EGiftTrait::Tool, 1.0f},{EGiftTrait::Speed, 1.0f}}}, // BP_EquipmentDescriptorJumpingStilts_C, 
 	{1338153, {{EGiftTrait::RangedWeapon, 1.0f},{EGiftTrait::Buff, 1.0f}}}, //BoomBox
 	{1338154, {{EGiftTrait::MeleeWeapon, 1.0f}}}, // Desc_Chainsaw_C, 
-	{1338155, {{EGiftTrait::RangedWeapon, 1.0f}}}, // Desc_NobeliskCluster_C, 
-	//{1338156, {{ }}}, // Unused, 
+	{1338155, {{EGiftTrait::Bomb, 1.0f}}}, // Desc_NobeliskCluster_C, 
+	{1338156, {{EGiftTrait::Neutralizing, 1.0f}}}, // Desc_HazmatFilter_C, 
 	{1338157, {{EGiftTrait::Speed, 1.0f}}}, // BP_EquipmentDescriptorCup_C, 
 	{1338158, {{EGiftTrait::Speed, 1.0f},{EGiftTrait::Gold, 1.0f}}}, // BP_EquipmentDescriptorCupGold_C, 
 	{1338159, {{EGiftTrait::RangedWeapon, 1.0f}}}, // Desc_Rebar_Explosive_C, 
@@ -269,6 +276,7 @@ const TMap<int64, TMap<EGiftTrait, float>> UApGiftingMappings::TraitsPerItemRati
 	{1338184, {{EGiftTrait::MeleeWeapon, 1.0f}}}, // BP_EquipmentDescriptorShockShank_C, 
 	{1338185, {{EGiftTrait::Tool, 1.0f},{EGiftTrait::Speed, 1.0f}}}, // BP_EqDescZipLine_C, 
 	{1338186, {{EGiftTrait::Tool, 1.0f}}}, // BP_ItemDescriptorPortableMiner_C,
+	{1338187, {{EGiftTrait::Neutralizing, 1.0f}}}, // Desc_Filter_C,
 };
 
 // The Unsinkables

@@ -44,9 +44,6 @@ private:
 	FInventoryItem nextItemToOutput = FInventoryItem::NullInventoryItem;
 
 public:
-	UFUNCTION()
-	void CheckPower(bool newHasPower);
-
 	FORCEINLINE bool CanReceiveOutput() const { return camReceiveOutput; };
 
 	bool TrySetOutput(FInventoryItem item);
@@ -57,8 +54,4 @@ public:
 	virtual bool Factory_PeekOutput_Implementation(const class UFGFactoryConnectionComponent* connection, TArray<FInventoryItem>& out_items, TSubclassOf<UFGItemDescriptor> type) const override;
 	virtual bool Factory_GrabOutput_Implementation(class UFGFactoryConnectionComponent* connection, FInventoryItem& out_item, float& out_OffsetBeyond, TSubclassOf<UFGItemDescriptor> type) override;
 	virtual void Factory_CollectInput_Implementation() override;
-
-private:
-	void Register();
-	void UnRegister();
 };

@@ -1,9 +1,14 @@
 #include "Subsystem/ApSlotDataSubsystem.h"
+#include "Subsystem/ApSubsystem.h"
+#include "Subsystem/ApConnectionInfoSubsystem.h"
 #include "Net/UnrealNetwork.h"
 #include "PushModel.h"
 #include "Logging/StructuredLog.h"
 
 DEFINE_LOG_CATEGORY(LogApSlotDataSubsystem);
+
+#define LOCTEXT_NAMESPACE "Archipelago"
+#define EXPECTED_SLOTDATA_VERSION 1
 
 AApSlotDataSubsystem::AApSlotDataSubsystem() {
 	PrimaryActorTick.bCanEverTick = false;
@@ -45,12 +50,43 @@ void AApSlotDataSubsystem::BeginPlay() {
 	}
 }
 
-bool AApSlotDataSubsystem::SetSlotDataJson(FString slotDataJson) {
-	if (slotDataJson.IsEmpty())
-		return false;
+bool AApSlotDataSubsystem::HasLoadedSlotData() {
+	slotDataState = EApSlotDataState::NotLoaded;
 
+	if (hasLoadedSlotData && hasLoadedExplorationData) {
+		slotDataState = EApSlotDataState::Ready;
+		return true;
+	}
+
+	AApConnectionInfoSubsystem* connectionInfoSubsystem = AApConnectionInfoSubsystem::Get(GetWorld());
+	if (connectionInfoSubsystem == nullptr) {
+		UE_LOG(LogApSlotDataSubsystem, Warning, TEXT("AApSlotDataSubsystem::HasLoadedSlotData() Could not get ApConnectionInfoSubsystem"));
+		return false;
+	}
+
+	if (connectionInfoSubsystem->GetConnectionState() != EApConnectionState::Connected) {
+		return false;
+	}
+
+	AApSubsystem* apSubsystem = AApSubsystem::Get(GetWorld());
+	if (apSubsystem == nullptr) {
+		UE_LOG(LogApSlotDataSubsystem, Warning, TEXT("AApSlotDataSubsystem::HasLoadedSlotData() Could not get ApSubsystem"));
+		return false;
+	}
+
+	slotDataState = TryLoadSlotDataFromServer(apSubsystem->GetSlotDataJson());
+
+	return slotDataState == EApSlotDataState::Ready;
+}
+
+EApSlotDataState AApSlotDataSubsystem::TryLoadSlotDataFromServer(FString slotDataJson) {
 	hasLoadedSlotData = false;
 	hasLoadedExplorationData = false;
+
+	if (slotDataJson.IsEmpty()) {
+		lastError = LOCTEXT("SlotDataFailedToParseEmptyJson", "Failed to load SlotData - json was empty.");
+		return EApSlotDataState::Failed;
+	}
 
 	const TSharedRef<TJsonReader<>> reader = TJsonReaderFactory<>::Create(*slotDataJson);
 
@@ -60,18 +96,29 @@ bool AApSlotDataSubsystem::SetSlotDataJson(FString slotDataJson) {
 	serializer.Deserialize(reader, parsedJson);
 	if (!parsedJson.IsValid()) {
 		UE_LOGFMT(LogApSlotDataSubsystem, Error, "AApSlotDataSubsystem::SetSlotDataJson() failed to parse slotdata: {0}", slotDataJson);
-		return false;
+		lastError = FText::Format(LOCTEXT("SlotDataFailedToParse", "Failed to parse SlotData json: {0}"), FText::FromString(slotDataJson));
+		return EApSlotDataState::Failed;
 	}
 
+	const TSharedPtr<FJsonObject>* dataJsonPointer = nullptr;
+	if (!parsedJson->TryGetObjectField("Data", dataJsonPointer)) {
+		UE_LOGFMT(LogApSlotDataSubsystem, Error, "AApSlotDataSubsystem::SetSlotDataJson() failed to parse slotdata: {0}", slotDataJson);
+		lastError = FText::Format(LOCTEXT("SlotDataFailedToParse", "Failed to parse SlotData json: {0}"), FText::FromString(slotDataJson));
+		return EApSlotDataState::Failed;
+	}
+
+	const TSharedPtr<FJsonObject> dataJson = *dataJsonPointer;
+
 	int slotDataVersion = -1;
-	if (!parsedJson->TryGetNumberField("SlotDataVersion", slotDataVersion) || slotDataVersion < 1) {
+	if (!dataJson->TryGetNumberField("SlotDataVersion", slotDataVersion) || slotDataVersion < EXPECTED_SLOTDATA_VERSION) {
 		UE_LOGFMT(LogApSlotDataSubsystem, Error, "AApSlotDataSubsystem::SetSlotDataJson() failed to parse slotdata of version {0}", slotDataVersion);
-		return false;
+		lastError = FText::Format(LOCTEXT("SlotDataFailedVersionMissMatch", "Failed to parse SlotData of version {0}, expected version {1}"), slotDataVersion, EXPECTED_SLOTDATA_VERSION);
+		return EApSlotDataState::Failed;
 	}
 
 	TArray<FApReplicatedHubLayoutEntry> parsedHubCostEntries;
 	int tierNumber = 0;
-	for (TSharedPtr<FJsonValue> tier : parsedJson->GetArrayField("HubLayout")) {
+	for (TSharedPtr<FJsonValue> tier : dataJson->GetArrayField("HubLayout")) {
 		int milestoneNumber = 0;
 		for (TSharedPtr<FJsonValue> milestone : tier->AsArray()) {
 			for (TPair<FString, TSharedPtr<FJsonValue>> cost : milestone->AsObject()->Values) {
@@ -92,7 +139,7 @@ bool AApSlotDataSubsystem::SetSlotDataJson(FString slotDataJson) {
 	ReconstructHubLayout();
 
 	TArray<FApReplicatedCostAmount> parsedExplorationCosts;
-	for (TPair<FString, TSharedPtr<FJsonValue>> cost : parsedJson->GetObjectField("ExplorationCosts")->Values) {
+	for (TPair<FString, TSharedPtr<FJsonValue>> cost : dataJson->GetObjectField("ExplorationCosts")->Values) {
 		int64 itemId = FCString::Atoi64(*cost.Key);
 		uint32 amount;
 		cost.Value->TryGetNumber(amount);
@@ -103,7 +150,7 @@ bool AApSlotDataSubsystem::SetSlotDataJson(FString slotDataJson) {
 	MARK_PROPERTY_DIRTY_FROM_NAME(AApSlotDataSubsystem, replicatedExplorationCost, this);
 	ReconstructExplorationCost();
 
-	TSharedPtr<FJsonObject> options = parsedJson->GetObjectField("Options");
+	TSharedPtr<FJsonObject> options = dataJson->GetObjectField("Options");
 
 	TArray<TSharedPtr<FJsonValue>> starting_items_array = options->GetArrayField("StartingRecipies");
 	starterRecipeIds.SetNum(starting_items_array.Num());
@@ -120,7 +167,9 @@ bool AApSlotDataSubsystem::SetSlotDataJson(FString slotDataJson) {
 	bool requiresAnyGoal = goalRequirement == 0;
 
 	uint8 finalSpaceElevatorTier;
-	options->TryGetNumberField("FinalElevatorTier", finalSpaceElevatorTier);
+	if (!options->TryGetNumberField("FinalElevatorPhase", finalSpaceElevatorTier)) {
+		options->TryGetNumberField("FinalElevatorTier", finalSpaceElevatorTier); //legacy support
+	}
 	uint64 finalResourceSinkPoints; 
 	options->TryGetNumberField("FinalResourceSinkPointsTotal", finalResourceSinkPoints);
 	uint64 finalResourceSinkPointsPerMinute;
@@ -128,7 +177,8 @@ bool AApSlotDataSubsystem::SetSlotDataJson(FString slotDataJson) {
 
 	TArray<FString> goalSelection; 
 	options->TryGetStringArrayField("GoalSelection", goalSelection);
-	bool isSpaceElevatorGoalEnabled = goalSelection.Contains("Space Elevator Tier");
+	bool isSpaceElevatorGoalEnabled = goalSelection.Contains("Space Elevator Phase") ||
+												 goalSelection.Contains("Space Elevator Tier"); //legacy support
 	bool isResourceSinkGoalEnabled = goalSelection.Contains("AWESOME Sink Points (total)");
 	bool isResourceSinkPerMinuteGoalEnabled = goalSelection.Contains("AWESOME Sink Points (per minute)");
 	bool isExplorationGoalEnabled = goalSelection.Contains("Exploration Collectables");
@@ -149,7 +199,7 @@ bool AApSlotDataSubsystem::SetSlotDataJson(FString slotDataJson) {
 	hasLoadedSlotData = true;
 	hasLoadedExplorationData = true;
 
-	return true;
+	return EApSlotDataState::Ready;
 }
 
 void AApSlotDataSubsystem::ReconstructHubLayout() {
@@ -225,4 +275,18 @@ void AApSlotDataSubsystem::PostLoadGame_Implementation(int32 saveVersion, int32 
 
 	ReconstructHubLayout();
 	ReconstructExplorationCost();
+
+	//Temp fix for old saves that with missing goals
+	if (!Goals.IsSpaceElevatorGoalEnabled()
+		&& !Goals.IsResourceSinkGoalEnabled()
+		&& !Goals.IsResourceSinkPerMinuteGoalEnabled()
+		&& !Goals.IsExplorationGoalEnabled()
+		&& !Goals.IsFicsmasGoalEnabled()) {
+
+		UE_LOG(LogApSlotDataSubsystem, Display, TEXT("AApSlotDataSubsystem::PostLoadGame_Implementation(saveVersion: %i, gameVersion: %i) No goal selected, let slot_data be decided by server"), saveVersion, gameVersion);
+		//something is wrong if we dont have a goal, force load slot_data from server
+		hasLoadedSlotData = false;
+	}
 }
+
+#undef LOCTEXT_NAMESPACE

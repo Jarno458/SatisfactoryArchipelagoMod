@@ -11,6 +11,13 @@ DECLARE_LOG_CATEGORY_EXTERN(LogApSlotDataSubsystem, Log, All);
 
 #define ID_OFFSET 1338000
 
+UENUM(BlueprintType)
+enum class EApSlotDataState : uint8 {
+	NotLoaded UMETA(DisplayName = "Not Avaiable"),
+	Ready UMETA(DisplayName = "Avaiable"),
+	Failed UMETA(DisplayName = "Loading Failed"),
+};
+
 USTRUCT()
 struct ARCHIPELAGO_API FApReplicatedHubLayoutEntry
 {
@@ -162,8 +169,14 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Schematic", DisplayName = "Get Archipelago Slot Data Subsystem", Meta = (DefaultToSelf = "worldContext"))
 	static AApSlotDataSubsystem* Get(UObject* worldContext);
 
+	UFUNCTION(BlueprintCallable)
+	bool HasLoadedSlotData();
+
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	FORCEINLINE bool HasLoadedSlotData() const { return hasLoadedSlotData && hasLoadedExplorationData; }
+	FORCEINLINE EApSlotDataState GetSlotDataState() const { return slotDataState; };
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	FORCEINLINE FText GetLastError() const { return lastError; };
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	const TMap<int64, int> GetCostsForMilestone(int tier, int milestone);
@@ -180,12 +193,7 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	TArray<int64> GetStarterRecipeIds();
 
-	//Returns false if slot data could not parsed
-	bool SetSlotDataJson(FString slotDataJson);
-
 public:
-	//UPROPERTY(BlueprintReadOnly, SaveGame)
-	//int NumberOfChecksPerMilestone;
 	UPROPERTY(BlueprintReadOnly, SaveGame)
 	int FreeSampleEquipment;
 	UPROPERTY(BlueprintReadOnly, SaveGame)
@@ -199,6 +207,7 @@ public:
 
 	UPROPERTY(BlueprintReadOnly, SaveGame, Replicated)
 	TArray<int64> starterRecipeIds;
+
 private:
 	UPROPERTY(SaveGame, ReplicatedUsing = ReconstructHubLayout)
 	TArray<FApReplicatedHubLayoutEntry> hubCostEntriesReplicated;
@@ -210,6 +219,8 @@ private:
 
 	bool hasLoadedSlotData;
 	bool hasLoadedExplorationData;
+	EApSlotDataState slotDataState = EApSlotDataState::NotLoaded;
+	FText lastError;
 
 	UPROPERTY(SaveGame, Replicated)
 	FApGoals Goals;
@@ -240,6 +251,8 @@ public:
 	FORCEINLINE bool const IsExplorationGoalEnabled() const { return Goals.IsExplorationGoalEnabled(); }
 
 private:
+	EApSlotDataState TryLoadSlotDataFromServer(FString json);
+
 	UFUNCTION() //required for event hookup
 	void ReconstructHubLayout();
 

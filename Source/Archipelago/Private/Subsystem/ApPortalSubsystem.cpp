@@ -1,4 +1,7 @@
 #include "Subsystem/ApPortalSubsystem.h"
+#include "Containers/List.h"
+#include "EngineUtils.h"
+#include "Buildable/ApPortal.h"
 #include "Subsystem/ApServerGiftingSubsystem.h"
 
 DEFINE_LOG_CATEGORY(LogApPortalSubsystem);
@@ -15,7 +18,10 @@ AApPortalSubsystem::AApPortalSubsystem() : Super() {
 
 	PrimaryActorTick.bCanEverTick = true;
 	PrimaryActorTick.bStartWithTickEnabled = true;
-	PrimaryActorTick.TickInterval = 0.048f; //needs to thick atleast 20 times per seconds to keep up with a 1200 belt, 0.048 is ~20.8 times per second
+
+	//needs to thick atleast 1200 times per minute to keep up with a 1200 belt, 1200 / 60sec = 20x per second
+	//0.048 is ~20.8 times per second
+	PrimaryActorTick.TickInterval = 0.048f; 
 
 	ReplicationPolicy = ESubsystemReplicationPolicy::SpawnOnServer;
 }
@@ -38,17 +44,35 @@ void AApPortalSubsystem::Tick(float dt) {
 
 		isInitialized = true;
 	} else {
-		ProcessOutputQueue();
+		ProcessPendingOutputQueue();
+		SendOutputQueueToPortals();
 	}
 }
 
-void AApPortalSubsystem::ProcessOutputQueue() {
-	for (AApPortal* portal : BuiltPortals) {
+void AApPortalSubsystem::ProcessPendingOutputQueue() {
+	FInventoryItem pendingItem;
+
+	while (PriorityPendingOutputQueue.Dequeue(pendingItem)) {
+		AddToStartOfQueue(pendingItem);
+	}
+
+	while (PendingOutputQueue.Dequeue(pendingItem)) {
+		AddToEndOfQueue(pendingItem);
+	}
+}
+
+void AApPortalSubsystem::SendOutputQueueToPortals() {
+	for (TActorIterator<AApPortal> actorItterator(GetWorld()); actorItterator; ++actorItterator) {
+		AApPortal* portal = *actorItterator;
+		if (!IsValid(portal))
+			continue;
+
 		if (!nextItemToOutput.IsValid())
-			OutputQueue.Dequeue(nextItemToOutput);
+			TryPopFromQueue(nextItemToOutput);
 		if (!nextItemToOutput.IsValid())
 			return;
-		if (IsValid(portal) && portal->TrySetOutput(nextItemToOutput))
+
+		if (portal->TrySetOutput(nextItemToOutput))
 			nextItemToOutput = FInventoryItem::NullInventoryItem;
 	}
 }
@@ -57,7 +81,7 @@ void AApPortalSubsystem::Enqueue(TSubclassOf<UFGItemDescriptor>& cls, int amount
 	UE_LOG(LogApPortalSubsystem, Display, TEXT("AApPortalSubsystem::Enqueue(%s, %i)"), *UFGItemDescriptor::GetItemName(cls).ToString(), amount);
 
 	for (int i = 0; i < amount; i++) {
-		OutputQueue.Enqueue(FInventoryItem(cls));
+		PendingOutputQueue.Enqueue(FInventoryItem(cls));
 	}
 }
 
@@ -65,23 +89,9 @@ void AApPortalSubsystem::Send(FApPlayer targetPlayer, FInventoryStack itemStack)
 	((AApServerGiftingSubsystem*)giftingSubsystem)->EnqueueForSending(targetPlayer, itemStack);
 }
 
-void AApPortalSubsystem::RegisterPortal(AApPortal* portal) {
-	if (portal == nullptr)
-		return;
-
-	bool alreadyExists;
-	BuiltPortals.Add(portal, &alreadyExists);
-}
-
-void AApPortalSubsystem::UnRegisterPortal(AApPortal* portal, FInventoryItem nextItem) {
-	if (portal == nullptr)
-		return;
-
-	BuiltPortals.Remove(portal);
-	
+void AApPortalSubsystem::ReQueue(FInventoryItem nextItem) {
 	if (nextItem.IsValid()) {
-		//TODO should be added to front of queue
-		OutputQueue.Enqueue(nextItem);
+		PriorityPendingOutputQueue.Enqueue(nextItem);
 	}
 }
 
@@ -99,18 +109,41 @@ void AApPortalSubsystem::PostSaveGame_Implementation(int32 saveVersion, int32 ga
 
 void AApPortalSubsystem::StoreQueueForSave() {
 	FInventoryItem item;
-	while (OutputQueue.Dequeue(item)) {
+	while (TryPopFromQueue(item)) {
 		OutputQueueSave.Add(mappings->ItemClassToItemId[item.GetItemClass()]);
 	}
 }
 
 void AApPortalSubsystem::RebuildQueueFromSave() {
-	OutputQueue.Empty();
+	ClearQueue();
 
 	for (int64 itemId : OutputQueueSave) {
 		TSubclassOf<UFGItemDescriptor> cls = StaticCastSharedRef<FApItem>(mappings->ApItems[itemId])->Class;
-		OutputQueue.Enqueue(FInventoryItem(cls));
+		AddToEndOfQueue(FInventoryItem(cls));
 	}
 
 	OutputQueueSave.Empty();
+}
+
+void AApPortalSubsystem::AddToEndOfQueue(FInventoryItem item) {
+	OutputQueue.AddHead(item);
+}
+
+void AApPortalSubsystem::AddToStartOfQueue(FInventoryItem item) {
+	OutputQueue.AddTail(item);
+}
+
+bool AApPortalSubsystem::TryPopFromQueue(FInventoryItem& outItem) {
+	if (!OutputQueue.IsEmpty()) {
+		TDoubleLinkedList<FInventoryItem>::TDoubleLinkedListNode* head = OutputQueue.GetHead();
+		outItem = head->GetValue();
+		OutputQueue.RemoveNode(head);
+		return true;
+	}
+	
+	return false;
+}
+
+void AApPortalSubsystem::ClearQueue() {
+	OutputQueue.Empty();
 }

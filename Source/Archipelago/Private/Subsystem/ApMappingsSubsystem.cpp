@@ -237,7 +237,7 @@ const TMap<FName, const FAssetData> AApMappingsSubsystem::GetBlueprintAssetsIn(I
 	registery.GetAssets(filter, assets);
 
 	TMap<FName, const FAssetData> assetsMap;
-	for (const FAssetData asset : assets) {
+	for (const FAssetData& asset : assets) {
 		FString nameString = asset.AssetName.ToString();
 
 		for (FString prefix : namePrefixes) {

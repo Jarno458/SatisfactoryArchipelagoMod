@@ -465,6 +465,7 @@ const TMap<int64, const TArray<FString>> UApMappings::ItemIdToGameRecipe = {
 	{1338465, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/Equipment/Recipe_NobeliskDetonator.Recipe_NobeliskDetonator'")}},
 	{1338466, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/Equipment/Recipe_PortableMiner.Recipe_PortableMiner'")}},
 	//1.1
+	{1338467, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/Converter/Recipe_DarkEnergy.Recipe_DarkEnergy'")}}, // Dark Matter Residue
 };
 
 const TMap<int64, const TArray<FString>> UApMappings::ItemIdToGameBuilding = {

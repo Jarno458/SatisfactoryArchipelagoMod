@@ -83,6 +83,8 @@ public:
 	FApNetworkItem ScoutLocation(int64 locationId);
 	TMap<int64, FApNetworkItem> ScoutLocation(const TSet<int64>& locationIds);
 
+	FString GetSlotDataJson();
+
 	void CreateLocationHint(int64 locationId, bool spam = false);
 	void CreateLocationHint(const TSet<int64>& locationIds, bool spam = false);
 

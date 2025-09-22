@@ -11,3 +11,5 @@ std::vector<std::pair<int,std::string>> AP_GetAllPlayers();
 void AP_SetLoggingCallback(std::function<void(std::string)> f_log);
 
 std::vector<int64_t> AP_GetAllLocations();
+
+std::string AP_GetSlotData();

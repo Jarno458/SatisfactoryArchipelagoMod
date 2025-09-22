@@ -59,9 +59,6 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FORCEINLINE FString GetRoomSeed() const { return roomSeed; };
 
-	UFUNCTION(BlueprintCallable, BlueprintPure)
-	FORCEINLINE FString GetSlotDataJson() const { return slotDataJson; };
-
 private:
 	UPROPERTY(Replicated)
 	EApConnectionState ConnectionState;
@@ -73,8 +70,6 @@ private:
 	int currentPlayerSlot = 0;
 	UPROPERTY(SaveGame)
 	FString roomSeed;
-	UPROPERTY(SaveGame)
-	FString slotDataJson;
 
 public:
 	friend class AApSubsystem;

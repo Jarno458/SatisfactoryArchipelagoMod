@@ -3,7 +3,6 @@
 #include "CoreMinimal.h"
 #include "Subsystem/ModSubsystem.h"
 
-#include "Buildable/ApPortal.h"
 #include "Subsystem/ApMappingsSubsystem.h"
 
 #include "Data/ApTypes.h"
@@ -12,9 +11,6 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(LogApPortalSubsystem, Log, All);
 
-/**
- * 
- */
 UCLASS()
 class ARCHIPELAGO_API AApPortalSubsystem : public AModSubsystem, public IFGSaveInterface
 {
@@ -48,28 +44,35 @@ private:
 	TArray<int64> OutputQueueSave;
 
 	FInventoryItem nextItemToOutput;
-	TQueue<FInventoryItem, EQueueMode::Mpsc> OutputQueue;
-	TQueue<FInventoryItem, EQueueMode::Mpsc> StartupQueue;
+
+	TDoubleLinkedList<FInventoryItem> OutputQueue;
+
+	TQueue<FInventoryItem, EQueueMode::Mpsc> PriorityPendingOutputQueue;
+	TQueue<FInventoryItem, EQueueMode::Mpsc> PendingOutputQueue;
 
 	int lastUsedPortalIndex;
 	bool isInitialized;
 
 public:
-	TSet<AApPortal*> BuiltPortals;
-
 	FORCEINLINE bool IsInitialized() const { return isInitialized; };
 
 	void Enqueue(TSubclassOf<UFGItemDescriptor>& cls, int amount);
 	
 	void Send(FApPlayer targetPlayer, FInventoryStack itemStack);
 
-	void RegisterPortal(AApPortal* portal);
-	void UnRegisterPortal(AApPortal* portal, FInventoryItem nextItem);
+	void ReQueue(FInventoryItem nextItem);
 
 private:
 	void ProcessInputQueue();
-	void ProcessOutputQueue();
+
+	void ProcessPendingOutputQueue();
+	void SendOutputQueueToPortals();
 
 	void StoreQueueForSave();
 	void RebuildQueueFromSave();
+
+	void AddToEndOfQueue(FInventoryItem item);
+	void AddToStartOfQueue(FInventoryItem item);
+	bool TryPopFromQueue(FInventoryItem& outItem);
+	void ClearQueue();
 };
