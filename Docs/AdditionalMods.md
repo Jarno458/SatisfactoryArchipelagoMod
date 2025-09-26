@@ -36,3 +36,4 @@ The following mods have been used successfully by other players but have not bee
 
 - [Resource Roulette](https://ficsit.app/mod/ResourceRoulette) - Randomize the location of resource nodes
 - [Infinite Zoop](https://ficsit.app/mod/InfiniteZoop) - Adds a research tree in the MAM where you can improve your Zoop capacity. Also enables multi-row & column Wall and Foundation construction.
+- [Random Start Location](https://ficsit.app/mod/RandomStart) - The game already spawns you in a random position within your chosen start location. This mod lets you start in a truly random location. Be prepared to start a new save if it spawns you in an unfortunate location.
