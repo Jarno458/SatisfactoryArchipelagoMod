@@ -114,10 +114,11 @@ In order to continue your save, you will first need to restart the room by re-op
 Back in the game, load your save file again and the connection should succeed.
 If it doesn't, your room's port may have been reassigned.
 
-Check the connection details in the room. If the port has changed, go back to the mod config screen,
-enter the new port in the URI field, and enable the `Force override settings in save` checkbox.
-
-Once you've loaded into the save again after the port change, disable the `Force override settings in save` checkbox.
+Check the connection details on the room webpage. If the port has changed,
+go to the [Mod Savegame Settings screen](https://docs.ficsit.app/satisfactory-modding/latest/ForUsers/ConfiguringMods.html#_mod_savegame_settings)
+and update the Server URI field to use the new port.
+To reload the save with the updated connection details, save the game,
+then load the save you just created.
 
 ## Network Activity Transparency
 
