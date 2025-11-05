@@ -642,7 +642,9 @@ const TMap<int64, const TArray<FString>> UApMappings::ItemIdToGameBuilding = {
 		{TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipe_PipeHyperStart.Recipe_PipeHyperStart'"),
 		 TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/Buildings/Recipe_PipeHyperSupport.Recipe_PipeHyperSupport'"),
 		 TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/Buildings/Recipe_HyperPoleStackable.Recipe_HyperPoleStackable'"),
-		 TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/Buildings/Recipe_PipeHyper.Recipe_PipeHyper'")}},
+		 TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/Buildings/Recipe_PipeHyper.Recipe_PipeHyper'"),
+		 TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/Buildings/Recipe_HyperTubeJunction.Recipe_HyperTubeJunction'"),
+		 TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/Buildings/Recipe_HyperTubeTJunction.Recipe_HyperTubeTJunction'")}},
 	//1338810 Schematic
 	{1338811,
 		{TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/Buildings/Recipe_HyperTubeWallSupport.Recipe_HyperTubeWallSupport'")}},
