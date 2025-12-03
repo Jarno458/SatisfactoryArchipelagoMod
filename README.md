@@ -46,6 +46,7 @@ You will need to import them into your project using the tutorial above before t
 - [MAM Enhancer](https://github.com/Nogg-aholic/MAMTips)
 - [Free Samples](https://github.com/budak7273/FreeSamples)
 - [FixClientResourceSinkPoints](https://github.com/budak7273/FixClientResourceSinkPoints)
+- [HoverpackFuseReminder](https://github.com/budak7273/HoverpackFuseReminder)
 
 ### APCpp
 
@@ -70,3 +71,4 @@ To update the used APCpp version, build a STATIC library version then:
 You need to have a running Archipelago server to test the mod in-game.
 You can self host one from source by following the directions
 [in the Archipelago repo](https://github.com/ArchipelagoMW/Archipelago/blob/main/docs/running%20from%20source.md).
+
