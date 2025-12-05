@@ -52,10 +52,16 @@ You will need to import them into your project using the tutorial above before t
 
 This mod uses a modified fork of [APCpp](https://github.com/Jarno458/APCpp/tree/Satisfactory) to communicate with the AP server. In order to get this to work this mod uses static compiled libraries from APCpp, which have already been configured in Jarno's "Satisfactory" branch.
 
+To update the used APCpp version, build then:
+
+1. Copy all *.lib over from `APCpp\build\lib\Release` to `Archipelago\Source\APCpp\lib\Win64`
+2. Copy `Archipelago.h` over to `APCpp` to `Archipelago\Source\APCpp\inc`
+
 ### Archipelago Server
 
 You need to have a running Archipelago server to test the mod in-game.
 You can self host one from source by following the directions
 [in the Archipelago repo](https://github.com/ArchipelagoMW/Archipelago/blob/main/docs/running%20from%20source.md).
+
 
 
