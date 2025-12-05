@@ -264,4 +264,4 @@ esac
 echo
 echo "SatisfactoryArchipelagoMod set up!"
 echo "Please copy or share your files to a windows machine to set up Wwise and generate VS build files."
-echo "Satisfactory server inside of WSL for testing, but a windows client may be unable to see a WSL server socket."
+echo "Satisfactory server can be ran inside of WSL for testing, but a windows client may be unable to see a WSL server socket."
