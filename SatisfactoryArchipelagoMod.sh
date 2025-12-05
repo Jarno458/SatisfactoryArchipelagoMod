@@ -81,7 +81,7 @@ else
 fi
 
 if [ ! -d "APCpp" ]; then
-    git clone https://github.com/N00byKing/APCpp
+    git clone -b Satisfactory https://github.com/Jarno458/APCpp
 else
     echo "APCpp already exists, skipping clone."
 fi
@@ -90,61 +90,7 @@ cd APCpp
 git submodule update --init --recursive
 
 ############################################
-# 3. Patch CMakeLists.txt for static build
-############################################
-
-PATCH_FILE="../APCpp-static-build.patch"
-PATCH_URL="https://github.com/adamboy7/APCpp/commit/19517a9.patch"
-
-if [ -f CMakeLists.txt ]; then
-    echo "Found CMakeLists.txt, preparing to patch for static build..."
-
-    # Prefer local patch file; download if missing
-    if [ -f "$PATCH_FILE" ]; then
-        echo "Using local patch: $PATCH_FILE"
-    else
-        echo "Local patch '$PATCH_FILE' not found. Attempting to download from:"
-        echo "  $PATCH_URL"
-
-        if command -v curl >/dev/null 2>&1; then
-            echo "Downloading with curl..."
-            if ! curl -fL "$PATCH_URL" -o "$PATCH_FILE"; then
-                echo "ERROR: Failed to download patch from:"
-                echo "  $PATCH_URL"
-                exit 1
-            fi
-        elif command -v wget >/dev/null 2>&1; then
-            echo "Downloading with wget..."
-            if ! wget -O "$PATCH_FILE" "$PATCH_URL"; then
-                echo "ERROR: Failed to download patch from:"
-                echo "  $PATCH_URL"
-                exit 1
-            fi
-        else
-            echo "ERROR: Neither 'curl' nor 'wget' is available to download the patch."
-            echo "       Install one of them or place '$PATCH_FILE' manually."
-            exit 1
-        fi
-    fi
-
-    echo "Checking if patch applies cleanly..."
-    if git apply --check "$PATCH_FILE"; then
-        echo "Patch applies cleanly. Applying..."
-        git apply "$PATCH_FILE"
-        echo "Patch applied successfully."
-    else
-        echo "WARNING: Patch does not apply cleanly to current CMakeLists.txt."
-        echo "Upstream may have changed. Skipping automatic modification."
-        echo "You may need to inspect CMakeLists.txt and apply equivalent changes manually."
-        # We intentionally do NOT exit here: "skip this step" behavior.
-    fi
-else
-    echo "ERROR: CMakeLists.txt not found in APCpp."
-    exit 1
-fi
-
-############################################
-# 4. Configure and build (Release)
+# 3. Configure and build (Release)
 ############################################
 
 mkdir -p build
@@ -154,7 +100,7 @@ cmake .. -DCMAKE_BUILD_TYPE=Release
 cmake --build .
 
 ############################################
-# 5. Copy built static libraries into SatisfactoryArchipelagoMod
+# 4. Copy built static libraries into SatisfactoryArchipelagoMod
 ############################################
 
 # We are currently in APCpp/build
@@ -164,7 +110,7 @@ MBEDTLS_DIR="$MOD_LIB_DIR/mbedtls"
 mkdir -p "$MOD_LIB_DIR"
 mkdir -p "$MBEDTLS_DIR"
 
-cp libAPCpp_static.a                        "$MOD_LIB_DIR/libAPCpp.a"
+cp libAPCpp.a                        "$MOD_LIB_DIR/libAPCpp.a"
 cp IXWebSocket/libixwebsocket.a             "$MOD_LIB_DIR/libixwebsocket.a"
 cp jsoncpp/src/lib_json/libjsoncpp.a        "$MOD_LIB_DIR/libjsoncpp.a"
 cp _deps/zlib-build/libz.a                  "$MOD_LIB_DIR/libz.a"
@@ -179,7 +125,7 @@ echo "Done. Static libraries copied into SatisfactoryArchipelagoMod."
 cd ../..
 
 ############################################
-# 6. Optional: download Satisfactory mod dependencies (top-level)
+# 5. Optional: download Satisfactory mod dependencies (top-level)
 ############################################
 
 echo
@@ -239,7 +185,7 @@ else
 fi
 
 ############################################
-# 7. If SML exists, copy mods into SatisfactoryModLoader-master/Mods
+# 6. If SML exists, copy mods into SatisfactoryModLoader-master/Mods
 ############################################
 
 echo
@@ -278,7 +224,7 @@ else
 fi
 
 ############################################
-# 8. Optional: install Satisfactory Dedicated Server via steamcmd
+# 7. Optional: install Satisfactory Dedicated Server via steamcmd
 ############################################
 
 echo
