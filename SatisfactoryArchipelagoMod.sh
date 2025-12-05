@@ -110,7 +110,7 @@ MBEDTLS_DIR="$MOD_LIB_DIR/mbedtls"
 mkdir -p "$MOD_LIB_DIR"
 mkdir -p "$MBEDTLS_DIR"
 
-cp libAPCpp.a                        "$MOD_LIB_DIR/libAPCpp.a"
+cp libAPCpp.a                               "$MOD_LIB_DIR/libAPCpp.a"
 cp IXWebSocket/libixwebsocket.a             "$MOD_LIB_DIR/libixwebsocket.a"
 cp jsoncpp/src/lib_json/libjsoncpp.a        "$MOD_LIB_DIR/libjsoncpp.a"
 cp _deps/zlib-build/libz.a                  "$MOD_LIB_DIR/libz.a"
@@ -262,6 +262,6 @@ case "$INSTALL_SDS" in
 esac
 
 echo
-echo "SatisfactoryArchipelagoMod set up. Please copy or share your files to a windows machine to set up Wwise and generate VS build files."
-echo "After installing dependencies It's entirely possible run the modded satisfactory server inside of WSL for testing, just be advised that a windows client will be unable to see a WSL server socket."
-echo "All done."
+echo "SatisfactoryArchipelagoMod set up!"
+exho "Please copy or share your files to a windows machine to set up Wwise and generate VS build files."
+echo "Satisfactory server inside of WSL for testing, but a windows client may be unable to see a WSL server socket."
