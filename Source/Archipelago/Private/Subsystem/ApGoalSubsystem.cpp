@@ -38,6 +38,7 @@ void AApGoalSubsystem::BeginPlay() {
 
 	AApSchematicPatcherSubsystem* schematicPatcher = AApSchematicPatcherSubsystem::Get(world);
 	explorationGoalSchematic = schematicPatcher->GetExplorationSchematic();
+	finalFicsmasSchematic = schematicPatcher->GetFinalFicsmasSchematic();
 
 	countdownStartedTime = FDateTime::MinValue();
 
@@ -104,7 +105,7 @@ TArray<FApGraphInfo> AApGoalSubsystem::GetResourceSinkGoalGraphs() {
 		resourceSinkPerMinuteThresholdGraph.Suffix = FText::FromString(TEXT("p/min"));
 		resourceSinkPerMinuteThresholdGraph.FullName = FText::FromString(TEXT("ResourceSink points per minute Threshold"));
 		resourceSinkPerMinuteThresholdGraph.Description = 
-			FText::FromString(TEXT("Maintain your standart points above this line for 10 minutes to complete your ResourceSink points per minute goal"));
+			FText::FromString(TEXT("Maintain your standard points above this line for 10 minutes to complete your ResourceSink points per minute goal"));
 
 		if (hasCompletedResourceSinkPerMinute)
 			resourceSinkPerMinuteThresholdGraph.Color = completedColor;
@@ -126,10 +127,10 @@ TArray<FApGraphInfo> AApGoalSubsystem::GetResourceSinkGoalGraphs() {
 
 		totalResourceSinkGoal.Id = FString(TEXT("TPG"));
 		totalResourceSinkGoal.DisplayName = FText::FromString(TEXT("Remaining for Goal"));
-		totalResourceSinkGoal.Suffix = FText::FromString(TEXT(""));
-		totalResourceSinkGoal.FullName = FText::FromString(TEXT("ResourceSink points per minute Threshold"));
+		totalResourceSinkGoal.Suffix = FText::FromString(TEXT("p"));
+		totalResourceSinkGoal.FullName = FText::FromString(TEXT("ResourceSink points total Threshold"));
 		totalResourceSinkGoal.Description =
-			FText::FromString(TEXT("Maintain your standart points above this line for 10 minutes to complete your ResourceSink points per minute goal"));
+			FText::FromString(TEXT("Get a total points value above this line to complete your ResourceSink points total"));
 
 		int64 remaining = GetTotalRemainingPoints();
 
@@ -213,12 +214,14 @@ bool AApGoalSubsystem::AreGoalsCompleted() {
 		return   (!slotData->IsSpaceElevatorGoalEnabled() || CheckSpaceElevatorGoal())
 				&& (!slotData->IsResourceSinkGoalEnabled() || CheckResourceSinkPointsGoal())
 				&& (!slotData->IsResourceSinkPerMinuteGoalEnabled() || CheckResourceSinkPointPerMinuteGoal())
-				&& (!slotData->IsExplorationGoalEnabled() || CheckExplorationGoal());
+				&& (!slotData->IsExplorationGoalEnabled() || CheckExplorationGoal())
+				&& (!slotData->IsFicsmasGoalEnabled() || CheckFicsmasGoal());
 	else
 		return   (slotData->IsSpaceElevatorGoalEnabled() && CheckSpaceElevatorGoal())
 				|| (slotData->IsResourceSinkGoalEnabled() && CheckResourceSinkPointsGoal())
 				|| (slotData->IsResourceSinkPerMinuteGoalEnabled() && CheckResourceSinkPointPerMinuteGoal())
-				|| (slotData->IsExplorationGoalEnabled() && CheckExplorationGoal());
+				|| (slotData->IsExplorationGoalEnabled() && CheckExplorationGoal())
+				|| (slotData->IsFicsmasGoalEnabled() && CheckFicsmasGoal());
 }
 
 bool AApGoalSubsystem::CheckSpaceElevatorGoal() {
@@ -235,6 +238,10 @@ bool AApGoalSubsystem::CheckResourceSinkPointPerMinuteGoal() {
 
 bool AApGoalSubsystem::CheckExplorationGoal() {
 	return schematicManager->IsSchematicPurchased(explorationGoalSchematic);
+}
+
+bool AApGoalSubsystem::CheckFicsmasGoal() {
+	return schematicManager->IsSchematicPurchased(finalFicsmasSchematic);
 }
 
 FTimespan AApGoalSubsystem::GetPerMinuteSinkGoalRemainingTime() {

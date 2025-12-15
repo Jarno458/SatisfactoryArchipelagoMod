@@ -149,7 +149,7 @@ void AApEnergyLinkSubsystem::OnEnergyLinkValueChanged(AP_SetReply setReply) {
 	}
 
 	int256 valueForClientMegaWattHour;
-	int devisions;
+	int devisions = 0;
 
 	if (serverValueMegaWattHour > 0) {
 		valueForClientMegaWattHour = serverValueMegaWattHour;

@@ -4,6 +4,7 @@
 #include "FGCentralStorageSubsystem.h"
 #include "Logging/StructuredLog.h"
 #include "FGGameUserSettings.h"
+#include "FGEventSubsystem.h"
 
 #include "Data/ApMappings.h"
 
@@ -249,12 +250,35 @@ void AApServerRandomizerSubsystem::FinalizeInitialization() {
 
 			if (!className.Contains("AP_") && !className.EndsWith("HardDrive_C") && !className.EndsWith("XMas_C"))
 				contentRegistry->RemoveResearchTree(tree);
+
+			if (className.EndsWith("AP_ResearchTree_XMas_C") && !slotData->IsFicsmasGoalEnabled()) {
+				contentRegistry->RemoveResearchTree(tree);
+			}
 		}
 	};
 
 	TArray<TSubclassOf<class UFGSchematic>> hardDriveSchematics;
 	locationPerHardDrive.GetKeys(hardDriveSchematics);
 	hardDriveGachaSubsystem->Initialize(hardDriveSchematics);
+
+	//if (slotData->IsFicsmasGoalEnabled()) {
+		//enable ficsmas
+		AFGEventSubsystem* eventSubsystem = AFGEventSubsystem::Get(GetWorld());
+
+		TMap<EEvents, FFGEventData> eventData = eventSubsystem->GetmEvents();
+		if (eventData.Contains(EEvents::EV_Christmas)) {
+			eventData[EEvents::EV_Christmas].mEndDate = eventData[EEvents::EV_Christmas].mStartDate;
+
+			FSimpleDate endDate;
+			endDate.mDay = eventData[EEvents::EV_Christmas].mStartDate.mDay;
+			endDate.mMonth = eventData[EEvents::EV_Christmas].mStartDate.mMonth;
+			endDate.mYearOffset = 1;
+
+			eventData[EEvents::EV_Christmas].mEndDate = endDate;
+
+			eventSubsystem->SetmEvents(eventData);
+		}
+	//}
 }
 
 void AApServerRandomizerSubsystem::BeginPlay() {

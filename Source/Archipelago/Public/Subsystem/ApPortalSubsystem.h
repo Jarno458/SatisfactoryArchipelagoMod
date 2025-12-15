@@ -4,6 +4,7 @@
 #include "Subsystem/ModSubsystem.h"
 
 #include "Subsystem/ApMappingsSubsystem.h"
+#include "Subsystem/ApConnectionInfoSubsystem.h"
 
 #include "Data/ApTypes.h"
 
@@ -39,6 +40,7 @@ protected:
 private:
 	AApMappingsSubsystem* mappings;
 	AModSubsystem* giftingSubsystem;
+	AApConnectionInfoSubsystem* connectionInfoSubsystem;
 	
 	UPROPERTY(SaveGame)
 	TArray<int64> OutputQueueSave;

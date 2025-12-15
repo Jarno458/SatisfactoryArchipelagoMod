@@ -250,6 +250,9 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FORCEINLINE bool const IsExplorationGoalEnabled() const { return Goals.IsExplorationGoalEnabled(); }
 
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	FORCEINLINE bool const IsFicsmasGoalEnabled() const { return Goals.IsFicsmasGoalEnabled(); }
+
 private:
 	EApSlotDataState TryLoadSlotDataFromServer(FString json);
 

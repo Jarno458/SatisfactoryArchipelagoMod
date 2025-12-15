@@ -94,36 +94,47 @@ void AApMappingsSubsystem::LoadItemMappings(TMap<int64, TSharedRef<FApItemBase>>
 void AApMappingsSubsystem::LoadItemMappings(TMap<int64, TSharedRef<FApItemBase>>& itemMap, TMap<FName, const FAssetData>& itemDescriptorAssets) {
 	ItemClassToItemId.Empty();
 
+	//UApMappings::ItemIdToGameItemDescriptor only contains the Bundle: item ids
 	for (TPair<int64, FString> itemMapping : UApMappings::ItemIdToGameItemDescriptor) {
 		UFGItemDescriptor* itemDescriptor = GetItemDescriptorByName(itemDescriptorAssets, itemMapping.Value);
 		TSubclassOf<UFGItemDescriptor> itemClass = itemDescriptor->GetClass();
 
-		FApItem itemInfo;
-		itemInfo.Id = itemMapping.Key;
-		itemInfo.Descriptor = itemDescriptor;
-		itemInfo.Class = itemClass;
+		FApItem bundleItemInfo;
+		bundleItemInfo.Id = itemMapping.Key;
+		bundleItemInfo.Descriptor = itemDescriptor;
+		bundleItemInfo.Class = itemClass;
 
-		if (itemMapping.Key >= SINGLE_ITEM_START) {
-			itemInfo.stackSize = 1;
-		} else if (UApMappings::ItemIdToSpecailStackSize.Contains(itemMapping.Key)) {
-			itemInfo.stackSize = UApMappings::ItemIdToSpecailStackSize[itemMapping.Key];
+		if (UApMappings::ItemIdToSpecailStackSize.Contains(itemMapping.Key)) {
+			bundleItemInfo.stackSize = UApMappings::ItemIdToSpecailStackSize[itemMapping.Key];
 		} else {
-			itemInfo.stackSize = UFGItemDescriptor::GetStackSize(itemClass);
+			bundleItemInfo.stackSize = UFGItemDescriptor::GetStackSize(itemClass);
 		}
-
+		
 #if WITH_EDITOR 
 		if (UApMappings::ItemIdToCouponCost.Contains(itemMapping.Key))
-			itemInfo.couponCost = UApMappings::ItemIdToCouponCost[itemMapping.Key];
+			bundleItemInfo.couponCost = UApMappings::ItemIdToCouponCost[itemMapping.Key];
 		else
-			itemInfo.couponCost = -1;
+			bundleItemInfo.couponCost = -1;
+#else
+		bundleItemInfo.couponCost = -1;
 #endif
 
-		TSharedRef<FApItemBase> itemInfoRef = MakeShared<FApItem>(itemInfo);
-
-		itemMap.Add(itemMapping.Key, itemInfoRef);
-		itemMap.Add(itemMapping.Key + SINGLE_ITEM_OFFSET, itemInfoRef);
+		TSharedRef<FApItemBase> bundleItemInfoRef = MakeShared<FApItem>(bundleItemInfo);
+		itemMap.Add(bundleItemInfo.Id, bundleItemInfoRef);
 
 		ItemClassToItemId.Add(itemClass, itemMapping.Key);
+
+		if (!UApMappings::ItemIdToSpecailStackSize.Contains(itemMapping.Key)) {
+			FApItem singleItemInfo;
+			singleItemInfo.Id = itemMapping.Key + SINGLE_ITEM_OFFSET;
+			singleItemInfo.Descriptor = itemDescriptor;
+			singleItemInfo.Class = itemClass;
+			singleItemInfo.stackSize = 1;
+			singleItemInfo.couponCost = -1;
+
+			TSharedRef<FApItemBase> singleItemInfoRef = MakeShared<FApItem>(singleItemInfo);
+			itemMap.Add(singleItemInfo.Id, singleItemInfoRef);
+		}
 	}
 }
 
@@ -357,6 +368,8 @@ const TMap<FName, const FAssetData> AApMappingsSubsystem::GetItemDescriptorAsset
 	itemDescriptorAssets.Append(GetBlueprintAssetsIn(registery, "/Game/FactoryGame/Resource", TArray<FString>{ "Desc_", "BP_" }));
 	itemDescriptorAssets.Append(GetBlueprintAssetsIn(registery, "/Game/FactoryGame/Equipment", TArray<FString>{ "Desc_", "BP_" }));
 	itemDescriptorAssets.Append(GetBlueprintAssetsIn(registery, "/Game/FactoryGame/Prototype", TArray<FString>{ "Desc_" })); // Desc_WAT1 and Desc_WAT2 (alien artifacts)
+	itemDescriptorAssets.Append(GetBlueprintAssetsIn(registery, "/Game/FactoryGame/Events/Christmas/Parts", TArray<FString>{ "Desc_" }, false));
+	itemDescriptorAssets.Append(GetBlueprintAssetsIn(registery, "/Game/FactoryGame/Events/Christmas/Fireworks", TArray<FString>{ "Desc_" }, false));
 
 	return itemDescriptorAssets;
 }
@@ -369,7 +382,10 @@ const TMap<FName, const FAssetData> AApMappingsSubsystem::GetRecipeAssets(IAsset
 	recipeAssets.Append(GetBlueprintAssetsIn(registery, "/Game/FactoryGame/Equipment", TArray<FString>{ "Recipe_" }));
 	recipeAssets.Append(GetBlueprintAssetsIn(registery, "/Game/FactoryGame/Buildable/Factory", TArray<FString>{ "Recipe_" }));
 	recipeAssets.Append(GetBlueprintAssetsIn(registery, "/Game/FactoryGame/Buildable/Building", TArray<FString>{ "Recipe_" }));
-	
+	recipeAssets.Append(GetBlueprintAssetsIn(registery, "/Game/FactoryGame/Events/Christmas/Parts", TArray<FString>{ "Recipe_" }, false));
+	recipeAssets.Append(GetBlueprintAssetsIn(registery, "/Game/FactoryGame/Events/Christmas/Fireworks", TArray<FString>{ "Recipe_" }, false));
+	recipeAssets.Append(GetBlueprintAssetsIn(registery, "/Game/FactoryGame/Events/Christmas/Buildings", TArray<FString>{ "Recipe_" }));
+
 	return recipeAssets;
 }
 

@@ -175,9 +175,6 @@ void AApServerGiftingSubsystem::ProcessInputQueue() {
 
 void AApServerGiftingSubsystem::Send(TMap<FApPlayer, TMap<TSubclassOf<UFGItemDescriptor>, int>>& itemsToSend) {
 	for (TPair<FApPlayer, TMap<TSubclassOf<UFGItemDescriptor>, int>>& itemsToSendPerPlayer : itemsToSend) {
-		if (itemsToSendPerPlayer.Value.Num() <= 0)
-			continue;
-
 		for (TPair<TSubclassOf<UFGItemDescriptor>, int>& stack : itemsToSendPerPlayer.Value) {
 			FApSendGift gift;
 
@@ -191,6 +188,7 @@ void AApServerGiftingSubsystem::Send(TMap<FApPlayer, TMap<TSubclassOf<UFGItemDes
 			gift.Traits = replicatedGiftingSubsystem->GetTraitsForItem(stack.Key);
 			gift.Receiver = itemsToSendPerPlayer.Key;
 
+			//TODO group all items for the same player together
 			ap->SendGift(gift);
 		}
 	}

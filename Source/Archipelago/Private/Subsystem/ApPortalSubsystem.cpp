@@ -3,6 +3,7 @@
 #include "EngineUtils.h"
 #include "Buildable/ApPortal.h"
 #include "Subsystem/ApServerGiftingSubsystem.h"
+#include "Subsystem/ApConnectionInfoSubsystem.h"
 
 DEFINE_LOG_CATEGORY(LogApPortalSubsystem);
 
@@ -34,12 +35,19 @@ void AApPortalSubsystem::BeginPlay() {
 	UWorld* world = GetWorld();
 	giftingSubsystem = AApServerGiftingSubsystem::Get(world);
 	mappings = AApMappingsSubsystem::Get(world);
+	connectionInfoSubsystem = AApConnectionInfoSubsystem::Get(world);
+
+	//connectionInfoSubsystem->GetCurrentPlayerTeam(), connectionInfoSubsystem->GetCurrentPlayerSlot()
 }
 
 void AApPortalSubsystem::Tick(float dt) {
 	Super::Tick(dt);
 
 	if (!isInitialized) {
+		//if (connectionInfoSubsystem->GetConnectionState() == EApConnectionState::Connected) {
+
+		//}
+
 		RebuildQueueFromSave();
 
 		isInitialized = true;
@@ -80,13 +88,25 @@ void AApPortalSubsystem::SendOutputQueueToPortals() {
 void AApPortalSubsystem::Enqueue(TSubclassOf<UFGItemDescriptor>& cls, int amount) {
 	UE_LOG(LogApPortalSubsystem, Display, TEXT("AApPortalSubsystem::Enqueue(%s, %i)"), *UFGItemDescriptor::GetItemName(cls).ToString(), amount);
 
+	const FInventoryItem item(cls);
+
 	for (int i = 0; i < amount; i++) {
-		PendingOutputQueue.Enqueue(FInventoryItem(cls));
+		PendingOutputQueue.Enqueue(item);
 	}
 }
 
 void AApPortalSubsystem::Send(FApPlayer targetPlayer, FInventoryStack itemStack) {
-	((AApServerGiftingSubsystem*)giftingSubsystem)->EnqueueForSending(targetPlayer, itemStack);
+	//TODO send items for self directly to output queue instead of gifting subsystem
+
+	if (!targetPlayer.IsValid())
+		return;
+
+	if (false) { //TODO check if target player is self
+		TSubclassOf<UFGItemDescriptor> cls = itemStack.Item.GetItemClass();
+		Enqueue(cls, itemStack.NumItems);
+	} else {
+		((AApServerGiftingSubsystem*)giftingSubsystem)->EnqueueForSending(targetPlayer, itemStack);
+	}
 }
 
 void AApPortalSubsystem::ReQueue(FInventoryItem nextItem) {

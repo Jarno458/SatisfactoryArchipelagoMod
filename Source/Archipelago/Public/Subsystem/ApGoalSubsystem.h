@@ -50,6 +50,7 @@ private:
 	AApSlotDataSubsystem* slotData;
 
 	TSubclassOf<class UFGSchematic> explorationGoalSchematic;
+	TSubclassOf<class UFGSchematic> finalFicsmasSchematic;
 
 public:
 	bool AreGoalsCompleted();
@@ -62,8 +63,6 @@ public:
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	int GetTotalSecondsForResourceSinkPerMinuteGoal();
-
-
 
 private:
 	const FTimespan totalResourceSinkPerMinuteDuration = FTimespan(0, 0, 10, 0, 0);
@@ -98,6 +97,7 @@ private:
 	bool CheckResourceSinkPointsGoal();
 	bool CheckResourceSinkPointPerMinuteGoal();
 	bool CheckExplorationGoal();
+	bool CheckFicsmasGoal();
 
 	void UpdateResourceSinkPerMinuteGoal();
 	void UpdateTotalRemainingPointHistory();

@@ -260,6 +260,7 @@ void AApSchematicPatcherSubsystem::InitializeSchematicsBasedOnScoutedData() {
 
 	InitializeStarterRecipes();
 	InitializeExplorationGoal();
+	InitializeFinalFicsmasSchematic(apWorldModule->mTreeNodeSchematics);
 
 	TMap<int64, FApReplicatedItemInfo> itemInfoBySchematicId;
 	for (const FApReplicatedItemInfo& replicatedItemInfo : replicatedItemInfos) {
@@ -404,6 +405,20 @@ void AApSchematicPatcherSubsystem::InitializeExplorationGoal() {
 	}
 
 	InitializeHubSchematic(explorationGoalSchematic, unlocks, slotDataSubsystem->GetExplorationGoalCosts());
+}
+
+void AApSchematicPatcherSubsystem::InitializeFinalFicsmasSchematic(TArray<TSubclassOf<UFGSchematic>>& treeNodeSchematics) {
+	if (slotDataSubsystem->IsFicsmasGoalEnabled()) {
+		for (TSubclassOf<UFGSchematic>& schematic : treeNodeSchematics) {
+			//The magic, we store AP id's inside the menu priority, and we set techtier to -1 for item send by the server
+			int locationId = FMath::RoundToInt(UFGSchematic::GetMenuPriority(schematic));
+
+			if (locationId == 1338812) {// "Giant FICSMAS Tree: Upgrade 4"
+				finalFicsmasSchematic = schematic;
+				return;
+			}
+		}
+	}
 }
 
 void AApSchematicPatcherSubsystem::InitializeHubSchematic(TSubclassOf<UFGSchematic> factorySchematic, const TArray<FApReplicatedItemInfo>& items, const TMap<int64, int>& costs) {

@@ -144,7 +144,7 @@ const TMap<int64, const FString> UApMappings::ItemIdToGameItemDescriptor = {
 	{1338150, TEXT("Desc_Shroom_C")},
 	{1338151, TEXT("Desc_Nut_C")},
 	{1338152, TEXT("BP_EquipmentDescriptorJumpingStilts_C")},
-	//{1338153, TEXT("")}, //BoomBox
+	{1338153, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Equipment/BoomBox/Desc_BoomBox.Desc_BoomBox'")},
 	{1338154, TEXT("Desc_Chainsaw_C")},
 	{1338155, TEXT("Desc_NobeliskCluster_C")},
 	{1338156, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Resource/Parts/IodineInfusedFilter/Desc_HazmatFilter.Desc_HazmatFilter'")},
@@ -184,6 +184,26 @@ const TMap<int64, const FString> UApMappings::ItemIdToGameItemDescriptor = {
 	{1338193, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Prototype/WAT/Desc_WAT2.Desc_WAT2'")},
 	{1338194, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Prototype/WAT/Desc_WAT1.Desc_WAT1'")},
 	{1338195, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Resource/Environment/CrashSites/Desc_HardDrive.Desc_HardDrive'")},
+	{1338196, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Events/Christmas/Parts/Desc_XmasDataCartridge1.Desc_XmasDataCartridge1'")},
+	{1338197, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Events/Christmas/Parts/Desc_XmasDataCartridge2.Desc_XmasDataCartridge2'")},
+	{1338198, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Events/Christmas/Parts/Desc_XmasDataCartridge3.Desc_XmasDataCartridge3'")},
+	{1338199, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Events/Christmas/Parts/Desc_XmasDataCartridge4.Desc_XmasDataCartridge4'")},
+
+	{1338820, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Events/Christmas/Parts/Desc_XmasBranch.Desc_XmasBranch'")},
+	{1338821, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Events/Christmas/Parts/Desc_XmasBall2.Desc_XmasBall2'")},
+	{1338822, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Events/Christmas/Parts/Desc_XmasBall1.Desc_XmasBall1'")},
+	{1338823, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Events/Christmas/Parts/Desc_XmasBall4.Desc_XmasBall4'")},
+	{1338824, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Events/Christmas/Parts/Desc_XmasBall3.Desc_XmasBall3'")},
+	{1338825, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Events/Christmas/Parts/Desc_CandyCane.Desc_CandyCane'")},
+	{1338826, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Events/Christmas/Parts/Desc_Snow.Desc_Snow'")},
+	{1338827, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Events/Christmas/Parts/Desc_XmasBow.Desc_XmasBow'")},
+	{1338828, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Events/Christmas/Parts/Desc_XmasBallCluster.Desc_XmasBallCluster'")},
+	{1338829, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Events/Christmas/Parts/Desc_XmasWreath.Desc_XmasWreath'")},
+	{1338830, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Events/Christmas/Parts/Desc_XmasStar.Desc_XmasStar'")},
+	{1338831, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Resource/Equipment/StunSpear/BP_EquipmentDescriptorCandyCane.BP_EquipmentDescriptorCandyCane'")},
+	{1338832, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Events/Christmas/Fireworks/Desc_Fireworks_Projectile_01.Desc_Fireworks_Projectile_01'")},
+	{1338833, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Events/Christmas/Fireworks/Desc_Fireworks_Projectile_02.Desc_Fireworks_Projectile_02'")},
+	{1338834, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Events/Christmas/Fireworks/Desc_Fireworks_Projectile_03.Desc_Fireworks_Projectile_03'")},
 };
 
 const TMap<int64, const EApMappingsSpecialItemType> UApMappings::ItemIdToSpecialItemType = {
@@ -381,7 +401,7 @@ const TMap<int64, const TArray<FString>> UApMappings::ItemIdToGameRecipe = {
 	{1338384, {TEXT("Recipe_GasTank")}}, // Empty Fluid Tank
 	{1338385, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/Packager/Recipe_PackagedAlumina.Recipe_PackagedAlumina'"), TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/Packager/Recipe_UnpackageAlumina.Recipe_UnpackageAlumina'"),}},
 	{1338386, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/OilRefinery/Recipe_Fuel.Recipe_Fuel'"), TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/OilRefinery/Recipe_UnpackageFuel.Recipe_UnpackageFuel'")}}, //Packaged Fuel
-	{1338387, {TEXT("Recipe_Alternate_DilutedPackagedFuel")}}, //Removed in AP world 2.1.0
+	{1338387, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/Equipment/Recipe_CandyCaneBasher.Recipe_CandyCaneBasher'")}}, //Ficsmas gap filler
 	{1338388, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/OilRefinery/Recipe_PackagedOilResidue.Recipe_PackagedOilResidue'"), TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/OilRefinery/Recipe_UnpackageOilResidue.Recipe_UnpackageOilResidue'")}},
 	{1338389, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/OilRefinery/Recipe_PackagedBiofuel.Recipe_PackagedBiofuel'"), TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/OilRefinery/Recipe_UnpackageBioFuel.Recipe_UnpackageBioFuel'")}},
 	{1338390, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/Packager/Recipe_PackagedNitricAcid.Recipe_PackagedNitricAcid'"), TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/Packager/Recipe_UnpackageNitricAcid.Recipe_UnpackageNitricAcid'")}},
@@ -466,6 +486,21 @@ const TMap<int64, const TArray<FString>> UApMappings::ItemIdToGameRecipe = {
 	{1338466, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/Equipment/Recipe_PortableMiner.Recipe_PortableMiner'")}},
 	//1.1
 	{1338467, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/Converter/Recipe_DarkEnergy.Recipe_DarkEnergy'")}}, // Dark Matter Residue
+
+	{1338468, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Events/Christmas/Parts/Recipe_XmasBranch.Recipe_XmasBranch'")}},
+	{1338469, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Events/Christmas/Parts/Recipe_XmasBall2.Recipe_XmasBall2'")}},
+	{1338470, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Events/Christmas/Parts/Recipe_XmasBall1.Recipe_XmasBall1'")}},
+	{1338471, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Events/Christmas/Parts/Recipe_XmasBall4.Recipe_XmasBall4'")}},
+	{1338472, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Events/Christmas/Parts/Recipe_XmasBall3.Recipe_XmasBall3'")}},
+	{1338473, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Events/Christmas/Parts/Recipe_CandyCane.Recipe_CandyCane'")}},
+	{1338474, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Events/Christmas/Parts/Recipe_Snow.Recipe_Snow'")}},
+	{1338475, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Events/Christmas/Parts/Recipe_XmasBow.Recipe_XmasBow'")}},
+	{1338476, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Events/Christmas/Parts/Recipe_XmasBallCluster.Recipe_XmasBallCluster'")}},
+	{1338477, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Events/Christmas/Parts/Recipe_XmasWreath.Recipe_XmasWreath'")}},
+	{1338478, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Events/Christmas/Parts/Recipe_XmasStar.Recipe_XmasStar'")}},
+	{1338479, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Events/Christmas/Fireworks/Recipe_Fireworks_01.Recipe_Fireworks_01'")}},
+	{1338480, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Events/Christmas/Fireworks/Recipe_Fireworks_02.Recipe_Fireworks_02'")}},
+	{1338481, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Events/Christmas/Fireworks/Recipe_Fireworks_03.Recipe_Fireworks_03'")}}
 };
 
 const TMap<int64, const TArray<FString>> UApMappings::ItemIdToGameBuilding = {
@@ -586,7 +621,15 @@ const TMap<int64, const TArray<FString>> UApMappings::ItemIdToGameBuilding = {
 	{1338732, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Buildable/Building/StackableShelf/Recipe_StackableShelf.Recipe_StackableShelf'")}},
 	//1338733 Schematic
 	//1338734 Schematic
-	//1.1
+ 	//1.1
+	{1338735, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Events/Christmas/Buildings/CandyCaneDecor/Recipe_CandyCaneDecor.Recipe_CandyCaneDecor'")}},
+	{1338736, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Events/Christmas/Buildings/WreathDecor/Recipe_WreathDecor.Recipe_WreathDecor'")}},
+	{1338737, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/Holiday/Recipe_TreeGiftProducer.Recipe_TreeGiftProducer'")}},
+	{1338738, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Events/Christmas/Buildings/PowerLineLights/Recipe_xmassLights.Recipe_xmassLights'")}},
+	{1338739, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Events/Christmas/Buildings/SnowCannon/Recipe_SnowCannon.Recipe_SnowCannon'")}},
+	{1338740, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Events/Christmas/Buildings/SnowDispenser/Recipe_SnowDispenser.Recipe_SnowDispenser'")}},
+	{1338741, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Events/Christmas/Buildings/SnowmanDecor/Recipe_Snowman.Recipe_Snowman'")}},
+	{1338742, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Events/Christmas/Buildings/TreeDecor/Recipe_XMassTree.Recipe_XMassTree'")}},
 
 	//1338750 - 1338766 schematics
 
@@ -739,6 +782,9 @@ const TMap<int64, const FString> UApMappings::ItemIdToGameSchematic = {
 	{1338773, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/Patterns/ResourceSink_Caterium_PaintFinish.ResourceSink_Caterium_PaintFinish'")},
 	//1.0
 
+	{1338774, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Events/Christmas/Calendar_Schematics/Ficsmas_Schematic_SkinBundle_1.Ficsmas_Schematic_SkinBundle_1'")},
+	{1338775, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Events/Christmas/Calendar_Schematics/Ficsmas_Schematic_SkinBundle_2.Ficsmas_Schematic_SkinBundle_2'")},
+
 	{1338810, TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_HyperTubeFloorHole.ResourceSink_HyperTubeFloorHole'")}
 };
 
@@ -846,7 +892,7 @@ const TMap<int64, int> UApMappings::ItemIdToCouponCost = {
 	{1338124, 5}, //Ficsite Trigon
 	{1338126, 4},
 	{1338131, 6},
-	{1338131, 8},
+	{1338132, 8},
 
 	//Enquipment/Ammo
 	{1338155, 4},

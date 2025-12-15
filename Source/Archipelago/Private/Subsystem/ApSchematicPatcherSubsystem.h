@@ -7,19 +7,13 @@
 
 #include "Registry/ModContentRegistry.h"
 #include "Subsystem/ModSubsystem.h"
-#include "Subsystem/SubsystemActorManager.h"
 #include "Templates/SubclassOf.h"
-#include "Reflection/ClassGenerator.h"
 #include "Buildables/FGBuildable.h"
 #include "Buildables/FGBuildableAutomatedWorkBench.h"
-#include "Unlocks/FGUnlockInfoOnly.h"
-#include "ApConfigurationStruct.h"
 #include "Data/ApTypes.h"
-#include "Subsystem/ApSubsystem.h"
 #include "Subsystem/ApConnectionInfoSubsystem.h"
 #include "Subsystem/ApSlotDataSubsystem.h"
 #include "Subsystem/ApMappingsSubsystem.h"
-#include "ApUtils.h"
 
 #include "CLSchematicBPFLib.h"
 #include "BPFContentLib.h"
@@ -135,16 +129,19 @@ protected:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
-	TSubclassOf<class UFGSchematic> tierOSchematic;
+	TSubclassOf<UFGSchematic> tierOSchematic;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
-	TSubclassOf<class UFGSchematic> explorationGoalSchematic;
+	TSubclassOf<UFGSchematic> explorationGoalSchematic;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	TSubclassOf<UFGSchematic> finalFicsmasSchematic;
+	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	TArray<FApAlternativeRecipes> alternativeStartingRecipes;
 
 public:
-	static AApSchematicPatcherSubsystem* Get(class UWorld* world);
+	static AApSchematicPatcherSubsystem* Get(UWorld* world);
 	UFUNCTION(BlueprintPure, Category = "Schematic", DisplayName = "Get Ap Schematic Patcher Subsystem", Meta = (DefaultToSelf = "worldContext"))
 	static AApSchematicPatcherSubsystem* Get(UObject* worldContext);
 
@@ -153,7 +150,8 @@ public:
 
 	bool IsCollected(int64 locationId) const { return collectedLocations.Contains(locationId); };
 
-	FORCEINLINE TSubclassOf<class UFGSchematic> GetExplorationSchematic() const { return explorationGoalSchematic; }
+	FORCEINLINE TSubclassOf<UFGSchematic> GetExplorationSchematic() const { return explorationGoalSchematic; }
+	FORCEINLINE TSubclassOf<UFGSchematic> GetFinalFicsmasSchematic() const { return finalFicsmasSchematic; }
 
 	void Server_SetTier0Recipes(int currentPlayerId, const TArray<FApNetworkItem>& itemInfos);
 	void Server_SetItemInfoPerSchematicId(int currentPlayerId, const TArray<FApNetworkItem>& itemInfo);
@@ -218,6 +216,7 @@ private:
 	void InitializeStarterRecipes();
 	void SetHandcraftable(TSubclassOf<UFGRecipe> recipe, bool handcraftable);
 	void InitializeExplorationGoal();
+	void InitializeFinalFicsmasSchematic(TArray<TSubclassOf<UFGSchematic>>& treeNodeSchematics);
 	void InitializeHubSchematic(TSubclassOf<UFGSchematic> factorySchematic, const TArray<FApReplicatedItemInfo>& items, const TMap<int64, int>& costs);
 	void InitializeHubSchematic(TSubclassOf<UFGSchematic> factorySchematic, const TArray<FContentLib_UnlockInfoOnly>& unlocks, const TMap<int64, int>& costs);
 	void InitializaSchematicForItem(TSubclassOf<UFGSchematic> factorySchematic, const FApReplicatedItemInfo& item, bool updateSchemaName);
