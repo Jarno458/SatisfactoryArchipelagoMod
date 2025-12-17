@@ -18,7 +18,7 @@
 
 DEFINE_LOG_CATEGORY(LogApEditorScripts);
 
-#if WITH_EDITOR 
+#if WITH_EDITORONLY_DATA 
 void UApEditorScripts::GenerateApItemSchematicBlueprints() {
 	UE_LOGFMT(LogApEditorScripts, Log, "UApEditorScripts::GenerateApItemSchematicBlueprints()");
 

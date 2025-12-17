@@ -248,12 +248,14 @@ void AApServerRandomizerSubsystem::FinalizeInitialization() {
 		if (treeCDO != nullptr) {
 			FString className = treeCDO->GetName();
 
-			if (!className.Contains("AP_") && !className.EndsWith("HardDrive_C") && !className.EndsWith("XMas_C"))
+			if (!className.Contains("AP_") && !className.EndsWith("HardDrive_C"))
 				contentRegistry->RemoveResearchTree(tree);
 
-			if (className.EndsWith("AP_ResearchTree_XMas_C") && !slotData->IsFicsmasGoalEnabled()) {
+			if (className.EndsWith("BPD_ResearchTree_XMas_C") && slotData->IsFicsmasGoalEnabled())
 				contentRegistry->RemoveResearchTree(tree);
-			}
+
+			if (className.EndsWith("AP_ResearchTree_XMas_C") && !slotData->IsFicsmasGoalEnabled())
+				contentRegistry->RemoveResearchTree(tree);
 		}
 	};
 
@@ -261,7 +263,8 @@ void AApServerRandomizerSubsystem::FinalizeInitialization() {
 	locationPerHardDrive.GetKeys(hardDriveSchematics);
 	hardDriveGachaSubsystem->Initialize(hardDriveSchematics);
 
-	//if (slotData->IsFicsmasGoalEnabled()) {
+	/* //to late to affect current events
+	if (slotData->IsFicsmasGoalEnabled()) {
 		//enable ficsmas
 		AFGEventSubsystem* eventSubsystem = AFGEventSubsystem::Get(GetWorld());
 
@@ -279,6 +282,7 @@ void AApServerRandomizerSubsystem::FinalizeInitialization() {
 			eventSubsystem->SetmEvents(eventData);
 		}
 	//}
+	*/
 }
 
 void AApServerRandomizerSubsystem::BeginPlay() {

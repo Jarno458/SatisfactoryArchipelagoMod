@@ -110,13 +110,11 @@ void AApMappingsSubsystem::LoadItemMappings(TMap<int64, TSharedRef<FApItemBase>>
 			bundleItemInfo.stackSize = UFGItemDescriptor::GetStackSize(itemClass);
 		}
 		
-#if WITH_EDITOR 
+#if WITH_EDITORONLY_DATA 
 		if (UApMappings::ItemIdToCouponCost.Contains(itemMapping.Key))
 			bundleItemInfo.couponCost = UApMappings::ItemIdToCouponCost[itemMapping.Key];
 		else
 			bundleItemInfo.couponCost = -1;
-#else
-		bundleItemInfo.couponCost = -1;
 #endif
 
 		TSharedRef<FApItemBase> bundleItemInfoRef = MakeShared<FApItem>(bundleItemInfo);
@@ -130,7 +128,9 @@ void AApMappingsSubsystem::LoadItemMappings(TMap<int64, TSharedRef<FApItemBase>>
 			singleItemInfo.Descriptor = itemDescriptor;
 			singleItemInfo.Class = itemClass;
 			singleItemInfo.stackSize = 1;
+#if WITH_EDITORONLY_DATA 
 			singleItemInfo.couponCost = -1;
+#endif
 
 			TSharedRef<FApItemBase> singleItemInfoRef = MakeShared<FApItem>(singleItemInfo);
 			itemMap.Add(singleItemInfo.Id, singleItemInfoRef);

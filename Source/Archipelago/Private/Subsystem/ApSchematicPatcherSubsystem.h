@@ -216,7 +216,6 @@ private:
 	void InitializeStarterRecipes();
 	void SetHandcraftable(TSubclassOf<UFGRecipe> recipe, bool handcraftable);
 	void InitializeExplorationGoal();
-	void InitializeFinalFicsmasSchematic(TArray<TSubclassOf<UFGSchematic>>& treeNodeSchematics);
 	void InitializeHubSchematic(TSubclassOf<UFGSchematic> factorySchematic, const TArray<FApReplicatedItemInfo>& items, const TMap<int64, int>& costs);
 	void InitializeHubSchematic(TSubclassOf<UFGSchematic> factorySchematic, const TArray<FContentLib_UnlockInfoOnly>& unlocks, const TMap<int64, int>& costs);
 	void InitializaSchematicForItem(TSubclassOf<UFGSchematic> factorySchematic, const FApReplicatedItemInfo& item, bool updateSchemaName);
@@ -246,5 +245,9 @@ private:
 	void OnRep_ConnectionInfoAvailable();
 	UFUNCTION() //required for event hookup
 	void OnRep_SlotDataAvailable();
+
+public:
+	UFUNCTION(BlueprintImplementableEvent)
+	void OnDataAvailable();
 };
 

@@ -27,6 +27,7 @@ void AApGoalSubsystem::BeginPlay() {
 	Super::BeginPlay();
 
 	UWorld* world = GetWorld();
+	fgcheck(world != nullptr);
 
 	phaseManager = AFGGamePhaseManager::Get(world);
 	resourceSinkSubsystem = AFGResourceSinkSubsystem::Get(world);
