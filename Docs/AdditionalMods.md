@@ -34,6 +34,17 @@ The following mods are known to work with Archipelago:
 
 The following mods have been used successfully by other players but have not been thoroughly tested with Archipelago:
 
+### Extended Randomization
+
 - [Resource Roulette](https://ficsit.app/mod/ResourceRoulette) - Randomize the location of resource nodes
-- [Infinite Zoop](https://ficsit.app/mod/InfiniteZoop) - Adds a research tree in the MAM where you can improve your Zoop capacity. Also enables multi-row & column Wall and Foundation construction.
 - [Random Start Location](https://ficsit.app/mod/RandomStart) - The game already spawns you in a random position within your chosen start location. This mod lets you start in a truly random location. Be prepared to start a new save if it spawns you in an unfortunate location.
+
+### Quality of Life
+
+- [Infinite Zoop](https://ficsit.app/mod/InfiniteZoop) - Adds a research tree in the MAM where you can improve your Zoop capacity. Also enables multi-row & column Wall and Foundation construction.
+- [Doggo Transportation](https://ficsit.app/mod/DoggoTransportation) - Easily relocate tamed Lizard Doggos. They can provide some fun out-of-logic resources.
+
+### New Content
+
+- [Refined Power](https://ficsit.app/mod/RefinedPower) - Additional power production options and processing chains. Its progression is not randomized at all.
+- [Small Storage Containers](https://ficsit.app/mod/SmallStorage)
