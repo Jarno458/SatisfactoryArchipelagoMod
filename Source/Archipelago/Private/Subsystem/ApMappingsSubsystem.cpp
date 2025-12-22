@@ -8,9 +8,6 @@
 
 DEFINE_LOG_CATEGORY(LogApMappingsSubsystem);
 
-//TODO REMOVE
-#pragma optimize("", off)
-
 #define SINGLE_ITEM_START 1339000
 #define SINGLE_ITEM_OFFSET 1000
 
@@ -417,5 +414,3 @@ void AApMappingsSubsystem::PostLoadGame_Implementation(int32 saveVersion, int32 
 
 	hasLoadedItemNameMappings = true;
 }
-
-#pragma optimize("", on)

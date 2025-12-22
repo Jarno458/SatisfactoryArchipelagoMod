@@ -2,16 +2,12 @@
 
 #include "CoreMinimal.h"
 #include "Subsystem/ModSubsystem.h"
-#include "Subsystem/SubsystemActorManager.h"
 #include "Subsystem/ApSubsystem.h"
 #include "Patching/NativeHookManager.h"
 #include "FGSchematicManager.h"
 #include "FGResearchManager.h"
 
 #include "ApHardDriveGachaSubsystem.generated.h"
-
-//TODO REMOVE
-#pragma optimize("", off)
 
 DECLARE_LOG_CATEGORY_EXTERN(LogApHardDriveGachaSubsystem, Log, All);
 
@@ -52,5 +48,3 @@ private:
 	UFUNCTION() //required for event binding
 	void OnSchematicCompleted(TSubclassOf<class UFGSchematic> schematic);
 };
-
-#pragma optimize("", on)

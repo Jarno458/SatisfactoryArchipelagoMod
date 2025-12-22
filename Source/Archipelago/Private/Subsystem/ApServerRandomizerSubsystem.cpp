@@ -1,10 +1,11 @@
 #include "Subsystem/ApServerRandomizerSubsystem.h"
-#include "Engine\DamageEvents.h"
+
+#include "ConfigPropertyBool.h"
+#include "ConfigPropertyInteger.h"
 #include "FGGamePhase.h"
-#include "FGCentralStorageSubsystem.h"
 #include "Logging/StructuredLog.h"
-#include "FGGameUserSettings.h"
 #include "FGEventSubsystem.h"
+#include "Subsystem/SubsystemActorManager.h"
 
 #include "Data/ApMappings.h"
 
@@ -19,20 +20,20 @@ AApServerRandomizerSubsystem::AApServerRandomizerSubsystem() {
 	ReplicationPolicy = ESubsystemReplicationPolicy::SpawnOnServer;
 }
 
-AApServerRandomizerSubsystem* AApServerRandomizerSubsystem::Get(class UObject* worldContext) {
+AApServerRandomizerSubsystem* AApServerRandomizerSubsystem::Get(UObject* worldContext) {
 	UWorld* world = GEngine->GetWorldFromContextObject(worldContext, EGetWorldErrorMode::Assert);
 
 	return Get(world);
 }
 
-AApServerRandomizerSubsystem* AApServerRandomizerSubsystem::Get(class UWorld* world) {
+AApServerRandomizerSubsystem* AApServerRandomizerSubsystem::Get(UWorld* world) {
 	USubsystemActorManager* SubsystemActorManager = world->GetSubsystem<USubsystemActorManager>();
 	fgcheck(SubsystemActorManager);
 
 	return SubsystemActorManager->GetSubsystemActor<AApServerRandomizerSubsystem>();
 }
 
-void AApServerRandomizerSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase, const TArray<TSubclassOf<class UFGSchematic>>& apSchematics) {
+void AApServerRandomizerSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase, const TArray<TSubclassOf<UFGSchematic>>& apSchematics) {
 	UE_LOGFMT(LogApServerRandomizerSubsystem, Display, "AApServerRandomizerSubsystem()::DispatchLifecycleEvent({0})", UEnum::GetValueAsString(phase));
 
 	if (!HasAuthority())
@@ -69,7 +70,6 @@ void AApServerRandomizerSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase,
 
 		ap->SetItemReceivedCallback([this](int64 itemid, bool isFromServer) { ReceiveItem(itemid, isFromServer); });
 		ap->SetLocationCheckedCallback([this](int64 itemid) { CollectLocation(itemid); });
-		ap->SetDeathLinkReceivedCallback([this](FText message) { OnDeathLinkReceived(message); });
 		ap->SetReconnectCallback([this]() { ResetCurrentItemCounter(); });
 
 		FGenericPlatformProcess::ConditionalSleep([this]() { return InitializeTick(); }, 0.5);
@@ -80,6 +80,9 @@ void AApServerRandomizerSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase,
 		SetActorTickEnabled(true);
 
 		if (connectionInfo->GetConnectionState() == EApConnectionState::Connected) {
+			if (slotData->DeathLink)
+				ap->EnableDeathLink();
+
 			TArray<TSubclassOf<UFGSchematic>> unlockedSchematics;
 
 			SManager->GetAllPurchasedSchematics(unlockedSchematics);
@@ -240,7 +243,7 @@ void AApServerRandomizerSubsystem::FinalizeInitialization() {
 		UE_LOGFMT(LogApServerRandomizerSubsystem, Error, "AApServerRandomizerSubsystem::FinalizeInitialization() Failed to update configuration of Free Samples");
 	}
 
-	TArray<TSubclassOf<class UFGResearchTree>> researchTrees;
+	TArray<TSubclassOf<UFGResearchTree>> researchTrees;
 	RManager->GetAllResearchTrees(researchTrees);
 
 	for (const TSubclassOf<UFGResearchTree>& tree : researchTrees) {
@@ -322,7 +325,6 @@ void AApServerRandomizerSubsystem::Tick(float DeltaTime) {
 		return;
 
 	HandleCheckedLocations();
-	HandleDeathLink();
 
 	if (phaseManager->GetCurrentGamePhase()->mGamePhase > lastGamePhase) {
 		OnAvaiableSchematicsChanged();
@@ -366,52 +368,6 @@ void AApServerRandomizerSubsystem::ResetDuplicationCounter() {
 
 	FText message = NSLOCTEXT("Archipelago", "ResetDuplicationCounterMessage", "Item duplication counter reset, please save your game and reload that save!");
 	ap->AddChatMessage(message, FLinearColor::Blue);
-}
-
-void AApServerRandomizerSubsystem::OnDeathLinkReceived(FText message) {
-	UE_LOGFMT(LogApServerRandomizerSubsystem, Display, "AApServerRandomizerSubsystem::OnDeathLinkReceived({0})", message.ToString());
-	
-	instagib = true;
-	ap->AddChatMessage(message, FLinearColor::Red);
-}
-
-
-void AApServerRandomizerSubsystem::HandleDeathLink() {
-	if (IsRunningDedicatedServer())
-		return; // TODO make deathlink work for dedicated servers
-
-	const AFGPlayerController* playerController = UFGBlueprintFunctionLibrary::GetLocalPlayerController(GetWorld());
-	if (playerController == nullptr)
-		return;
-
-	AFGCharacterPlayer* player = Cast<AFGCharacterPlayer>(playerController->GetControlledCharacter());
-	if (player == nullptr)
-		return;
-
-	HandleInstagib(player);
-
-	if (player->IsAliveAndWell()) {
-		awaitingHealty = false;
-	}
-	else {
-		if (!awaitingHealty) {
-			if (!instagib) {
-				ap->TriggerDeathLink();
-			}
-			awaitingHealty = true;
-		}
-	}
-	if (instagib) {
-		instagib = false;
-	}
-}
-
-void AApServerRandomizerSubsystem::HandleInstagib(AFGCharacterPlayer* player) {
-	if (instagib) {
-		const TSubclassOf<UDamageType> damageType = TSubclassOf<UDamageType>(UDamageType::StaticClass());
-		FDamageEvent instagibDamageEvent = FDamageEvent(damageType);
-		player->TakeDamage(1333337, instagibDamageEvent, player->GetFGPlayerController(), player);
-	}
 }
 
 bool AApServerRandomizerSubsystem::UpdateFreeSamplesConfiguration() {
@@ -470,7 +426,7 @@ bool AApServerRandomizerSubsystem::UpdateFreeSamplesConfiguration() {
 	return true;
 }
 
-void AApServerRandomizerSubsystem::OnMamResearchCompleted(TSubclassOf<class UFGSchematic> schematic) {
+void AApServerRandomizerSubsystem::OnMamResearchCompleted(TSubclassOf<UFGSchematic> schematic) {
 	UE_LOGFMT(LogApServerRandomizerSubsystem, Display, "AApSubSystem::OnResearchCompleted(schematic)");
 
 	OnAvaiableSchematicsChanged();

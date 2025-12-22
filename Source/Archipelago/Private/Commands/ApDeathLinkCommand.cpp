@@ -1,8 +1,5 @@
 #include "Commands/ApDeathLinkCommand.h"
 
-//TODO REMOVE
-#pragma optimize("", off)
-
 AApDeathLinkCommand::AApDeathLinkCommand() {
 	CommandName = TEXT("ap-deathlink");
 	Usage = NSLOCTEXT("Archipelago", "ApDeathlinkCommandUsage", "/ap-deathlink - list all clients that have deathlink enabled");
@@ -15,5 +12,3 @@ EExecutionStatus AApDeathLinkCommand::ExecuteCommand_Implementation(UCommandSend
 
 	return EExecutionStatus::COMPLETED;
 }
-
-#pragma optimize("", on)

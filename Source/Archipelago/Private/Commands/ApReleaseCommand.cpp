@@ -1,8 +1,5 @@
 #include "Commands/ApReleaseCommand.h"
 
-//TODO REMOVE
-#pragma optimize("", off)
-
 AApReleaseCommand::AApReleaseCommand() {
 	CommandName = TEXT("ap-release");
 	Usage = NSLOCTEXT("Archipelago", "ApReleaseCommandUsage", "/ap-release - attempts to send out all your locations to other players' worlds");
@@ -16,5 +13,3 @@ EExecutionStatus AApReleaseCommand::ExecuteCommand_Implementation(UCommandSender
 
 	return EExecutionStatus::COMPLETED;
 }
-
-#pragma optimize("", on)

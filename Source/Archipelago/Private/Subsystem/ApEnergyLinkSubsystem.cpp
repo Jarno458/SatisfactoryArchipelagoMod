@@ -8,6 +8,7 @@
 #include "Subsystem/ApConnectionInfoSubsystem.h"
 #include "Subsystem/ApServerRandomizerSubsystem.h"
 #include "ApUtils.h"
+#include "UnrealNetwork.h"
 
 #include "Logging/StructuredLog.h"
 

@@ -2,6 +2,7 @@
 #include "Data/ApGiftingMappings.h"
 #include "FGGameState.h"
 #include "PushModel.h"
+#include "UnrealNetwork.h"
 
 DEFINE_LOG_CATEGORY(LogApReplicatedGiftingSubsystem);
 
@@ -11,7 +12,7 @@ AApReplicatedGiftingSubsystem* AApReplicatedGiftingSubsystem::Get(UObject* world
 	return Get(world);
 }
 
-AApReplicatedGiftingSubsystem* AApReplicatedGiftingSubsystem::Get(class UWorld* world) {
+AApReplicatedGiftingSubsystem* AApReplicatedGiftingSubsystem::Get(UWorld* world) {
 	USubsystemActorManager* SubsystemActorManager = world->GetSubsystem<USubsystemActorManager>();
 	fgcheck(SubsystemActorManager);
 

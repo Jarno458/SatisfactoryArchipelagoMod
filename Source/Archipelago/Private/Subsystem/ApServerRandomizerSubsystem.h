@@ -5,21 +5,12 @@
 #include "FGSchematicManager.h"
 #include "FGResearchManager.h"
 #include "FGGamePhaseManager.h"
-#include "FGPlayerController.h"
-#include "FGCharacterPlayer.h"
 #include "FGUnlockSubsystem.h"
 
 #include "Subsystem/ModSubsystem.h"
-#include "Subsystem/SubsystemActorManager.h"
-#include "Configuration/ModConfiguration.h"
-#include "Configuration/ConfigProperty.h"
-#include "Configuration/Properties/ConfigPropertyInteger.h"
-#include "Configuration/Properties/ConfigPropertyBool.h"
 #include "Templates/SubclassOf.h"
-#include "FGChatManager.h"
-#include "Unlocks/FGUnlockInfoOnly.h"
 
-#include "ApConfigurationStruct.h"
+#include "ApTrapSubsystem.h"
 #include "Data/ApTypes.h"
 #include "Subsystem/ApPortalSubsystem.h"
 #include "Subsystem/ApMappingsSubsystem.h"
@@ -29,10 +20,6 @@
 #include "Subsystem/ApSubsystem.h"
 #include "Subsystem/ApHardDriveGachaSubsystem.h"
 #include "Subsystem/ApMamTreeSubsystem.h"
-
-#include "ApUtils.h"
-
-#include "Configuration/FreeSamplesConfigurationStruct.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(LogApServerRandomizerSubsystem, Log, All);
 
@@ -64,11 +51,11 @@ protected:
 	// End IFSaveInterface
 
 public:
-	static AApServerRandomizerSubsystem* Get(class UWorld* world);
+	static AApServerRandomizerSubsystem* Get(UWorld* world);
 	UFUNCTION(BlueprintPure, Category = "Schematic", DisplayName = "Get Ap Server Side Randomizer Subsystem", Meta = (DefaultToSelf = "worldContext"))
 	static AApServerRandomizerSubsystem* Get(UObject* worldContext);
 
-	void DispatchLifecycleEvent(ELifecyclePhase phase, const TArray<TSubclassOf<class UFGSchematic>>& schematics);
+	void DispatchLifecycleEvent(ELifecyclePhase phase, const TArray<TSubclassOf<UFGSchematic>>& schematics);
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FORCEINLINE bool IsInitialized() const { return areRecipiesAndSchematicsInitialized; };
@@ -110,11 +97,11 @@ private:
 
 	TSet<int64> hintedLocations;
 
-	TMap<TSubclassOf<class UFGSchematic>, TArray<FApNetworkItem>> locationsPerMilestone;
-	TMap<TSubclassOf<class UFGSchematic>, FApNetworkItem> locationPerMamNode;
-	TMap<TSubclassOf<class UFGSchematic>, FApNetworkItem> locationPerHardDrive;
-	TMap<TSubclassOf<class UFGSchematic>, FApNetworkItem> locationPerShopNode;
-	TMap<int64, TSubclassOf<class UFGSchematic>> ItemSchematics;
+	TMap<TSubclassOf<UFGSchematic>, TArray<FApNetworkItem>> locationsPerMilestone;
+	TMap<TSubclassOf<UFGSchematic>, FApNetworkItem> locationPerMamNode;
+	TMap<TSubclassOf<UFGSchematic>, FApNetworkItem> locationPerHardDrive;
+	TMap<TSubclassOf<UFGSchematic>, FApNetworkItem> locationPerShopNode;
+	TMap<int64, TSubclassOf<UFGSchematic>> ItemSchematics;
 
 	std::atomic_bool areRecipiesAndSchematicsInitialized;
 	std::atomic_bool hasLoadedRoomInfo;
@@ -140,16 +127,13 @@ private:
 
 	std::atomic_bool instagib;
 	std::atomic_bool awaitingHealty;
-	void OnDeathLinkReceived(FText message);
-	void HandleDeathLink();
-	void HandleInstagib(AFGCharacterPlayer* player);
 
 	UFUNCTION() //required for event binding
-	void OnMamResearchCompleted(TSubclassOf<class UFGSchematic> schematic);
+	void OnMamResearchCompleted(TSubclassOf<UFGSchematic> schematic);
 	UFUNCTION() //required for event binding
-	void OnMamResearchTreeUnlocked(TSubclassOf<class UFGResearchTree> researchTree);
+	void OnMamResearchTreeUnlocked(TSubclassOf<UFGResearchTree> researchTree);
 	UFUNCTION() //required for event binding
-	void OnSchematicCompleted(TSubclassOf<class UFGSchematic> schematic);
+	void OnSchematicCompleted(TSubclassOf<UFGSchematic> schematic);
 	UFUNCTION() //required for event binding
 	void OnUnclaimedHardDrivesUpdated();
 

@@ -1,11 +1,12 @@
 #include "Subsystem/ApSubsystem.h"
+
+#include "ApMessagingSubsystem.h"
 #include "Subsystem/ApSlotDataSubsystem.h"
 #include "ApUtils.h"
 #include "Async/Async.h"
 #include "SessionSettings/SessionSettingsManager.h"
 #include "Settings/SMLOptionsLibrary.h"
 #include "Logging/StructuredLog.h"
-#include "FGGameUserSettings.h"
 
 DEFINE_LOG_CATEGORY(LogApSubsystem);
 
@@ -19,13 +20,13 @@ AApSubsystem::AApSubsystem() {
 	ReplicationPolicy = ESubsystemReplicationPolicy::SpawnOnServer;
 }
 
-AApSubsystem* AApSubsystem::Get(class UObject* worldContext) {
+AApSubsystem* AApSubsystem::Get(UObject* worldContext) {
 	UWorld* world = GEngine->GetWorldFromContextObject(worldContext, EGetWorldErrorMode::Assert);
 
 	return Get(world);
 }
 
-AApSubsystem* AApSubsystem::Get(class UWorld* world) {
+AApSubsystem* AApSubsystem::Get(UWorld* world) {
 	USubsystemActorManager* SubsystemActorManager = world->GetSubsystem<USubsystemActorManager>();
 	fgcheck(SubsystemActorManager);
 
@@ -317,6 +318,10 @@ void AApSubsystem::ProcessDeadlinks() {
 		for (TFunction<void(FText)> callback : deathLinkReceivedCallbacks)
 			callback(deadlinkMessage);
 	}
+}
+
+void AApSubsystem::EnableDeathLink() {
+	CallOnGameThread<void>([]() { AP_EnabledDeathlinkAnyway(); });
 }
 
 void AApSubsystem::TriggerDeathLink() {

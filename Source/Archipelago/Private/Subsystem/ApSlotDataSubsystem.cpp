@@ -4,6 +4,7 @@
 #include "Net/UnrealNetwork.h"
 #include "PushModel.h"
 #include "Logging/StructuredLog.h"
+#include "Subsystem/SubsystemActorManager.h"
 
 DEFINE_LOG_CATEGORY(LogApSlotDataSubsystem);
 
@@ -17,13 +18,13 @@ AApSlotDataSubsystem::AApSlotDataSubsystem() {
 	ReplicationPolicy = ESubsystemReplicationPolicy::SpawnOnServer_Replicate;
 }
 
-AApSlotDataSubsystem* AApSlotDataSubsystem::Get(class UObject* worldContext) {
+AApSlotDataSubsystem* AApSlotDataSubsystem::Get(UObject* worldContext) {
 	UWorld* world = GEngine->GetWorldFromContextObject(worldContext, EGetWorldErrorMode::Assert);
 
 	return Get(world);
 }
 
-AApSlotDataSubsystem* AApSlotDataSubsystem::Get(class UWorld* world) {
+AApSlotDataSubsystem* AApSlotDataSubsystem::Get(UWorld* world) {
 	USubsystemActorManager* SubsystemActorManager = world->GetSubsystem<USubsystemActorManager>();
 	fgcheck(SubsystemActorManager);
 
@@ -195,6 +196,8 @@ EApSlotDataState AApSlotDataSubsystem::TryLoadSlotDataFromServer(FString slotDat
 
 	if (!options->TryGetBoolField("EnergyLink", EnergyLink))
 		EnergyLink = false;
+	if (!parsedJson->TryGetBoolField("DeathLink", DeathLink))
+		DeathLink = false;
 
 	hasLoadedSlotData = true;
 	hasLoadedExplorationData = true;

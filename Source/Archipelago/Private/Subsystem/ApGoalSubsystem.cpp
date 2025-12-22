@@ -1,6 +1,7 @@
 #include "Subsystem/ApGoalSubsystem.h"
 #include "FGGamePhase.h"
 #include "Patching/NativeHookManager.h"
+#include "Subsystem/SubsystemActorManager.h"
 
 AApGoalSubsystem::AApGoalSubsystem() : Super() {
 	PrimaryActorTick.bCanEverTick = true;

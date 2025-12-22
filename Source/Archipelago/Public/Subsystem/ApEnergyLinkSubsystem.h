@@ -4,11 +4,9 @@
 #include "Math/BigInt.h"
 
 #include "Subsystem/ModSubsystem.h"
-#include "Subsystem/SubsystemActorManager.h"
 #include "Patching/NativeHookManager.h"
 #include "FGPowerInfoComponent.h"
 #include "Buildables/FGBuildablePowerStorage.h"
-#include "FGPowerCircuit.h"
 #include "FGCircuitSubsystem.h"
 
 #include "Subsystem/ApSubsystem.h"

@@ -1,9 +1,6 @@
 #include "Commands/ResyncCommand.h"
 #include "Subsystem/ApServerRandomizerSubsystem.h"
 
-//TODO REMOVE
-#pragma optimize("", off)
-
 AResyncCommand::AResyncCommand() {
 	CommandName = TEXT("resync");
 	Usage = NSLOCTEXT("Archipelago", "ApResyncCommandUsage", "/resync - resets the internal item duplication counter, save and reload the save afterwards");
@@ -16,5 +13,3 @@ EExecutionStatus AResyncCommand::ExecuteCommand_Implementation(UCommandSender* S
 
 	return EExecutionStatus::COMPLETED;
 }
-
-#pragma optimize("", on)

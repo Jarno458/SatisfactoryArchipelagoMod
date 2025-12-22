@@ -7,7 +7,7 @@
 
 DEFINE_LOG_CATEGORY(LogApPortalSubsystem);
 
-AApPortalSubsystem* AApPortalSubsystem::Get(class UWorld* world) {
+AApPortalSubsystem* AApPortalSubsystem::Get(UWorld* world) {
 	USubsystemActorManager* SubsystemActorManager = world->GetSubsystem<USubsystemActorManager>();
 	fgcheck(SubsystemActorManager);
 

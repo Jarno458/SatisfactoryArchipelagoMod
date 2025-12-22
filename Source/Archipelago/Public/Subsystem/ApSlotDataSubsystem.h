@@ -3,7 +3,6 @@
 #include "CoreMinimal.h"
 #include "FGSaveInterface.h"
 #include "Subsystem/ModSubsystem.h"
-#include "Subsystem/SubsystemActorManager.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(LogApSlotDataSubsystem, Log, All);
 
@@ -204,6 +203,8 @@ public:
 	bool FreeSampleRadioactive;
 	UPROPERTY(BlueprintReadOnly, SaveGame)
 	bool EnergyLink;
+	UPROPERTY(BlueprintReadOnly, SaveGame)
+	bool DeathLink;
 
 	UPROPERTY(BlueprintReadOnly, SaveGame, Replicated)
 	TArray<int64> starterRecipeIds;

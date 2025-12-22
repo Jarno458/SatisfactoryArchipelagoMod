@@ -2,15 +2,9 @@
 
 #include "CoreMinimal.h"
 #include "Subsystem/ModSubsystem.h"
-#include "Subsystem/SubsystemActorManager.h"
 #include "Subsystem/ApSubsystem.h"
-#include "FGSchematicManager.h"
-#include "FGResearchManager.h"
 
 #include "ApMamTreeSubsystem.generated.h"
-
-//TODO REMOVE
-#pragma optimize("", off)
 
 DECLARE_LOG_CATEGORY_EXTERN(LogApMamTreeSubsystem, Log, All);
 
@@ -27,5 +21,3 @@ public:
 	UFUNCTION(BlueprintImplementableEvent)
 	TSet<int64> GetVisibleMamNodeIds() const;
 };
-
-#pragma optimize("", on)

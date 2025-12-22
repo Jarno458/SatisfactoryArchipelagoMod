@@ -9,7 +9,7 @@ AApServerGiftingSubsystem* AApServerGiftingSubsystem::Get(UObject* worldContext)
 	return Get(world);
 }
 
-AApServerGiftingSubsystem* AApServerGiftingSubsystem::Get(class UWorld* world) {
+AApServerGiftingSubsystem* AApServerGiftingSubsystem::Get(UWorld* world) {
 	USubsystemActorManager* SubsystemActorManager = world->GetSubsystem<USubsystemActorManager>();
 	fgcheck(SubsystemActorManager);
 

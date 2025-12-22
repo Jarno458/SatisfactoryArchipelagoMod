@@ -2,7 +2,7 @@
 #include "Patching/NativeHookManager.h"
 #include "Registry/ModContentRegistry.h"
 #include "Subsystem/ApSchematicPatcherSubsystem.h"
-#include "Subsystem/ApMappingsSubsystem.h"
+#include "Subsystem/SubsystemActorManager.h"
 
 DEFINE_LOG_CATEGORY(LogApHardDriveGachaSubsystem);
 
@@ -112,11 +112,11 @@ bool AApHardDriveGachaSubsystem::GetAvailableAlternateSchematics(
 	return result;
 }
 
-TSubclassOf<class UFGSchematic> AApHardDriveGachaSubsystem::GetRandomSchematic(TSet<TSubclassOf<UFGSchematic>> excludedSchematics) {
+TSubclassOf<UFGSchematic> AApHardDriveGachaSubsystem::GetRandomSchematic(TSet<TSubclassOf<UFGSchematic>> excludedSchematics) {
 	//Schematic should be randomly selected from the first x schematics in apHardDriveSchematics that arent excluded
 
-	TArray<TSubclassOf<class UFGSchematic>> schematicsToOffer;
-	for (const TSubclassOf<class UFGSchematic> schematic : apHardDriveSchematics) {
+	TArray<TSubclassOf<UFGSchematic>> schematicsToOffer;
+	for (const TSubclassOf<UFGSchematic> schematic : apHardDriveSchematics) {
 		if (excludedSchematics.Contains(schematic))
 			continue;
 

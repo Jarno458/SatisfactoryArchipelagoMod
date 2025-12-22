@@ -5,9 +5,6 @@
 #include "Module/GameInstanceModuleManager.h"
 #include "Module/ApGameInstanceModule.h"
 
-//TODO REMOVE
-#pragma optimize("", off)
-
 DEFINE_LOG_CATEGORY(LogApUtils);
 
 DEFINE_LOG_CATEGORY(LogArchipelagoCpp);
@@ -72,5 +69,3 @@ void UApUtils::WriteStringToFile(FString Path, FString text, bool relative) {
 bool UApUtils::IsApPlayerValid(FApPlayer player) {
 	return player.IsValid();
 }
-
-#pragma optimize("", on)

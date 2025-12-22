@@ -1,8 +1,5 @@
 #include "Commands/ApCountdownCommand.h"
 
-//TODO REMOVE
-#pragma optimize("", off)
-
 AApCountdownCommand::AApCountdownCommand() {
 	CommandName = TEXT("ap-countdown");
 	Usage = NSLOCTEXT("Archipelago", "ApCountdownCommandUsage", "/ap-countdown <seconds> - starts a countdown on the server that's broadcasted to all clients");
@@ -19,5 +16,3 @@ EExecutionStatus AApCountdownCommand::ExecuteCommand_Implementation(UCommandSend
 
 	return EExecutionStatus::COMPLETED;
 }
-
-#pragma optimize("", on)

@@ -1,8 +1,5 @@
 #include "Commands/ApSayCommand.h"
 
-//TODO REMOVE
-#pragma optimize("", off)
-
 AApSayCommand::AApSayCommand() {
 	CommandName = TEXT("ap-say");
 	Usage = NSLOCTEXT("Archipelago", "ApSayCommandUsage", "/ap-say <message> - send chat message to AP server");
@@ -17,5 +14,3 @@ EExecutionStatus AApSayCommand::ExecuteCommand_Implementation(UCommandSender* Se
 
 	return EExecutionStatus::COMPLETED;
 }
-
-#pragma optimize("", on)

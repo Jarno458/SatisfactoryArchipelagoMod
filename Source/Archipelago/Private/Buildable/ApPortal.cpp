@@ -2,9 +2,6 @@
 #include "Subsystem/ApPortalSubsystem.h"
 #include "Subsystem/ApReplicatedGiftingSubsystem.h"
 
-//TODO REMOVE
-#pragma optimize("", off)
-
 AApPortal::AApPortal() : Super() {
 	bReplicates = true;
 
@@ -130,5 +127,3 @@ bool AApPortal::Factory_GrabOutput_Implementation(class UFGFactoryConnectionComp
 		return false;
 	}
 }
-
-#pragma optimize("", on)

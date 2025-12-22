@@ -19,13 +19,13 @@ AApSchematicPatcherSubsystem::AApSchematicPatcherSubsystem() {
 	ReplicationPolicy = ESubsystemReplicationPolicy::SpawnOnServer_Replicate;
 }
 
-AApSchematicPatcherSubsystem* AApSchematicPatcherSubsystem::Get(class UObject* worldContext) {
+AApSchematicPatcherSubsystem* AApSchematicPatcherSubsystem::Get(UObject* worldContext) {
 	UWorld* world = GEngine->GetWorldFromContextObject(worldContext, EGetWorldErrorMode::Assert);
 
 	return Get(world);
 }
 
-AApSchematicPatcherSubsystem* AApSchematicPatcherSubsystem::Get(class UWorld* world) {
+AApSchematicPatcherSubsystem* AApSchematicPatcherSubsystem::Get(UWorld* world) {
 	return UApUtils::GetSubsystemActorIncludingParentClases<AApSchematicPatcherSubsystem>(world);
 }
 

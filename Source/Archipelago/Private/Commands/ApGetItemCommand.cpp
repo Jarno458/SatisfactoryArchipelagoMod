@@ -1,8 +1,5 @@
 #include "Commands/ApGetItemCommand.h"
 
-//TODO REMOVE
-#pragma optimize("", off)
-
 AApGetItemCommand::AApGetItemCommand() {
 	CommandName = TEXT("ap-getitem");
 	Usage = NSLOCTEXT("Archipelago", "ApGetItemCommandUsage", "/ap-getitem <item-name> - asks the server to send you the specified AP item, the request can be rejected by the server if you don't have permission");
@@ -17,5 +14,3 @@ EExecutionStatus AApGetItemCommand::ExecuteCommand_Implementation(UCommandSender
 
 	return EExecutionStatus::COMPLETED;
 }
-
-#pragma optimize("", on)

@@ -1,33 +1,21 @@
 #pragma once
 
-#include <functional>
-#include <map>
 #include <string>
 #include <vector>
-#include <numeric>
-#include <set>
 #include <atomic>
 
 #include "CoreMinimal.h"
 #include "Templates/Function.h"
 
 #include "FGPlayerController.h"
-#include "FGCharacterPlayer.h"
 
 #include "GenericPlatform/GenericPlatformProcess.h"
-#include "Registry/ModContentRegistry.h"
 #include "Subsystem/ModSubsystem.h"
-#include "Subsystem/SubsystemActorManager.h"
-#include "Subsystem/ApTrapSubsystem.h"
-#include "Configuration/ModConfiguration.h"
-#include "Configuration/ConfigManager.h"
 #include "Templates/SubclassOf.h"
 #include "Module/ModModule.h"
 #include "ApConfigurationStruct.h"
 #include "Data/ApTypes.h"
-#include "Data/ApTypes.h"
 #include "Subsystem/ApConnectionInfoSubsystem.h"
-#include "Subsystem/ApMessagingSubsystem.h"
 
 #include "Archipelago.h"
 #include "Archipelago_Satisfactory.h"
@@ -98,6 +86,7 @@ public:
 
 	void AddChatMessage(FText, FLinearColor);
 
+	void EnableDeathLink();
 	void TriggerDeathLink();
 private:
 	AApConnectionInfoSubsystem* connectionInfoSubsystem;

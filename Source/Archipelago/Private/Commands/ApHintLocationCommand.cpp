@@ -1,8 +1,5 @@
 #include "Commands/ApHintLocationCommand.h"
 
-//TODO REMOVE
-#pragma optimize("", off)
-
 AApHintLocationCommand::AApHintLocationCommand() {
 	CommandName = TEXT("ap-hintlocation");
 	Usage = NSLOCTEXT("Archipelago", "ApHintLocationCommandUsage", "/ap-hintlocation <location-name> - attempt to hint what is located at the specified location");
@@ -19,5 +16,3 @@ EExecutionStatus AApHintLocationCommand::ExecuteCommand_Implementation(UCommandS
 
 	return EExecutionStatus::COMPLETED;
 }
-
-#pragma optimize("", on)

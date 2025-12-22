@@ -1,8 +1,5 @@
 #include "Commands/ApPlayersCommand.h"
 
-//TODO REMOVE
-#pragma optimize("", off)
-
 AApPlayersCommand::AApPlayersCommand() {
 	CommandName = TEXT("ap-players");
 	Usage = NSLOCTEXT("Archipelago", "ApPlayersCommandUsage", "/ap-players - Get information about connected Archipelago players");
@@ -14,5 +11,3 @@ EExecutionStatus AApPlayersCommand::ExecuteCommand_Implementation(UCommandSender
 
 	return EExecutionStatus::COMPLETED;
 }
-
-#pragma optimize("", on)

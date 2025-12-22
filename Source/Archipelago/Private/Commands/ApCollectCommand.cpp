@@ -1,8 +1,5 @@
 #include "Commands/ApCollectCommand.h"
 
-//TODO REMOVE
-#pragma optimize("", off)
-
 AApCollectCommand::AApCollectCommand() {
 	CommandName = TEXT("ap-collect");
 	Usage = NSLOCTEXT("Archipelago", "ApCollectCommandUsage", "/ap-collect - attempts to collect all of your items from inside other players' worlds");
@@ -14,5 +11,3 @@ EExecutionStatus AApCollectCommand::ExecuteCommand_Implementation(UCommandSender
 
 	return EExecutionStatus::COMPLETED;
 }
-
-#pragma optimize("", on)

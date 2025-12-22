@@ -1,9 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "FGChatManager.h"
 #include "Subsystem/ModSubsystem.h"
-#include "Net/UnrealNetwork.h"
 
 #include "ApMessagingSubsystem.generated.h"
 

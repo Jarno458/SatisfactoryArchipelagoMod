@@ -24,9 +24,6 @@ DECLARE_LOG_CATEGORY_EXTERN(LogApSchematicPatcherSubsystem, Log, All);
 
 #define ID_OFFSET 1338000
 
-//TODO REMOVE
-#pragma optimize("", off)
-
 USTRUCT()
 struct ARCHIPELAGO_API FApReplicatedItemInfo
 {
@@ -75,8 +72,6 @@ public:
 	FORCEINLINE int const GetFlags() const { return (data & 0x4F000000) >> 24; }
 	FORCEINLINE bool GetIsLocalPlayer() const { return (data & 0x80000000) > 0; }
 };
-
-#pragma optimize("", on)
 
 USTRUCT()
 struct ARCHIPELAGO_API FApReplicatedMilestoneInfo
