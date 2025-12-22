@@ -40,6 +40,7 @@ Choose between one or more of the following goals to complete your game:
 - AWESOME Sink Points Total
 - AWESOME Sink Points Per Minute
 - Exploration
+- Erect a FICSMAS Tree
 
 ## How to Setup
 
