@@ -69,14 +69,12 @@ void AApSubsystem::ConnectToArchipelago() {
 	AP_SetLocationInfoCallback([this](std::vector<AP_NetworkItem> scoutedItems) {
 		LocationScoutedCallback(std::move(scoutedItems));
 	});
-	AP_SetDeathLinkRecvCallback([this](std::string source, std::string cause) {
-		DeathLinkReceivedCallback(source, cause);
-	});
 	AP_SetLoggingCallback([this](std::string message) {
 		UE_LOG(LogApSubsystem, Display, TEXT("LogFromAPCpp: %s"), *UApUtils::FStr(message));
 	});
-
-	AP_SetDeathLinkSupported(true);
+	AP_RegisterBouncedCallback([this](AP_Bounce bounce) {
+		BounceReceivedCallback(bounce);
+	});
 	AP_SetGiftingSupported(true);
 
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::Starting AP"));
@@ -156,11 +154,44 @@ void AApSubsystem::EndPlay(const EEndPlayReason::Type endPlayReason) {
 	CallOnGameThread<void>([]() { AP_Shutdown(); });
 }
 
-void AApSubsystem::DeathLinkReceivedCallback(std::string source, std::string cause) {
+void AApSubsystem::BounceReceivedCallback(AP_Bounce bounce)
+{
+	if (std::ranges::find(*bounce.tags, "DeathLink") != bounce.tags->end()) {
+		FString data = UApUtils::FStr(bounce.data);
+		const TSharedRef<TJsonReader<>> reader = TJsonReaderFactory<>::Create(*data);
+
+		TSharedPtr<FJsonObject> parsedJson;
+		FJsonSerializer::Deserialize(reader, parsedJson);
+
+		uint64 reference;
+		if (parsedJson->TryGetNumberField("reference", reference))
+		{
+			if (sendDeathLinkReferences.Contains(reference)) {
+				sendDeathLinkReferences.Remove(reference);
+				return;
+			}
+		}
+
+		FString source;
+		if (!parsedJson->TryGetStringField("source", source))
+			source = "Unknown";
+
+		FString cause;
+		if (!parsedJson->TryGetStringField("cause", cause))
+			cause = "Unknown";
+
+		DeathLinkReceivedCallback(source, cause);
+	}
+	else {
+		UE_LOGFMT(LogApSubsystem, Display, "AApSubsystem::BounceReceivedCallback() unknown bounce packet received");
+	}
+}
+
+void AApSubsystem::DeathLinkReceivedCallback(const FString& source, const FString& cause) {
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::DeathLinkReceivedCallback()"));
 
-	FText sourceString = UApUtils::FText(source);
-	FText causeString = UApUtils::FText(cause);
+	FText sourceString = FText::FromString(source);
+	FText causeString = FText::FromString(cause);
 	FText message;
 	if (causeString.IsEmpty())
 		message = FText::Format(LOCTEXT("DeathLinkReceived", "{0} has died, and so have you!"), sourceString);
@@ -324,8 +355,22 @@ void AApSubsystem::EnableDeathLink() {
 	CallOnGameThread<void>([]() { AP_EnabledDeathlinkAnyway(); });
 }
 
-void AApSubsystem::TriggerDeathLink() {
-	CallOnGameThread<void>([]() { AP_DeathLinkSend(); });
+void AApSubsystem::TriggerDeathLink(FString source, FString cause) {
+	AP_Bounce bounce;
+	bounce.tags->emplace_back(TCHAR_TO_UTF8("DeathLink"));
+
+	FBounceDayo deathLinkData;
+	deathLinkData.source = source;
+	deathLinkData.cause = cause;
+	deathLinkData.time = FDateTime::Now().ToUnixTimestampDecimal();
+	deathLinkData.reference = FMath::RandRange((int64)0, INT64_MAX);
+
+	FString jsonString;
+	FJsonObjectConverter::UStructToJsonObjectString(deathLinkData, jsonString);
+
+	bounce.data = TCHAR_TO_UTF8(*jsonString);
+
+	CallOnGameThread<void>([bounce]() { AP_SendBounce(bounce); });
 }
 
 void AApSubsystem::CheckConnectionState() {

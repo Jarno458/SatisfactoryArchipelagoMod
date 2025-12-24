@@ -24,6 +24,21 @@ DECLARE_LOG_CATEGORY_EXTERN(LogApSubsystem, Log, All);
 
 #include "ApSubsystem.generated.h"
 
+USTRUCT()
+struct ARCHIPELAGO_API FBounceDayo
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	FString source;
+	UPROPERTY()
+	FString cause;
+	UPROPERTY()
+	double time;
+	UPROPERTY()
+	int64 reference;
+};
+
 UCLASS()
 class ARCHIPELAGO_API AApSubsystem : public AModSubsystem
 {
@@ -83,11 +98,12 @@ public:
 	void SetLocationCheckedCallback(TFunction<void(int64)> onLocationChecked);
 	void SetDeathLinkReceivedCallback(TFunction<void(FText)> onDeathLinkReceived);
 	void SetReconnectCallback(TFunction<void(void)> onReconnect);
+	void BounceReceivedCallback(AP_Bounce bounce);
 
 	void AddChatMessage(FText, FLinearColor);
 
 	void EnableDeathLink();
-	void TriggerDeathLink();
+	void TriggerDeathLink(FString source, FString cause);
 private:
 	AApConnectionInfoSubsystem* connectionInfoSubsystem;
 
@@ -99,9 +115,11 @@ private:
 	TArray<TFunction<void(FText)>> deathLinkReceivedCallbacks;
 	TArray<TFunction<void(void)>> onReconnectCallbacks;
 
+	TSet<uint64> sendDeathLinkReferences;
+
 	void SetReplyCallback(AP_SetReply setReply);
 	void LocationScoutedCallback(std::vector<AP_NetworkItem>);
-	void DeathLinkReceivedCallback(std::string source, std::string cause);
+	void DeathLinkReceivedCallback(const FString& source, const FString& cause);
 
 	TQueue<TTuple<int64, bool>> ReceivedItems;
 	TQueue<int64> CheckedLocations;

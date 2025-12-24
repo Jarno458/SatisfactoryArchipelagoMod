@@ -29,22 +29,12 @@ private:
 
 	bool canTriggerDeathlinks = false;
 
-
 	void MassMurder();
 
 public:
 	UFUNCTION(BlueprintCallable)
-	void OnPlayerBeginPlay(AFGCharacterPlayer* player);
-
-	UFUNCTION(BlueprintCallable)
-	void OnPlayerEndPlay(AFGCharacterPlayer* player);
+	void OnPlayerDeath(AActor* deadActor, AActor* causee, const UDamageType* damageType);
 
 private:
 	void OnDeathLinkReceived(FText message);
-
-	UFUNCTION() //required for event binding
-	void OnPlayerDeath(AActor* deadActor);
-
-	UFUNCTION() //required for event binding
-	void OnPlayerTakeDamage(AActor* damagedActor, float damageAmount, const UDamageType* damageType, AController* instigatedBy, AActor* damageCauser);
 };

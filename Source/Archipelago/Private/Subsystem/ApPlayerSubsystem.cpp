@@ -43,51 +43,67 @@ void AApPlayerSubsystem::BeginPlay() {
 	UE_LOG(LogApPlayerSubsystem, Display, TEXT("AApPlayerSubsystem::BeginPlay()"));
 }
 
-void AApPlayerSubsystem::OnPlayerBeginPlay(AFGCharacterPlayer* player) {
-	UE_LOGFMT(LogApPlayerSubsystem, Display, "AApPlayerSubsystem::OnPlayerBeginPlay() player begin play");
-
-	if (!HasAuthority())
-		return;
-
-	UFGHealthComponent* health = player->GetHealthComponent();
-
-	UE_LOGFMT(LogApPlayerSubsystem, Display, "AApPlayerSubsystem::OnPlayerEndPlay Health {0}", health->GetFullName());
-
-	health->DeathDelegate.AddDynamic(this, &AApPlayerSubsystem::OnPlayerDeath);
-	health->OnTakeAnyDamageDelegate.AddDynamic(this, &AApPlayerSubsystem::OnPlayerTakeDamage);
-
-}
-
-void AApPlayerSubsystem::OnPlayerEndPlay(AFGCharacterPlayer* player) {
-	UE_LOGFMT(LogApPlayerSubsystem, Display, "AApPlayerSubsystem::OnPlayerEndPlay player left play");
-
-	if (!HasAuthority())
-		return;
-
-	UFGHealthComponent* health = player->GetHealthComponent();
-
-	UE_LOGFMT(LogApPlayerSubsystem, Display, "AApPlayerSubsystem::OnPlayerEndPlay Health {0}", health->GetFullName());
-
-	health->DeathDelegate.RemoveDynamic(this, &AApPlayerSubsystem::OnPlayerDeath);
-	health->OnTakeAnyDamageDelegate.RemoveDynamic(this, &AApPlayerSubsystem::OnPlayerTakeDamage);
-}
-
-void AApPlayerSubsystem::OnPlayerDeath(AActor* deadActor) {
+void AApPlayerSubsystem::OnPlayerDeath(AActor* deadActor, AActor* causee, const UDamageType* damageType) {
 	UE_LOGFMT(LogApPlayerSubsystem, Display, "AApPlayerSubsystem::OnPlayerDeath({0})", *deadActor->GetName());
 
 	if (!HasAuthority() || !canTriggerDeathlinks)
 		return;
 
-	ap->TriggerDeathLink();
+	FString source(TEXT("Unknown"));
+	FString cause(TEXT(""));
+
+	if (!IsValid(deadActor))
+		return;
+
+	AFGCharacterPlayer* player = Cast<AFGCharacterPlayer>(deadActor);
+	if (IsValid(player))
+	{
+		APlayerState* state = player->GetPlayerState();
+		if (IsValid(state))
+			source = state->GetPlayerName();
+	}
+
+	bool isTeamKill = false;
+	if (causee->IsA<AFGCharacterPlayer>())
+	{
+		AFGCharacterPlayer* player2 = Cast<AFGCharacterPlayer>(causee);
+		if (IsValid(player2))
+		{
+			if (player != player2)
+				isTeamKill = true;
+		}
+	}
+
+	FString damageName = damageType->GetName();
+
+	if (damageName.EndsWith(TEXT("WorldBounds")))
+		cause = TEXT("Flew out of the map");
+	if (damageName.EndsWith(TEXT("Radiation")))
+		cause = TEXT("Radiation poisoning");
+	if (damageName.EndsWith(TEXT("Gas")))
+		cause = TEXT("Suffocated in toxic gas");
+	if (damageName.EndsWith(TEXT("_Fall")))
+		cause = TEXT("Fell to their death");
+	if (damageName.EndsWith(TEXT("Explosive")))
+	{
+		if (isTeamKill)
+			cause = TEXT("Blown up by a teammate");
+		else
+			cause = TEXT("Blown up");
+	}
+	if (damageName.EndsWith(TEXT("Physical")))
+	{
+		if (isTeamKill)
+			cause = TEXT("Teamkill");
+		else
+			cause = TEXT("Physical damage");
+	}
+
+	UE_LOGFMT(LogApPlayerSubsystem, Display, "AApPlayerSubsystem::OnPlayerDeath source: {0}, cause: {1}", source, cause);
+
+	ap->TriggerDeathLink(source, cause);
 
 	MassMurder();
-}
-
-void AApPlayerSubsystem::OnPlayerTakeDamage(AActor* damagedActor, float damageAmount, const UDamageType* damageType, AController* instigatedBy, AActor* damageCauser) {
-	UE_LOGFMT(LogApPlayerSubsystem, Display, "AApPlayerSubsystem::OnPlayerTakeDamage({0}, {1})", *damagedActor->GetName(), damageAmount);
-
-	if (!HasAuthority() || !canTriggerDeathlinks)
-		return;
 }
 
 void AApPlayerSubsystem::OnDeathLinkReceived(FText message) {
@@ -98,7 +114,7 @@ void AApPlayerSubsystem::OnDeathLinkReceived(FText message) {
 
 	MassMurder();
 	
-	ap->AddChatMessage(message, FLinearColor::Red);
+	//ap->AddChatMessage(message, FLinearColor::Red);
 }
 
 void AApPlayerSubsystem::MassMurder()

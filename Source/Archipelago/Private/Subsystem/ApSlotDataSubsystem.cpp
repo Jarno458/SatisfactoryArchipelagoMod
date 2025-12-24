@@ -91,10 +91,9 @@ EApSlotDataState AApSlotDataSubsystem::TryLoadSlotDataFromServer(FString slotDat
 
 	const TSharedRef<TJsonReader<>> reader = TJsonReaderFactory<>::Create(*slotDataJson);
 
-	FJsonSerializer serializer;
 	TSharedPtr<FJsonObject> parsedJson;
+	FJsonSerializer::Deserialize(reader, parsedJson);
 
-	serializer.Deserialize(reader, parsedJson);
 	if (!parsedJson.IsValid()) {
 		UE_LOGFMT(LogApSlotDataSubsystem, Error, "AApSlotDataSubsystem::SetSlotDataJson() failed to parse slotdata: {0}", slotDataJson);
 		lastError = FText::Format(LOCTEXT("SlotDataFailedToParse", "Failed to parse SlotData json: {0}"), FText::FromString(slotDataJson));
