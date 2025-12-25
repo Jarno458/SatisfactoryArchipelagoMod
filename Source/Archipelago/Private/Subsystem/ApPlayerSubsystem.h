@@ -2,7 +2,6 @@
 
 #include "CoreMinimal.h"
 #include "ApSubsystem.h"
-#include "FGCharacterPlayer.h"
 
 #include "Subsystem/ModSubsystem.h"
 
@@ -29,6 +28,7 @@ private:
 
 	bool canTriggerDeathlinks = false;
 
+	bool IsOnlinePlayer(AFGCharacterPlayer* player);
 	void MassMurder();
 
 public:
@@ -36,5 +36,9 @@ public:
 	void OnPlayerDeath(AActor* deadActor, AActor* causee, const UDamageType* damageType);
 
 private:
-	void OnDeathLinkReceived(FText message);
+	void OnDeathLinkReceived(FString source, FString cause);
+
+	void AddDeathLinkMessageToChat(const FString& source, const FString& cause) const;
+
+	static FString GetDamageSuffix(const UDamageType* damageType, AActor* self, AActor* causee);
 };

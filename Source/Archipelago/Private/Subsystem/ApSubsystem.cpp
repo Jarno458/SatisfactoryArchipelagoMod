@@ -163,8 +163,9 @@ void AApSubsystem::BounceReceivedCallback(AP_Bounce bounce)
 		TSharedPtr<FJsonObject> parsedJson;
 		FJsonSerializer::Deserialize(reader, parsedJson);
 
-		uint64 reference;
-		if (parsedJson->TryGetNumberField("reference", reference))
+		FString referenceString;
+		FGuid reference;
+		if (parsedJson->TryGetStringField("reference", referenceString) && FGuid::Parse(referenceString, reference))
 		{
 			if (sendDeathLinkReferences.Contains(reference)) {
 				sendDeathLinkReferences.Remove(reference);
@@ -178,7 +179,7 @@ void AApSubsystem::BounceReceivedCallback(AP_Bounce bounce)
 
 		FString cause;
 		if (!parsedJson->TryGetStringField("cause", cause))
-			cause = "Unknown";
+			cause = "";
 
 		DeathLinkReceivedCallback(source, cause);
 	}
@@ -190,15 +191,9 @@ void AApSubsystem::BounceReceivedCallback(AP_Bounce bounce)
 void AApSubsystem::DeathLinkReceivedCallback(const FString& source, const FString& cause) {
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::DeathLinkReceivedCallback()"));
 
-	FText sourceString = FText::FromString(source);
-	FText causeString = FText::FromString(cause);
-	FText message;
-	if (causeString.IsEmpty())
-		message = FText::Format(LOCTEXT("DeathLinkReceived", "{0} has died, and so have you!"), sourceString);
-	else
-		message = FText::Format(LOCTEXT("DeathLinkReceivedWithCause", "{0} has died because {1}"), sourceString, causeString);
+	TPair<FString, FString> messagePair = TPair<FString, FString>(source, cause);
 
-	PendingDeathlinks.Enqueue(message);
+	PendingDeathlinks.Enqueue(messagePair);
 }
 
 void AApSubsystem::SetReplyCallback(AP_SetReply setReply) {
@@ -313,7 +308,7 @@ void AApSubsystem::SetLocationCheckedCallback(TFunction<void(int64)> onLocationC
 	locationCheckedCallbacks.Add(onLocationChecked);
 }
 
-void AApSubsystem::SetDeathLinkReceivedCallback(TFunction<void(FText)> onDeathLinkReceived) {
+void AApSubsystem::SetDeathLinkReceivedCallback(TFunction<void(FString, FString)> onDeathLinkReceived) {
 	deathLinkReceivedCallbacks.Add(onDeathLinkReceived);
 }
 
@@ -344,10 +339,10 @@ void AApSubsystem::ProcessCheckedLocations() {
 }
 
 void AApSubsystem::ProcessDeadlinks() {
-	FText deadlinkMessage;
+	TPair<FString, FString> deadlinkMessage;
 	while (PendingDeathlinks.Dequeue(deadlinkMessage)) {
-		for (TFunction<void(FText)> callback : deathLinkReceivedCallbacks)
-			callback(deadlinkMessage);
+		for (TFunction<void(FString, FString)> callback : deathLinkReceivedCallbacks)
+			callback(deadlinkMessage.Key, deadlinkMessage.Value);
 	}
 }
 
@@ -357,17 +352,24 @@ void AApSubsystem::EnableDeathLink() {
 
 void AApSubsystem::TriggerDeathLink(FString source, FString cause) {
 	AP_Bounce bounce;
-	bounce.tags->emplace_back(TCHAR_TO_UTF8("DeathLink"));
+	std::string tag = "DeathLink";
+	std::vector<std::string> tagsArray = {tag};
+
+	FGuid reference = FGuid::NewGuid();
+	FString referenceString = reference.ToString();
+
+	sendDeathLinkReferences.Add(reference);
 
 	FBounceDayo deathLinkData;
-	deathLinkData.source = source;
-	deathLinkData.cause = cause;
-	deathLinkData.time = FDateTime::Now().ToUnixTimestampDecimal();
-	deathLinkData.reference = FMath::RandRange((int64)0, INT64_MAX);
+	deathLinkData.Source = source;
+	deathLinkData.Cause = cause;
+	deathLinkData.Time = FDateTime::Now().ToUnixTimestampDecimal();
+	deathLinkData.Reference = referenceString;
 
 	FString jsonString;
 	FJsonObjectConverter::UStructToJsonObjectString(deathLinkData, jsonString);
 
+	bounce.tags = &tagsArray;
 	bounce.data = TCHAR_TO_UTF8(*jsonString);
 
 	CallOnGameThread<void>([bounce]() { AP_SendBounce(bounce); });

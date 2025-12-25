@@ -30,13 +30,13 @@ struct ARCHIPELAGO_API FBounceDayo
 	GENERATED_BODY()
 
 	UPROPERTY()
-	FString source;
+	FString Source;
 	UPROPERTY()
-	FString cause;
+	FString Cause;
 	UPROPERTY()
-	double time;
+	double Time;
 	UPROPERTY()
-	int64 reference;
+	FString Reference;
 };
 
 UCLASS()
@@ -96,7 +96,7 @@ public:
 
 	void SetItemReceivedCallback(TFunction<void(int64, bool)> onItemReceived);
 	void SetLocationCheckedCallback(TFunction<void(int64)> onLocationChecked);
-	void SetDeathLinkReceivedCallback(TFunction<void(FText)> onDeathLinkReceived);
+	void SetDeathLinkReceivedCallback(TFunction<void(FString, FString)> onDeathLinkReceived);
 	void SetReconnectCallback(TFunction<void(void)> onReconnect);
 	void BounceReceivedCallback(AP_Bounce bounce);
 
@@ -112,10 +112,10 @@ private:
 	TMap<FString, TFunction<void(AP_SetReply)>> dataStoreCallbacks;
 	TArray<TFunction<void(int64, bool)>> itemReceivedCallbacks;
 	TArray<TFunction<void(int64)>> locationCheckedCallbacks;
-	TArray<TFunction<void(FText)>> deathLinkReceivedCallbacks;
+	TArray<TFunction<void(FString, FString)>> deathLinkReceivedCallbacks;
 	TArray<TFunction<void(void)>> onReconnectCallbacks;
 
-	TSet<uint64> sendDeathLinkReferences;
+	TSet<FGuid> sendDeathLinkReferences = TSet<FGuid>();
 
 	void SetReplyCallback(AP_SetReply setReply);
 	void LocationScoutedCallback(std::vector<AP_NetworkItem>);
@@ -123,7 +123,7 @@ private:
 
 	TQueue<TTuple<int64, bool>> ReceivedItems;
 	TQueue<int64> CheckedLocations;
-	TQueue<FText> PendingDeathlinks;
+	TQueue<TPair<FString, FString>> PendingDeathlinks;
 	TQueue<TPair<FString, FLinearColor>> ChatMessageQueue;
 	std::atomic_bool isReconnect = false;
 
