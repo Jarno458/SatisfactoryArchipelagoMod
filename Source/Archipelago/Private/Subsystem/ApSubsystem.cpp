@@ -156,12 +156,18 @@ void AApSubsystem::EndPlay(const EEndPlayReason::Type endPlayReason) {
 
 void AApSubsystem::BounceReceivedCallback(AP_Bounce bounce)
 {
+	if (bounce.tags == nullptr || bounce.data.empty()) {
+		return;
+	}
+	
 	if (std::ranges::find(*bounce.tags, "DeathLink") != bounce.tags->end()) {
 		FString data = UApUtils::FStr(bounce.data);
 		const TSharedRef<TJsonReader<>> reader = TJsonReaderFactory<>::Create(*data);
 
 		TSharedPtr<FJsonObject> parsedJson;
-		FJsonSerializer::Deserialize(reader, parsedJson);
+
+		if (!FJsonSerializer::Deserialize(reader, parsedJson))
+			return;
 
 		FString referenceString;
 		FGuid reference;
