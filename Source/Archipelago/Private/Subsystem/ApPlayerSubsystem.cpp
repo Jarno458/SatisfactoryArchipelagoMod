@@ -1,15 +1,14 @@
 #include "ApPlayerSubsystem.h"
+
 #include "EngineUtils.h"
 #include "Subsystem/SubsystemActorManager.h"
-#include "FGDriveablePawn.h"
+#include "AI/FGCreatureController.h"
 
 #include "Logging/StructuredLog.h"
 
 DEFINE_LOG_CATEGORY(LogApPlayerSubsystem);
 
 #define LOCTEXT_NAMESPACE "Archipelago"
-
-#pragma optimize("", off)
 
 AApPlayerSubsystem* AApPlayerSubsystem::Get(UWorld* world) {
 	USubsystemActorManager* SubsystemActorManager = world->GetSubsystem<USubsystemActorManager>();
@@ -29,27 +28,46 @@ AApPlayerSubsystem::AApPlayerSubsystem() : Super() {
 
 	ReplicationPolicy = ESubsystemReplicationPolicy::SpawnOnServer;
 
-	PrimaryActorTick.bCanEverTick = false;
-	PrimaryActorTick.bStartWithTickEnabled = false;
+	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bStartWithTickEnabled = true;
 }
 
 void AApPlayerSubsystem::BeginPlay() {
 	Super::BeginPlay();
 
-	ap = AApSubsystem::Get(GetWorld());
+	UWorld* world = GetWorld();
+	fgcheck(world != nullptr);
+
+	ap = AApSubsystem::Get(world);
 	fgcheck(ap);
-
-	ap->SetDeathLinkReceivedCallback([this](FString source, FString cause) { OnDeathLinkReceived(source, cause); });
-
-	canTriggerDeathlinks = true;
+	slotData = AApSlotDataSubsystem::Get(world);
+	fgcheck(slotData);
 
 	UE_LOG(LogApPlayerSubsystem, Display, TEXT("AApPlayerSubsystem::BeginPlay()"));
 }
 
-void AApPlayerSubsystem::OnPlayerDeath(AActor* deadActor, AActor* causee, const UDamageType* damageType) {
+void AApPlayerSubsystem::Tick(float DeltaTime) {
+	Super::Tick(DeltaTime);
+
+	if (!slotData->HasLoadedSlotData())
+		return;
+
+	if (slotData->DeathLink)
+	{
+		ap->SetDeathLinkReceivedCallback([this](FString source, FString cause) { OnDeathLinkReceived(source, cause); });
+
+		canTriggerDeathlinks = true;
+	}
+
+	SetActorTickEnabled(false);
+
+	isInitialized = true;
+}
+
+void AApPlayerSubsystem::OnPlayerDeath(AActor* deadActor, const UDamageType* damageType, AActor* instigatedBy, AActor* damageCauser) {
 	UE_LOGFMT(LogApPlayerSubsystem, Display, "AApPlayerSubsystem::OnPlayerDeath({0})", *deadActor->GetName());
 
-	if (!HasAuthority() || !canTriggerDeathlinks)
+	if (!isInitialized || !canTriggerDeathlinks || !HasAuthority())
 		return;
 
 	FString source(TEXT("Unknown"));
@@ -65,7 +83,7 @@ void AApPlayerSubsystem::OnPlayerDeath(AActor* deadActor, AActor* causee, const 
 			source = state->GetPlayerName();
 	}
 
-	FString cause = GetDamageSuffix(damageType, deadActor, causee);
+	FString cause = GetDamageSuffix(damageType, deadActor, instigatedBy, damageCauser);
 
 	if (!cause.IsEmpty())
 		cause = source + TEXT(" ") + cause;
@@ -79,44 +97,40 @@ void AApPlayerSubsystem::OnPlayerDeath(AActor* deadActor, AActor* causee, const 
 	MassMurder();
 }
 
-FString AApPlayerSubsystem::GetDamageSuffix(const UDamageType* damageType, AActor* self, AActor* causee)
+FString AApPlayerSubsystem::GetDamageSuffix(const UDamageType* damageType, AActor* self, AActor* instigatedBy, AActor* damageCauser)
 {
 	FString cause = TEXT("");
-	FString damageName = damageType->GetName();
+	FString damageName = TEXT("");
 
-	if (damageName.EndsWith(TEXT("WorldBounds_C")))
-		cause = TEXT("flew out of the map");
-	if (damageName.EndsWith(TEXT("Radiation_C")))
-		cause = TEXT("died of radiation poisoning");
-	if (damageName.EndsWith(TEXT("Gas_C")))
-		cause = TEXT("suffocated in toxic gas");
-	if (damageName.EndsWith(TEXT("_Fall_C")))
-		cause = TEXT("fell to their death");
-	else
+	bool isTeamKill = false;
+	bool selfHarm = false;
+	FString causer = TEXT("");
+
+	if (IsValid(instigatedBy))
 	{
-		bool isTeamKill = false;
-		bool selfHarm = false;
-		FString causer = TEXT("");
-
-		if (causee->IsA<AFGCharacterPlayer>())
+		if (instigatedBy->IsA<AFGPlayerController>())
 		{
-			AFGCharacterPlayer* causeePlayer = Cast<AFGCharacterPlayer>(causee);
+			AFGPlayerController* causeeController = Cast<AFGPlayerController>(instigatedBy);
 
-			if (IsValid(causeePlayer))
+			if (IsValid(causeeController))
 			{
-				if (self != causeePlayer)
-					isTeamKill = true;
-				else
-					selfHarm = true;
+				AFGCharacterPlayer* causeePlayer = Cast<AFGCharacterPlayer>(causeeController->GetCharacter());
+				if (IsValid(causeePlayer))
+				{
+					if (self != causeePlayer)
+						isTeamKill = true;
+					else
+						selfHarm = true;
 
-				APlayerState* causeePlayerState = causeePlayer->GetPlayerState();
-				if (!IsValid(causeePlayerState))
-					causer = causeePlayerState->GetPlayerName();
+					AFGPlayerState* causeePlayerState = causeeController->GetPlayerState<AFGPlayerState>();
+					if (IsValid(causeePlayerState))
+						causer = causeePlayerState->GetPlayerName();
+				}
 			}
 		}
-		else if (causee->IsA<AFGCreature>())
+		else if (instigatedBy->IsA<AFGCreatureController>())
 		{
-			FString causeeName = causee->GetName();
+			FString causeeName = instigatedBy->GetName();
 
 			if (causeeName.Contains("Hog") || causeeName.Contains("Johnny"))
 				causer = "A Hog";
@@ -127,29 +141,56 @@ FString AApPlayerSubsystem::GetDamageSuffix(const UDamageType* damageType, AActo
 			if (causeeName.Contains("Crab") || causeeName.Contains("Hatcher"))
 				causer = "A Bee";
 		}
+	} else if (IsValid(damageCauser)) {
+		FString causeeName = damageCauser->GetName();
 
-		if (damageName.EndsWith(TEXT("Explosive_C")))
+		if (causeeName.Contains("Hog") || causeeName.Contains("Johnny"))
+			causer = "A Hog";
+		if (causeeName.Contains("Spitter"))
+			causer = "A Spitter";
+		if (causeeName.Contains("Stinger"))
+			causer = "A Spider";
+		if (causeeName.Contains("Crab") || causeeName.Contains("Hatcher"))
+			causer = "A Bee";
+	}
+
+	if (IsValid(damageType))
+		damageName = damageType->GetName();
+
+	if (damageName.EndsWith(TEXT("WorldBounds_C")))
+		cause = TEXT("flew out of the map");
+	else if (damageName.EndsWith(TEXT("Radiation_C")))
+		cause = TEXT("died of radiation poisoning");
+	else if (damageName.EndsWith(TEXT("Gas_C")))
+		cause = TEXT("suffocated in toxic gas");
+	else if (damageName.EndsWith(TEXT("_Fall_C")))
+		cause = TEXT("fell to their death");
+	else if (damageName.EndsWith(TEXT("Explosive_C")))
+	{
+		if (isTeamKill)
+			cause = FString::Format(TEXT("was blown up by teammate {0}"), { causer });
+		else if (selfHarm)
+			cause = TEXT("blew themself up");
+		else if (!causer.IsEmpty())
+			cause = FString::Format(TEXT("was blown up by {0}"), { causer });
+		else
+			cause = TEXT("blew up");
+	}
+	else
+	{
+		if (isTeamKill)
 		{
-			if (isTeamKill)
-				cause = FString::Format(TEXT("was blown up by teammate {0}"), { causer });
-			else if (selfHarm)
-				cause = TEXT("blew themself up");
-			else if (!causer.IsEmpty())
-				cause = FString::Format(TEXT("was blown up by {0}"), { causer });
+			if (causer.IsEmpty())
+				cause = TEXT("was teamkilled");
 			else
-				cause = TEXT("blew up");
-		}
-		if (damageName.EndsWith(TEXT("Physical_C")))
-		{
-			if (isTeamKill)
 				cause = FString::Format(TEXT("was teamkilled by {0}"), { causer });
-			else if (selfHarm)
-				cause = TEXT("killed themself");
-			else if (!causer.IsEmpty())
-				cause = FString::Format(TEXT("was killed by {0}"), { causer });
-			else
-				cause = TEXT("was killed");
 		}
+		else if (selfHarm)
+			cause = TEXT("killed themself");
+		else if (!causer.IsEmpty())
+			cause = FString::Format(TEXT("was killed by {0}"), { causer });
+		else
+			cause = TEXT("was killed");
 	}
 
 	return cause;
@@ -158,7 +199,7 @@ FString AApPlayerSubsystem::GetDamageSuffix(const UDamageType* damageType, AActo
 void AApPlayerSubsystem::OnDeathLinkReceived(FString source, FString cause) {
 	UE_LOGFMT(LogApPlayerSubsystem, Display, "AApPlayerSubsystem::OnDeathLinkReceived({0}, {1})", source, cause);
 
-	if (!HasAuthority())
+	if (!isInitialized || !canTriggerDeathlinks || !HasAuthority())
 		return;
 
 	AddDeathLinkMessageToChat(source, cause);
@@ -209,7 +250,5 @@ bool AApPlayerSubsystem::IsOnlinePlayer(AFGCharacterPlayer* player)
 
 	return player->IsPlayerOnline();
 }
-
-#pragma optimize("", on)
 
 #undef LOCTEXT_NAMESPACE
