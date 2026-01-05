@@ -59,7 +59,7 @@ To update the used APCpp version
  * `cmake .. -DWIN32=1`
  * `cmake --build . --config Release`
 
-1. Copy all *.lib over from `APCpp\build\` to `Archipelago\Source\APCpp\lib\Win64` and subdirectories
+1. Copy all `*.lib` over from `APCpp\build\` to `Archipelago\Source\APCpp\lib\Win64` and subdirectories
 2. Copy all `*.h` over from `APCpp` to `Archipelago\Source\APCpp\inc`
 
 For linux, its not currently working
@@ -69,4 +69,5 @@ For linux, its not currently working
 You need to have a running Archipelago server to test the mod in-game.
 You can self host one from source by following the directions
 [in the Archipelago repo](https://github.com/ArchipelagoMW/Archipelago/blob/main/docs/running%20from%20source.md).
+
 
