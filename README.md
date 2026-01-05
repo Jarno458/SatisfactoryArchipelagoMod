@@ -43,30 +43,30 @@ This mod depends on a few other Satisfactory mods.
 You will need to import them into your project using the tutorial above before this mod can compile.
 
 - [ContentLib](https://github.com/Nogg-aholic/ContentLib)
-- [MAM Enhancer](https://github.com/Nogg-aholic/MAMTips)
+- ~~[MAM Enhancer](https://github.com/Nogg-aholic/MAMTips)~~ (disabled for now due to breakages since the 1.1 update)
 - [Free Samples](https://github.com/budak7273/FreeSamples)
-- [FixClientResourceSinkPoints](https://github.com/budak7273/FixClientResourceSinkPoints)
+- [Fix Client Resource Sink Points](https://github.com/budak7273/FixClientResourceSinkPoints)
+- [Hover Pack Fuse Reminder](https://ficsit.app/mod/HoverpackFuseReminder)
 
 ### APCpp
 
-This mod uses a [APCpp](https://github.com/Jarno458/APCpp/tree/Satisfactory) to communicate with the AP server.
+This mod uses a specific branch of [APCpp](https://github.com/Jarno458/APCpp/tree/Satisfactory) to communicate with the AP server.
 
-In order to get this to work this mod uses static compiled libraries from APCpp.
-The libraries are included in this repo, but if you want to update them you can follow these steps:
+To update the used APCpp version
+ * clone the [branch](https://github.com/Jarno458/APCpp/tree/Satisfactory) of APCpp
+ * Create a folder `build`
+ * Enter the folder
+ * `cmake .. -DWIN32=1`
+ * `cmake --build . --config Release`
 
-To do a static compile of APCpp, add this line below line 9 in the `CMakeLists.txt` inside APCpp:
+1. Copy all *.lib over from `APCpp\build\` to `Archipelago\Source\APCpp\lib\Win64` and subdirectories
+2. Copy all `*.h` over from `APCpp` to `Archipelago\Source\APCpp\inc`
 
-```cmake
-add_library(APCpp-static STATIC Archipelago.cpp Archipelago.h)
-```
-
-To update the used APCpp version, build a STATIC library version then:
-
-1. Copy all *.lib over from `APCpp\build\lib\Release` to `Archipelago\Source\APCpp\lib\Win64`
-2. Copy `Archipelago.h` over to `APCpp` to `Archipelago\Source\APCpp\inc`
+For linux, its not currently working
 
 ### Archipelago Server
 
 You need to have a running Archipelago server to test the mod in-game.
 You can self host one from source by following the directions
 [in the Archipelago repo](https://github.com/ArchipelagoMW/Archipelago/blob/main/docs/running%20from%20source.md).
+
