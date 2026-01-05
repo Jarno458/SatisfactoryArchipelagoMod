@@ -5,7 +5,7 @@ The vault protocol serves as a shared inventory buffer, where anyone can dump so
 ## V 0.0.1 Alpha, its currently under discussion ands improves can still be made
 
 ### Its not Gifting
-The Vault protocol and the Gifting protocol share a similar goal where you can make some of you items available to other players but both protocols achieve this in their own way with their own pro's and cons
+The Vault protocol and the [Gifting API](<https://github.com/agilbert1412/Archipelago.Gifting.Net/blob/main/Documentation/Gifting%20API.md>) share a similar goal where you can make some of you items available to other players but both protocols achieve this in their own way with their own pro's and cons
 
 |                          | Vault                        | Gifting                                | 
 | ------------------------ | ---------------------------- | -------------------------------------- |
@@ -53,8 +53,11 @@ now we listen for the server its `SetReply` to our `Set` packet to tell us how m
 In the example above, there where only 7 balloons in the vault, so by subtracting `value` from `original_value` we can see how many we managed to obtain
 
 ## Adding support for a personal vault
+If you want to support a personal vault for your game, we should first let other other sernders know what items they can put into it, we do this by storing a list of items per game that that game can accept, For each of those items you should specify some traits, the traits allow sending games to transforms items to a simular item the receiving game would understand. for simplicity the traits follow the same guidelines are those for the [Gifting API](<https://github.com/agilbert1412/Archipelago.Gifting.Net/blob/main/Documentation/Gifting%20API.md#gifttrait-specification>) so games dont have to maintain duplicate lists, in the data storage we just add the thair values for 1 single item, so our item list per game should look like this
 
-//TODO describe items / traits
+```json
+
+```
 
 ## Adding items to the an personal vault
 
