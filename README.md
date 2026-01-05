@@ -46,7 +46,7 @@ You will need to import them into your project using the tutorial above before t
 - ~~[MAM Enhancer](https://github.com/Nogg-aholic/MAMTips)~~ (disabled for now due to breakages since the 1.1 update)
 - [Free Samples](https://github.com/budak7273/FreeSamples)
 - [Fix Client Resource Sink Points](https://github.com/budak7273/FixClientResourceSinkPoints)
-- [Hover Pack Fuse Reminder](https://ficsit.app/mod/HoverpackFuseReminder)
+- [Hover Pack Fuse Reminder](https://github.com/budak7273/HoverpackFuseReminder)
 
 ### APCpp
 
@@ -69,5 +69,6 @@ For linux, its not currently working
 You need to have a running Archipelago server to test the mod in-game.
 You can self host one from source by following the directions
 [in the Archipelago repo](https://github.com/ArchipelagoMW/Archipelago/blob/main/docs/running%20from%20source.md).
+
 
 
