@@ -41,6 +41,7 @@ private:
 	AApMappingsSubsystem* mappings;
 	AModSubsystem* giftingSubsystem;
 	AApConnectionInfoSubsystem* connectionInfoSubsystem;
+	class AApVaultSubsystem* vaultSubsystem;
 	
 	UPROPERTY(SaveGame)
 	TArray<int64> OutputQueueSave;
@@ -60,9 +61,10 @@ public:
 
 	void Enqueue(TSubclassOf<UFGItemDescriptor>& cls, int amount);
 	
-	void Send(FApPlayer targetPlayer, FInventoryStack itemStack);
+	void Send(FApPlayer targetPlayer, FItemAmount itemStack);
+	void SendBuffer(FApPlayer targetPlayer, TArray<FItemAmount> items);
 
-	void ReQueue(FInventoryItem nextItem);
+	void ReQueue(FInventoryItem nextItem) const;
 
 private:
 	void ProcessInputQueue();

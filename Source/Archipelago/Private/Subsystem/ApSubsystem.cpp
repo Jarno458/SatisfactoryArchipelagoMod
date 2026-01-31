@@ -3,6 +3,7 @@
 #include "ApMessagingSubsystem.h"
 #include "Subsystem/ApSlotDataSubsystem.h"
 #include "ApUtils.h"
+#include "JsonObjectConverter.h"
 #include "Async/Async.h"
 #include "SessionSettings/SessionSettingsManager.h"
 #include "Settings/SMLOptionsLibrary.h"
@@ -211,7 +212,7 @@ void AApSubsystem::SetReplyCallback(AP_SetReply setReply) {
 		dataStoreCallbacks[key](setReply);
 }
 
-void AApSubsystem::LocationScoutedCallback(std::vector<AP_NetworkItem> scoutedLocations) {
+void AApSubsystem::LocationScoutedCallback(std::vector<AP_NetworkItem> scoutedLocations) const {
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::LocationScoutedCallback(vector[%i])"), scoutedLocations.size());
 
 	TMap<int64, FApNetworkItem> scoutedLocationsResult = TMap<int64, FApNetworkItem>();
@@ -244,22 +245,40 @@ void AApSubsystem::MonitorDataStoreValue(FString keyFString, TFunction<void()> c
 	callback();
 }
 
-void AApSubsystem::MonitorDataStoreValue(FString keyFString, AP_DataType dataType, FString defaultValueFString, TFunction<void(AP_SetReply)> callback) {
+void AApSubsystem::MonitorDataStoreValue(TArray<FString> keys, AP_DataType dataType, TFunction<void(AP_SetReply)> callback) {
+	for (FString keyFString : keys)
+	{
+		if (dataStoreCallbacks.Contains(keyFString))
+			dataStoreCallbacks[keyFString] = callback;
+		else
+			dataStoreCallbacks.Add(keyFString, callback);
+	}
+
+	CallOnGameThread<void>([this, keys, dataType]() {
+		std::map<std::string, AP_DataType> Keylist;
+
+		for (FString Key : keys)
+			Keylist[TCHAR_TO_UTF8(*Key)] = dataType;
+
+		AP_SetNotify(Keylist);
+	});
+}
+
+void AApSubsystem::MonitorUnboundedIntergerDataStoreValue(FString keyFString, TFunction<void(AP_SetReply)> callback) {
 	if (dataStoreCallbacks.Contains(keyFString))
 		dataStoreCallbacks[keyFString] = callback;
 	else
 		dataStoreCallbacks.Add(keyFString, callback);
 
-	CallOnGameThread<void>([this, keyFString, dataType, defaultValueFString]() {
+	CallOnGameThread<void>([this, keyFString]() {
 		std::string key = TCHAR_TO_UTF8(*keyFString);
-		std::string defaultValue = TCHAR_TO_UTF8(*defaultValueFString);
+		std::string defaultValue = "0";
 
-		std::map<std::string, AP_DataType> keylist = { { key, dataType } };
+		AP_SetNotify(key, AP_DataType::Raw);
 
-		AP_SetNotify(keylist);
-
-		AP_SetServerDataRequest setDefaultAndRecieceUpdate;
-		setDefaultAndRecieceUpdate.key = key;
+		//we do not request default through AP_SetNotify, because we use dataType Raw for unbounded integers (like EnergyLink),
+		AP_SetServerDataRequest setDefaultAndRecieveUpdate;
+		setDefaultAndRecieveUpdate.key = key;
 
 		AP_DataStorageOperation setDefault;
 		setDefault.operation = "default";
@@ -268,16 +287,16 @@ void AApSubsystem::MonitorDataStoreValue(FString keyFString, AP_DataType dataTyp
 		std::vector<AP_DataStorageOperation> operations;
 		operations.push_back(setDefault);
 
-		setDefaultAndRecieceUpdate.operations = operations;
-		setDefaultAndRecieceUpdate.default_value = &defaultValue;
-		setDefaultAndRecieceUpdate.type = dataType;
-		setDefaultAndRecieceUpdate.want_reply = true;
+		setDefaultAndRecieveUpdate.operations = operations;
+		setDefaultAndRecieveUpdate.default_value = &defaultValue;
+		setDefaultAndRecieveUpdate.type = AP_DataType::Raw;
+		setDefaultAndRecieveUpdate.want_reply = true;
 
-		AP_SetServerData(&setDefaultAndRecieceUpdate);
+		AP_SetServerData(&setDefaultAndRecieveUpdate);
 	});
 }
 
-void AApSubsystem::ModdifyEnergyLink(long amount) {
+void AApSubsystem::ModifyEnergyLink(int64 amount) {
 	CallOnGameThread<void>([this, amount]() {
 		AP_SetServerDataRequest sendEnergyLinkUpdate;
 		sendEnergyLinkUpdate.key = "EnergyLink" + std::to_string(connectionInfoSubsystem->currentPlayerTeam);
@@ -303,6 +322,41 @@ void AApSubsystem::ModdifyEnergyLink(long amount) {
 		sendEnergyLinkUpdate.want_reply = true;
 
 		AP_SetServerData(&sendEnergyLinkUpdate);
+	});
+}
+
+void AApSubsystem::ModifyDataStorageInt64(FString key, int64 amount) {
+	CallOnGameThread<void>([this, key, amount]() {
+		AP_SetServerDataRequest sendUpdate;
+		sendUpdate.key = TCHAR_TO_UTF8(*key);
+
+		int64_t valueToAdd = amount;
+		int64_t minValue = 0;
+		int64_t maxValue = INT64_MAX;
+
+		AP_DataStorageOperation add;
+		add.operation = "add";
+		add.value = &valueToAdd;
+
+		AP_DataStorageOperation boundryGuard;
+		if (amount > 0)	{
+			boundryGuard.operation = "min";
+			boundryGuard.value = &maxValue;
+		} else	{
+			boundryGuard.operation = "max";
+			boundryGuard.value = &minValue;
+		}
+
+		std::vector<AP_DataStorageOperation> operations;
+		operations.push_back(add);
+		operations.push_back(boundryGuard);
+
+		sendUpdate.operations = operations;
+		sendUpdate.default_value = nullptr;
+		sendUpdate.type = AP_DataType::Int64;
+		sendUpdate.want_reply = true;
+
+		AP_SetServerData(&sendUpdate);
 	});
 }
 
@@ -456,14 +510,14 @@ void AApSubsystem::HandleAPMessages() {
 	}
 }
 
-void AApSubsystem::SendChatMessage(const FString& Message, const FLinearColor& Color) {
+void AApSubsystem::SendChatMessage(const FString& Message, const FLinearColor& Color) const {
 	UE_LOG(LogApSubsystem, Display, TEXT("Archipelago Cpp Chat Message: %s"), *Message);
 	AApMessagingSubsystem* messaging = AApMessagingSubsystem::Get(GetWorld());
 	fgcheck(messaging);
 	messaging->DisplayMessage(Message, Color);
 }
 
-void AApSubsystem::TimeoutConnection() {
+void AApSubsystem::TimeoutConnection() const {
 	AP_Shutdown();
 
 	connectionInfoSubsystem->ConnectionState = EApConnectionState::ConnectionFailed;
@@ -471,11 +525,11 @@ void AApSubsystem::TimeoutConnection() {
 	UE_LOG(LogApSubsystem, Error, TEXT("AApSubsystem::TimeoutConnectionIfNotConnected(), Authenticated Failed"));
 }
 
-FString AApSubsystem::GetApItemName(int64 id) {
+FString AApSubsystem::GetApItemName(int64 id) const {
 	return UApUtils::FStr(CallOnGameThread<std::string>([id]() { return AP_GetItemName("Satisfactory", id); }));
 }
 
-void AApSubsystem::SetGiftBoxState(bool open, const TSet<FString>& acceptedTraits) {
+void AApSubsystem::SetGiftBoxState(bool open, const TSet<FString>& acceptedTraits) const {
 	AP_RequestStatus result = CallOnGameThread<AP_RequestStatus>([open, acceptedTraits]() {
 		AP_UseGiftAutoReject(true);
 
@@ -496,18 +550,18 @@ void AApSubsystem::SetGiftBoxState(bool open, const TSet<FString>& acceptedTrait
 		UE_LOG(LogApSubsystem, Error, TEXT("AApSubsystem::SetGiftBoxState(\"%s\") Updating giftbox metadata failed"), (open ? TEXT("true") : TEXT("false")));
 }
 
-TMap<FApPlayer, FApTraitBits> AApSubsystem::GetAcceptedTraitsPerPlayer() {
-	std::map<std::pair<int, std::string>, AP_GiftBoxProperties> giftboxes =
-		CallOnGameThread<std::map<std::pair<int, std::string>, AP_GiftBoxProperties>>([]() { return AP_QueryGiftBoxes(); });
+TMap<FApPlayer, FApTraitBits> AApSubsystem::GetAcceptedTraitsPerPlayer() const {
+	std::map<std::pair<int, int>, AP_GiftBoxProperties> giftboxes =
+		CallOnGameThread<std::map<std::pair<int, int>, AP_GiftBoxProperties>>([]() { return AP_QueryGiftBoxes(); });
 
 	static const UEnum* giftTraitEnum = StaticEnum<EGiftTrait>();
 
 	TMap<FApPlayer, FApTraitBits> openGiftBoxes;
-	for (std::pair<std::pair<int, std::string>, AP_GiftBoxProperties> giftbox : giftboxes) {
+	for (const auto& giftbox : giftboxes) {
 		if (giftbox.second.IsOpen) {
 			FApPlayer player;
 			player.Team = giftbox.first.first;
-			player.Name = UApUtils::FStr(giftbox.first.second);
+			player.Slot = giftbox.first.second;
 
 			TSet<EGiftTrait> acceptedTraits;
 			for (std::string trait : giftbox.second.DesiredTraits) {
@@ -526,14 +580,15 @@ TMap<FApPlayer, FApTraitBits> AApSubsystem::GetAcceptedTraitsPerPlayer() {
 	return openGiftBoxes;
 }
 
-bool AApSubsystem::SendGift(FApSendGift giftToSend) {
+bool AApSubsystem::SendGift(FApSendGift giftToSend) const {
 	static const UEnum* giftTraitEnum = StaticEnum<EGiftTrait>();
 
 	AP_Gift gift;
 	gift.ItemName = TCHAR_TO_UTF8(*giftToSend.ItemName);
 	gift.Amount = giftToSend.Amount;
 	gift.ItemValue = giftToSend.ItemValue;
-	gift.Receiver = TCHAR_TO_UTF8(*giftToSend.Receiver.Name);
+	// TODO FIXME
+	//gift.Receiver = TCHAR_TO_UTF8(*GetPlayerName(giftToSend.Receiver.Team, giftToSend.Receiver.Slot));
 	gift.ReceiverTeam = giftToSend.Receiver.Team;
 	gift.Traits = std::vector<AP_GiftTrait>(giftToSend.Traits.Num());
 	gift.IsRefund = false;
@@ -556,7 +611,7 @@ bool AApSubsystem::SendGift(FApSendGift giftToSend) {
 	return result != AP_RequestStatus::Error;
 }
 
-TArray<FApReceiveGift> AApSubsystem::GetGifts() {
+TArray<FApReceiveGift> AApSubsystem::GetGifts() const {
 	if (config.SaveMode) {
 		UE_LOG(LogApSubsystem, Warning, TEXT("AApSubsystem::GetGifts() called in Save Mode, ignoring request"));
 		return TArray<FApReceiveGift>();
@@ -573,7 +628,7 @@ TArray<FApReceiveGift> AApSubsystem::GetGifts() {
 		gift.ItemName = UApUtils::FStr(apGift.ItemName);
 		gift.Amount = apGift.Amount;
 		gift.ItemValue = apGift.ItemValue;
-		gift.Traits;
+		gift.Traits.Empty();
 		
 		for (const AP_GiftTrait& apTrait : apGift.Traits) {
 			const int64 enumValue = giftTraitEnum->GetValueByNameString(UApUtils::FStr(apTrait.Trait));
@@ -594,7 +649,7 @@ TArray<FApReceiveGift> AApSubsystem::GetGifts() {
 	return currentGifts;
 }
 
-void AApSubsystem::RejectGift(TSet<FString> ids) {
+void AApSubsystem::RejectGift(TSet<FString> ids) const {
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::RejectGift(count: %i)"), ids.Num());
 	if (ids.Num() == 0)
 		return;
@@ -611,7 +666,7 @@ void AApSubsystem::RejectGift(TSet<FString> ids) {
 		UE_LOG(LogApSubsystem, Error, TEXT("AApSubsystem::RejectGift(count: %i) Rejecting gift failed"), ids.Num());
 }
 
-void AApSubsystem::AcceptGift(TSet<FString> ids) {
+void AApSubsystem::AcceptGift(TSet<FString> ids) const {
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::AcceptGift(count: %i)"), ids.Num());
 	if (ids.Num() == 0)
 		return;
@@ -628,18 +683,20 @@ void AApSubsystem::AcceptGift(TSet<FString> ids) {
 		UE_LOG(LogApSubsystem, Error, TEXT("AApSubsystem::AcceptGift(count: %i) Accepting gift failed"), ids.Num());
 }
 
-TArray<FApPlayer> AApSubsystem::GetAllApPlayers() {
-	std::vector<std::pair<int, std::string>> apPlayers =
-		CallOnGameThread<std::vector<std::pair<int, std::string>>>([]() { return AP_GetAllPlayers(); });
+TMap<FApPlayer, TTuple<FString, FString>> AApSubsystem::GetAllApPlayers() const {
+	std::vector<AP_NetworkPlayer> apPlayers =
+		CallOnGameThread<std::vector<AP_NetworkPlayer>>([]() { return AP_GetAllPlayers(); });
 
-	TArray<FApPlayer> players;
+	TMap<FApPlayer, TTuple<FString, FString>> players;
 
-	for (std::pair<int, std::string> apPlayer : apPlayers) {
+	for (const AP_NetworkPlayer& apPlayer : apPlayers) {
 		FApPlayer player;
-		player.Team = apPlayer.first;
-		player.Name = UApUtils::FStr(apPlayer.second);
+		player.Team = apPlayer.team;
+		player.Slot = apPlayer.slot;
+		
+		TTuple<FString, FString> nameAndGame(UApUtils::FStr(apPlayer.alias), UApUtils::FStr(apPlayer.game));
 
-		players.Add(player);
+		players.Add(player, nameAndGame);
 	}
 
 	return players;
@@ -655,7 +712,7 @@ TSet<int64> AApSubsystem::GetAllLocations() {
 	return locations;
 }
 
-void AApSubsystem::MarkGameAsDone() {
+void AApSubsystem::MarkGameAsDone() const {
 	if (config.SaveMode) {
 		UE_LOG(LogApSubsystem, Warning, TEXT("AApSubsystem::MarkGameAsDone() called in Save Mode, ignoring request"));
 		return;
@@ -712,7 +769,7 @@ void AApSubsystem::CreateLocationHint(int64 locationId, bool spam) {
 	CreateLocationHint(locationIds, spam);
 }
 
-void AApSubsystem::CreateLocationHint(const TSet<int64>& locationIds, bool spam) {
+void AApSubsystem::CreateLocationHint(const TSet<int64>& locationIds, bool spam) const {
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::CreateLocationHint(set: %i, %s)"), locationIds.Num(), spam ? TEXT("true") : TEXT("false"));
 
 	if (config.SaveMode) {
@@ -737,7 +794,7 @@ void AApSubsystem::CheckLocation(int64 locationId) {
 	CheckLocation(locationIds);
 }
 
-void AApSubsystem::CheckLocation(const TSet<int64>& locationIds) {
+void AApSubsystem::CheckLocation(const TSet<int64>& locationIds) const {
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::CheckLocation(set: %i)"), locationIds.Num());
 
 	if (config.SaveMode) {
@@ -756,7 +813,7 @@ void AApSubsystem::CheckLocation(const TSet<int64>& locationIds) {
 	});
 }
 
-FString AApSubsystem::GetSlotDataJson() {
+FString AApSubsystem::GetSlotDataJson() const {
 	return CallOnGameThread<FString>([]() {
 		std::string slotData = AP_GetSlotData();
 		return UApUtils::FStr(slotData);
@@ -764,7 +821,7 @@ FString AApSubsystem::GetSlotDataJson() {
 }
 
 template<typename RetType>
-RetType AApSubsystem::CallOnGameThread(TFunction<RetType()> InFunction) {
+RetType AApSubsystem::CallOnGameThread(TFunction<RetType()> InFunction) const {
 	if (IsInGameThread())
 		return InFunction();
 	
@@ -777,7 +834,7 @@ RetType AApSubsystem::CallOnGameThread(TFunction<RetType()> InFunction) {
 	return Promise->GetFuture().Get();
 }
 template<>
-void AApSubsystem::CallOnGameThread(TFunction<void()> InFunction) {
+void AApSubsystem::CallOnGameThread(TFunction<void()> InFunction) const {
 	if (IsInGameThread())
 		return InFunction();
 

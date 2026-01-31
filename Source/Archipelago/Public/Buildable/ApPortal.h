@@ -28,6 +28,9 @@ public:
 	UPROPERTY(BlueprintReadWrite, SaveGame, Replicated)
 	FApPlayer targetPlayer;
 
+	UPROPERTY(SaveGame)
+	TArray<FItemAmount> inputBuffer;
+
 private:
 	AModSubsystem* portalSubsystem;
 	AModSubsystem* replicatedGiftingSubsystem;
@@ -37,16 +40,25 @@ private:
 
 	bool camReceiveOutput = false;
 
-	//mutable as used in  Factory_*Output_Implementation const methods
+	//mutable as used in Factory_*Output_Implementation const methods
 	mutable FCriticalSection outputLock;
 
 	UPROPERTY(SaveGame)
 	FInventoryItem nextItemToOutput = FInventoryItem::NullInventoryItem;
 
+protected:
+	UPROPERTY()
+	UFGInventoryComponent* mInputInventory;
+
 public:
 	FORCEINLINE bool CanReceiveOutput() const { return camReceiveOutput; };
 
+	UFUNCTION(BlueprintPure, Category = "FactoryGame|Factory|Inventory")
+	FORCEINLINE UFGInventoryComponent* GetInputInventory() const { return mInputInventory; }
+
 	bool TrySetOutput(FInventoryItem item);
+
+	void ServerSendManually();
 
 	virtual bool CanProduce_Implementation() const override;
 
@@ -54,4 +66,9 @@ public:
 	virtual bool Factory_PeekOutput_Implementation(const class UFGFactoryConnectionComponent* connection, TArray<FInventoryItem>& out_items, TSubclassOf<UFGItemDescriptor> type) const override;
 	virtual bool Factory_GrabOutput_Implementation(class UFGFactoryConnectionComponent* connection, FInventoryItem& out_item, float& out_OffsetBeyond, TSubclassOf<UFGItemDescriptor> type) override;
 	virtual void Factory_CollectInput_Implementation() override;
+
+public:
+	/** Set this to filter out what items are allowed and not allowed in the inventory */
+	UFUNCTION()
+	bool FilterInventoryClasses(TSubclassOf<UObject> object, int32 idx) const;
 };

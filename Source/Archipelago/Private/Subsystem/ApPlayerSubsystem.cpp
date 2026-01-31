@@ -35,6 +35,8 @@ AApPlayerSubsystem::AApPlayerSubsystem() : Super() {
 void AApPlayerSubsystem::BeginPlay() {
 	Super::BeginPlay();
 
+	UE_LOG(LogApPlayerSubsystem, Display, TEXT("AApPlayerSubsystem::BeginPlay()"));
+
 	UWorld* world = GetWorld();
 	fgcheck(world != nullptr);
 
@@ -42,8 +44,6 @@ void AApPlayerSubsystem::BeginPlay() {
 	fgcheck(ap);
 	slotData = AApSlotDataSubsystem::Get(world);
 	fgcheck(slotData);
-
-	UE_LOG(LogApPlayerSubsystem, Display, TEXT("AApPlayerSubsystem::BeginPlay()"));
 }
 
 void AApPlayerSubsystem::Tick(float DeltaTime) {

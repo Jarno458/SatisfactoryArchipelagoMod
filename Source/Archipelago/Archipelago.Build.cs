@@ -32,7 +32,8 @@ public class Archipelago : ModuleRules
             "NetCore",
             "GameplayTags",
             "Json", "JsonUtilities",
-            "AssetRegistry"
+            "AssetRegistry",
+            "ReliableMessaging"
         });
 
         // Header stubs

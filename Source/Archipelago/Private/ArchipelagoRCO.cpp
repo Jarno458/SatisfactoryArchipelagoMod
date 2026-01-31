@@ -13,7 +13,16 @@ void UArchipelagoRCO::ServerSetPortalTargetPlayer_Implementation(AApPortal* Buil
 	if (!Building)
 		return;
 
-	UE_LOGFMT(LogApReplication, Display, "RCO Server Set PortalTarget {0}", Player.Name);
+	UE_LOGFMT(LogApReplication, Display, "RCO Server Set PortalTarget team: {0}, slot: {1}", Player.Team, Player.Slot);
 
 	Building->targetPlayer = Player;
+}
+
+void UArchipelagoRCO::ServerSendPortalGifts_Implementation(AApPortal* Building) {
+	if (!Building)
+		return;
+
+	UE_LOGFMT(LogApReplication, Display, "RCO Server Send Portal Gifts");
+
+	Building->ServerSendManually();
 }

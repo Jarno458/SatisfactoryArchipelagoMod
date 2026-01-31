@@ -119,7 +119,8 @@ void AApEnergyLinkSubsystem::Tick(float DeltaTime) {
 		}
 
 		if (energyLinkState == EApEnergyLinkState::Enabled) {
-			ap->MonitorDataStoreValue(FString("EnergyLink") + UApUtils::FStr(apConnectionInfo->GetCurrentPlayerTeam()), AP_DataType::Raw, "0", [&](AP_SetReply setReply) {
+			FString key = FString("EnergyLink") + UApUtils::FStr(apConnectionInfo->GetCurrentPlayerTeam());
+			ap->MonitorUnboundedIntergerDataStoreValue(key, [&](AP_SetReply setReply) {
 				OnEnergyLinkValueChanged(setReply);
 			});
 		}
@@ -130,7 +131,7 @@ void AApEnergyLinkSubsystem::Tick(float DeltaTime) {
 }
 
 void AApEnergyLinkSubsystem::OnEnergyLinkValueChanged(AP_SetReply setReply) {
-	FString intergerValueString = YankParseValueString(setReply);
+	FString intergerValueString = UApUtils::YankParseValueString(setReply);
 
 	replicatedServerStorageJoules = intergerValueString;
 
@@ -138,7 +139,7 @@ void AApEnergyLinkSubsystem::OnEnergyLinkValueChanged(AP_SetReply setReply) {
 	// correct conversion from energylink's J to battery capacity MWh * 1.000.000 * 3600, 
 	// however for balance reasons use a different conversion here (dont tell the players)
 	int256 remainder;
-	int256 serverValueMegaWattHour = Int256FromDecimal(intergerValueString);
+	int256 serverValueMegaWattHour = UApUtils::Int256FromBigIntString(intergerValueString);
 	serverValueMegaWattHour.DivideWithRemainder(ENERGYLINK_MULTIPLIER * 3600, remainder);
 
 	double remainderMegaWattHour = (double)remainder.ToInt() / (ENERGYLINK_MULTIPLIER * 3600);
@@ -179,70 +180,6 @@ void AApEnergyLinkSubsystem::OnEnergyLinkValueChanged(AP_SetReply setReply) {
 		serverAvailableMegaWattHour = (ENERGYLINK_STORE_CAPACITY - 100);
 	else
 		serverAvailableMegaWattHour = serverValueMegaWattHour.ToInt() + remainderMegaWattHour;
-}
-
-FString AApEnergyLinkSubsystem::YankParseValueString(AP_SetReply& setReply) {
-	//example 54737402054455566
-
-	// this breaks on really long values due to internal conversion to double
-	//std::string valueCstr = (*(std::string*)setReply.value);
-
-	FString intergerValueString = "0";
-
-	FString rawPacket = UApUtils::FStr(*setReply.raw);
-
-	//destroy opperators
-	int32 opperatorStart = rawPacket.Find(TEXT("\"operations\":[{"));
-	if (opperatorStart == INDEX_NONE) {
-		UE_LOGFMT(LogApEnergyLink, Error, "AApEnergyLinkSubsystem::OnEnergyLinkValueChanged() opperator not found in packet: {0}", rawPacket);
-		return intergerValueString;
-	}
-	int32 opperatorEnd = rawPacket.Find(TEXT("}],"), ESearchCase::IgnoreCase, ESearchDir::FromStart, opperatorStart);
-	if (opperatorEnd == INDEX_NONE) {
-		UE_LOGFMT(LogApEnergyLink, Error, "AApEnergyLinkSubsystem::OnEnergyLinkValueChanged() opperator end not found in packet: {0}", rawPacket);
-		return intergerValueString;
-	}
-
-	FString reducedRawPacket = rawPacket.Left(opperatorStart) + rawPacket.Right(rawPacket.Len() - opperatorEnd);
-
-	//find value
-	FString valueKey = FString(TEXT("\"value\":"));
-	int32 valueStart = reducedRawPacket.Find(valueKey) + valueKey.Len();
-	if (valueStart == INDEX_NONE) {
-		UE_LOGFMT(LogApEnergyLink, Error, "AApEnergyLinkSubsystem::OnEnergyLinkValueChanged() value not found in packet: {0}", reducedRawPacket);
-		return intergerValueString;
-	}
-	int32 valueEnd = reducedRawPacket.Find(TEXT(","), ESearchCase::IgnoreCase, ESearchDir::FromStart, valueStart);
-	if (valueEnd == INDEX_NONE)
-		valueEnd = reducedRawPacket.Find(TEXT("}"), ESearchCase::IgnoreCase, ESearchDir::FromStart, valueStart);
-	if (valueEnd == INDEX_NONE) {
-		UE_LOGFMT(LogApEnergyLink, Error, "AApEnergyLinkSubsystem::OnEnergyLinkValueChanged() value end not found packet: {0}", reducedRawPacket);
-		return intergerValueString;
-	}
-
-	FString rawValue = reducedRawPacket.Mid(valueStart, valueEnd - valueStart).TrimStartAndEnd();
-	UE_LOGFMT(LogApEnergyLink, Log, "AApEnergyLinkSubsystem::OnEnergyLinkValueChanged() new energylink value: {0}", rawValue);
-
-	if (rawValue.IsEmpty()) {
-		intergerValueString = "0";
-	}
-	else {
-		//cut off decimals, should not happen, but we cant trust other games
-		if (rawValue.Contains(".")) {
-			UE_LOGFMT(LogApEnergyLink, Error, "AApEnergyLinkSubsystem::OnEnergyLinkValueChanged() received non numeric input {0}", rawValue);
-			intergerValueString = rawValue.Left(rawValue.Find(".", ESearchCase::IgnoreCase, ESearchDir::FromEnd));
-		}
-		else {
-			intergerValueString = rawValue;
-		}
-
-		if (!intergerValueString.IsNumeric()) {
-			UE_LOGFMT(LogApEnergyLink, Error, "AApEnergyLinkSubsystem::OnEnergyLinkValueChanged() received non numeric input {0}", intergerValueString);
-			return intergerValueString;
-		}
-	}
-
-	return intergerValueString;
 }
 
 void AApEnergyLinkSubsystem::TickCircuitSubsystem(TCallScope<void(*)(AFGCircuitSubsystem*, float)>& func, AFGCircuitSubsystem* self, float deltaTime) {
@@ -342,13 +279,13 @@ double AApEnergyLinkSubsystem::ProcessLocalStorage() {
 	return returnValue;
 }
 
-void AApEnergyLinkSubsystem::SendEnergyToServer(long amountMegaJoule) {
+void AApEnergyLinkSubsystem::SendEnergyToServer(long amountMegaJoule) const {
 	if (energyLinkState != EApEnergyLinkState::Enabled)
 		return;
 
 	// correct conversion from MJ to energylink's J is * 1.000.000, 
 	// however for balance reasons use a different conversion here (dont tell the players)
-	ap->ModdifyEnergyLink(amountMegaJoule * ENERGYLINK_MULTIPLIER); 
+	ap->ModifyEnergyLink(static_cast<int64>(amountMegaJoule) * ENERGYLINK_MULTIPLIER); 
 }
 
 TArray<FApGraphInfo> AApEnergyLinkSubsystem::GetEnergyLinkGraphs(UFGPowerCircuit* circuit) const {
@@ -416,38 +353,4 @@ TArray<FApGraphInfo> AApEnergyLinkSubsystem::GetEnergyLinkGraphs(UFGPowerCircuit
 	return graphs;
 }
 
-int256 AApEnergyLinkSubsystem::Int256FromDecimal(FString decimal) {
-	bool negative = false;
-	if (decimal.StartsWith(TEXT("-"))) {
-		negative = true;
-		decimal = decimal.RightChop(1);
-	}
-
-	FString reverse = decimal.Reverse();
-
-	int256 total = 0;
-	int multiplier = 0;
-
-	for (TCHAR c : reverse) {
-		if (!FChar::IsDigit(c)) {
-			UE_LOGFMT(LogApEnergyLink, Error, "AApEnergyLinkSubsystem::Int256FromDecimal() received non numeric input {0} in string {1}", c, decimal);
-			total = 0;
-		}
-
-		int256 multiplierValue = int256::One;
-		for (int i = 0; i < multiplier; i++) {
-			multiplierValue *= 10;
-		}
-				
-		total += (multiplierValue * FChar::ConvertCharDigitToInt(c));
-		multiplier++;
-	}
-
-	if (negative)
-		total *= -1;
-
-	UE_LOGFMT(LogApEnergyLink, VeryVerbose, "AApEnergyLinkSubsystem::Int256FromDecimal() validation, input: {0} > hex: {1} > validation: {2}", decimal, total.ToString(), FParse::HexNumber(*total.ToString()));
-
-	return total;
-}
 #undef LOCTEXT_NAMESPACE

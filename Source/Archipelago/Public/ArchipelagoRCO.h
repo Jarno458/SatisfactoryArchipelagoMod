@@ -10,9 +10,6 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(LogApReplication, Log, All);
 
-/**
- * 
- */
 UCLASS()
 class ARCHIPELAGO_API UArchipelagoRCO : public UFGRemoteCallObject
 {
@@ -26,4 +23,7 @@ public:
 
 	UFUNCTION(BlueprintCallable, Reliable, Server)
 	void ServerSetPortalTargetPlayer(AApPortal* Buidling, FApPlayer Player);
+
+	UFUNCTION(BlueprintCallable, Reliable, Server)
+	void ServerSendPortalGifts(AApPortal* Building);
 };

@@ -3,6 +3,8 @@
 #include "CoreMinimal.h"
 #include "Resources/FGItemDescriptor.h"
 #include "ApBlueprintDataBridge.h"
+#include "Archipelago.h"
+#include "BigInt.h"
 #include "Module/ApGameInstanceModule.h"
 #include "Data/ApTypes.h"
 #include "Subsystem/SubsystemActorManager.h"
@@ -40,6 +42,9 @@ public:
 
 	static UApGameInstanceModule* GetGameInstanceModule(UObject* worldContext);
 
+	static FString YankParseValueString(AP_SetReply& setReply);
+	static int256 Int256FromBigIntString(FString bigInt);
+
 	UFUNCTION(BlueprintCallable)
 	static UApBlueprintDataBridge* GetBlueprintDataBridge(UObject* worldContext);
 
@@ -48,7 +53,7 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	static bool IsApPlayerValid(FApPlayer player);
 
-	template<typename T>
+	 template<typename T>
 	static T* GetSubsystemActorIncludingParentClases(class UWorld* world) {
 		USubsystemActorManager* SubsystemActorManager = world->GetSubsystem<USubsystemActorManager>();
 		fgcheck(SubsystemActorManager);

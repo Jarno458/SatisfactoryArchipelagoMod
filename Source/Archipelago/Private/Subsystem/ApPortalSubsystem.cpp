@@ -1,4 +1,6 @@
 #include "Subsystem/ApPortalSubsystem.h"
+
+#include "ApVaultSubsystem.h"
 #include "Containers/List.h"
 #include "EngineUtils.h"
 #include "Buildable/ApPortal.h"
@@ -6,6 +8,8 @@
 #include "Subsystem/ApConnectionInfoSubsystem.h"
 
 DEFINE_LOG_CATEGORY(LogApPortalSubsystem);
+
+#pragma optimize("", off)
 
 AApPortalSubsystem* AApPortalSubsystem::Get(UWorld* world) {
 	USubsystemActorManager* SubsystemActorManager = world->GetSubsystem<USubsystemActorManager>();
@@ -22,7 +26,7 @@ AApPortalSubsystem::AApPortalSubsystem() : Super() {
 
 	//needs to thick atleast 1200 times per minute to keep up with a 1200 belt, 1200 / 60sec = 20x per second
 	//0.048 is ~20.8 times per second
-	PrimaryActorTick.TickInterval = 0.048f; 
+	PrimaryActorTick.TickInterval = 0.048f;
 
 	ReplicationPolicy = ESubsystemReplicationPolicy::SpawnOnServer;
 }
@@ -36,6 +40,7 @@ void AApPortalSubsystem::BeginPlay() {
 	giftingSubsystem = AApServerGiftingSubsystem::Get(world);
 	mappings = AApMappingsSubsystem::Get(world);
 	connectionInfoSubsystem = AApConnectionInfoSubsystem::Get(world);
+	vaultSubsystem = AApVaultSubsystem::Get(world);
 
 	//connectionInfoSubsystem->GetCurrentPlayerTeam(), connectionInfoSubsystem->GetCurrentPlayerSlot()
 }
@@ -51,7 +56,8 @@ void AApPortalSubsystem::Tick(float dt) {
 		RebuildQueueFromSave();
 
 		isInitialized = true;
-	} else {
+	}
+	else {
 		ProcessPendingOutputQueue();
 		SendOutputQueueToPortals();
 	}
@@ -66,6 +72,26 @@ void AApPortalSubsystem::ProcessPendingOutputQueue() {
 
 	while (PendingOutputQueue.Dequeue(pendingItem)) {
 		AddToEndOfQueue(pendingItem);
+	}
+
+	//TODO only take what is requested by filters, likely the portals themzelf will take the items and handle filtering
+
+	TArray<FItemAmount> personalVaultItems = vaultSubsystem->GetItems(true);
+	if (!personalVaultItems.IsEmpty())
+	{
+		for (FItemAmount vaultItem : personalVaultItems)
+		{
+			for (int i = 0; i < vaultItem.Amount; i++)
+				AddToEndOfQueue(FInventoryItem(vaultItem.ItemClass));
+		}
+	} else {
+		TArray<FItemAmount> globalVaultItems = vaultSubsystem->GetItems(true);
+
+		for (FItemAmount vaultItem : globalVaultItems)
+		{
+			for (int i = 0; i < vaultItem.Amount; i++)
+				AddToEndOfQueue(FInventoryItem(vaultItem.ItemClass));
+		}
 	}
 }
 
@@ -95,23 +121,39 @@ void AApPortalSubsystem::Enqueue(TSubclassOf<UFGItemDescriptor>& cls, int amount
 	}
 }
 
-void AApPortalSubsystem::Send(FApPlayer targetPlayer, FInventoryStack itemStack) {
+void AApPortalSubsystem::Send(FApPlayer targetPlayer, FItemAmount itemStack) {
 	//TODO send items for self directly to output queue instead of gifting subsystem
+	 //TODO get if target player their game support personal vault protocol then store in personal vault instead of sending directly
 
 	if (!targetPlayer.IsValid())
 		return;
 
 	if (false) { //TODO check if target player is self
-		TSubclassOf<UFGItemDescriptor> cls = itemStack.Item.GetItemClass();
-		Enqueue(cls, itemStack.NumItems);
-	} else {
-		((AApServerGiftingSubsystem*)giftingSubsystem)->EnqueueForSending(targetPlayer, itemStack);
+		TSubclassOf<UFGItemDescriptor> cls = itemStack.ItemClass;
+		Enqueue(cls, itemStack.Amount);
+	}
+	else {
+		static_cast<AApServerGiftingSubsystem*>(giftingSubsystem)->EnqueueForSending(targetPlayer, itemStack);
 	}
 }
 
-void AApPortalSubsystem::ReQueue(FInventoryItem nextItem) {
+void AApPortalSubsystem::SendBuffer(FApPlayer targetPlayer, TArray<FItemAmount> items)
+{
+	if (!targetPlayer.IsValid())
+		return;
+
+	//TODO get if target player their game support personal vault protocol then store in personal vault instead of sending directly
+
+	//TODO Implement sending to gifting subsystem
+
+
+}
+
+void AApPortalSubsystem::ReQueue(FInventoryItem nextItem) const
+{
 	if (nextItem.IsValid()) {
-		PriorityPendingOutputQueue.Enqueue(nextItem);
+		//PriorityPendingOutputQueue.Enqueue(nextItem);
+		vaultSubsystem->Store(FItemAmount(nextItem.GetItemClass(), 1), true);
 	}
 }
 
@@ -160,10 +202,12 @@ bool AApPortalSubsystem::TryPopFromQueue(FInventoryItem& outItem) {
 		OutputQueue.RemoveNode(head);
 		return true;
 	}
-	
+
 	return false;
 }
 
 void AApPortalSubsystem::ClearQueue() {
 	OutputQueue.Empty();
 }
+
+#pragma optimize("", on)

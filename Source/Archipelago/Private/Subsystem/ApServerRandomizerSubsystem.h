@@ -11,6 +11,7 @@
 #include "Templates/SubclassOf.h"
 
 #include "ApTrapSubsystem.h"
+#include "ApVaultSubsystem.h"
 #include "Data/ApTypes.h"
 #include "Subsystem/ApPortalSubsystem.h"
 #include "Subsystem/ApMappingsSubsystem.h"
@@ -85,6 +86,7 @@ private:
 	AApSlotDataSubsystem* slotData;
 	AApSchematicPatcherSubsystem* schematicPatcher;
 	AApPortalSubsystem* portalSubsystem;
+	AApVaultSubsystem* vaultSubsystem;
 	AApMappingsSubsystem* mappingSubsystem;
 	AApTrapSubsystem* trapSubsystem;
 	AApHardDriveGachaSubsystem* hardDriveGachaSubsystem;
@@ -114,7 +116,7 @@ private:
 	bool InitializeTick();
 	void FinalizeInitialization();
 
-	bool UpdateFreeSamplesConfiguration();
+	bool UpdateFreeSamplesConfiguration() const;
 
 	void ReceiveItem(int64 itemId, bool isFromServer);
 	void ProcessReceivedItems();

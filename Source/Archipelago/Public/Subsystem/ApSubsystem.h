@@ -63,36 +63,38 @@ public:
 	void DispatchLifecycleEvent(ELifecyclePhase phase);
 
 	void MonitorDataStoreValue(FString keyFString, TFunction<void()> callback);
-	void MonitorDataStoreValue(FString keyFString, AP_DataType dataType, FString defaultValueFString, TFunction<void(AP_SetReply)> callback);
-	void ModdifyEnergyLink(long amount);
+	void MonitorDataStoreValue(TArray<FString> keys, AP_DataType datatype, TFunction<void(AP_SetReply)> callback);
+	void MonitorUnboundedIntergerDataStoreValue(FString keyFString, TFunction<void(AP_SetReply)> callback);
+	void ModifyEnergyLink(int64 amount);
+	void ModifyDataStorageInt64(FString key, int64 amount);
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FApConfigurationStruct GetConfig() const { return config; };
 
-	FString GetApItemName(int64 itemId);
+	FString GetApItemName(int64 itemId) const;
 
-	void SetGiftBoxState(bool open, const TSet<FString>& acceptedTraits);
-	bool SendGift(FApSendGift giftToSend);
-	TArray<FApReceiveGift> GetGifts();
-	void RejectGift(TSet<FString> ids);
-	void AcceptGift(TSet<FString> ids);
-	TMap<FApPlayer, FApTraitBits> GetAcceptedTraitsPerPlayer();
-	TArray<FApPlayer> GetAllApPlayers();
-	TSet<int64> GetAllLocations();
+	void SetGiftBoxState(bool open, const TSet<FString>& acceptedTraits) const;
+	bool SendGift(FApSendGift giftToSend) const;
+	TArray<FApReceiveGift> GetGifts() const;
+	void RejectGift(TSet<FString> ids) const;
+	void AcceptGift(TSet<FString> ids) const;
+	TMap<FApPlayer, FApTraitBits> GetAcceptedTraitsPerPlayer() const;
+	TMap<FApPlayer, TTuple<FString, FString>> GetAllApPlayers() const;
+	static TSet<int64> GetAllLocations();
 
-	void MarkGameAsDone();
-	void Say(FString message);
+	void MarkGameAsDone() const;
+	static void Say(FString message);
 
 	FApNetworkItem ScoutLocation(int64 locationId);
 	TMap<int64, FApNetworkItem> ScoutLocation(const TSet<int64>& locationIds);
 
-	FString GetSlotDataJson();
+	FString GetSlotDataJson() const;
 
 	void CreateLocationHint(int64 locationId, bool spam = false);
-	void CreateLocationHint(const TSet<int64>& locationIds, bool spam = false);
+	void CreateLocationHint(const TSet<int64>& locationIds, bool spam = false) const;
 
 	void CheckLocation(int64 locationId);
-	void CheckLocation(const TSet<int64>& locationIds);
+	void CheckLocation(const TSet<int64>& locationIds) const;
 
 	void SetItemReceivedCallback(TFunction<void(int64, bool)> onItemReceived);
 	void SetLocationCheckedCallback(TFunction<void(int64)> onLocationChecked);
@@ -104,6 +106,7 @@ public:
 
 	void EnableDeathLink();
 	void TriggerDeathLink(FString source, FString cause);
+
 private:
 	AApConnectionInfoSubsystem* connectionInfoSubsystem;
 
@@ -118,7 +121,7 @@ private:
 	TSet<FGuid> sendDeathLinkReferences = TSet<FGuid>();
 
 	void SetReplyCallback(AP_SetReply setReply);
-	void LocationScoutedCallback(std::vector<AP_NetworkItem>);
+	void LocationScoutedCallback(std::vector<AP_NetworkItem>) const;
 	void DeathLinkReceivedCallback(const FString& source, const FString& cause);
 
 	TQueue<TTuple<int64, bool>> ReceivedItems;
@@ -134,7 +137,7 @@ private:
 	bool InitializeTick(FDateTime connectingStartedTime, int timeout);
 
 	void ConnectToArchipelago();
-	void TimeoutConnection();
+	void TimeoutConnection() const;
 
 	void CheckConnectionState();
 
@@ -145,10 +148,10 @@ private:
 	void HandleAPMessages();
 
 	// TODO do we want to keep this around or call AApMessagingSubsystem::DisplayMessage directly?
-	void SendChatMessage(const FString& Message, const FLinearColor& Color);
+	void SendChatMessage(const FString& Message, const FLinearColor& Color) const;
 
 	template<typename RetType>
-	RetType CallOnGameThread(TFunction<RetType()> InFunction);
+	RetType CallOnGameThread(TFunction<RetType()> InFunction) const;
 	template<>
-	FORCEINLINE void CallOnGameThread(TFunction<void()> InFunction);
+	FORCEINLINE void CallOnGameThread(TFunction<void()> InFunction) const;
 };

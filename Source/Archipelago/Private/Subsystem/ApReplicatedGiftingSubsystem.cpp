@@ -40,7 +40,6 @@ void AApReplicatedGiftingSubsystem::GetLifetimeReplicatedProps(TArray<FLifetimeP
 	replicationParams.bIsPushBased = true;
 
 	DOREPLIFETIME_WITH_PARAMS_FAST(AApReplicatedGiftingSubsystem, AcceptedGiftTraitsPerPlayerReplicated, replicationParams);
-	DOREPLIFETIME_WITH_PARAMS_FAST(AApReplicatedGiftingSubsystem, AllPlayers, replicationParams);
 
 	DOREPLIFETIME(AApReplicatedGiftingSubsystem, ServiceState);
 }
@@ -94,8 +93,7 @@ void AApReplicatedGiftingSubsystem::Tick(float dt) {
 		ServiceState = EApGiftingServiceState::Offline;
 	} else {
 		if (!hasLoadedPlayers) {
-			AllPlayers = ap->GetAllApPlayers();
-			MARK_PROPERTY_DIRTY_FROM_NAME(AApReplicatedGiftingSubsystem, AllPlayers, this);
+			//TODO load from player info subsystem
 			hasLoadedPlayers = true;
 		}
 
@@ -105,9 +103,10 @@ void AApReplicatedGiftingSubsystem::Tick(float dt) {
 			SetActorTickEnabled(false);
 
 			TSet<int> teams;
-			for (const FApPlayer& player : AllPlayers) {
+			// TODO fix me
+			/*for (const FApPlayer& player : AllPlayers) {
 				teams.Add(player.Team);
-			}
+			}*/
 			for (int team : teams) {
 				FString giftboxKey = FString::Format(TEXT("GiftBoxes;{0}"), { team });
 				ap->MonitorDataStoreValue(giftboxKey, [this]() { UpdateAcceptedGifts();	});
@@ -169,10 +168,6 @@ TArray<FApGiftTrait> AApReplicatedGiftingSubsystem::GetTraitsForItem(TSubclassOf
 	}
 
 	return traits;
-}
-
-TArray<FApPlayer> AApReplicatedGiftingSubsystem::GetAllApPlayers() {
-	return AllPlayers;
 }
 
 void AApReplicatedGiftingSubsystem::UpdateAcceptedGifts() {

@@ -28,7 +28,7 @@ public:
 		: data(
 			  (((uint64)tier) << 48) 
 			| (((uint64)milestone) << 44) 
-			| (((uint64)itemId) << 20) 
+			| (((uint64)itemId) << 20) // can be reduced to 12 bits if we subtract the ID_OFFSET frees up 8 bits
 			| (((uint64)amount) << 0)
 		)
 	{}	
@@ -46,10 +46,10 @@ private:
 	int64 data; //Sadly a single hub milestone can take up 50_000 costs so it wont fit in 12bit 4096 max
 
 public:
-	FORCEINLINE int const GetTier() const { return (data & 0x000F000000000000) >> 48; }
-	FORCEINLINE int const GetMilestone() const { return (data & 0x0000F00000000000) >> 44; }
-	FORCEINLINE int64 const GetItemId() const { return ((data & 0x00000FFFFFF00000) >> 20); }
-	FORCEINLINE int const GetAmount() const { return (data & 0x00000000000FFFFF) >> 0; }
+	FORCEINLINE int GetTier() const { return (data & 0x000F000000000000) >> 48; }
+	FORCEINLINE int GetMilestone() const { return (data & 0x0000F00000000000) >> 44; }
+	FORCEINLINE int64 GetItemId() const { return ((data & 0x00000FFFFFF00000) >> 20); }
+	FORCEINLINE int GetAmount() const { return (data & 0x00000000000FFFFF) >> 0; }
 };
 
 USTRUCT()
@@ -104,19 +104,18 @@ public:
 				| ((resourceSinkGoal ? 1 : 0) << 1) 
 				| ((spaceElevatorGoal ? 1 : 0) << 0)
 			),
-			finalResourceSinkPoints(finalResourceSinkPoints),
-			perMinuteResourceSinkPoints(perMinuteResourceSinkPoints)
-	{
-	}
+			perMinuteResourceSinkPoints(perMinuteResourceSinkPoints),
+			finalResourceSinkPoints(finalResourceSinkPoints)
+	{}
 	// Default constructor
 	FApGoals()
-		: data(0), finalResourceSinkPoints(0), perMinuteResourceSinkPoints(0)
+		: data(0), perMinuteResourceSinkPoints(0), finalResourceSinkPoints(0)
 	{}
 	// Copy constructor
 	FApGoals(const FApGoals& Other)
 		: data(Other.data), 
-			finalResourceSinkPoints(Other.finalResourceSinkPoints), 
-			perMinuteResourceSinkPoints(Other.perMinuteResourceSinkPoints)
+			perMinuteResourceSinkPoints(Other.perMinuteResourceSinkPoints),
+			finalResourceSinkPoints(Other.finalResourceSinkPoints)
 	{}
 
 private:
@@ -124,21 +123,21 @@ private:
 	uint32 data;
 
 	UPROPERTY(SaveGame)
-	uint64 finalResourceSinkPoints;
-
-	UPROPERTY(SaveGame)
 	uint32 perMinuteResourceSinkPoints;
 
+	UPROPERTY(SaveGame)
+	uint64 finalResourceSinkPoints;
+
 public:
-	FORCEINLINE bool const RequireAllGoals() const { return (data & 0x80000000) == 0; }
-	FORCEINLINE uint8 const GetFinalSpaceElevatorTier() const { return (data & 0x70000000) >> 28; }
-	FORCEINLINE uint64 const GetFinalResourceSinkPoints() const { return finalResourceSinkPoints; }
-	FORCEINLINE uint32 const GePerMinuteResourceSinkPoints() const { return perMinuteResourceSinkPoints; }
-	FORCEINLINE bool const IsSpaceElevatorGoalEnabled() const { return (data & 0x00000001) > 0; }
-	FORCEINLINE bool const IsResourceSinkGoalEnabled() const { return (data & 0x00000002) > 0; }
-	FORCEINLINE bool const IsResourceSinkPerMinuteGoalEnabled() const { return (data & 0x00000004) > 0; }
-	FORCEINLINE bool const IsExplorationGoalEnabled() const { return (data & 0x00000008) > 0; }
-	FORCEINLINE bool const IsFicsmasGoalEnabled() const { return (data & 0x00000010) > 0; }
+	FORCEINLINE bool RequireAllGoals() const { return (data & 0x80000000) == 0; }
+	FORCEINLINE uint8 GetFinalSpaceElevatorTier() const { return (data & 0x70000000) >> 28; }
+	FORCEINLINE uint64 GetFinalResourceSinkPoints() const { return finalResourceSinkPoints; }
+	FORCEINLINE uint32 GePerMinuteResourceSinkPoints() const { return perMinuteResourceSinkPoints; }
+	FORCEINLINE bool IsSpaceElevatorGoalEnabled() const { return (data & 0x00000001) > 0; }
+	FORCEINLINE bool IsResourceSinkGoalEnabled() const { return (data & 0x00000002) > 0; }
+	FORCEINLINE bool IsResourceSinkPerMinuteGoalEnabled() const { return (data & 0x00000004) > 0; }
+	FORCEINLINE bool IsExplorationGoalEnabled() const { return (data & 0x00000008) > 0; }
+	FORCEINLINE bool IsFicsmasGoalEnabled() const { return (data & 0x00000010) > 0; }
 };
 
 UCLASS()
@@ -228,31 +227,31 @@ private:
 
 public:
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	FORCEINLINE bool const RequireAllGoals() const { return Goals.RequireAllGoals(); }
+	FORCEINLINE bool RequireAllGoals() const { return Goals.RequireAllGoals(); }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	FORCEINLINE uint8 const GetFinalSpaceElevatorTier() const { return Goals.GetFinalSpaceElevatorTier(); }
+	FORCEINLINE uint8 GetFinalSpaceElevatorTier() const { return Goals.GetFinalSpaceElevatorTier(); }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	FORCEINLINE int64 const GetFinalResourceSinkPoints() const { return Goals.GetFinalResourceSinkPoints(); }
+	FORCEINLINE int64 GetFinalResourceSinkPoints() const { return Goals.GetFinalResourceSinkPoints(); }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	FORCEINLINE int32 const GePerMinuteResourceSinkPoints() const { return Goals.GePerMinuteResourceSinkPoints(); }
+	FORCEINLINE int32 GetPerMinuteResourceSinkPoints() const { return Goals.GePerMinuteResourceSinkPoints(); }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	FORCEINLINE bool const IsSpaceElevatorGoalEnabled() const { return Goals.IsSpaceElevatorGoalEnabled(); }
+	FORCEINLINE bool IsSpaceElevatorGoalEnabled() const { return Goals.IsSpaceElevatorGoalEnabled(); }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	FORCEINLINE bool const IsResourceSinkGoalEnabled() const { return Goals.IsResourceSinkGoalEnabled(); }
+	FORCEINLINE bool IsResourceSinkGoalEnabled() const { return Goals.IsResourceSinkGoalEnabled(); }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	FORCEINLINE bool const IsResourceSinkPerMinuteGoalEnabled() const { return Goals.IsResourceSinkPerMinuteGoalEnabled(); }
+	FORCEINLINE bool IsResourceSinkPerMinuteGoalEnabled() const { return Goals.IsResourceSinkPerMinuteGoalEnabled(); }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	FORCEINLINE bool const IsExplorationGoalEnabled() const { return Goals.IsExplorationGoalEnabled(); }
+	FORCEINLINE bool IsExplorationGoalEnabled() const { return Goals.IsExplorationGoalEnabled(); }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	FORCEINLINE bool const IsFicsmasGoalEnabled() const { return Goals.IsFicsmasGoalEnabled(); }
+	FORCEINLINE bool IsFicsmasGoalEnabled() const { return Goals.IsFicsmasGoalEnabled(); }
 
 private:
 	EApSlotDataState TryLoadSlotDataFromServer(FString json);

@@ -102,11 +102,6 @@ void AApSchematicPatcherSubsystem::TryInitialize() {
 	if (slotDataSubsystem) //sometimes they are already avaialble before this subsystem is avaiable itzelf
 		slotDataSubsystemAvailable = true;
 
-	UE_LOGFMT(LogApSchematicPatcherSubsystem, Display, "AApSchematicPatcherSubsystem:: HasAuthority(): {0}", HasAuthority());
-	UE_LOGFMT(LogApSchematicPatcherSubsystem, Display, "AApSchematicPatcherSubsystem:: baseGameSubsystemsAvailable: {0}", baseGameSubsystemsAvailable);
-	UE_LOGFMT(LogApSchematicPatcherSubsystem, Display, "AApSchematicPatcherSubsystem:: connectionInfoSubsustemAvailable: {0}", connectionInfoSubsustemAvailable);
-	UE_LOGFMT(LogApSchematicPatcherSubsystem, Display, "AApSchematicPatcherSubsystem:: slotDataSubsystemAvailable: {0}", slotDataSubsystemAvailable);
-
 	if (!HasAuthority() && (!baseGameSubsystemsAvailable || !connectionInfoSubsustemAvailable || !slotDataSubsystemAvailable))
 		return;
 

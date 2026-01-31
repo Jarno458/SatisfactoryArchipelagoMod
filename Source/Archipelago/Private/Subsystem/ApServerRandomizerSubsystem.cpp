@@ -370,7 +370,7 @@ void AApServerRandomizerSubsystem::ResetDuplicationCounter() {
 	ap->AddChatMessage(message, FLinearColor::Blue);
 }
 
-bool AApServerRandomizerSubsystem::UpdateFreeSamplesConfiguration() {
+bool AApServerRandomizerSubsystem::UpdateFreeSamplesConfiguration() const {
 	const FConfigId FreeSamplesConfigId{ "FreeSamples", "" };
 
 	UConfigManager* ConfigManager = GetWorld()->GetGameInstance()->GetSubsystem<UConfigManager>();
@@ -592,11 +592,16 @@ void AApServerRandomizerSubsystem::AwardItem(int64 itemid, bool isFromServer) {
 
 				int numAdded = inventory->AddStack(stack, true);
 				if (numAdded < itemInfo->stackSize)
-					portalSubsystem->Enqueue(itemClass, itemInfo->stackSize - numAdded);
+				{
+					//portalSubsystem->Enqueue(itemClass, itemInfo->stackSize - numAdded);
+					FItemAmount ItemAmount(itemClass, itemInfo->stackSize - numAdded);
+					vaultSubsystem->Store(ItemAmount);
+				}
 			}
 			else {
-				TSubclassOf<UFGItemDescriptor> itemClass = itemInfo->Class;
-				portalSubsystem->Enqueue(itemClass, itemInfo->stackSize);
+				//portalSubsystem->Enqueue(itemClass, itemInfo->stackSize);
+				FItemAmount ItemAmount(itemInfo->Class, itemInfo->stackSize);
+				vaultSubsystem->Store(ItemAmount);
 			}
 		}
 		else if (mappingSubsystem->ApItems[itemid]->Type == EItemType::Schematic) {

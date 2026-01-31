@@ -11,11 +11,10 @@
 
 #include "ApServerGiftingSubsystem.generated.h"
 
+class AApVaultSubsystem;
+
 DECLARE_LOG_CATEGORY_EXTERN(LogApServerGiftingSubsystem, Log, All);
 
-/**
- * 
- */
 UCLASS()
 class AApServerGiftingSubsystem : public AModSubsystem
 {
@@ -39,7 +38,7 @@ private:
 
 	TMap<uint32, TSubclassOf<UFGItemDescriptor>> ItemPerTraitsHashCache;
 
-	TMap<FApPlayer, TSharedPtr<TQueue<FInventoryStack, EQueueMode::Mpsc>>> InputQueue;
+	TMap<FApPlayer, TSharedPtr<TQueue<FItemAmount, EQueueMode::Mpsc>>> InputQueue;
 
 	TSet<FString> ProcessedIds;
 
@@ -48,9 +47,10 @@ private:
 	AApPortalSubsystem* portalSubSystem;
 	AApMappingsSubsystem* mappingSubsystem;
 	AApReplicatedGiftingSubsystem* replicatedGiftingSubsystem;
+	AApVaultSubsystem* vaultSubsystem;
 
 public:
-	void EnqueueForSending(FApPlayer targetPlayer, FInventoryStack itemStack);
+	void EnqueueForSending(FApPlayer targetPlayer, FItemAmount itemStack);
 
 private:
 	void PullAllGiftsAsync();

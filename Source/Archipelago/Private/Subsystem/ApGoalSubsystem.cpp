@@ -118,7 +118,7 @@ TArray<FApGraphInfo> AApGoalSubsystem::GetResourceSinkGoalGraphs() {
 
 		resourceSinkPerMinuteThresholdGraph.DataPoints.SetNum(resourceSinkSubsystem->mGlobalHistorySize);
 		for (int i = 0; i < resourceSinkPerMinuteThresholdGraph.DataPoints.Num(); i++) {
-			resourceSinkPerMinuteThresholdGraph.DataPoints[i] = slotData->GePerMinuteResourceSinkPoints();
+			resourceSinkPerMinuteThresholdGraph.DataPoints[i] = slotData->GetPerMinuteResourceSinkPoints();
 		}
 
 		graphs.Add(resourceSinkPerMinuteThresholdGraph);
@@ -169,7 +169,7 @@ void AApGoalSubsystem::UpdateResourceSinkPerMinuteGoal() {
 	if (!standartPointHistory.IsEmpty())
 		currentPointsPerMinute = standartPointHistory[standartPointHistory.Num() - 1];
 
-	if (currentPointsPerMinute > slotData->GePerMinuteResourceSinkPoints()) {
+	if (currentPointsPerMinute > slotData->GetPerMinuteResourceSinkPoints()) {
 		if (countdownStartedTime.GetYear() < 2000) {
 			countdownStartedTime = FDateTime::UtcNow();
 		}
@@ -200,7 +200,7 @@ void AApGoalSubsystem::UpdateTotalRemainingPointHistory() {
 	totalRemainingPointHistory.Add(GetTotalRemainingPoints());
 }
 
-int64 AApGoalSubsystem::GetTotalRemainingPoints() {
+int64 AApGoalSubsystem::GetTotalRemainingPoints() const {
 	int64 totalSinkPoints = resourceSinkSubsystem->GetNumTotalPoints(EResourceSinkTrack::RST_Default);
 	int64 finalSinkPoints = slotData->GetFinalResourceSinkPoints();
 
@@ -226,27 +226,27 @@ bool AApGoalSubsystem::AreGoalsCompleted() {
 				|| (slotData->IsFicsmasGoalEnabled() && CheckFicsmasGoal());
 }
 
-bool AApGoalSubsystem::CheckSpaceElevatorGoal() {
+bool AApGoalSubsystem::CheckSpaceElevatorGoal() const {
 	return phaseManager->GetCurrentGamePhase()->mGamePhase >= slotData->GetFinalSpaceElevatorTier();
 }
 
-bool AApGoalSubsystem::CheckResourceSinkPointsGoal() {
+bool AApGoalSubsystem::CheckResourceSinkPointsGoal() const {
 	return resourceSinkSubsystem->GetNumTotalPoints(EResourceSinkTrack::RST_Default) >= slotData->GetFinalResourceSinkPoints();
 }
 
-bool AApGoalSubsystem::CheckResourceSinkPointPerMinuteGoal() {
+bool AApGoalSubsystem::CheckResourceSinkPointPerMinuteGoal() const {
 	return hasCompletedResourceSinkPerMinute;
 }
 
-bool AApGoalSubsystem::CheckExplorationGoal() {
+bool AApGoalSubsystem::CheckExplorationGoal() const {
 	return schematicManager->IsSchematicPurchased(explorationGoalSchematic);
 }
 
-bool AApGoalSubsystem::CheckFicsmasGoal() {
+bool AApGoalSubsystem::CheckFicsmasGoal() const {
 	return schematicManager->IsSchematicPurchased(finalFicsmasSchematic);
 }
 
-FTimespan AApGoalSubsystem::GetPerMinuteSinkGoalRemainingTime() {
+FTimespan AApGoalSubsystem::GetPerMinuteSinkGoalRemainingTime() const {
 	if (countdownStartedTime.GetYear() < 2000) {
 		return totalResourceSinkPerMinuteDuration;
 	}

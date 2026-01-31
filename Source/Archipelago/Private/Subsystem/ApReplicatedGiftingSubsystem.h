@@ -49,9 +49,6 @@ private:
 	TArray<FApTraitByPlayer> AcceptedGiftTraitsPerPlayerReplicated;
 
 	UPROPERTY(Replicated)
-	TArray<FApPlayer> AllPlayers;
-
-	UPROPERTY(Replicated)
 	EApGiftingServiceState ServiceState;
 
 	TSet<EGiftTrait> AllTraits;
@@ -82,16 +79,16 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	TArray<FApGiftTrait> GetTraitsForItem(TSubclassOf<UFGItemDescriptor> itemClass);
 
-	UFUNCTION(BlueprintCallable, BlueprintPure)
-	TArray<FApPlayer> GetAllApPlayers();
+	//UFUNCTION(BlueprintCallable, BlueprintPure)
+	//TArray<FApPlayer> GetAllApPlayers();
 
 private:
 	void UpdateAcceptedGifts();
 	void UpdateAcceptedGiftTraitsPerPlayerReplicatedValue();
 
 	void LoadTraitMappings();
-	int GetResourceSinkPointsForItem(AFGResourceSinkSubsystem* resourceSinkSubsystem, TSubclassOf<UFGItemDescriptor> itemClass, int64 itemId);
-	float GetTraitValue(int itemValue, float avarageItemValueForTrait, float itemSpecificTraitMultiplier);
+	static int GetResourceSinkPointsForItem(AFGResourceSinkSubsystem* resourceSinkSubsystem, TSubclassOf<UFGItemDescriptor> itemClass, int64 itemId);
+	static float GetTraitValue(int itemValue, float avarageItemValueForTrait, float itemSpecificTraitMultiplier);
 	void PrintTraitValuesPerItem();
 
 private:

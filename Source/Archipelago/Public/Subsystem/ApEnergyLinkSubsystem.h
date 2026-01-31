@@ -117,10 +117,6 @@ private:
 	void TickCircuitSubsystem(TCallScope<void(*)(AFGCircuitSubsystem*, float)>& func, AFGCircuitSubsystem* self, float deltaTime);
 
 	double ProcessLocalStorage();
-	void SendEnergyToServer(long amount);
+	void SendEnergyToServer(long amount) const;
 	void OnEnergyLinkValueChanged(AP_SetReply setReply);
-	FString YankParseValueString(AP_SetReply& setReply);
-
-	static int256 Int256FromDecimal(FString decimal);
-
 };

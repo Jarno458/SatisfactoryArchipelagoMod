@@ -1,5 +1,6 @@
 #include "ApServerGiftingSubsystem.h"
 #include "Data/ApGiftingMappings.h"
+#include "Subsystem/ApVaultSubsystem.h"
 
 DEFINE_LOG_CATEGORY(LogApServerGiftingSubsystem);
 
@@ -39,6 +40,7 @@ void AApServerGiftingSubsystem::BeginPlay() {
 		mappingSubsystem = AApMappingsSubsystem::Get(world);
 		portalSubSystem = AApPortalSubsystem::Get(world);
 		replicatedGiftingSubsystem = AApReplicatedGiftingSubsystem::Get(world);
+		vaultSubsystem = AApVaultSubsystem::Get(world);
 	}
 }
 
@@ -55,8 +57,8 @@ void AApServerGiftingSubsystem::Tick(float dt) {
 
 			TSet<FString> allTraits;
 			for (int32 i = 0; i < (giftTraitEnum->NumEnums() - 1); i++) {
-			for (EGiftTrait trait : TEnumRange<EGiftTrait>())
-				allTraits.Add(giftTraitEnum->GetNameStringByIndex(i));
+				for (EGiftTrait trait : TEnumRange<EGiftTrait>())
+					allTraits.Add(giftTraitEnum->GetNameStringByIndex(i));
 			}
 
 			ap->SetGiftBoxState(true, allTraits);
@@ -65,9 +67,10 @@ void AApServerGiftingSubsystem::Tick(float dt) {
 
 			SetActorTickInterval(pollInterfall);
 
-			FString giftboxKey = FString::Format(TEXT("GiftBox;{0};{1}"), { connectionInfoSubsystem->GetCurrentPlayerTeam(), connectionInfoSubsystem->GetCurrentPlayerSlot()});
+			FString giftboxKey = FString::Format(TEXT("GiftBox;{0};{1}"), { connectionInfoSubsystem->GetCurrentPlayerTeam(), connectionInfoSubsystem->GetCurrentPlayerSlot() });
 			ap->MonitorDataStoreValue(giftboxKey, [this]() { PullAllGiftsAsync(); });
-		} else {
+		}
+		else {
 			return;
 		}
 	}
@@ -80,6 +83,8 @@ void AApServerGiftingSubsystem::PullAllGiftsAsync() {
 
 	TSet<FString> giftsToAccept;
 	TSet<FString> giftsToReject;
+
+	TMap<TSubclassOf<UFGItemDescriptor>, int> itemsToAccepted;
 
 	UpdatedProcessedIds(gifts);
 
@@ -99,18 +104,24 @@ void AApServerGiftingSubsystem::PullAllGiftsAsync() {
 		if (mappingSubsystem->NameToItemId.Contains(gift.ItemName)) {
 			UE_LOG(LogApServerGiftingSubsystem, Display, TEXT("AApServerGiftingSubsystem::PullAllGiftsAsync() passing gift(%s) to portalSubSystem using itemName %s"), *gift.Id, *gift.ItemName);
 			itemClass = StaticCastSharedRef<FApItem>(mappingSubsystem->ApItems[mappingSubsystem->NameToItemId[gift.ItemName]])->Class;
-		} else if (UApGiftingMappings::HardcodedItemNameToIdMappings.Contains(gift.ItemName)) {
+		}
+		else if (UApGiftingMappings::HardcodedItemNameToIdMappings.Contains(gift.ItemName)) {
 			UE_LOG(LogApServerGiftingSubsystem, Display, TEXT("AApServerGiftingSubsystem::PullAllGiftsAsync() passing gift(%s) to portalSubSystem using hardcoded mapping for %s"), *gift.Id, *gift.ItemName);
 			int64 itemId = UApGiftingMappings::HardcodedItemNameToIdMappings[gift.ItemName];
 			itemClass = StaticCastSharedRef<FApItem>(mappingSubsystem->ApItems[itemId])->Class;
-		} else {
+		}
+		else {
 			itemClass = TryGetItemClassByTraits(gift.Traits);
 			UE_LOG(LogApServerGiftingSubsystem, Display, TEXT("AApServerGiftingSubsystem::PullAllGiftsAsync() passing gift(%s) to portalSubSystem by traits as item %s"), *gift.Id, *UFGItemDescriptor::GetItemName(itemClass).ToString());
 		}
 
 		if (itemClass != nullptr) {
-			portalSubSystem->Enqueue(itemClass, gift.Amount);
-		} else {
+			if (!itemsToAccepted.Contains(itemClass))
+				itemsToAccepted.Add(itemClass, gift.Amount);
+			else
+				itemsToAccepted[itemClass] += gift.Amount;
+		}
+		else {
 			UE_LOG(LogApServerGiftingSubsystem, Display, TEXT("AApServerGiftingSubsystem::PullAllGiftsAsync() rejecting gift(%s)"), *gift.Id);
 			giftsToReject.Add(gift.Id);
 			continue;
@@ -118,6 +129,17 @@ void AApServerGiftingSubsystem::PullAllGiftsAsync() {
 
 		UE_LOG(LogApServerGiftingSubsystem, Display, TEXT("AApServerGiftingSubsystem::PullAllGiftsAsync() accepting gift(%s)"), *gift.Id);
 		giftsToAccept.Add(gift.Id);
+	}
+
+	if (!itemsToAccepted.IsEmpty()) {
+		for (const TPair<TSubclassOf<UFGItemDescriptor>, int>& ItemsToAccepted : itemsToAccepted)
+		{
+			FItemAmount ItemAmount(ItemsToAccepted.Key, ItemsToAccepted.Value);
+
+			vaultSubsystem->Store(ItemAmount, true);
+
+			//portalSubSystem->Enqueue(ItemsToAccepted.Key, ItemsToAccepted.Value);
+		}
 	}
 
 	ap->AcceptGift(giftsToAccept);
@@ -141,9 +163,9 @@ void AApServerGiftingSubsystem::UpdatedProcessedIds(TArray<FApReceiveGift>& gift
 	}
 }
 
-void AApServerGiftingSubsystem::EnqueueForSending(FApPlayer targetPlayer, FInventoryStack itemStack) {
+void AApServerGiftingSubsystem::EnqueueForSending(FApPlayer targetPlayer, FItemAmount itemStack) {
 	if (!InputQueue.Contains(targetPlayer)) {
-		TSharedPtr<TQueue<FInventoryStack, EQueueMode::Mpsc>> queue = MakeShareable(new TQueue<FInventoryStack, EQueueMode::Mpsc>());
+		TSharedPtr<TQueue<FItemAmount, EQueueMode::Mpsc>> queue = MakeShareable(new TQueue<FItemAmount, EQueueMode::Mpsc>());
 		InputQueue.Add(targetPlayer, queue);
 	}
 
@@ -153,19 +175,19 @@ void AApServerGiftingSubsystem::EnqueueForSending(FApPlayer targetPlayer, FInven
 void AApServerGiftingSubsystem::ProcessInputQueue() {
 	TMap<FApPlayer, TMap<TSubclassOf<UFGItemDescriptor>, int>> itemsToSend;
 
-	for (TPair<FApPlayer, TSharedPtr<TQueue<FInventoryStack, EQueueMode::Mpsc>>>& stacksPerPlayer : InputQueue) {
+	for (TPair<FApPlayer, TSharedPtr<TQueue<FItemAmount, EQueueMode::Mpsc>>>& stacksPerPlayer : InputQueue) {
 		if (!itemsToSend.Contains(stacksPerPlayer.Key))
 			itemsToSend.Add(stacksPerPlayer.Key, TMap<TSubclassOf<UFGItemDescriptor>, int>());
 
-		FInventoryStack stack;
+		FItemAmount stack;
 		while (stacksPerPlayer.Value->Dequeue(stack))
 		{
-			TSubclassOf<UFGItemDescriptor> cls = stack.Item.GetItemClass();
+			TSubclassOf<UFGItemDescriptor> cls = stack.ItemClass;
 
 			if (!itemsToSend[stacksPerPlayer.Key].Contains(cls))
-				itemsToSend[stacksPerPlayer.Key].Add(cls, stack.NumItems);
+				itemsToSend[stacksPerPlayer.Key].Add(cls, stack.Amount);
 			else
-				itemsToSend[stacksPerPlayer.Key][cls] += stack.NumItems;
+				itemsToSend[stacksPerPlayer.Key][cls] += stack.Amount;
 		}
 	}
 
@@ -218,13 +240,13 @@ TSubclassOf<UFGItemDescriptor> AApServerGiftingSubsystem::TryGetItemClassByTrait
 
 	TMap<TSubclassOf<UFGItemDescriptor>, TPair<int, float>> numberOfMatchesAndTotalDiviationPerItemClass;
 	int mostMatches = 0;
-	
+
 	for (const TPair<TSubclassOf<UFGItemDescriptor>, FApTraitValues>& traitsPerItem : replicatedGiftingSubsystem->TraitsPerItem) {
 		int matches = 0;
 		float totalDifference = 0.0f;
 
 		for (FApGiftTrait& trait : traits) {
-			if (traitsPerItem.Value.AcceptsTrait(trait.Trait)){
+			if (traitsPerItem.Value.AcceptsTrait(trait.Trait)) {
 				totalDifference += FGenericPlatformMath::Abs(traitsPerItem.Value.TraitsValues[trait.Trait] - trait.Quality);
 				matches++;
 			}

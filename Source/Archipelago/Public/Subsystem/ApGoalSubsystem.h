@@ -92,16 +92,16 @@ private:
 
 	void InitializeTotalRemainingPointHistory();
 
-	bool CheckSpaceElevatorGoal();
-	bool CheckResourceSinkPointsGoal();
-	bool CheckResourceSinkPointPerMinuteGoal();
-	bool CheckExplorationGoal();
-	bool CheckFicsmasGoal();
+	bool CheckSpaceElevatorGoal() const;
+	bool CheckResourceSinkPointsGoal() const;
+	bool CheckResourceSinkPointPerMinuteGoal() const;
+	bool CheckExplorationGoal() const;
+	bool CheckFicsmasGoal() const;
 
 	void UpdateResourceSinkPerMinuteGoal();
 	void UpdateTotalRemainingPointHistory();
 
-	FTimespan GetPerMinuteSinkGoalRemainingTime();
+	FTimespan GetPerMinuteSinkGoalRemainingTime() const;
 
-	int64 GetTotalRemainingPoints();
+	int64 GetTotalRemainingPoints() const;
 };
