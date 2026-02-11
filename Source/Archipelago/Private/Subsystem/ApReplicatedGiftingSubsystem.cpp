@@ -28,7 +28,8 @@ AApReplicatedGiftingSubsystem::AApReplicatedGiftingSubsystem() : Super() {
 		PrimaryActorTick.bCanEverTick = true;
 		PrimaryActorTick.bStartWithTickEnabled = true;
 		PrimaryActorTick.TickInterval = 0.1f;
-	} else {
+	}
+	else {
 		PrimaryActorTick.bCanEverTick = false;
 	}
 }
@@ -66,7 +67,9 @@ void AApReplicatedGiftingSubsystem::BeginPlay() {
 		ap = AApSubsystem::Get(world);
 		connectionInfoSubsystem = AApConnectionInfoSubsystem::Get(world);
 		portalSubsystem = AApPortalSubsystem::Get(world);
-	} else {
+		playerInfoSubsystem = AApPlayerInfoSubsystem::Get(world);
+	}
+	else {
 		if (AFGGameState* factoryGameState = Cast<AFGGameState>(gameState)) {
 			factoryGameState->mOnClientSubsystemsValid.AddDynamic(this, &AApReplicatedGiftingSubsystem::OnClientSubsystemsValid);
 
@@ -91,22 +94,16 @@ void AApReplicatedGiftingSubsystem::Tick(float dt) {
 		SetActorTickInterval(0.1f);
 
 		ServiceState = EApGiftingServiceState::Offline;
-	} else {
-		if (!hasLoadedPlayers) {
-			//TODO load from player info subsystem
-			hasLoadedPlayers = true;
-		}
-
-		if (!hasLoadedTraits || !portalSubsystem->IsInitialized()) {
+	}
+	else {
+		if (!hasLoadedTraits || !portalSubsystem->IsInitialized() || !playerInfoSubsystem->IsInitialized()) {
 			ServiceState = EApGiftingServiceState::Initializing;
-		} else {
+		}
+		else {
 			SetActorTickEnabled(false);
 
-			TSet<int> teams;
-			// TODO fix me
-			/*for (const FApPlayer& player : AllPlayers) {
-				teams.Add(player.Team);
-			}*/
+			TSet<int> teams = playerInfoSubsystem->GetTeams();
+
 			for (int team : teams) {
 				FString giftboxKey = FString::Format(TEXT("GiftBoxes;{0}"), { team });
 				ap->MonitorDataStoreValue(giftboxKey, [this]() { UpdateAcceptedGifts();	});
@@ -179,7 +176,8 @@ void AApReplicatedGiftingSubsystem::UpdateAcceptedGifts() {
 	//only update replicated value if required
 	if (AcceptedGiftTraitsPerPlayer.Num() != AcceptedGiftTraitsPerPlayerReplicated.Num()) {
 		UpdateAcceptedGiftTraitsPerPlayerReplicatedValue();
-	} else {
+	}
+	else {
 		for (int i = 0; i < AcceptedGiftTraitsPerPlayerReplicated.Num(); i++) {
 			FApPlayer player = AcceptedGiftTraitsPerPlayerReplicated[i].Player;
 
@@ -207,7 +205,7 @@ void AApReplicatedGiftingSubsystem::LoadTraitMappings() {
 	AFGResourceSinkSubsystem* resourceSinkSubsystem = AFGResourceSinkSubsystem::Get(GetWorld());
 	fgcheck(resourceSinkSubsystem)
 
-	TMap<EGiftTrait, float> defaultSinkPointsPerTrait;
+		TMap<EGiftTrait, float> defaultSinkPointsPerTrait;
 	for (const TPair<EGiftTrait, int64>& traitDefault : UApGiftingMappings::TraitDefaultItemIds) {
 		fgcheck(mappingSubsystem->ApItems.Contains(traitDefault.Value) && mappingSubsystem->ApItems[traitDefault.Value]->Type == EItemType::Item);
 

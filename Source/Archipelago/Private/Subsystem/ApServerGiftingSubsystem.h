@@ -8,6 +8,7 @@
 #include "Subsystem/ApPortalSubsystem.h"
 #include "Subsystem/ApMappingsSubsystem.h"
 #include "Subsystem/ApReplicatedGiftingSubsystem.h"
+#include "Subsystem/ApPlayerInfoSubsystem.h"
 
 #include "ApServerGiftingSubsystem.generated.h"
 
@@ -48,6 +49,7 @@ private:
 	AApMappingsSubsystem* mappingSubsystem;
 	AApReplicatedGiftingSubsystem* replicatedGiftingSubsystem;
 	AApVaultSubsystem* vaultSubsystem;
+	AApPlayerInfoSubsystem* playerInfoSubsystem;
 
 public:
 	void EnqueueForSending(FApPlayer targetPlayer, FItemAmount itemStack);

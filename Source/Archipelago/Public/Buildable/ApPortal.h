@@ -1,8 +1,6 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Net/UnrealNetwork.h"
-#include "Misc/ScopeTryLock.h"
 
 #include "Buildables/FGBuildableFactory.h"
 
@@ -25,15 +23,18 @@ public:
 	virtual void BeginPlay() override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
-	UPROPERTY(BlueprintReadWrite, SaveGame, Replicated)
+	UPROPERTY(SaveGame, Replicated, BlueprintReadOnly)
 	FApPlayer targetPlayer;
 
 	UPROPERTY(SaveGame)
 	TArray<FItemAmount> inputBuffer;
 
 private:
+	bool initialized = false;
+
 	AModSubsystem* portalSubsystem;
 	AModSubsystem* replicatedGiftingSubsystem;
+	AModSubsystem* vaultSubsystem;
 
 	UFGFactoryConnectionComponent* input = nullptr;
 	UFGFactoryConnectionComponent* output = nullptr;
@@ -52,6 +53,9 @@ protected:
 
 public:
 	FORCEINLINE bool CanReceiveOutput() const { return camReceiveOutput; };
+
+	//UFUNCTION(BlueprintCallable) Should only be called through RCO, so not directly from blueprints
+	void SetTarget(FApPlayer player);
 
 	UFUNCTION(BlueprintPure, Category = "FactoryGame|Factory|Inventory")
 	FORCEINLINE UFGInventoryComponent* GetInputInventory() const { return mInputInventory; }

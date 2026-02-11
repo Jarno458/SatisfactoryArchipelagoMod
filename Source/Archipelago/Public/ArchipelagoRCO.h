@@ -22,7 +22,7 @@ public:
 	bool Dummy;
 
 	UFUNCTION(BlueprintCallable, Reliable, Server)
-	void ServerSetPortalTargetPlayer(AApPortal* Buidling, FApPlayer Player);
+	void ServerSetPortalTargetPlayer(AApPortal* Building, FApPlayer Player);
 
 	UFUNCTION(BlueprintCallable, Reliable, Server)
 	void ServerSendPortalGifts(AApPortal* Building);

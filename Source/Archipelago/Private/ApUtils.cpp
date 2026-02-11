@@ -169,7 +169,3 @@ void UApUtils::WriteStringToFile(FString Path, FString text, bool relative) {
 	}
 #endif
 }
-
-bool UApUtils::IsApPlayerValid(FApPlayer player) {
-	return player.IsValid();
-}

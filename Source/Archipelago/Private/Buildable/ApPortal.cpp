@@ -1,6 +1,10 @@
 #include "Buildable/ApPortal.h"
+
+#include "ScopeTryLock.h"
+#include "UnrealNetwork.h"
 #include "Subsystem/ApPortalSubsystem.h"
 #include "Subsystem/ApReplicatedGiftingSubsystem.h"
+#include "Subsystem/ApVaultSubsystem.h"
 
 #pragma optimize("", off)
 
@@ -13,6 +17,10 @@ AApPortal::AApPortal() : Super() {
 	mInputInventory->SetDefaultSize(10);
 
 	targetPlayer = FApPlayer();
+
+	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bStartWithTickEnabled = true;
+	PrimaryActorTick.TickInterval = 0.1f;
 }
 
 void AApPortal::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const {
@@ -20,6 +28,7 @@ void AApPortal::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetim
 
 	DOREPLIFETIME(AApPortal, targetPlayer);
 }
+
 
 void AApPortal::BeginPlay() {
 	Super::BeginPlay();
@@ -33,6 +42,7 @@ void AApPortal::BeginPlay() {
 	UWorld* world = GetWorld();
 	portalSubsystem = AApPortalSubsystem::Get(world);
 	replicatedGiftingSubsystem = AApReplicatedGiftingSubsystem::Get(world);
+	vaultSubsystem = AApVaultSubsystem::Get(world);
 
 	for (UFGFactoryConnectionComponent* connection : GetConnectionComponents()) {
 		if (connection->GetDirection() == EFactoryConnectionDirection::FCD_INPUT) {
@@ -68,6 +78,17 @@ void AApPortal::Factory_Tick(float dt) {
 			nextItemToOutput = FInventoryItem::NullInventoryItem;
 		}
 	}
+}
+
+void AApPortal::SetTarget(FApPlayer player)
+{
+	 //TODO handle cleaning of inventory
+
+	 // send current inventory
+
+
+
+	targetPlayer = player;
 }
 
 bool AApPortal::TrySetOutput(FInventoryItem item) {

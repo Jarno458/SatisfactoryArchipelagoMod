@@ -6,6 +6,7 @@
 #include "Data/ApTypes.h"
 
 #include "ApSubsystem.h"
+#include "BlueprintHookingTypes.h"
 
 #include "ApPlayerInfoSubsystem.generated.h"
 
@@ -26,16 +27,20 @@ public:
 
 	// Value constructor
 	FReplicatedFApPlayerInfo(int team, uint8 slot, FString name, FString game) : FApPlayer(team, slot), Name(name), Game(game)
-	{}
+	{
+	}
 
 	FReplicatedFApPlayerInfo(FApPlayer player, FString name, FString game) : FApPlayer(player), Name(name), Game(game)
-	{}
+	{
+	}
 	// Default constructor
 	FReplicatedFApPlayerInfo() : FReplicatedFApPlayerInfo(-1, -1, TEXT(""), TEXT("Archipelago"))
-	{}
+	{
+	}
 	// Copy constructor
 	FReplicatedFApPlayerInfo(const FReplicatedFApPlayerInfo& Other) : FApPlayer(Other), Name(Other.Name), Game(Other.Game)
-	{}
+	{
+	}
 };
 
 enum class EPlayerInfoSubsystemMessageId : uint32
@@ -102,6 +107,15 @@ public:
 	UFUNCTION(BlueprintPure)
 	int GetPlayerCount() const;
 
+	UFUNCTION(BlueprintPure)
+	TSet<int> GetTeams() const;
+
+	UFUNCTION(BlueprintPure)
+	TArray<FApPlayer> GetAllPlayers() const;
+
+	 UFUNCTION(BlueprintPure)
+	 TArray<FString> GetAllGames() const;
+
 private:
 	void InitializeData(TArray<FReplicatedFApPlayerInfo> playerInfos);
 
@@ -110,10 +124,10 @@ private:
 
 	void UpdateReplicationDataForAllClients(const TArray<FReplicatedFApPlayerInfo>& playerInfosToUpdate) const;
 	void SendUpdatedReplicationData(APlayerController* PlayerController, const TArray<FReplicatedFApPlayerInfo> playerInfos) const;
-	
-//
-// called from Player Controller mixin
-//
+
+	//
+	// called from Player Controller mixin
+	//
 public:
 	UFUNCTION(BlueprintCallable)
 	void OnPlayerControllerBeginPlay(const APlayerController* PlayerController);
@@ -127,7 +141,7 @@ protected:
 	/** Handles Initial Replication Data for Player Info Subsystem */
 	void ReceiveInitialReplicationData(const FPlayerInfoSubsystemInitialReplicationMessage& Message);
 	void ReceiveInitialReplicationData(const FPlayerInfoSubsystemUpdateReplicationMessage& Message);
-//
-//
-//
+	//
+	//
+	//
 };

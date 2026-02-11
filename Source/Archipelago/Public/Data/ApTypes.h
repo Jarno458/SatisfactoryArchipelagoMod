@@ -18,31 +18,22 @@ public:
 	UPROPERTY(BlueprintReadWrite, SaveGame)
 	int Slot;
 
-	//Override the comparison operator
 	bool operator==(const FApPlayer& Other) const
 	{
 		return Team == Other.Team && Slot == Other.Slot;
 	}
-
-	// Value constructor
-	FApPlayer(int team, uint8 slot) : Team(team), Slot(slot)
-	{}
-	// Default constructor
-	FApPlayer() : FApPlayer(-1, -1)
-	{}
-	// Copy constructor
-	FApPlayer(const FApPlayer& Other) : Team(Other.Team), Slot(Other.Slot)
-	{}
-
-	FORCEINLINE bool IsValid() {
-		return this->Team >= 0;
+	bool operator!=(const FApPlayer& Other) const
+	{
+		return Team != Other.Team || Slot != Other.Slot;
 	}
 
-	/*FORCEINLINE FString toString(const FApPlayer& This) {
-		FString out;
-		FJsonObjectConverter::UStructToJsonObjectString(This, out);
-		return out;
-	}*/
+	FApPlayer(int team, uint8 slot) : Team(team), Slot(slot) {}
+	FApPlayer() : FApPlayer(-1, -1) {}
+	FApPlayer(const FApPlayer& Other) : Team(Other.Team), Slot(Other.Slot) {}
+
+	FORCEINLINE bool IsValid() const {
+		return this->Team >= 0;
+	}
 };
 
 FORCEINLINE uint32 GetTypeHash(const FApPlayer& This)
@@ -50,6 +41,14 @@ FORCEINLINE uint32 GetTypeHash(const FApPlayer& This)
 	return HashCombine(static_cast<uint32>(This.Team), static_cast<uint32>(This.Slot));
 };
 
+template<>
+struct TStructOpsTypeTraits<FApPlayer> : public TStructOpsTypeTraitsBase2<FApPlayer>
+{
+	enum
+	{
+		WithIdenticalViaEquality = true
+	};
+};
 
 USTRUCT(BlueprintType)
 struct ARCHIPELAGO_API FApGiftTrait
@@ -89,6 +88,9 @@ struct ARCHIPELAGO_API FApSendGift : public FApGift
 public:
 	UPROPERTY()
 	FApPlayer Receiver;
+
+	UPROPERTY()
+	FString ReceiverName;
 };
 
 USTRUCT()

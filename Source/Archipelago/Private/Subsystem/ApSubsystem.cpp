@@ -587,8 +587,7 @@ bool AApSubsystem::SendGift(FApSendGift giftToSend) const {
 	gift.ItemName = TCHAR_TO_UTF8(*giftToSend.ItemName);
 	gift.Amount = giftToSend.Amount;
 	gift.ItemValue = giftToSend.ItemValue;
-	// TODO FIXME
-	//gift.Receiver = TCHAR_TO_UTF8(*GetPlayerName(giftToSend.Receiver.Team, giftToSend.Receiver.Slot));
+	gift.Receiver = TCHAR_TO_UTF8(*giftToSend.ReceiverName);
 	gift.ReceiverTeam = giftToSend.Receiver.Team;
 	gift.Traits = std::vector<AP_GiftTrait>(giftToSend.Traits.Num());
 	gift.IsRefund = false;

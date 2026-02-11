@@ -41,6 +41,7 @@ void AApServerGiftingSubsystem::BeginPlay() {
 		portalSubSystem = AApPortalSubsystem::Get(world);
 		replicatedGiftingSubsystem = AApReplicatedGiftingSubsystem::Get(world);
 		vaultSubsystem = AApVaultSubsystem::Get(world);
+		playerInfoSubsystem = AApPlayerInfoSubsystem::Get(world);
 	}
 }
 
@@ -51,7 +52,8 @@ void AApServerGiftingSubsystem::Tick(float dt) {
 		if (connectionInfoSubsystem->GetConnectionState() == EApConnectionState::Connected
 			&& replicatedGiftingSubsystem->HasLoadedItemTraits()
 			&& mappingSubsystem->HasLoadedItemNameMappings()
-			&& portalSubSystem->IsInitialized())
+			&& portalSubSystem->IsInitialized()
+			&& playerInfoSubsystem->IsInitialized())
 		{
 			static const UEnum* giftTraitEnum = StaticEnum<EGiftTrait>();
 
@@ -208,7 +210,7 @@ void AApServerGiftingSubsystem::Send(TMap<FApPlayer, TMap<TSubclassOf<UFGItemDes
 			gift.Amount = stack.Value;
 			gift.ItemValue = 0;
 			gift.Traits = replicatedGiftingSubsystem->GetTraitsForItem(stack.Key);
-			gift.Receiver = itemsToSendPerPlayer.Key;
+			gift.ReceiverName = playerInfoSubsystem->GetPlayerName(itemsToSendPerPlayer.Key);
 
 			//TODO group all items for the same player together
 			ap->SendGift(gift);

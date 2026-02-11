@@ -41,6 +41,7 @@ public:
 		//no need to replicate itemid if its not from local player
 		//truncation at 16 is default for AP
 		//todo might want to move player replication to its own subsystem so it can be shared between gifting and schematic patching
+		//TODO it was move to its own subsystem but we still have to rewrite this system
 		if (!isLocalPlayer)
 			this->playerName = playerName.Left(16);
 		else

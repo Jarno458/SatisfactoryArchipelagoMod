@@ -4,6 +4,7 @@
 #include "ApUtils.h"
 #include "StructuredLog.h"
 #include "SubsystemActorManager.h"
+#include "UnrealNetwork.h"
 #include "Subsystem/ApMappingsSubsystem.h"
 
 #pragma optimize("", off)
@@ -26,11 +27,18 @@ AApVaultSubsystem* AApVaultSubsystem::Get(const UWorld* world) {
 AApVaultSubsystem::AApVaultSubsystem() : Super() {
 	UE_LOGFMT(LogApVaultSubsystem, Display, "AApVaultSubsystem::AApVaultSubsystem()");
 
-	ReplicationPolicy = ESubsystemReplicationPolicy::SpawnOnServer;
+	ReplicationPolicy = ESubsystemReplicationPolicy::SpawnOnServer_Replicate;
 
 	PrimaryActorTick.bCanEverTick = true;
 	PrimaryActorTick.bStartWithTickEnabled = true;
 	PrimaryActorTick.TickInterval = 0.1f;
+}
+
+void AApVaultSubsystem::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(AApVaultSubsystem, vaultEnabledPlayersReplicated);
 }
 
 void AApVaultSubsystem::BeginPlay() {
@@ -40,54 +48,44 @@ void AApVaultSubsystem::BeginPlay() {
 
 	if (HasAuthority()) {
 		UWorld* world = GetWorld();
+		fgcheck(world != nullptr);
 
 		ap = AApSubsystem::Get(world);
 		connectionInfoSubsystem = AApConnectionInfoSubsystem::Get(world);
 		mappingSubsystem = AApMappingsSubsystem::Get(world);
+		playerInfoSubsystem = AApPlayerInfoSubsystem::Get(world);
 	}
 }
 
 void AApVaultSubsystem::Tick(float dt) {
 	Super::Tick(dt);
 
+	if (!HasAuthority())
+		return;
+
 	if (!apInitialized) {
 		if (connectionInfoSubsystem->GetConnectionState() == EApConnectionState::Connected
-			&& mappingSubsystem->HasLoadedItemNameMappings())
+			&& mappingSubsystem->HasLoadedItemNameMappings()
+			&& playerInfoSubsystem->IsInitialized())
 		{
-			apInitialized = true;
-
 			SetActorTickInterval(pollInterfall);
 
 			int team = connectionInfoSubsystem->GetCurrentPlayerTeam();
 			int slot = connectionInfoSubsystem->GetCurrentPlayerSlot();
 
-			TArray<FString> keysToMonitor;
+			MonitorVaultItems(team, slot);
 
-			for (const TPair<int64, TSharedRef<FApItemBase>>& ApItem : mappingSubsystem->ApItems)
-			{
-				if (ApItem.Value->Type != EItemType::Item)
-					continue;
+			vaults.Add(FApPlayer(team, GLOBAL_VAULT_SLOT));
 
-				TSharedRef<FApItem> itemInfo = StaticCastSharedRef<FApItem>(ApItem.Value);
+			//TODO add personal vaults
+			TArray<FString> allGames = playerInfoSubsystem->GetAllGames();
 
-				if (!mappingSubsystem->ItemIdToName.Contains(itemInfo->Id))
-					continue;
+			//TODO check if game has personal vault setup
+			//TODO setup personal vault for Satisfactory
 
-				FString apItemName = GetItemName(itemInfo->Id);
+			vaultEnabledPlayersReplicated = vaults.Array();
 
-				if (!apItemName.StartsWith(SINGLE_ITEM_PREFIX))
-					continue;
-
-				FString itemName = apItemName.RightChop(FString(SINGLE_ITEM_PREFIX).Len());
-
-				FString globalVaultKey = FString::Format(TEXT("V{0}:{1}:{2}"), { team, GLOBAL_VAULT_SLOT, itemName });
-				FString personalVaultKey = FString::Format(TEXT("V{0}:{1}:{2}"), { team, slot, itemName });
-
-				keysToMonitor.Add(globalVaultKey);
-				keysToMonitor.Add(personalVaultKey);
-			}
-
-			ap->MonitorDataStoreValue(keysToMonitor, AP_DataType::Int64, [&](AP_SetReply setReply) { UpdateItemAmount(setReply); });
+			apInitialized = true;
 		}
 		else {
 			return;
@@ -95,6 +93,38 @@ void AApVaultSubsystem::Tick(float dt) {
 	}
 
 	//ProcessVaultStoreQueue();
+}
+
+
+void AApVaultSubsystem::MonitorVaultItems(int team, int slot)
+{
+	TArray<FString> keysToMonitor;
+
+	for (const TPair<int64, TSharedRef<FApItemBase>>& ApItem : mappingSubsystem->ApItems)
+	{
+		if (ApItem.Value->Type != EItemType::Item)
+			continue;
+		//we should look at > 1339XXX for single items 
+		TSharedRef<FApItem> itemInfo = StaticCastSharedRef<FApItem>(ApItem.Value);
+
+		if (!mappingSubsystem->ItemIdToName.Contains(itemInfo->Id))
+			continue;
+
+		FString apItemName = GetItemName(itemInfo->Id);
+
+		if (!apItemName.StartsWith(SINGLE_ITEM_PREFIX))
+			continue;
+
+		FString itemName = apItemName.RightChop(FString(SINGLE_ITEM_PREFIX).Len());
+
+		FString globalVaultKey = FString::Format(TEXT("V{0}:{1}:{2}"), { team, GLOBAL_VAULT_SLOT, itemName });
+		FString personalVaultKey = FString::Format(TEXT("V{0}:{1}:{2}"), { team, slot, itemName });
+
+		keysToMonitor.Add(globalVaultKey);
+		keysToMonitor.Add(personalVaultKey);
+	}
+
+	ap->MonitorDataStoreValue(keysToMonitor, AP_DataType::Int64, [&](AP_SetReply setReply) { UpdateItemAmount(setReply); });
 }
 
 void AApVaultSubsystem::UpdateItemAmount(const AP_SetReply& newData) {
@@ -134,7 +164,8 @@ void AApVaultSubsystem::UpdateItemAmount(const AP_SetReply& newData) {
 		else {
 			globalItemAmounts.Add(itemName, newValue);
 		}
-	} else {
+	}
+	else {
 		if (personalItemAmounts.Contains(itemName)) {
 			personalItemAmounts[itemName] = newValue;
 		}
@@ -164,20 +195,25 @@ void AApVaultSubsystem::Store(const FItemAmount& item, const bool personal) {
 		if (personalItemAmounts.Contains(itemName)) {
 			if (personalItemAmounts[itemName] + static_cast<uint64>(item.Amount) > INT64_MAX) {
 				personalItemAmounts[itemName] = INT64_MAX;
-			} else {
+			}
+			else {
 				personalItemAmounts[itemName] += item.Amount;
 			}
-		} else {
+		}
+		else {
 			personalItemAmounts.Add(itemName, item.Amount);
 		}
-	} else {
+	}
+	else {
 		if (globalItemAmounts.Contains(itemName)) {
 			if (globalItemAmounts[itemName] + static_cast<uint64>(item.Amount) > INT64_MAX) {
 				globalItemAmounts[itemName] = INT64_MAX;
-			} else {
+			}
+			else {
 				globalItemAmounts[itemName] += item.Amount;
 			}
-		} else {
+		}
+		else {
 			globalItemAmounts.Add(itemName, item.Amount);
 		}
 	}
@@ -207,7 +243,8 @@ int32 AApVaultSubsystem::Take(const FItemAmount& item) {
 			requested -= personalAmount;
 			personalYield += personalAmount;
 			personalAmount = 0;
-		} else {
+		}
+		else {
 			personalYield += requested;
 			personalAmount -= requested;
 		}
@@ -215,8 +252,8 @@ int32 AApVaultSubsystem::Take(const FItemAmount& item) {
 		FString personalKey = FString::Format(TEXT("V{0}:{1}:{2}"), { team, slot, itemName });
 
 		ap->ModifyDataStorageInt64(personalKey, personalYield);
-	} 
-	
+	}
+
 	if (globalItemAmounts.Contains(itemName) && requested > 0) {
 		int64& globalAmount = globalItemAmounts[itemName];
 		if (globalAmount < requested)
@@ -276,6 +313,26 @@ TArray<FItemAmount> AApVaultSubsystem::GetItems(bool personal) const {
 	return result;
 }
 
+TArray<FApPlayer> AApVaultSubsystem::GetVaultEnabledPlayers() const
+{
+	return vaults.Array();
+}
+
+FApPlayer AApVaultSubsystem::GetCurrentTeamGlobalVault() const
+{
+	if (!IsValid(connectionInfoSubsystem))
+		return FApPlayer();
+
+	int team = connectionInfoSubsystem->GetCurrentPlayerTeam();
+	return FApPlayer(team, GLOBAL_VAULT_SLOT);
+}
+
+
+bool AApVaultSubsystem::DoesPlayerAcceptVaultItems(const FApPlayer& player) const
+{
+	return vaults.Contains(player);
+}
+
 FString AApVaultSubsystem::GetItemName(uint64 itemId) const {
 	if (!mappingSubsystem->ItemIdToName.Contains(itemId))
 	{
@@ -287,6 +344,8 @@ FString AApVaultSubsystem::GetItemName(uint64 itemId) const {
 
 	if (!apItemName.StartsWith(SINGLE_ITEM_PREFIX))
 	{
+		//]LogApVaultSubsystem: Error: AApVaultSubsystem::GetItemName(1338823) item is not a single: Item1338823 from Satisfactory
+
 		UE_LOGFMT(LogApVaultSubsystem, Error, "AApVaultSubsystem::GetItemName({0}) item is not a single: {1}", itemId, apItemName);
 		return TEXT("");
 	}
@@ -302,6 +361,12 @@ FString AApVaultSubsystem::GetItemName(TSubclassOf<UFGItemDescriptor> item) cons
 	}
 
 	return GetItemName(mappingSubsystem->ItemClassToItemId[item]);
+}
+
+void AApVaultSubsystem::OnRep_VaultEnabledPlayers()
+{
+	vaults.Empty();
+	vaults.Append(vaultEnabledPlayersReplicated);
 }
 
 #pragma optimize("", on)

@@ -63,7 +63,6 @@ void AApPlayerInfoSubsystem::BeginPlay() {
 
 	//cant use Authority checks here because its locally spawned
 	if (ActiveNetMode != ENetMode::NM_Client) {
-		UWorld* world = GetWorld();
 		ap = AApSubsystem::Get(world);
 		connectionInfoSubsystem = AApConnectionInfoSubsystem::Get(world);
 	}
@@ -72,7 +71,7 @@ void AApPlayerInfoSubsystem::BeginPlay() {
 void AApPlayerInfoSubsystem::Tick(float dt) {
 	Super::Tick(dt);
 
-	 //cant use Authority checks here because its locally spawned
+	//cant use Authority checks here because its locally spawned
 	const ENetMode ActiveNetMode = GetWorld()->GetNetMode();
 	if (ActiveNetMode == ENetMode::NM_Client)
 	{
@@ -99,7 +98,7 @@ void AApPlayerInfoSubsystem::Tick(float dt) {
 
 			SendInitialReplicationDataForAllClients();
 
-			PrimaryActorTick.TickInterval = 60.0f;
+			PrimaryActorTick.TickInterval = 30.0f;
 
 			return;
 		}
@@ -149,6 +148,50 @@ int AApPlayerInfoSubsystem::GetPlayerCount() const {
 	return PlayerNamesMap.Num();
 }
 
+TSet<int> AApPlayerInfoSubsystem::GetTeams() const {
+	TSet<int> teams;
+
+	for (TPair<FApPlayer, FString> NamesMap : PlayerNamesMap)
+	{
+		if (!teams.Contains(NamesMap.Key.Team))
+		{
+			teams.Add(NamesMap.Key.Team);
+		}
+	}
+
+	return teams;
+}
+
+TArray<FApPlayer> AApPlayerInfoSubsystem::GetAllPlayers() const
+{
+	TArray<FApPlayer> players;
+
+	for (const TPair<FApPlayer, FString>& player : PlayerNamesMap)
+	{
+		if (player.Key.Slot != 0) {
+			players.Add(player.Key);;
+		}
+	}	
+
+	return players;
+}
+
+TArray<FString> AApPlayerInfoSubsystem::GetAllGames() const
+{
+	TArray<FString> games;
+
+	for (TPair<FApPlayer, FString> NamesMap : PlayerNamesMap)
+	{
+		FString game = GetPlayerGame(NamesMap.Key);
+
+		if (!game.IsEmpty()) {
+			games.Add(game);
+		}
+	}
+
+	return games;
+}
+
 void AApPlayerInfoSubsystem::SendInitialReplicationDataForAllClients() {
 	for (TActorIterator<APlayerController> actorItterator(GetWorld()); actorItterator; ++actorItterator) {
 		APlayerController* PlayerController = *actorItterator;
@@ -167,11 +210,6 @@ void AApPlayerInfoSubsystem::SendInitialReplicationData(const APlayerController*
 	{
 		PlayerInfos.Add(FReplicatedFApPlayerInfo(namesMap.Key, namesMap.Value, PlayerGamesMap[namesMap.Key]));
 	}
-
-	PlayerInfos.Add(FReplicatedFApPlayerInfo(1, 1, TEXT("Player Henk"), TEXT("Stardew Valley")));
-	PlayerInfos.Add(FReplicatedFApPlayerInfo(1, 2, TEXT("Berserker"), TEXT("Subnauticay")));
-	PlayerInfos.Add(FReplicatedFApPlayerInfo(1, 3, TEXT("Robb"), TEXT("Satisfactory")));
-	PlayerInfos.Add(FReplicatedFApPlayerInfo(1, 4, TEXT("Elizabeth Rose Bloodflame"), TEXT("Holo vs Robo")));
 
 	FPlayerInfoSubsystemInitialReplicationMessage Message;
 	Message.PlayerInfos = PlayerInfos;
@@ -248,7 +286,6 @@ void AApPlayerInfoSubsystem::SendRawMessage(const APlayerController* PlayerContr
 
 	NameAsStringProxyArchive << MessageId;
 	MessageSerializer(NameAsStringProxyArchive);
-	//NameAsStringProxyArchive << Message;
 
 	UReliableMessagingPlayerComponent* PlayerComponent = UReliableMessagingPlayerComponent::GetFromPlayer(PlayerController);
 	if (ensure(PlayerComponent))

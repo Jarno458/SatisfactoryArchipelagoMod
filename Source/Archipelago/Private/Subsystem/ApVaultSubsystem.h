@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "ApPlayerInfoSubsystem.h"
 
 #include "ApSubsystem.h"
 #include "Subsystem/ApMappingsSubsystem.h"
@@ -22,12 +23,13 @@ class AApVaultSubsystem : public AModSubsystem
 public:
 	AApVaultSubsystem();
 
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	virtual void BeginPlay() override;
-
+	void MonitorVaultItems(int team, int slot);
 	virtual void Tick(float dt) override;
 
 	static AApVaultSubsystem* Get(const UWorld* world);
-	UFUNCTION(BlueprintPure, Category = "Schematic", DisplayName = "Get ServerSide ApVaultSubsystem", Meta = (DefaultToSelf = "worldContext"))
+	UFUNCTION(BlueprintPure, Category = "Schematic", DisplayName = "Get Ap Vault Subsystem", Meta = (DefaultToSelf = "worldContext"))
 	static AApVaultSubsystem* Get(const UObject* worldContext);
 
 private:
@@ -39,9 +41,15 @@ private:
 	AApSubsystem* ap;
 	AApConnectionInfoSubsystem* connectionInfoSubsystem;
 	AApMappingsSubsystem* mappingSubsystem;
+	AApPlayerInfoSubsystem* playerInfoSubsystem;
 
 	TMap<FString, int64> globalItemAmounts;
 	TMap<FString, int64> personalItemAmounts;
+
+	UPROPERTY(Replicated, ReplicatedUsing = OnRep_VaultEnabledPlayers)
+	TArray<FApPlayer> vaultEnabledPlayersReplicated;
+
+	TSet<FApPlayer> vaults;
 
 	void UpdateItemAmount(const AP_SetReply& newData);
 
@@ -58,7 +66,20 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	TArray<FItemAmount> GetItems(bool personal = false) const;
 
+	UFUNCTION(BlueprintPure)
+	TArray<FApPlayer> GetVaultEnabledPlayers() const;
+
+	UFUNCTION(BlueprintPure)
+	FApPlayer GetCurrentTeamGlobalVault() const;
+
+	UFUNCTION(BlueprintPure)
+	bool DoesPlayerAcceptVaultItems(const FApPlayer& player) const;
+
 private:
 	FString GetItemName(uint64 itemId) const;
 	FString GetItemName(TSubclassOf<UFGItemDescriptor> item) const;
+
+public: 
+	UFUNCTION() //required for event hookup
+	void OnRep_VaultEnabledPlayers();
 };

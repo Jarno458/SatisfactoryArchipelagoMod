@@ -50,7 +50,11 @@
 			"Name": "HoverpackFuseReminder",
 			"Enabled": true,
 			"SemVersion": ">=1.0.0"
-		}
+		},
+		{
+			"Name": "ReliableMessaging",
+			"Enabled": true
+		},
 	],
 	"GameVersion": ">=416835"
 }

@@ -51,9 +51,12 @@ public:
 	static void WriteStringToFile(FString Path, FString text, bool relative);
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	static bool IsApPlayerValid(FApPlayer player);
+	static bool IsApPlayerValid(const FApPlayer& player) { return player.IsValid(); };
 
-	 template<typename T>
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	static bool IsApPlayerEqual(const FApPlayer& player, const FApPlayer& other) { return player == other; }
+
+	template<typename T>
 	static T* GetSubsystemActorIncludingParentClases(class UWorld* world) {
 		USubsystemActorManager* SubsystemActorManager = world->GetSubsystem<USubsystemActorManager>();
 		fgcheck(SubsystemActorManager);

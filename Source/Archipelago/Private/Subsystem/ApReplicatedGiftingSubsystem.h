@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "ApPlayerInfoSubsystem.h"
 
 #include "Subsystem/ModSubsystem.h"
 #include "Subsystem/ApSubsystem.h"
@@ -44,6 +45,7 @@ private:
 	AApConnectionInfoSubsystem* connectionInfoSubsystem;
 	AApPortalSubsystem* portalSubsystem;
 	AApMappingsSubsystem* mappingSubsystem;
+	AApPlayerInfoSubsystem* playerInfoSubsystem;
 
 	UPROPERTY(ReplicatedUsing = OnRep_AcceptedGiftTraitsPerPlayerReplicated)
 	TArray<FApTraitByPlayer> AcceptedGiftTraitsPerPlayerReplicated;
@@ -55,7 +57,6 @@ private:
 	TMap<FApPlayer, FApTraitBits> AcceptedGiftTraitsPerPlayer; //build using replication
 	TMap<TSubclassOf<UFGItemDescriptor>, FApTraitValues> TraitsPerItem; 	//also used by usage is Server side gifting subsystem
 
-	bool hasLoadedPlayers = false;
 	bool hasLoadedTraits = false;
 
 public:
