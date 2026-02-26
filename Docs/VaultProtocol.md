@@ -7,16 +7,25 @@ The vault protocol serves as a shared inventory buffer, where anyone can dump so
 ### Its not Gifting
 The Vault protocol and the [Gifting API](<https://github.com/agilbert1412/Archipelago.Gifting.Net/blob/main/Documentation/Gifting%20API.md>) share a similar goal where you can make some of you items available to other players but both protocols achieve this in their own way with their own pro's and cons
 
-|                          | Vault                        | Gifting                                | 
-| ------------------------ | ---------------------------- | -------------------------------------- |
-| Requires specific target | No                           | Yes                                    |
-| Throughput               | Unlimited                    | Useably only a few gifts at at time    |
-| Cross game compatibility | Limited, based on item names | Lots, items are described using traits |
-| Can reject items         | No                           | Yes                                    |
-| Works in asyncs          | Yes                          | Yes                                    |
+|                          | Vault                               | Gifting                                       | 
+| ------------------------ | ----------------------------------- | --------------------------------------------- |
+| Requires specific target | No                                  | Yes                                           |
+| Throughput               | Unlimited                           | Useably only a few gifts at at time           |
+| Cross game compatibility | Limited, mostly based on item names | Lots, items are always described using traits |
+| Can reject items         | No                                  | Yes                                           |
+| Works in asyncs          | Yes                                 | Yes                                           |
 
 ### Two different type of Vaults
 There is one global vault accessible for anyone, in addition to that some games can have personal vaults. Any game can add items to any vault, but they should only take items from their own personal vault or the global vault, the global vault and personal vaults use a similar data storage keys formatted like `V<team>:<slot>:<item name>` for the available quantity of a specific item, for the global vault, the slot number is always `0`
+
+### Three levels of integrating with the Vault Protocol
+There are 3 levels to choose from when implementing the vault protocol, higher levels allow for better cross game compatibility but also require more effort and setup, they are as follows:
+* Level 1 (Basic)
+  * Global Vault only, the game does not support any personaly vaults and will only take and store items in the global vault based on item names
+* Level 2 (Personal)
+  * The game support a personal vault, and offers a list of valid items names for other games to store in thier personal vault
+* Level 3 (Personal vault with item traits)
+  * The game support a personal vault, and offers a list of trait values per item name so other games can decide under which name to store items that dont simply match on name 
 
 ## Checking items available in the vaultfor taking
 Since you can only consume items your game understands, its as simple as reading the keys for each item you care about, so you can build a single `Get` packet to read the amounts for all items you care about, in the example below we will at a `Bow`, `Arrow`, `Knife`, if you use a personal vault, its important to look for those items in both vaults, in the example below we assume your game does use a personal vault, item names are always lower case to prevent mismatching casings
@@ -53,7 +62,7 @@ now we listen for the server its `SetReply` to our `Set` packet to tell us how m
 In the example above, there where only 7 balloons in the vault, so by subtracting `value` from `original_value` we can see how many we managed to obtain
 
 ## Personal vault
-### Setting up item names
+### Setting up item names (Level 2)
 If you want to support a personal vault for your game, we should first let other other senders know what items they can put into it, we do this by storing a list of items per game that that game can accept,
 The items are stored under a game specific key in the format of `V<game>` (so for V6 it will be VVVVVVV). you can find the game that belongs to specific slot in the `slot_info` you received in the `Connected` packet, The value should be a dictionary for lowercase item names and their values can be null if you just want item to be added based on its item name. Note this value should not change during game play as your game can not all of a sudden handle new items
 
@@ -74,7 +83,7 @@ Storing items to a personal vault is the same as the global vault, however it ma
 ```
 This should return a dictionary with as keys the item names that game can handle, if this returns null it means that target game does not expose what item names you can store, in such cases its best not use the personal vault
 
-## Cross game item sharing
+## Cross game item sharing (Level 3)
 ### Setting up trait information on your items
 If you want to take items from other games for cross game item sharing the game specific item list should be extended with traits, traits allow the sending game to decide a good enough match for an item in their game to add it to vault under a different item name that your game understands for simplicity the traits follow the same guidelines are those for the [Gifting API](<https://github.com/agilbert1412/Archipelago.Gifting.Net/blob/main/Documentation/Gifting%20API.md#gifttrait-specification>) so games don't have to maintain duplicate lists
 
