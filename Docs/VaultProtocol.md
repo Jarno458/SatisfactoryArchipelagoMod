@@ -37,7 +37,8 @@ Since you can only consume items your game understands, its as simple as reading
 
 Your response will contain all keys and the amounts of how much of each item is available in the vault, be aware some keys will have a value of `null` if there never was an item with that name added to the vault
 
-## Storing items to the global vault
+## Global vault (level 1)
+### Storing items to the vault
 Storing items to the vault is as simple as incrementing the key corresponding to the item name and vault, item names are in lowercase. if you plan to add multiple instances of the same item to the same vault, its best to cache them locally and only send them to the server in bulk to preserve bandwidth, So if we want to add a shotgun to the global vault we would do it like this:
 
 ```json
@@ -47,7 +48,7 @@ Storing items to the vault is as simple as incrementing the key corresponding to
 
 We don't have to specify any default, as the default value will default to `0` anyway
 
-## Taking items from the vault
+### Taking items from the vault
 Taking items to the vault is a little bit more tricky as we need to wait for the `SetReply` to tell us how many items we successfully managed to take out of the vault. we also need to add a 2nd operation to make sure the amount of items in the vault can never go negative, so if we want to take 10 balloons out of our personal vault it would go something like this
 
 ```json
@@ -61,8 +62,8 @@ now we listen for the server its `SetReply` to our `Set` packet to tell us how m
 ```
 In the example above, there where only 7 balloons in the vault, so by subtracting `value` from `original_value` we can see how many we managed to obtain
 
-## Personal vault
-### Setting up item names (Level 2)
+## Personal vault (Level 2)
+### Setting up item names 
 If you want to support a personal vault for your game, we should first let other other senders know what items they can put into it, we do this by storing a list of items per game that that game can accept,
 The items are stored under a game specific key in the format of `V<game>` (so for V6 it will be VVVVVVV). you can find the game that belongs to specific slot in the `slot_info` you received in the `Connected` packet, The value should be a dictionary for lowercase item names and their values can be null if you just want item to be added based on its item name. Note this value should not change during game play as your game can not all of a sudden handle new items
 
