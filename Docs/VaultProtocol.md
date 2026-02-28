@@ -15,7 +15,7 @@ The Vault protocol and the [Gifting API](<https://github.com/agilbert1412/Archip
 | Can reject items         | No                                  | Yes                                           |
 | Works in asyncs          | Yes                                 | Yes                                           |
 
-### Two different type of Vaults
+### Two different types of Vaults
 There is one global vault accessible for anyone, in addition to that some games can have personal vaults.  
 Any game can add items to any vault, but they should only take items from their own personal vault or the global vault, the global vault and personal vaults use a similar data storage keys formatted like `V<team>:<slot>:<item name>` for the available quantity of a specific item.  
 For the global vault the slot number is always `0`.
@@ -132,7 +132,7 @@ Your game should only take items that you know, so you can just check the vaults
 ## Storing items to the an personal vault
 Storing items to a personal vault is the same as the global vault, however it makes no sense to store items to a personal vault that the game of that slot does not know how to process. 
 Just like with global vault, make sure the value never exceeds an 64 bit interger (9223372036854775807).  
-Therefor before adding anything to a personal vault, we first need to check what item names the target slots its game can receive as described abonve in [Checking what games support personal vaults](## Checking what games support personal vaults).
+Therefor before adding anything to a personal vault, we first need to check what item names the target slots its game can receive as described abonve in [Checking what games support personal vaults](#checking-what-games-support-personal-vaults).
 If the results is `null` that slot does not support a personal vault so you cant store an item there, maybe you can store it in global vault instead.  
 If the result is an array, then make sure any item name you try to store in that personal vault as in that array as those are the only item names that slot can process.  
 If the result is an object, then make sure any item name you try to store in that personal vault corresponds to an key on the object.  
