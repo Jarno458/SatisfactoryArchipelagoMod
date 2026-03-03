@@ -37,8 +37,6 @@ private:
 
 	bool apInitialized;
 
-	TMap<uint32, TSubclassOf<UFGItemDescriptor>> ItemPerTraitsHashCache;
-
 	TMap<FApPlayer, TSharedPtr<TQueue<FItemAmount, EQueueMode::Mpsc>>> InputQueue;
 
 	TSet<FString> ProcessedIds;
@@ -47,7 +45,7 @@ private:
 	AApConnectionInfoSubsystem* connectionInfoSubsystem;
 	AApPortalSubsystem* portalSubSystem;
 	AApMappingsSubsystem* mappingSubsystem;
-	AApReplicatedGiftingSubsystem* replicatedGiftingSubsystem;
+	AApGiftTraitsSubsystem* giftTraitsSubsystem;
 	AApVaultSubsystem* vaultSubsystem;
 	AApPlayerInfoSubsystem* playerInfoSubsystem;
 
@@ -60,11 +58,5 @@ private:
 
 	void Send(TMap<FApPlayer, TMap<TSubclassOf<UFGItemDescriptor>, int>>& itemsToSend);
 
-	TSubclassOf<UFGItemDescriptor> TryGetItemClassByTraits(TArray<FApGiftTrait>& traits);
-
 	void UpdatedProcessedIds(TArray<FApReceiveGift>& gifts);
-
-	bool HasTraitKnownToSatisfactory(TArray<FApGiftTrait>& traits);
-
-	uint32 GetTraitsHash(TArray<FApGiftTrait>& traits);
 };

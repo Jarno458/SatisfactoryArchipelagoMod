@@ -1,6 +1,7 @@
 #include "ApServerGiftingSubsystem.h"
 #include "Data/ApGiftingMappings.h"
 #include "Subsystem/ApVaultSubsystem.h"
+#include "Subsystem/SubsystemActorManager.h"
 
 DEFINE_LOG_CATEGORY(LogApServerGiftingSubsystem);
 
@@ -39,7 +40,7 @@ void AApServerGiftingSubsystem::BeginPlay() {
 		connectionInfoSubsystem = AApConnectionInfoSubsystem::Get(world);
 		mappingSubsystem = AApMappingsSubsystem::Get(world);
 		portalSubSystem = AApPortalSubsystem::Get(world);
-		replicatedGiftingSubsystem = AApReplicatedGiftingSubsystem::Get(world);
+		giftTraitsSubsystem = AApGiftTraitsSubsystem::Get(world);
 		vaultSubsystem = AApVaultSubsystem::Get(world);
 		playerInfoSubsystem = AApPlayerInfoSubsystem::Get(world);
 	}
@@ -50,7 +51,7 @@ void AApServerGiftingSubsystem::Tick(float dt) {
 
 	if (!apInitialized) {
 		if (connectionInfoSubsystem->GetConnectionState() == EApConnectionState::Connected
-			&& replicatedGiftingSubsystem->HasLoadedItemTraits()
+			&& giftTraitsSubsystem->HasLoadedItemTraits()
 			&& mappingSubsystem->HasLoadedItemNameMappings()
 			&& portalSubSystem->IsInitialized()
 			&& playerInfoSubsystem->IsInitialized())
@@ -113,7 +114,7 @@ void AApServerGiftingSubsystem::PullAllGiftsAsync() {
 			itemClass = StaticCastSharedRef<FApItem>(mappingSubsystem->ApItems[itemId])->Class;
 		}
 		else {
-			itemClass = TryGetItemClassByTraits(gift.Traits);
+			itemClass = giftTraitsSubsystem->TryGetItemClassByTraits(gift.Traits);
 			UE_LOG(LogApServerGiftingSubsystem, Display, TEXT("AApServerGiftingSubsystem::PullAllGiftsAsync() passing gift(%s) to portalSubSystem by traits as item %s"), *gift.Id, *UFGItemDescriptor::GetItemName(itemClass).ToString());
 		}
 
@@ -209,89 +210,11 @@ void AApServerGiftingSubsystem::Send(TMap<FApPlayer, TMap<TSubclassOf<UFGItemDes
 			gift.ItemName = itemName;
 			gift.Amount = stack.Value;
 			gift.ItemValue = 0;
-			gift.Traits = replicatedGiftingSubsystem->GetTraitsForItem(stack.Key);
+			gift.Traits = giftTraitsSubsystem->GetFullTraitsForItem(stack.Key);
 			gift.ReceiverName = playerInfoSubsystem->GetPlayerName(itemsToSendPerPlayer.Key);
 
 			//TODO group all items for the same player together
 			ap->SendGift(gift);
 		}
 	}
-}
-
-bool AApServerGiftingSubsystem::HasTraitKnownToSatisfactory(TArray<FApGiftTrait>& traits) {
-	static const UEnum* giftTraitEnum = StaticEnum<EGiftTrait>();
-
-	for (const FApGiftTrait& trait : traits) {
-		if (giftTraitEnum->IsValidEnumValue((uint8)trait.Trait))
-			return true;
-	}
-
-	return false;
-}
-
-TSubclassOf<UFGItemDescriptor> AApServerGiftingSubsystem::TryGetItemClassByTraits(TArray<FApGiftTrait>& traits) {
-	if (!HasTraitKnownToSatisfactory(traits))
-		return nullptr;
-
-	uint32 hash = GetTraitsHash(traits);
-	if (ItemPerTraitsHashCache.Contains(hash))
-	{
-		UE_LOG(LogApServerGiftingSubsystem, Display, TEXT("AApServerGiftingSubsystem::TryGetItemClassByTraits() matched on hash"));
-		return ItemPerTraitsHashCache[hash];
-	}
-
-	TMap<TSubclassOf<UFGItemDescriptor>, TPair<int, float>> numberOfMatchesAndTotalDiviationPerItemClass;
-	int mostMatches = 0;
-
-	for (const TPair<TSubclassOf<UFGItemDescriptor>, FApTraitValues>& traitsPerItem : replicatedGiftingSubsystem->TraitsPerItem) {
-		int matches = 0;
-		float totalDifference = 0.0f;
-
-		for (FApGiftTrait& trait : traits) {
-			if (traitsPerItem.Value.AcceptsTrait(trait.Trait)) {
-				totalDifference += FGenericPlatformMath::Abs(traitsPerItem.Value.TraitsValues[trait.Trait] - trait.Quality);
-				matches++;
-			}
-		}
-
-		if (matches >= mostMatches) {
-			mostMatches = matches;
-			numberOfMatchesAndTotalDiviationPerItemClass.Add(traitsPerItem.Key, TPair<int, float>(matches, totalDifference));
-		}
-	}
-
-	float lowestDifference = 0.0f;
-	TMap<TSubclassOf<UFGItemDescriptor>, float> accurencyPerItem;
-	TSubclassOf<UFGItemDescriptor> itemClassWithLowestDifference = nullptr;
-
-	for (const TPair<TSubclassOf<UFGItemDescriptor>, TPair<int, float>>& numberOfMatchesAndTotalDiviation : numberOfMatchesAndTotalDiviationPerItemClass) {
-		if (numberOfMatchesAndTotalDiviation.Value.Key != mostMatches)
-			continue;
-
-		if (itemClassWithLowestDifference == nullptr || numberOfMatchesAndTotalDiviation.Value.Value < lowestDifference) {
-			lowestDifference = numberOfMatchesAndTotalDiviation.Value.Value;
-			itemClassWithLowestDifference = numberOfMatchesAndTotalDiviation.Key;
-		}
-	}
-
-	ItemPerTraitsHashCache.Add(hash, itemClassWithLowestDifference);
-
-	return itemClassWithLowestDifference;
-}
-
-uint32 AApServerGiftingSubsystem::GetTraitsHash(TArray<FApGiftTrait>& traits) {
-	TSortedMap<EGiftTrait, uint32> hashesPerTrait;
-
-	for (FApGiftTrait& trait : traits)
-		hashesPerTrait.Add(trait.Trait, HashCombine(GetTypeHash(trait.Trait), GetTypeHash(trait.Quality)));
-
-	uint32 totalHash = 0;
-
-	TArray<uint32> hashes;
-	hashesPerTrait.GenerateValueArray(hashes);
-
-	for (uint32 hash : hashes)
-		totalHash = HashCombine(totalHash, hash);
-
-	return totalHash;
 }

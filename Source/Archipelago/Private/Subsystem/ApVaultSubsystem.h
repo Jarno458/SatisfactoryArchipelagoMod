@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "ApGiftTraitsSubsystem.h"
 #include "ApPlayerInfoSubsystem.h"
 
 #include "ApSubsystem.h"
@@ -14,6 +15,13 @@ DECLARE_LOG_CATEGORY_EXTERN(LogApVaultSubsystem, Log, All);
 
 #define SINGLE_ITEM_PREFIX TEXT("Single: ")
 #define GLOBAL_VAULT_SLOT 0
+
+USTRUCT()
+struct FVaultItemMapping
+{
+	GENERATED_BODY()
+	TMap<TSubclassOf<UFGItemDescriptor>, FString> ItemNameByClass;
+};
 
 UCLASS()
 class AApVaultSubsystem : public AModSubsystem
@@ -42,6 +50,7 @@ private:
 	AApConnectionInfoSubsystem* connectionInfoSubsystem;
 	AApMappingsSubsystem* mappingSubsystem;
 	AApPlayerInfoSubsystem* playerInfoSubsystem;
+	AApGiftTraitsSubsystem* giftTraitsSubsystem;
 
 	TMap<FString, int64> globalItemAmounts;
 	TMap<FString, int64> personalItemAmounts;
@@ -49,7 +58,11 @@ private:
 	UPROPERTY(Replicated, ReplicatedUsing = OnRep_VaultEnabledPlayers)
 	TArray<FApPlayer> vaultEnabledPlayersReplicated;
 
+	UPROPERTY(Replicated)
+	FApPlayer currentPlayerGlobalVault;
+
 	TSet<FApPlayer> vaults;
+	TMap<FString, FVaultItemMapping> acceptedItemsPerGame;
 
 	void UpdateItemAmount(const AP_SetReply& newData);
 
@@ -67,7 +80,7 @@ public:
 	TArray<FItemAmount> GetItems(bool personal = false) const;
 
 	UFUNCTION(BlueprintPure)
-	TArray<FApPlayer> GetVaultEnabledPlayers() const;
+	TSet<FApPlayer> GetVaultEnabledPlayers() const;
 
 	UFUNCTION(BlueprintPure)
 	FApPlayer GetCurrentTeamGlobalVault() const;
@@ -75,9 +88,17 @@ public:
 	UFUNCTION(BlueprintPure)
 	bool DoesPlayerAcceptVaultItems(const FApPlayer& player) const;
 
+	UFUNCTION(BlueprintPure)
+	TArray<TSubclassOf<UFGItemDescriptor>> GetAcceptedItemsPerVault(FApPlayer vault) const;
+
 private:
 	FString GetItemName(uint64 itemId) const;
 	FString GetItemName(TSubclassOf<UFGItemDescriptor> item) const;
+
+	void ParseVaultItemInfo(FString game, FString itemInfoString);
+	void AddPersonalVaults(FString game);
+
+	void SetupPersonalVault() const;
 
 public: 
 	UFUNCTION() //required for event hookup

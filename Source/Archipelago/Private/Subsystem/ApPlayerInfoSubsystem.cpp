@@ -184,12 +184,26 @@ TArray<FString> AApPlayerInfoSubsystem::GetAllGames() const
 	{
 		FString game = GetPlayerGame(NamesMap.Key);
 
-		if (!game.IsEmpty()) {
+		if (!game.IsEmpty() && game != TEXT("__Server")) { //APCpp falsely report the server game as __Server
 			games.Add(game);
 		}
 	}
 
 	return games;
+}
+
+TArray<FApPlayer> AApPlayerInfoSubsystem::GetAllPlayersPlayingGame(FString game) const
+{
+	TArray<FApPlayer> players;
+
+	for (TPair<FApPlayer, FString> GamesMap : PlayerGamesMap)
+	{
+		if (GamesMap.Value == game) {
+			players.Add(GamesMap.Key);
+		}
+	}
+
+	return players;
 }
 
 void AApPlayerInfoSubsystem::SendInitialReplicationDataForAllClients() {

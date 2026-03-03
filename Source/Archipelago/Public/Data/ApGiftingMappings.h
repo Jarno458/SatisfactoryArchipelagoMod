@@ -3,7 +3,7 @@
 #include "CoreMinimal.h"
 
 #include "ApGiftingMappings.generated.h"
-// EGiftTrait is an interger value between 0 and 64
+// EGiftTrait is an integer value between 0 and 127
 UENUM(BlueprintType)
 enum class EGiftTrait : uint8
 {
@@ -65,10 +65,22 @@ enum class EGiftTrait : uint8
 	Explosive,
 	Pipe,
 	Insect,
-	Energy
-	//59-63 unused
+	Energy,
+	Blue, // new new newer traits
+	Red,
+	Orange,
+	White,
+	Green,
+	Candy,
+	Fireworks,
+	Orb,
+	Ice,
+	Charm,
+	Magnetism,
+	Pasta,
+	//76 - 127 unused
 };
-ENUM_RANGE_BY_FIRST_AND_LAST(EGiftTrait, EGiftTrait::Electronics, EGiftTrait::Statue)
+ENUM_RANGE_BY_FIRST_AND_LAST(EGiftTrait, EGiftTrait::Electronics, EGiftTrait::Pasta)
 
 UCLASS()
 class ARCHIPELAGO_API UApGiftingMappings : public UObject

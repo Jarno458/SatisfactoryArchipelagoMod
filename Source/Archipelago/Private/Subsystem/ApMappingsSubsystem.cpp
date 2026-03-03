@@ -227,7 +227,7 @@ void AApMappingsSubsystem::LoadSchematicMappings(TMap<int64, TSharedRef<FApItemB
 }
 
 const TMap<FName, const FAssetData> AApMappingsSubsystem::GetBlueprintAssetsIn(IAssetRegistry& registery, FName&& packagePath, TArray<FString> namePrefixes, bool searchSubFolders) {
-	UE_LOG(LogApMappingsSubsystem, Display, TEXT("AApMappingsSubsystem::GetBlueprintAssetsIn(packagePath: %s, namePrefixes: [%i])"), *packagePath.ToString(), namePrefixes.Num());
+	UE_LOG(LogApMappingsSubsystem, VeryVerbose, TEXT("AApMappingsSubsystem::GetBlueprintAssetsIn(packagePath: %s, namePrefixes: [%i])"), *packagePath.ToString(), namePrefixes.Num());
 
 	FARFilter filter;
 
@@ -251,18 +251,18 @@ const TMap<FName, const FAssetData> AApMappingsSubsystem::GetBlueprintAssetsIn(I
 		for (FString prefix : namePrefixes) {
 			if (nameString.StartsWith(prefix)) {
 				assetsMap.Add(asset.AssetName, asset);
-				UE_LOG(LogApMappingsSubsystem, Display, TEXT("AApMappingsSubsystem::GetBlueprintAssetsIn() Adding asset %s that matches prefix %s"), *nameString, *prefix);
+				UE_LOG(LogApMappingsSubsystem, VeryVerbose, TEXT("AApMappingsSubsystem::GetBlueprintAssetsIn() Adding asset %s that matches prefix %s"), *nameString, *prefix);
 			}
 		}
 	}
 
-	UE_LOG(LogApMappingsSubsystem, Display, TEXT("AApMappingsSubsystem::GetBlueprintAssetsIn() found %i assets"), assetsMap.Num());
+	UE_LOG(LogApMappingsSubsystem, VeryVerbose, TEXT("AApMappingsSubsystem::GetBlueprintAssetsIn() found %i assets"), assetsMap.Num());
 
 	return assetsMap;
 }
 
 UObject* AApMappingsSubsystem::FindAssetByName(const TMap<FName, const FAssetData> assets, FString assetName) {
-	UE_LOG(LogApMappingsSubsystem, Display, TEXT("AApMappingsSubsystem::FindAssetByName(assets[%i], \"%s\")"), assets.Num(), *assetName);
+	UE_LOG(LogApMappingsSubsystem, VeryVerbose, TEXT("AApMappingsSubsystem::FindAssetByName(assets[%i], \"%s\")"), assets.Num(), *assetName);
 
 	assetName.RemoveFromEnd("'");
 
@@ -283,7 +283,7 @@ UObject* AApMappingsSubsystem::FindAssetByName(const TMap<FName, const FAssetDat
 		//TSubclassOf<UFGSchematic> d = LoadClass<UFGSchematic>(nullptr, TEXT("/Game/FactoryGame/Schematics/ResourceSink/ResourceSink_Ladders.ResourceSink_Ladders_C"));
 		assetName.RemoveFromStart("/Script/Engine.Blueprint'");
 
-		UE_LOG(LogApMappingsSubsystem, Display, TEXT("AApMappingsSubsystem::FindAssetByName() attempting to load asset of name %s"), *assetName);
+		UE_LOG(LogApMappingsSubsystem, VeryVerbose, TEXT("AApMappingsSubsystem::FindAssetByName() attempting to load asset of name %s"), *assetName);
 
 		UBlueprintGeneratedClass* blueprint = LoadObject<UBlueprintGeneratedClass>(NULL, *assetName);
 		if (blueprint == nullptr) {
@@ -297,7 +297,7 @@ UObject* AApMappingsSubsystem::FindAssetByName(const TMap<FName, const FAssetDat
 		}
 		assetName = assetName.Mid(dotPos + 1, assetName.Len() - dotPos);
 
-		UE_LOG(LogApMappingsSubsystem, Display, TEXT("AApMappingsSubsystem::FindAssetByName() transformed into %s"), *assetName);
+		UE_LOG(LogApMappingsSubsystem, VeryVerbose, TEXT("AApMappingsSubsystem::FindAssetByName() transformed into %s"), *assetName);
 #endif
 	}
 
@@ -351,8 +351,8 @@ UFGRecipe* AApMappingsSubsystem::GetRecipeByName(const TMap<FName, const FAssetD
 UFGItemDescriptor* AApMappingsSubsystem::GetItemDescriptorByName(const TMap<FName, const FAssetData> itemDescriptorAssets, FString name) {
 	UObject* obj = FindAssetByName(itemDescriptorAssets, name);
 	fgcheck(obj != nullptr);
-	UE_LOG(LogApMappingsSubsystem, Display, TEXT("AApMappingsSubsystem::GetItemDescriptorByName() *obj->GetClass()->GetName() %s"), *obj->GetClass()->GetName())
-	UE_LOG(LogApMappingsSubsystem, Display, TEXT("AApMappingsSubsystem::GetItemDescriptorByName() *obj->GetClass()->GetDefaultObjectName() %s"), *obj->GetClass()->GetDefaultObjectName().ToString())
+	UE_LOG(LogApMappingsSubsystem, VeryVerbose, TEXT("AApMappingsSubsystem::GetItemDescriptorByName() *obj->GetClass()->GetName() %s"), *obj->GetClass()->GetName())
+	UE_LOG(LogApMappingsSubsystem, VeryVerbose, TEXT("AApMappingsSubsystem::GetItemDescriptorByName() *obj->GetClass()->GetDefaultObjectName() %s"), *obj->GetClass()->GetDefaultObjectName().ToString())
 
 	UFGItemDescriptor* itemDesc = Cast<UFGItemDescriptor>(obj);
 	fgcheck(itemDesc != nullptr);

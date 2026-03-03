@@ -1,7 +1,6 @@
 #pragma once
 
 #include "CoreMinimal.h"
-
 #include "Data/ApGiftingMappings.h"
 
 #include "ApTypes.generated.h"
@@ -128,10 +127,8 @@ public:
 	FString locationName;
 
 	UPROPERTY(SaveGame)
-	FString playerName;
+	FString playerName; //TODO dont replicate this, use PlayerInfoSubsystem and player int
 };
-
-#define ACCEPT_ALL_TRAITS_BIT 0x8000000000000000
 
 USTRUCT()
 struct ARCHIPELAGO_API FApTraitBits
@@ -140,44 +137,85 @@ struct ARCHIPELAGO_API FApTraitBits
 
 public:
 	// Value constructor
-	FApTraitBits(TMap<EGiftTrait, float> traitValues)
+	explicit FApTraitBits(const TMap<EGiftTrait, float>& traitValues)
 	{
 		data = 0;
+		moreData = 0;
+
 		for (const TPair<EGiftTrait, float>& traitValue : traitValues) {
-			data |= ((uint64)1 << (uint8)traitValue.Key);
+			if (static_cast<uint8>(traitValue.Key) < 64) {
+				data |= (static_cast<uint64>(1) << static_cast<uint8>(traitValue.Key));
+			}
+			else {
+				moreData |= (static_cast<uint64>(1) << (static_cast<uint8>(traitValue.Key) - 64));
+			}
 		}
 	}
-	FApTraitBits(bool acceptAllTraits, TSet<EGiftTrait> acceptedTraits)
+	FApTraitBits(const bool acceptAllTraits, const TSet<EGiftTrait>& acceptedTraits)
 	{
-		data = acceptAllTraits ? ACCEPT_ALL_TRAITS_BIT : 0;
+		if (acceptAllTraits)
+		{
+			data = UINT64_MAX;
+			moreData = UINT64_MAX;
+
+			return;
+		}
+
+		data = 0;
+		moreData = 0;
+
 		for (EGiftTrait trait : acceptedTraits) {
-			data |= ((uint64)1 << (uint8)trait);
+			if (static_cast<uint8>(trait) < 64) {
+				data |= (static_cast<uint64>(1) << static_cast<uint8>(trait));
+			} else {
+				moreData |= (static_cast<uint64>(1) << (static_cast<uint8>(trait) - 64));
+			}
 		}
 	}
 	// Copy constructor
-	FApTraitBits(const FApTraitBits& Other) : data(Other.data)
+	FApTraitBits(const FApTraitBits& Other) : data(Other.data), moreData(Other.moreData)
 	{}
 	// Default constructor
-	FApTraitBits() : data(0)
+	FApTraitBits() : data(0), moreData(0)
 	{}
 
 private:
 	UPROPERTY()
 	uint64 data;
+	UPROPERTY()
+	uint64 moreData;
 
 public:
-	FORCEINLINE bool AcceptsAllTraits() const { return (data & ACCEPT_ALL_TRAITS_BIT) > 0; }
+	FORCEINLINE bool AcceptsAllTraits() const { return data == UINT64_MAX && moreData == UINT64_MAX; }
 
-	FORCEINLINE bool AcceptsTrait(EGiftTrait trait) const { return (data & ((uint64)1 << (uint8)trait)) > 0; }
+	FORCEINLINE bool AcceptsTrait(EGiftTrait trait) const
+	{
+		if (static_cast<uint8>(trait) < 64) {
+			return (data & (static_cast<uint64>(1) << static_cast<uint8>(trait))) > 0;
+		} else {
+			return (moreData & (static_cast<uint64>(1) << (static_cast<uint8>(trait) - 64))) > 0;
+		}
+	}
 
-	FORCEINLINE bool HasOverlap(FApTraitBits traitBits) const { return (data & (traitBits.data | ACCEPT_ALL_TRAITS_BIT)) > 0; }
+	FORCEINLINE bool HasOverlap(FApTraitBits traitBits) const
+	{
+		return (data & traitBits.data) > 0 || (moreData & traitBits.moreData) > 0;
+	}
 
-	const TSet<EGiftTrait> GetTraits() const {
+	TSet<EGiftTrait> GetTraits() const
+	{
 		static const uint8 numberOfEnumValues = StaticEnum<EGiftTrait>()->NumEnums();
 		TSet<EGiftTrait> traits;
 		for (uint8 i = 0; i < numberOfEnumValues; i++) {
-			if ((data & ((uint64)1 << i)) > 0) {
-				traits.Add((EGiftTrait)i);
+			if (i < 64) {
+				 if ((data & (static_cast<uint64>(1) << i)) > 0) {
+					traits.Add(static_cast<EGiftTrait>(i));
+				}
+			}
+			else {
+				 if ((moreData & (static_cast<uint64>(1) << (i - 64))) > 0) {
+					traits.Add(static_cast<EGiftTrait>(i));
+				}
 			}
 		}
 		return traits;
@@ -186,7 +224,7 @@ public:
 	//Override the comparison operator
 	bool operator==(const FApTraitBits& Other) const
 	{
-		return data == Other.data;
+		return data == Other.data && moreData == Other.moreData;
 	}
 };
 
@@ -197,7 +235,7 @@ struct ARCHIPELAGO_API FApTraitValues : public FApTraitBits
 
 public:
 	// Value constructor
-	FApTraitValues(TMap<EGiftTrait, float> traitValues) : FApTraitBits(traitValues), TraitsValues(traitValues)
+	FApTraitValues(const TMap<EGiftTrait, float>& traitValues) : FApTraitBits(traitValues), TraitsValues(traitValues)
 	{}
 	// Copy constructor
 	FApTraitValues(const FApTraitValues& Other) : FApTraitBits(Other), TraitsValues(Other.TraitsValues)
@@ -218,9 +256,9 @@ struct ARCHIPELAGO_API FApTraitByPlayer : public FApTraitBits
 
 public:
 	// Value constructor
-	FApTraitByPlayer(FApPlayer player, bool acceptAllTraits, TSet<EGiftTrait> acceptedTraits)	: FApTraitBits(acceptAllTraits, acceptedTraits), Player(player)
+	FApTraitByPlayer(const FApPlayer& player, bool acceptAllTraits, const TSet<EGiftTrait>& acceptedTraits)	: FApTraitBits(acceptAllTraits, acceptedTraits), Player(player)
 	{}
-	FApTraitByPlayer(FApPlayer player, FApTraitBits acceptedTraits) : FApTraitBits(acceptedTraits), Player(player)
+	FApTraitByPlayer(const FApPlayer& player, const FApTraitBits& acceptedTraits) : FApTraitBits(acceptedTraits), Player(player)
 	{}
 	// Copy constructor
 	FApTraitByPlayer(const FApTraitByPlayer& Other)	: FApTraitBits(Other), Player(Other.Player)

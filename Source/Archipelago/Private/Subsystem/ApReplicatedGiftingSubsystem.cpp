@@ -1,8 +1,8 @@
 #include "ApReplicatedGiftingSubsystem.h"
 #include "Data/ApGiftingMappings.h"
-#include "FGGameState.h"
 #include "PushModel.h"
 #include "UnrealNetwork.h"
+#include "SubsystemActorManager.h"
 
 DEFINE_LOG_CATEGORY(LogApReplicatedGiftingSubsystem);
 
@@ -50,38 +50,17 @@ void AApReplicatedGiftingSubsystem::BeginPlay() {
 
 	UE_LOG(LogApReplicatedGiftingSubsystem, Display, TEXT("AApReplicatedGiftingSubsystem::BeginPlay()"));
 
-	AllTraits.Empty();
-	for (EGiftTrait trait : TEnumRange<EGiftTrait>()) {
-		AllTraits.Add(trait);
-	}
-
 	UWorld* world = GetWorld();
 	fgcheck(world != nullptr);
-	AGameStateBase* gameState = world->GetGameState();
 
-	mappingSubsystem = AApMappingsSubsystem::Get(world);
+	giftTraitsSubsystem = AApGiftTraitsSubsystem::Get(world);
 
-	if (gameState->HasAuthority()) {
-		LoadTraitMappings();
-
+	if (HasAuthority()) {
 		ap = AApSubsystem::Get(world);
 		connectionInfoSubsystem = AApConnectionInfoSubsystem::Get(world);
 		portalSubsystem = AApPortalSubsystem::Get(world);
 		playerInfoSubsystem = AApPlayerInfoSubsystem::Get(world);
 	}
-	else {
-		if (AFGGameState* factoryGameState = Cast<AFGGameState>(gameState)) {
-			factoryGameState->mOnClientSubsystemsValid.AddDynamic(this, &AApReplicatedGiftingSubsystem::OnClientSubsystemsValid);
-
-			if (factoryGameState->AreClientSubsystemsValid()) {
-				LoadTraitMappings();
-			}
-		}
-	}
-}
-
-void AApReplicatedGiftingSubsystem::OnClientSubsystemsValid() {
-	LoadTraitMappings();
 }
 
 void AApReplicatedGiftingSubsystem::Tick(float dt) {
@@ -96,7 +75,7 @@ void AApReplicatedGiftingSubsystem::Tick(float dt) {
 		ServiceState = EApGiftingServiceState::Offline;
 	}
 	else {
-		if (!hasLoadedTraits || !portalSubsystem->IsInitialized() || !playerInfoSubsystem->IsInitialized()) {
+		if (!giftTraitsSubsystem->HasLoadedItemTraits() || !portalSubsystem->IsInitialized() || !playerInfoSubsystem->IsInitialized()) {
 			ServiceState = EApGiftingServiceState::Initializing;
 		}
 		else {
@@ -119,16 +98,18 @@ bool AApReplicatedGiftingSubsystem::CanSend(const FApPlayer& targetPlayer, const
 	if (!AcceptedGiftTraitsPerPlayer.Contains(targetPlayer))
 		return false;
 
-	if (!hasLoadedTraits || !TraitsPerItem.Contains(itemClass) || !AcceptedGiftTraitsPerPlayer.Contains(targetPlayer))
+	if (!giftTraitsSubsystem->HasLoadedItemTraits() || !AcceptedGiftTraitsPerPlayer.Contains(targetPlayer))
 		return false;
 
-	return AcceptedGiftTraitsPerPlayer[targetPlayer].HasOverlap(TraitsPerItem[itemClass]);
+	FApTraitValues traits = giftTraitsSubsystem->GetTraitsForItem(itemClass);
+
+	return AcceptedGiftTraitsPerPlayer[targetPlayer].HasOverlap(static_cast<FApTraitBits>(traits));
 }
 
-TArray<FApPlayer> AApReplicatedGiftingSubsystem::GetPlayersAcceptingGifts() {
-	TArray<FApPlayer> keys;
-	AcceptedGiftTraitsPerPlayer.GenerateKeyArray(keys);
-	return keys;
+TSet<FApPlayer> AApReplicatedGiftingSubsystem::GetPlayersAcceptingGifts() const {
+	TArray<FApPlayer> keysArray;
+	AcceptedGiftTraitsPerPlayer.GenerateKeyArray(keysArray);
+	return TSet<FApPlayer>(keysArray);
 }
 
 TSet<EGiftTrait> AApReplicatedGiftingSubsystem::GetAcceptedTraitsPerPlayer(FApPlayer player) {
@@ -136,35 +117,20 @@ TSet<EGiftTrait> AApReplicatedGiftingSubsystem::GetAcceptedTraitsPerPlayer(FApPl
 		return TSet<EGiftTrait>();
 
 	if (AcceptedGiftTraitsPerPlayer[player].AcceptsAllTraits()) {
-		return AllTraits;
+		return giftTraitsSubsystem->GetAllTraits();
 	}
 
 	return AcceptedGiftTraitsPerPlayer[player].GetTraits();
 }
 
-TSet<EGiftTrait> AApReplicatedGiftingSubsystem::GetTraitNamesPerItem(TSubclassOf<UFGItemDescriptor> itemClass) {
-	if (!hasLoadedTraits || !TraitsPerItem.Contains(itemClass))
-		return TSet<EGiftTrait>();
+TArray<TSubclassOf<UFGItemDescriptor>> AApReplicatedGiftingSubsystem::GetAcceptedItemsPerPlayer(FApPlayer player) const
+{
+	TArray<TSubclassOf<UFGItemDescriptor>> items;
 
-	return TraitsPerItem[itemClass].GetTraits();
-}
+	if (!AcceptedGiftTraitsPerPlayer.Contains(player))
+		return items;
 
-TArray<FApGiftTrait> AApReplicatedGiftingSubsystem::GetTraitsForItem(TSubclassOf<UFGItemDescriptor> itemClass) {
-	if (!hasLoadedTraits || !TraitsPerItem.Contains(itemClass))
-		return TArray<FApGiftTrait>();
-
-	TArray<FApGiftTrait> traits;
-
-	for (TPair<EGiftTrait, float>& trait : TraitsPerItem[itemClass].TraitsValues) {
-		FApGiftTrait traitSpecification;
-		traitSpecification.Trait = trait.Key;
-		traitSpecification.Quality = trait.Value;
-		traitSpecification.Duration = 1.0f;
-
-		traits.Add(traitSpecification);
-	}
-
-	return traits;
+	return giftTraitsSubsystem->GetItemsWithOverlappingTraits(AcceptedGiftTraitsPerPlayer[player]);
 }
 
 void AApReplicatedGiftingSubsystem::UpdateAcceptedGifts() {
@@ -200,117 +166,6 @@ void AApReplicatedGiftingSubsystem::UpdateAcceptedGiftTraitsPerPlayerReplicatedV
 
 	MARK_PROPERTY_DIRTY_FROM_NAME(AApReplicatedGiftingSubsystem, AcceptedGiftTraitsPerPlayerReplicated, this);
 }
-
-void AApReplicatedGiftingSubsystem::LoadTraitMappings() {
-	AFGResourceSinkSubsystem* resourceSinkSubsystem = AFGResourceSinkSubsystem::Get(GetWorld());
-	fgcheck(resourceSinkSubsystem)
-
-		TMap<EGiftTrait, float> defaultSinkPointsPerTrait;
-	for (const TPair<EGiftTrait, int64>& traitDefault : UApGiftingMappings::TraitDefaultItemIds) {
-		fgcheck(mappingSubsystem->ApItems.Contains(traitDefault.Value) && mappingSubsystem->ApItems[traitDefault.Value]->Type == EItemType::Item);
-
-		TSharedRef<FApItem> itemInfo = StaticCastSharedRef<FApItem>(mappingSubsystem->ApItems[traitDefault.Value]);
-
-		int defaultItemSinkPoints = GetResourceSinkPointsForItem(resourceSinkSubsystem, itemInfo->Class, traitDefault.Value);
-
-		defaultSinkPointsPerTrait.Add(traitDefault.Key, defaultItemSinkPoints);
-	}
-
-	for (TPair<int64, TSharedRef<FApItemBase>>& itemInfoMapping : mappingSubsystem->ApItems) {
-		if (!UApGiftingMappings::TraitsPerItemRatings.Contains(itemInfoMapping.Key))
-			continue;
-
-		fgcheck(itemInfoMapping.Value->Type == EItemType::Item)
-
-		TSharedRef<FApItem> itemInfo = StaticCastSharedRef<FApItem>(itemInfoMapping.Value);
-		TSubclassOf<UFGItemDescriptor> itemClass = itemInfo->Class;
-		int64 itemId = itemInfoMapping.Key;
-
-		int itemValue = GetResourceSinkPointsForItem(resourceSinkSubsystem, itemClass, itemId);
-
-		for (const TPair<EGiftTrait, float>& traitRelativeRating : UApGiftingMappings::TraitsPerItemRatings[itemInfoMapping.Key]) {
-			EGiftTrait traitName = traitRelativeRating.Key;
-
-			fgcheck(defaultSinkPointsPerTrait.Contains(traitName));
-			float traitValue = GetTraitValue(itemValue, defaultSinkPointsPerTrait[traitName], traitRelativeRating.Value);
-
-			TMap<EGiftTrait, float> traitValueForItem;
-			traitValueForItem.Add(traitName, traitValue);
-
-			while (UApGiftingMappings::TraitParents.Contains(traitName)) {
-				traitName = UApGiftingMappings::TraitParents[traitName];
-
-				if (!traitValueForItem.Contains(traitName)) {
-					fgcheck(defaultSinkPointsPerTrait.Contains(traitName));
-					traitValue = GetTraitValue(itemValue, defaultSinkPointsPerTrait[traitName], traitRelativeRating.Value);
-					traitValueForItem.Add(traitName, traitValue);
-				}
-			}
-
-			if (!TraitsPerItem.Contains(itemInfo->Class)) {
-				TraitsPerItem.Add(itemInfo->Class, FApTraitValues(traitValueForItem));
-			}
-			else {
-				TraitsPerItem[itemInfo->Class].TraitsValues.Append(traitValueForItem);
-				TraitsPerItem[itemInfo->Class] = FApTraitValues(TraitsPerItem[itemInfo->Class].TraitsValues);
-			}
-		}
-	}
-
-	//PrintTraitValuesPerItem();
-
-	hasLoadedTraits = true;
-}
-
-int AApReplicatedGiftingSubsystem::GetResourceSinkPointsForItem(AFGResourceSinkSubsystem* resourceSinkSubsystem, TSubclassOf<UFGItemDescriptor> itemClass, int64 itemId) {
-	if (UApGiftingMappings::HardcodedSinkValues.Contains(itemId))
-		return UApGiftingMappings::HardcodedSinkValues[itemId];
-
-	int value = resourceSinkSubsystem->GetResourceSinkPointsForItem(itemClass);
-
-	if (value == 0) {
-		FString itemName = UFGItemDescriptor::GetItemName(itemClass).ToString();
-		UE_LOG(LogApMappingsSubsystem, Error, TEXT("AApMappingsSubsystem::GetResourceSinkPointsForItem(\"%s\", %i) No sink value for item"), *itemName, itemId);
-		value = 1;
-	}
-
-	return value;
-}
-
-float AApReplicatedGiftingSubsystem::GetTraitValue(int itemValue, float avarageItemValueForTrait, float itemSpecificTraitMultiplier) {
-	return (FPlatformMath::LogX(10, (double)itemValue + 0.1) / FPlatformMath::LogX(10, (double)avarageItemValueForTrait + 0.1)) * itemSpecificTraitMultiplier;
-}
-
-void AApReplicatedGiftingSubsystem::PrintTraitValuesPerItem() {
-	TMap<EGiftTrait, TSortedMap<float, FString>> valuesPerItem;
-
-	for (const TPair<TSubclassOf<UFGItemDescriptor>, FApTraitValues>& traitsPerItem : TraitsPerItem) {
-		for (TPair<EGiftTrait, float> trait : traitsPerItem.Value.TraitsValues) {
-			if (!valuesPerItem.Contains(trait.Key))
-				valuesPerItem.Add(trait.Key, TSortedMap<float, FString>());
-
-			FString itemName = mappingSubsystem->ItemIdToName[mappingSubsystem->ItemClassToItemId[traitsPerItem.Key]];
-
-			valuesPerItem[trait.Key].Add(trait.Value, itemName);
-		}
-	}
-
-	TArray<FString> lines;
-	for (const TPair<EGiftTrait, TSortedMap<float, FString>>& traitsPerItem : valuesPerItem) {
-		static const UEnum* giftTraitEnum = StaticEnum<EGiftTrait>();
-		FName traitName = giftTraitEnum->GetNameByValue((int64)traitsPerItem.Key);
-
-		lines.Add(FString::Printf(TEXT("Trait: \"%s\":"), *traitName.ToString()));
-
-		for (TPair<float, FString> valuePerItem : traitsPerItem.Value)
-			lines.Add(FString::Printf(TEXT("  - Item: \"%s\": %.2f"), *valuePerItem.Value, valuePerItem.Key));
-	}
-
-	FString fileText = FString::Join(lines, TEXT("\n"));
-
-	UApUtils::WriteStringToFile(fileText, TEXT("T:\\ItemTraits.txt"), false);
-}
-
 
 void AApReplicatedGiftingSubsystem::OnRep_AcceptedGiftTraitsPerPlayerReplicated() {
 	if (HasAuthority())

@@ -6,6 +6,7 @@
 #include "Buildable/ApPortal.h"
 #include "Subsystem/ApServerGiftingSubsystem.h"
 #include "Subsystem/ApConnectionInfoSubsystem.h"
+#include "Subsystem/SubsystemActorManager.h"
 
 DEFINE_LOG_CATEGORY(LogApPortalSubsystem);
 

@@ -39,6 +39,16 @@ struct ARCHIPELAGO_API FBounceDayo
 	FString Reference;
 };
 
+USTRUCT()
+struct ARCHIPELAGO_API FPendingServerData
+{
+	GENERATED_BODY()
+
+	AP_GetServerDataRequest Request;
+	TFunction<void(FString, FString)> Callback;
+	std::string ValueContainer;
+};
+
 UCLASS()
 class ARCHIPELAGO_API AApSubsystem : public AModSubsystem
 {
@@ -65,8 +75,9 @@ public:
 	void MonitorDataStoreValue(FString keyFString, TFunction<void()> callback);
 	void MonitorDataStoreValue(TArray<FString> keys, AP_DataType datatype, TFunction<void(AP_SetReply)> callback);
 	void MonitorUnboundedIntergerDataStoreValue(FString keyFString, TFunction<void(AP_SetReply)> callback);
-	void ModifyEnergyLink(int64 amount);
-	void ModifyDataStorageInt64(FString key, int64 amount);
+	void ModifyEnergyLink(int64 amount) const;
+	void ModifyDataStorageInt64(FString key, int64 amount) const;
+	void GetDataStorageJsonFields(TSet<FString> keys, TFunction<void(FString, FString)> callback);
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FApConfigurationStruct GetConfig() const { return config; };
@@ -93,7 +104,7 @@ public:
 	void CreateLocationHint(int64 locationId, bool spam = false);
 	void CreateLocationHint(const TSet<int64>& locationIds, bool spam = false) const;
 
-	void CheckLocation(int64 locationId);
+	void CheckLocation(int64 locationId) const;
 	void CheckLocation(const TSet<int64>& locationIds) const;
 
 	void SetItemReceivedCallback(TFunction<void(int64, bool)> onItemReceived);
@@ -104,8 +115,10 @@ public:
 
 	void AddChatMessage(FText, FLinearColor);
 
-	void EnableDeathLink();
+	void EnableDeathLink() const;
 	void TriggerDeathLink(FString source, FString cause);
+
+	void SetRawDataStorageValue(FString key, FString jsonString) const;
 
 private:
 	AApConnectionInfoSubsystem* connectionInfoSubsystem;
@@ -117,6 +130,8 @@ private:
 	TArray<TFunction<void(int64)>> locationCheckedCallbacks;
 	TArray<TFunction<void(FString, FString)>> deathLinkReceivedCallbacks;
 	TArray<TFunction<void(void)>> onReconnectCallbacks;
+	TMap<FString, FPendingServerData> dataStorageRetrievalCallbacks;
+
 
 	TSet<FGuid> sendDeathLinkReferences = TSet<FGuid>();
 
@@ -134,16 +149,17 @@ private:
 
 	bool canRecieveChat;
 
-	bool InitializeTick(FDateTime connectingStartedTime, int timeout);
+	bool InitializeTick(FDateTime connectingStartedTime, int timeout) const;
 
 	void ConnectToArchipelago();
 	void TimeoutConnection() const;
 
-	void CheckConnectionState();
+	void CheckConnectionState() const;
 
 	void ProcessReceivedItems();
 	void ProcessCheckedLocations();
 	void ProcessDeadlinks();
+	void ProcessPendingServerDataRequests();
 
 	void HandleAPMessages();
 

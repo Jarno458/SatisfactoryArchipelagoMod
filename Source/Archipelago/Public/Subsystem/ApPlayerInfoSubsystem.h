@@ -116,6 +116,9 @@ public:
 	 UFUNCTION(BlueprintPure)
 	 TArray<FString> GetAllGames() const;
 
+	 UFUNCTION(BlueprintPure)
+	 TArray<FApPlayer> GetAllPlayersPlayingGame(FString game) const;
+
 private:
 	void InitializeData(TArray<FReplicatedFApPlayerInfo> playerInfos);
 

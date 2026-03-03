@@ -97,7 +97,19 @@ const TMap<EGiftTrait, int64> UApGiftingMappings::TraitDefaultItemIds = {
 	{EGiftTrait::Pipe, 1338104}, // Desc_SteelPipe_C,
 	{EGiftTrait::Insect, 1338118}, // Desc_StingerParts_C,
 	{EGiftTrait::Energy, 1338082}, // // Desc_CrystalShard_C, //Power Shard
-	//
+	// newly newly newly added
+	{EGiftTrait::Blue, 1338821},
+	{EGiftTrait::Red, 1338822},
+	{EGiftTrait::Orange, 1338824},
+	{EGiftTrait::White, 1338823},
+	{EGiftTrait::Green, 1338824},
+	{EGiftTrait::Candy, 1338825},
+	{EGiftTrait::Fireworks, 1338833},
+	{EGiftTrait::Orb, 1338823},
+	{EGiftTrait::Ice, 1338826},
+	{EGiftTrait::Charm, 1338827},
+	{EGiftTrait::Magnetism, 1338033},
+	{EGiftTrait::Pasta, 1338063}
 };
 
 const TMap<int64, TMap<EGiftTrait, float>> UApGiftingMappings::TraitsPerItemRatings = {
@@ -134,7 +146,7 @@ const TMap<int64, TMap<EGiftTrait, float>> UApGiftingMappings::TraitsPerItemRati
 	{1338030, {{EGiftTrait::Copper, 1.0f}}}, // Desc_CopperSheet_C, 
 	{1338031, {{EGiftTrait::Copper, 5.0f},{EGiftTrait::Statue, 1.0f}}}, // Desc_CharacterRunStatue_C, 
 	{1338032, {{EGiftTrait::Crystal, 1.0f}}}, // Desc_CrystalOscillator_C, 
-	{1338033, {{EGiftTrait::Copper, 1.0f}}}, // Desc_ElectromagneticControlRod_C, 
+	{1338033, {{EGiftTrait::Copper, 1.0f}, {EGiftTrait::Magnetism, 1.0f}}}, // Desc_ElectromagneticControlRod_C, 
 	{1338034, {{EGiftTrait::Material, 1.0f},{EGiftTrait::Container, 1.0f}}}, // Desc_FluidCanister_C, 
 	{1338035, {{EGiftTrait::Silver, 1.0f},{EGiftTrait::Container, 1.0f}}}, // Desc_GasTank_C, //Empty Fluid Tank
 	{1338036, {{EGiftTrait::Steel, 0.5f},{EGiftTrait::Stone, 0.5f}}}, // Desc_SteelPlateReinforced_C, //Encased Industrial Beam
@@ -157,7 +169,7 @@ const TMap<int64, TMap<EGiftTrait, float>> UApGiftingMappings::TraitsPerItemRati
 	{1338053, {{EGiftTrait::Gold, 5.0f},{EGiftTrait::Statue, 1.0f}}}, // Desc_GoldenNut_Statue_C, 
 	{1338054, {{EGiftTrait::Grass, 1.0f}}}, // Desc_Leaves_C, 
 	{1338055, {{EGiftTrait::Stone, 1.0f},{EGiftTrait::Ore, 1.0f}}}, // Desc_Stone_C, //Limestone
-	{1338056, {{EGiftTrait::Copper, 0.4f},{EGiftTrait::Iron, 0.3f},{EGiftTrait::Steel,0.3f}}}, // Desc_SpaceElevatorPart_6_C, //Magnetic Field Generator
+	{1338056, {{EGiftTrait::Copper, 0.4f},{EGiftTrait::Iron, 0.3f},{EGiftTrait::Steel,0.3f}, {EGiftTrait::Magnetism, 0.5f}}}, // Desc_SpaceElevatorPart_6_C, //Magnetic Field Generator
 	{1338057, {{EGiftTrait::Artifact,1.0f}}}, // Desc_WAT2_C, //Mercer Sphere
 	{1338058, {{EGiftTrait::Copper, 1.0f}}}, // Desc_SpaceElevatorPart_4_C, //Modular Engine
 	{1338059, {{EGiftTrait::Iron, 1.0f}}}, // Desc_ModularFrame_C, 
@@ -277,6 +289,23 @@ const TMap<int64, TMap<EGiftTrait, float>> UApGiftingMappings::TraitsPerItemRati
 	{1338185, {{EGiftTrait::Tool, 1.0f},{EGiftTrait::Speed, 1.0f}}}, // BP_EqDescZipLine_C, 
 	{1338186, {{EGiftTrait::Tool, 1.0f}}}, // BP_ItemDescriptorPortableMiner_C,
 	{1338187, {{EGiftTrait::Neutralizing, 1.0f}}}, // Desc_Filter_C,
+
+
+	{ 1338820, {{EGiftTrait::Grass, 1.0f}}}, //Desc_XmasBranch
+	{ 1338821, {{EGiftTrait::Blue, 1.0f},{EGiftTrait::Orb, 1.0f}}}, //Desc_XmasBall2 Blue FICSMAS Ornament
+	{ 1338822, {{EGiftTrait::Red, 1.0f},{EGiftTrait::Orb, 1.0f}}}, //Desc_XmasBall1 Red FICSMAS Ornament
+	{ 1338823, {{EGiftTrait::White, 1.0f},{EGiftTrait::Orb, 1.0f}}}, //Desc_XmasBall4 Iron FICSMAS Ornament
+	{ 1338824, {{EGiftTrait::Orange, 1.0f},{EGiftTrait::Orb, 1.0f}}}, //Desc_XmasBall3 Copper FICSMAS Ornament
+	{ 1338825, {{EGiftTrait::Candy, 1.0f}}}, //Desc_CandyCane
+	{ 1338826, {{EGiftTrait::Ice, 1.0f}}}, //Desc_Snow
+	{ 1338827, {{EGiftTrait::Red, 1.0f},{EGiftTrait::Charm, 1.0f}}}, //Desc_XmasBow
+	{ 1338828, {{EGiftTrait::Blue, 0.25f},{EGiftTrait::Red, 0.25f},{EGiftTrait::White, 0.25f},{EGiftTrait::Orange, 0.25f},{EGiftTrait::Orb, 1.0f}}}, //Desc_XmasBallCluster
+	{ 1338829, {{EGiftTrait::Blue, 0.25f},{EGiftTrait::Red, 0.25f},{EGiftTrait::White, 0.25f},{EGiftTrait::Orange, 0.25f},{EGiftTrait::Grass, 1.0f}}}, //Desc_XmasWreath
+	{ 1338830, {{EGiftTrait::Angular, 0.2f}}}, //Desc_XmasStar
+	{ 1338831, {{EGiftTrait::Candy, 0.01f}}}, //BP_EquipmentDescriptorCandyCane
+	{ 1338832, {{EGiftTrait::Orange, 1.0f}, {EGiftTrait::Fireworks, 1.0f}}}, //Desc_Fireworks_Projectile_01 // Sweet // Orange
+	{ 1338833, {{EGiftTrait::White, 1.0f}, {EGiftTrait::Fireworks, 1.0f}}}, //Desc_Fireworks_Projectile_02 // Fancy // White
+	{ 1338824, {{EGiftTrait::Green, 1.0f}, {EGiftTrait::Fireworks, 1.0f}}} //Desc_Fireworks_Projectile_03 // Sparkly // Green
 };
 
 // The Unsinkables

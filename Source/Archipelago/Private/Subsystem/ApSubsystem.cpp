@@ -57,25 +57,25 @@ void AApSubsystem::ConnectToArchipelago() {
 	AP_SetItemClearCallback([this]() {
 		ReceivedItems.Empty();
 		isReconnect = true;
-	});
+		});
 	AP_SetItemRecvCallback([this](int64 itemId, bool notify, bool isFromServer) {
 		ReceivedItems.Enqueue(TTuple<int64, bool>(itemId, isFromServer));
-	});
-	AP_SetLocationCheckedCallback([this](int64 locationId) { 
+		});
+	AP_SetLocationCheckedCallback([this](int64 locationId) {
 		CheckedLocations.Enqueue(locationId);
-	});
+		});
 	AP_RegisterSetReplyCallback([this](AP_SetReply setPacket) {
 		SetReplyCallback(std::move(setPacket));
-	});
+		});
 	AP_SetLocationInfoCallback([this](std::vector<AP_NetworkItem> scoutedItems) {
 		LocationScoutedCallback(std::move(scoutedItems));
-	});
+		});
 	AP_SetLoggingCallback([this](std::string message) {
 		UE_LOG(LogApSubsystem, Display, TEXT("LogFromAPCpp: %s"), *UApUtils::FStr(message));
-	});
+		});
 	AP_RegisterBouncedCallback([this](AP_Bounce bounce) {
 		BounceReceivedCallback(bounce);
-	});
+		});
 	AP_SetGiftingSupported(true);
 
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::Starting AP"));
@@ -106,21 +106,21 @@ void AApSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase) {
 		bool dummy = CallOnGameThread<bool>([this]() {
 			ConnectToArchipelago();
 			return true;
-		});
+			});
 
 		UE_LOG(LogApSubsystem, Display, TEXT("Waiting for AP Server connection to succeed..."));
 		FDateTime connectingStartedTime = FDateTime::Now();
 
 		FGenericPlatformProcess::ConditionalSleep([this, connectingStartedTime]() {
 			return InitializeTick(connectingStartedTime, config.Timeout);
-		}, 0.5);
+			}, 0.5);
 	}
 	else if (phase == ELifecyclePhase::POST_INITIALIZATION) {
 		SetActorTickEnabled(true);
 	}
 }
 
-bool AApSubsystem::InitializeTick(FDateTime connectingStartedTime, int timeout) {
+bool AApSubsystem::InitializeTick(FDateTime connectingStartedTime, int timeout) const {
 	return CallOnGameThread<bool>([this, connectingStartedTime, timeout]() {
 		if (connectionInfoSubsystem->ConnectionState == EApConnectionState::Connecting) {
 			if ((FDateTime::Now() - connectingStartedTime).GetSeconds() > timeout)
@@ -129,9 +129,9 @@ bool AApSubsystem::InitializeTick(FDateTime connectingStartedTime, int timeout) 
 				CheckConnectionState();
 		}
 
-		return connectionInfoSubsystem->ConnectionState == EApConnectionState::Connected 
+		return connectionInfoSubsystem->ConnectionState == EApConnectionState::Connected
 			|| connectionInfoSubsystem->ConnectionState == EApConnectionState::ConnectionFailed;
-	});
+		});
 }
 
 void AApSubsystem::Tick(float DeltaTime) {
@@ -143,6 +143,7 @@ void AApSubsystem::Tick(float DeltaTime) {
 	ProcessReceivedItems();
 	ProcessCheckedLocations();
 	ProcessDeadlinks();
+	ProcessPendingServerDataRequests();
 
 	HandleAPMessages();
 }
@@ -160,7 +161,7 @@ void AApSubsystem::BounceReceivedCallback(AP_Bounce bounce)
 	if (bounce.tags == nullptr || bounce.data.empty()) {
 		return;
 	}
-	
+
 	if (std::ranges::find(*bounce.tags, "DeathLink") != bounce.tags->end()) {
 		FString data = UApUtils::FStr(bounce.data);
 		const TSharedRef<TJsonReader<>> reader = TJsonReaderFactory<>::Create(*data);
@@ -296,7 +297,7 @@ void AApSubsystem::MonitorUnboundedIntergerDataStoreValue(FString keyFString, TF
 	});
 }
 
-void AApSubsystem::ModifyEnergyLink(int64 amount) {
+void AApSubsystem::ModifyEnergyLink(int64 amount) const {
 	CallOnGameThread<void>([this, amount]() {
 		AP_SetServerDataRequest sendEnergyLinkUpdate;
 		sendEnergyLinkUpdate.key = "EnergyLink" + std::to_string(connectionInfoSubsystem->currentPlayerTeam);
@@ -325,7 +326,7 @@ void AApSubsystem::ModifyEnergyLink(int64 amount) {
 	});
 }
 
-void AApSubsystem::ModifyDataStorageInt64(FString key, int64 amount) {
+void AApSubsystem::ModifyDataStorageInt64(FString key, int64 amount) const {
 	CallOnGameThread<void>([this, key, amount]() {
 		AP_SetServerDataRequest sendUpdate;
 		sendUpdate.key = TCHAR_TO_UTF8(*key);
@@ -339,10 +340,11 @@ void AApSubsystem::ModifyDataStorageInt64(FString key, int64 amount) {
 		add.value = &valueToAdd;
 
 		AP_DataStorageOperation boundryGuard;
-		if (amount > 0)	{
+		if (amount > 0) {
 			boundryGuard.operation = "min";
 			boundryGuard.value = &maxValue;
-		} else	{
+		}
+		else {
 			boundryGuard.operation = "max";
 			boundryGuard.value = &minValue;
 		}
@@ -360,7 +362,64 @@ void AApSubsystem::ModifyDataStorageInt64(FString key, int64 amount) {
 	});
 }
 
-void AApSubsystem::SetItemReceivedCallback(TFunction<void(int64, bool)> onItemReceived){
+void AApSubsystem::GetDataStorageJsonFields(TSet<FString> keys, TFunction<void(FString, FString)> callback)
+{
+	for (FString key : keys)
+	{
+		FPendingServerData pendingData;
+		pendingData.Request.key = TCHAR_TO_UTF8(*key);
+		pendingData.Request.type = AP_DataType::Raw;
+		pendingData.ValueContainer = "";
+		pendingData.Callback = callback;
+
+		dataStorageRetrievalCallbacks.Add(key, pendingData);
+
+		dataStorageRetrievalCallbacks[key].Request.value = &dataStorageRetrievalCallbacks[key].ValueContainer;
+	}
+
+	CallOnGameThread<void>([this]() {
+		for (TPair<FString, FPendingServerData>& pendingDataRequest : dataStorageRetrievalCallbacks) {
+			AP_BulkGetServerData(&pendingDataRequest.Value.Request);
+		}
+
+		AP_CommitServerData();
+	});
+}
+
+void AApSubsystem::ProcessPendingServerDataRequests() {
+	if (dataStorageRetrievalCallbacks.Num() == 0)
+		return;
+
+	TArray<FString> keysToDrop;
+
+	CallOnGameThread<void>([this, &keysToDrop]() {
+		for (const TPair<FString, FPendingServerData>& pendingDataRequest : dataStorageRetrievalCallbacks) {
+			if (pendingDataRequest.Value.Request.status == AP_RequestStatus::Pending)
+				continue;
+
+			FString resultJson = UApUtils::FStr(pendingDataRequest.Value.ValueContainer);
+
+			resultJson = resultJson.LeftChop(1); //remove newline at the end
+
+			if (resultJson == TEXT("null"))
+			{
+				pendingDataRequest.Value.Callback(pendingDataRequest.Key, FString());
+			}
+			else
+			{
+				pendingDataRequest.Value.Callback(pendingDataRequest.Key, resultJson);
+			}
+
+			keysToDrop.Add(pendingDataRequest.Key);
+		}
+	});
+
+	for (const FString& key : keysToDrop) {
+		dataStorageRetrievalCallbacks.Remove(key);
+	}
+}
+
+void AApSubsystem::SetItemReceivedCallback(TFunction<void(int64, bool)> onItemReceived) {
 	itemReceivedCallbacks.Add(onItemReceived);
 }
 
@@ -406,14 +465,14 @@ void AApSubsystem::ProcessDeadlinks() {
 	}
 }
 
-void AApSubsystem::EnableDeathLink() {
+void AApSubsystem::EnableDeathLink() const {
 	CallOnGameThread<void>([]() { AP_EnabledDeathlinkAnyway(); });
 }
 
 void AApSubsystem::TriggerDeathLink(FString source, FString cause) {
 	AP_Bounce bounce;
 	std::string tag = "DeathLink";
-	std::vector<std::string> tagsArray = {tag};
+	std::vector<std::string> tagsArray = { tag };
 
 	FGuid reference = FGuid::NewGuid();
 	FString referenceString = reference.ToString();
@@ -435,7 +494,29 @@ void AApSubsystem::TriggerDeathLink(FString source, FString cause) {
 	CallOnGameThread<void>([bounce]() { AP_SendBounce(bounce); });
 }
 
-void AApSubsystem::CheckConnectionState() {
+void AApSubsystem::SetRawDataStorageValue(FString key, FString jsonString) const {
+	CallOnGameThread<void>([this, key, jsonString]() {
+		std::string keyString = TCHAR_TO_UTF8(*key);
+		std::string traitJsonString = TCHAR_TO_UTF8(*jsonString);
+
+		AP_SetServerDataRequest setTraitInfoRequest;
+		setTraitInfoRequest.key = keyString;
+
+		AP_DataStorageOperation setDefault;
+		setDefault.operation = "replace";
+		setDefault.value = &traitJsonString;
+
+		std::vector<AP_DataStorageOperation> operations;
+		operations.push_back(setDefault);
+
+		setTraitInfoRequest.operations = operations;
+		setTraitInfoRequest.type = AP_DataType::Raw;
+
+		AP_SetServerData(&setTraitInfoRequest);
+	});
+}
+
+void AApSubsystem::CheckConnectionState() const {
 	if (!IsInGameThread())
 		return;
 
@@ -452,7 +533,8 @@ void AApSubsystem::CheckConnectionState() {
 
 				connectionInfoSubsystem->ConnectionState = EApConnectionState::ConnectionFailed;
 				connectionInfoSubsystem->ConnectionStateDescription = LOCTEXT("SeedMissmatch", "Room seed does not match save's seed - this save does not belong to the multiworld you're connecting to. Ensure you're loading the right save file and check your connection details.");
-			} else {
+			}
+			else {
 				connectionInfoSubsystem->roomSeed = seedName;
 				connectionInfoSubsystem->currentPlayerTeam = AP_GetCurrentPlayerTeam();
 				connectionInfoSubsystem->currentPlayerSlot = AP_GetPlayerID();
@@ -472,12 +554,14 @@ void AApSubsystem::CheckConnectionState() {
 					}
 
 					UE_LOG(LogApSubsystem, Error, TEXT("AApSubsystem::CheckConnectionState(), Failed to load slotdata"));
-				} else {
+				}
+				else {
 					connectionInfoSubsystem->ConnectionStateDescription = LOCTEXT("AuthSuccess", "Authentication succeeded.");
 					UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::Tick(), Successfully Authenticated"));
 				}
 			}
-		} else if (status == AP_ConnectionStatus::ConnectionRefused) {
+		}
+		else if (status == AP_ConnectionStatus::ConnectionRefused) {
 			AP_Shutdown();
 
 			connectionInfoSubsystem->ConnectionState = EApConnectionState::ConnectionFailed;
@@ -496,8 +580,9 @@ void AApSubsystem::HandleAPMessages() {
 		TPair<FString, FLinearColor> queuedMessage;
 		if (ChatMessageQueue.Dequeue(queuedMessage)) {
 			SendChatMessage(queuedMessage.Key, queuedMessage.Value);
-		} else {
-			CallOnGameThread<void>([this]() {  
+		}
+		else {
+			CallOnGameThread<void>([this]() {
 				if (!AP_IsMessagePending())
 					return;
 
@@ -505,7 +590,7 @@ void AApSubsystem::HandleAPMessages() {
 				SendChatMessage(UApUtils::FStr(message->text), FLinearColor::White);
 
 				AP_ClearLatestMessage();
-			});
+				});
 		}
 	}
 }
@@ -543,8 +628,8 @@ void AApSubsystem::SetGiftBoxState(bool open, const TSet<FString>& acceptedTrait
 		giftbox.DesiredTraits = desiredTriats;
 		giftbox.IsOpen = open;
 
-		 return AP_SetGiftBoxProperties(giftbox);
-	});
+		return AP_SetGiftBoxProperties(giftbox);
+		});
 
 	if (result != AP_RequestStatus::Done)
 		UE_LOG(LogApSubsystem, Error, TEXT("AApSubsystem::SetGiftBoxState(\"%s\") Updating giftbox metadata failed"), (open ? TEXT("true") : TEXT("false")));
@@ -628,7 +713,7 @@ TArray<FApReceiveGift> AApSubsystem::GetGifts() const {
 		gift.Amount = apGift.Amount;
 		gift.ItemValue = apGift.ItemValue;
 		gift.Traits.Empty();
-		
+
 		for (const AP_GiftTrait& apTrait : apGift.Traits) {
 			const int64 enumValue = giftTraitEnum->GetValueByNameString(UApUtils::FStr(apTrait.Trait));
 			if (enumValue == INDEX_NONE)
@@ -692,7 +777,7 @@ TMap<FApPlayer, TTuple<FString, FString>> AApSubsystem::GetAllApPlayers() const 
 		FApPlayer player;
 		player.Team = apPlayer.team;
 		player.Slot = apPlayer.slot;
-		
+
 		TTuple<FString, FString> nameAndGame(UApUtils::FStr(apPlayer.alias), UApUtils::FStr(apPlayer.game));
 
 		players.Add(player, nameAndGame);
@@ -727,7 +812,7 @@ void AApSubsystem::Say(FString message) {
 }
 
 FApNetworkItem AApSubsystem::ScoutLocation(int64 locationId) {
-	TSet<int64> locationIds { locationId };
+	TSet<int64> locationIds{ locationId };
 
 	TMap<int64, FApNetworkItem> results = ScoutLocation(locationIds);
 
@@ -753,7 +838,7 @@ TMap<int64, FApNetworkItem> AApSubsystem::ScoutLocation(const TSet<int64>& locat
 
 	CallOnGameThread<void>([this, &locationsToScout]() {
 		AP_SendLocationScouts(locationsToScout, 0);
-	});
+		});
 
 	TMap<int64, FApNetworkItem> result = locationScoutingPromise->GetFuture().Get();
 
@@ -763,7 +848,7 @@ TMap<int64, FApNetworkItem> AApSubsystem::ScoutLocation(const TSet<int64>& locat
 }
 
 void AApSubsystem::CreateLocationHint(int64 locationId, bool spam) {
-	TSet<int64> locationIds { locationId };
+	TSet<int64> locationIds{ locationId };
 
 	CreateLocationHint(locationIds, spam);
 }
@@ -787,8 +872,8 @@ void AApSubsystem::CreateLocationHint(const TSet<int64>& locationIds, bool spam)
 	});
 }
 
-void AApSubsystem::CheckLocation(int64 locationId) {
-	TSet<int64> locationIds { locationId };
+void AApSubsystem::CheckLocation(int64 locationId) const {
+	TSet<int64> locationIds{ locationId };
 
 	CheckLocation(locationIds);
 }
@@ -809,26 +894,26 @@ void AApSubsystem::CheckLocation(const TSet<int64>& locationIds) const {
 
 	CallOnGameThread<void>([&locationsToCheck]() {
 		AP_SendItem(locationsToCheck);
-	});
+		});
 }
 
 FString AApSubsystem::GetSlotDataJson() const {
 	return CallOnGameThread<FString>([]() {
 		std::string slotData = AP_GetSlotData();
 		return UApUtils::FStr(slotData);
-	});
+		});
 }
 
 template<typename RetType>
 RetType AApSubsystem::CallOnGameThread(TFunction<RetType()> InFunction) const {
 	if (IsInGameThread())
 		return InFunction();
-	
+
 	TSharedRef<TPromise<RetType>> Promise = MakeShared<TPromise<RetType>>();
 
 	AsyncTask(ENamedThreads::GameThread, [Promise, InFunction]() {
-			Promise->SetValue(InFunction());
-	});
+		Promise->SetValue(InFunction());
+		});
 
 	return Promise->GetFuture().Get();
 }
@@ -839,7 +924,7 @@ void AApSubsystem::CallOnGameThread(TFunction<void()> InFunction) const {
 
 	AsyncTask(ENamedThreads::GameThread, [InFunction]() {
 		InFunction();
-	});
+		});
 }
 
 #undef LOCTEXT_NAMESPACE

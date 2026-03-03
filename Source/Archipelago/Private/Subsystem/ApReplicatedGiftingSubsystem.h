@@ -1,16 +1,15 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "ApGiftTraitsSubsystem.h"
 #include "ApPlayerInfoSubsystem.h"
 
 #include "Subsystem/ModSubsystem.h"
-#include "Subsystem/ApSubsystem.h"
 #include "Subsystem/ApConnectionInfoSubsystem.h"
 #include "Subsystem/ApMappingsSubsystem.h"
 #include "Subsystem/ApPortalSubsystem.h"
 #include "Data/ApGiftingMappings.h"
 #include "Data/ApTypes.h"
-#include "ApUtils.h"
 
 #include "ApReplicatedGiftingSubsystem.generated.h"
 
@@ -44,8 +43,8 @@ private:
 	AApSubsystem* ap;
 	AApConnectionInfoSubsystem* connectionInfoSubsystem;
 	AApPortalSubsystem* portalSubsystem;
-	AApMappingsSubsystem* mappingSubsystem;
 	AApPlayerInfoSubsystem* playerInfoSubsystem;
+	AApGiftTraitsSubsystem* giftTraitsSubsystem;
 
 	UPROPERTY(ReplicatedUsing = OnRep_AcceptedGiftTraitsPerPlayerReplicated)
 	TArray<FApTraitByPlayer> AcceptedGiftTraitsPerPlayerReplicated;
@@ -53,51 +52,29 @@ private:
 	UPROPERTY(Replicated)
 	EApGiftingServiceState ServiceState;
 
-	TSet<EGiftTrait> AllTraits;
 	TMap<FApPlayer, FApTraitBits> AcceptedGiftTraitsPerPlayer; //build using replication
-	TMap<TSubclassOf<UFGItemDescriptor>, FApTraitValues> TraitsPerItem; 	//also used by usage is Server side gifting subsystem
-
-	bool hasLoadedTraits = false;
 
 public:
-	UFUNCTION(BlueprintCallable, BlueprintPure)
+	UFUNCTION(BlueprintPure)
 	FORCEINLINE EApGiftingServiceState GetState() const { return ServiceState; };
 
-	FORCEINLINE bool HasLoadedItemTraits() const { return hasLoadedTraits; };
-
-	UFUNCTION(BlueprintCallable, BlueprintPure)
+	UFUNCTION(BlueprintPure)
 	bool CanSend(const FApPlayer& targetPlayer, const TSubclassOf<UFGItemDescriptor> itemClass);
 
-	UFUNCTION(BlueprintCallable, BlueprintPure)
-	TArray<FApPlayer> GetPlayersAcceptingGifts();
+	UFUNCTION(BlueprintPure)
+	TSet<FApPlayer> GetPlayersAcceptingGifts() const;
 
-	UFUNCTION(BlueprintCallable, BlueprintPure)
+	UFUNCTION(BlueprintPure)
 	TSet<EGiftTrait> GetAcceptedTraitsPerPlayer(FApPlayer player);
 
-	UFUNCTION(BlueprintCallable, BlueprintPure)
-	TSet<EGiftTrait> GetTraitNamesPerItem(TSubclassOf<UFGItemDescriptor> itemClass);
-
-	UFUNCTION(BlueprintCallable, BlueprintPure)
-	TArray<FApGiftTrait> GetTraitsForItem(TSubclassOf<UFGItemDescriptor> itemClass);
-
-	//UFUNCTION(BlueprintCallable, BlueprintPure)
-	//TArray<FApPlayer> GetAllApPlayers();
+	UFUNCTION(BlueprintPure)
+	TArray<TSubclassOf<UFGItemDescriptor>> GetAcceptedItemsPerPlayer(FApPlayer player) const;
 
 private:
 	void UpdateAcceptedGifts();
 	void UpdateAcceptedGiftTraitsPerPlayerReplicatedValue();
 
-	void LoadTraitMappings();
-	static int GetResourceSinkPointsForItem(AFGResourceSinkSubsystem* resourceSinkSubsystem, TSubclassOf<UFGItemDescriptor> itemClass, int64 itemId);
-	static float GetTraitValue(int itemValue, float avarageItemValueForTrait, float itemSpecificTraitMultiplier);
-	void PrintTraitValuesPerItem();
-
 private:
 	UFUNCTION() //required for event hookup
 	void OnRep_AcceptedGiftTraitsPerPlayerReplicated();
-
-	UFUNCTION() //required for event hookup
-	void OnClientSubsystemsValid();
-
-	friend class AApServerGiftingSubsystem;
 };
