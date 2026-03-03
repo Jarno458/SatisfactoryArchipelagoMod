@@ -2,7 +2,7 @@
 
 The vault protocol serves as a shared inventory buffer, where anyone can dump some of their excess items and thereby making them available for other players to use
 
-## V 0.1 Beta, its currently under discussion ands improves can still be made
+## V 0.8 Beta, its currently under discussion ands improves can still be made
 
 ### Its not Gifting
 The Vault protocol and the [Gifting API](<https://github.com/agilbert1412/Archipelago.Gifting.Net/blob/main/Documentation/Gifting%20API.md>) share a similar goal where you can make some of you items available to other players but both protocols achieve this in their own way with their own pro's and cons
@@ -90,7 +90,7 @@ Lets go over a little responses below:
 ```json
 // (In this example the following games are part of this multiworld Satisfactory, Timespinner, VVVVVV)
 {"cmd": "Retrieved", "keys": {
-    "VSatisfactory": {"medical inhaler": {"Healing": [1.0, 0.5]}},
+    "VSatisfactory": {"medical inhaler": {"Healing": 1.0}},
     "VTimespinner": ["blood orb", "iron orb", "ether"],
     "VVVVVVV": null
 }}
@@ -112,12 +112,12 @@ The more complete and complex way of supporting a personal vault with item trait
 Traits allow the sending game to decide a good enough match for an item in their game to add it to your personal vault under a different item name that your game understands. For simplicity the traits follow the same guidelines are those for the [Gifting API](<https://github.com/agilbert1412/Archipelago.Gifting.Net/blob/main/Documentation/Gifting%20API.md#gifttrait-specification>) so games don't have to maintain duplicate lists.  
 This is done by storing and object with the lowercase item names as keys and item traits as values.  
 The item namnes object is stored in the data storage under a key named with your game prefixed by a V.  
-The object should be a dictionary for lowercase item names, to specify traits for an item, its value should be a dictionary with the traits as keys, and an array of floats as its value per trait, the first value in the array will be the traits `quality`, the 2nd value will be the traits its `duration`. If duration is 1.0 it can be omitted. if both quality and duration are 1.0 then they can both be omitted, in this case the array can be replaced with null.  
+The object should be a dictionary for lowercase item names, to specify traits for an item, its value should be quality value corresponding to the trait. For example a normal item of wood could have the `wood` trait with value 1.0, while an item that is made out of twice as expansive wood can have a `wood` trait value of 2.0
 Items don't change their traits, so this dictionary is supposed to be static data that can be cached by other clients  
 Here is an example for how this setup could look for Satisfactory:
 ```json
 {"cmd": "Set", "key": "VSatisfactory", "operations": [{"operation": "replace", "value": { 
-    "iron ore": {"Iron": [0.856, 0.77], "Ore": [0.856], "Mineral": null},
+    "iron ore": {"Iron": 0.856, "Ore": 0.856, "Mineral": 1},
     "golden nut statue": {"Gold": [2.56]},
     "medical inhaler": {"Healing": [1.0, 0.5]},
 }}]}
