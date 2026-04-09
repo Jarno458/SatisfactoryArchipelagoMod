@@ -42,6 +42,11 @@
 			"SemVersion": "^2.0.0"
 		},
 		{
+			"Name": "MAMTips",
+			"Enabled": true,
+			"SemVersion": ">=1.9.0"
+		},
+		{
 			"Name": "FixClientResourceSinkPoints",
 			"Enabled": true,
 			"SemVersion": ">=1.2.0"
@@ -54,7 +59,7 @@
 		{
 			"Name": "ReliableMessaging",
 			"Enabled": true
-		},
+		}
 	],
 	"GameVersion": ">=416835"
 }
