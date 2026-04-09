@@ -48,10 +48,8 @@ For simplicity's sake, this guide focuses on setting up a single player experien
 For more complex games with more players feel free to visit [archipelago.gg](https://archipelago.gg/) and/or the [Archipelago Discord](https://discord.gg/archipelago).
 
 Before you can start using the mod you will need to generate a randomized game using Archipelago.
-
-Before you start you will need to generate a randomized game,
-this is done on the [player options](https://archipelago.gg/games/Satisfactory/player-options) page,
-on the options page you select the settings for your game or leave them as default.
+This is done on the [player options](https://archipelago.gg/games/Satisfactory/player-options) page.
+On the options page you select the settings for your game, or leave them as default.
 
 You need to change the `Player Name` to whatever you'd like to be called in Archipelago system messages.
 Once you are done configuring your game, click on the `Generate Game` button.
