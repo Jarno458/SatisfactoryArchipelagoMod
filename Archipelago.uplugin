@@ -1,8 +1,8 @@
 {
 	"FileVersion": 3,
 	"Version": 2,
-	"VersionName": "2.3.4",
-	"SemVersion": "2.3.4",
+	"VersionName": "2.3.5",
+	"SemVersion": "2.3.5",
 	"FriendlyName": "Archipelago",
 	"Description": "Provides connection to an Archipelago multiworld",
 	"Category": "Modding",
@@ -34,7 +34,7 @@
 		{
 			"Name": "ContentLib",
 			"Enabled": true,
-			"SemVersion": "^1.6.0"
+			"SemVersion": "^1.9.0"
 		},
 		{
 			"Name": "FreeSamples",
