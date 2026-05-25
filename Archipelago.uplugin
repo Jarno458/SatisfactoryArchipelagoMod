@@ -1,8 +1,8 @@
 {
 	"FileVersion": 3,
 	"Version": 2,
-	"VersionName": "2.3.4",
-	"SemVersion": "2.3.4",
+	"VersionName": "2.3.6-pre",
+	"SemVersion": "2.3.6-pre",
 	"FriendlyName": "Archipelago",
 	"Description": "Provides connection to an Archipelago multiworld",
 	"Category": "Modding",
@@ -34,12 +34,17 @@
 		{
 			"Name": "ContentLib",
 			"Enabled": true,
-			"SemVersion": "^1.6.0"
+			"SemVersion": "^1.9.0"
 		},
 		{
 			"Name": "FreeSamples",
 			"Enabled": true,
 			"SemVersion": "^2.0.0"
+		},
+		{
+			"Name": "MAMTips",
+			"Enabled": true,
+			"SemVersion": ">=1.9.0"
 		},
 		{
 			"Name": "FixClientResourceSinkPoints",
@@ -60,7 +65,7 @@
 			"Name": "ReliableMessaging",
 			"Enabled": true,
 			"BasePlugin": true
-		},
+		}
 	],
 	"GameVersion": ">=416835"
 }

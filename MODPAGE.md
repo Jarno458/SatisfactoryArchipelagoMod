@@ -2,18 +2,18 @@
 
 Experience Satisfactory in a whole new way by randomizing your game progression, potentially bringing completely separate video games into the mix too!
 
-This mod is a [randomizer](https://tvtropes.org/pmwiki/pmwiki.php/Main/VideoGameRandomizer),
-meaning it modifies your path of progression through the game,
+This mod is a **[randomizer](https://tvtropes.org/pmwiki/pmwiki.php/Main/VideoGameRandomizer)**,
+meaning it **modifies your path of progression through the game**,
 requiring you to employ different approaches to reach your goals.
-The randomizer's logic system ensures that the game can still be finished, but the path to get there is different every time.
-You can also change when the game ends, such as finishing after only 2 space elevator shipments.
+The randomizer's logic system ensures that **the game can still be finished**, but **the path to get there is different every time**.
+You can also **change when the game ends**, such as finishing after only 2 space elevator shipments.
 
 The mod will shuffle around all things you unlock in the HUB, MAM, and even add a few new unlocks to the AWESOME Shop.
-You will have to look through all options available to you to find what to unlock next.
-For example, if you need an assembler to craft something but can't find where to get access to it,
-you could try to unlock some more nodes in the MAM as it might be hiding there.
+You will have to assess all options available to you to find what to unlock next.
+For example, if you need an Assembler to craft something but can't find where to get access to it,
+you could try to unlock some more nodes in the MAM, as it might be hiding there.
 
-The Archipelago randomizer allows progression from over 60 different games to be mixed,
+The Archipelago randomizer allows progression from over **60 different games to be mixed**,
 this is called a multi-world randomizer.
 
 [![Randomized](https://raw.githubusercontent.com/Jarno458/SatisfactoryArchipelagoMod/main/Docs/random.jpg)](https://raw.githubusercontent.com/Jarno458/SatisfactoryArchipelagoMod/main/Docs/random.jpg)
@@ -40,7 +40,7 @@ Choose between one or more of the following goals to complete your game:
 - AWESOME Sink Points Total
 - AWESOME Sink Points Per Minute
 - Exploration
-- Erect a FICSMAS Tree
+- Erect a FICSMAS Tree (requires using an [in-development version](https://github.com/Jarno458/SatisfactoryArchipelagoMod/blob/main/UseDevelopmentVersions.md))
 
 ## How to Setup
 
@@ -48,47 +48,20 @@ For simplicity's sake, this guide focuses on setting up a single player experien
 For more complex games with more players feel free to visit [archipelago.gg](https://archipelago.gg/) and/or the [Archipelago Discord](https://discord.gg/archipelago).
 
 Before you can start using the mod you will need to generate a randomized game using Archipelago.
+This is done on the [player options](https://archipelago.gg/games/Satisfactory/player-options) page.
+On the options page you select the settings for your game, or leave them as default.
 
-<!-- TODO remove me once local gen no longer needed -->
-**Since this mod is still in active development, the convenient Player Options page is not yet available on the Archipelago website for Satisfactory.**
-
-You will need to download the Archipelago Client and load a custom apworld file to generate a game.
-If you get stuck, ask for help in the [Archipelago Discord](https://discord.gg/archipelago).
-
-1. Download the Archipelago Client installer from the [Archipelago GitHub Releases](https://github.com/ArchipelagoMW/Archipelago/releases/latest)
-2. Run the installer
-3. Open the Archipelago Launcher
-4. Download the latest apworld file from [the GitHub releases page](https://github.com/Jarno458/SatisfactoryArchipelagoMod/releases)
-5. Press the "Browse Files" button
-6. Place the downloaded apworld file into the `/lib/worlds` folder that the button took you to
-7. Close and reopen the Archipelago Launcher
-8. Press the "Generate Template Settings" button
-9. In the folder that pressing the button took you to, make a copy of the `Satisfactory.yaml` file and open it in a text editor
-10. Edit your a player settings yaml file by following the guide here: <https://archipelago.gg/tutorial/Archipelago/advanced_settings/en>
-11. Move your copy of the file to the `/Players` folder
-12. Return to the Archipelago Launcher and hit the `Generate` button
-13. Use the zip in the `/Output` folder for the next steps below.
-
-<!-- 
-TODO once player options page is available:
-Before you start you will need to generate a randomized game,
-this is done on the [player options](https://archipelago.gg/games/Satisfactory/player-options) page,
-on the options page you select the settings for your game or leave them as default.
-
-You need to change the `Player Name` to whatever name you like to called as.
-Once you are done configuring your game click on the `Generate Game` button.
-Generation might take a few seconds, after that you will be redirect to a page showing your `Seed Info`, on this page click on `Create New Room`.
+You need to change the `Player Name` to whatever you'd like to be called in Archipelago system messages.
+Once you are done configuring your game, click on the `Generate Game` button.
+Generation might take a few seconds,
+after that you'll be redirected to a page showing your `Seed Info`,
+on this page click on `Create New Room`.
 
 [![Setup1](https://raw.githubusercontent.com/Jarno458/SatisfactoryArchipelagoMod/main/Docs/Setup1.JPG)](https://raw.githubusercontent.com/Jarno458/SatisfactoryArchipelagoMod/main/Docs/Setup1.JPG)
 
--->
-
-<!-- TODO remove me once local gen no longer needed -->
-Once you have generated a game locally you can upload it to the Archipelago website via the [Upload a Pre-Generated Game](https://archipelago.gg/uploads) page.
-
 This will redirect you to a page where you can create a room from your upload; do so.
 On the room page you will see connection details, for example, `/connect archipelago.gg:60282`.
-Keep this room page open and bookmark the tab, otherwise, you will lose access to your room.
+Keep this room page open and bookmark the tab, otherwise you will lose access to your room.
 
 Install this mod via the Mod Manager if you haven't already and fire up your game.
 
