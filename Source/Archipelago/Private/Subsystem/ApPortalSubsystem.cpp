@@ -12,6 +12,8 @@ DEFINE_LOG_CATEGORY(LogApPortalSubsystem);
 
 #pragma optimize("", off)
 
+#define VAULT_SEND_INTERVAL 10.0f
+
 AApPortalSubsystem* AApPortalSubsystem::Get(UWorld* world) {
 	USubsystemActorManager* SubsystemActorManager = world->GetSubsystem<USubsystemActorManager>();
 	fgcheck(SubsystemActorManager);
@@ -27,7 +29,7 @@ AApPortalSubsystem::AApPortalSubsystem() : Super() {
 
 	//needs to thick atleast 1200 times per minute to keep up with a 1200 belt, 1200 / 60sec = 20x per second
 	//0.048 is ~20.8 times per second
-	PrimaryActorTick.TickInterval = 0.048f;
+	PrimaryActorTick.TickInterval = 0.048f; //TODO might want to change this is portals take care of thier own output
 
 	ReplicationPolicy = ESubsystemReplicationPolicy::SpawnOnServer;
 }
@@ -43,33 +45,33 @@ void AApPortalSubsystem::BeginPlay() {
 	connectionInfoSubsystem = AApConnectionInfoSubsystem::Get(world);
 	vaultSubsystem = AApVaultSubsystem::Get(world);
 
-	//connectionInfoSubsystem->GetCurrentPlayerTeam(), connectionInfoSubsystem->GetCurrentPlayerSlot()
+	lastAutoSendTime = FDateTime::Now();
 }
 
 void AApPortalSubsystem::Tick(float dt) {
 	Super::Tick(dt);
 
 	if (!isInitialized) {
-		//if (connectionInfoSubsystem->GetConnectionState() == EApConnectionState::Connected) {
-
-		//}
-
 		RebuildQueueFromSave();
 
 		isInitialized = true;
 	}
 	else {
-		ProcessPendingOutputQueue();
 		SendOutputQueueToPortals();
 	}
+
+	 if (lastAutoSendTime + FTimespan::FromSeconds(VAULT_SEND_INTERVAL) < FDateTime::Now()) {
+
+		 ProcessPendingOutputQueue();
+
+		 ProcessAutoVaultStoring();
+
+		 lastAutoSendTime = FDateTime::Now();
+	 }
 }
 
 void AApPortalSubsystem::ProcessPendingOutputQueue() {
 	FInventoryItem pendingItem;
-
-	while (PriorityPendingOutputQueue.Dequeue(pendingItem)) {
-		AddToStartOfQueue(pendingItem);
-	}
 
 	while (PendingOutputQueue.Dequeue(pendingItem)) {
 		AddToEndOfQueue(pendingItem);
@@ -79,26 +81,31 @@ void AApPortalSubsystem::ProcessPendingOutputQueue() {
 
 	TArray<FItemAmount> personalVaultItems = vaultSubsystem->GetItems(true);
 	if (!personalVaultItems.IsEmpty())
-	{
+	{	 
 		for (FItemAmount vaultItem : personalVaultItems)
 		{
-			for (int i = 0; i < vaultItem.Amount; i++)
+			int32 taken = vaultSubsystem->Take(vaultItem);
+
+			for (int i = 0; i < taken; i++)
 				AddToEndOfQueue(FInventoryItem(vaultItem.ItemClass));
 		}
-	} else {
-		TArray<FItemAmount> globalVaultItems = vaultSubsystem->GetItems(true);
+	}
+	
+	
+	/*else { // from global should only be done if explicitly requested
+		TArray<FItemAmount> globalVaultItems = vaultSubsystem->GetItems(false);
 
 		for (FItemAmount vaultItem : globalVaultItems)
 		{
 			for (int i = 0; i < vaultItem.Amount; i++)
 				AddToEndOfQueue(FInventoryItem(vaultItem.ItemClass));
 		}
-	}
+	}*/
 }
 
 void AApPortalSubsystem::SendOutputQueueToPortals() {
-	for (TActorIterator<AApPortal> actorItterator(GetWorld()); actorItterator; ++actorItterator) {
-		AApPortal* portal = *actorItterator;
+	for (TActorIterator<AApPortal> actorIterator(GetWorld()); actorIterator; ++actorIterator) {
+		AApPortal* portal = *actorIterator;
 		if (!IsValid(portal))
 			continue;
 
@@ -122,38 +129,26 @@ void AApPortalSubsystem::Enqueue(TSubclassOf<UFGItemDescriptor>& cls, int amount
 	}
 }
 
-void AApPortalSubsystem::Send(FApPlayer targetPlayer, FItemAmount itemStack) {
-	//TODO send items for self directly to output queue instead of gifting subsystem
-	 //TODO get if target player their game support personal vault protocol then store in personal vault instead of sending directly
-
-	if (!targetPlayer.IsValid())
-		return;
-
-	if (false) { //TODO check if target player is self
-		TSubclassOf<UFGItemDescriptor> cls = itemStack.ItemClass;
-		Enqueue(cls, itemStack.Amount);
-	}
-	else {
-		static_cast<AApServerGiftingSubsystem*>(giftingSubsystem)->EnqueueForSending(targetPlayer, itemStack);
-	}
-}
-
 void AApPortalSubsystem::SendBuffer(FApPlayer targetPlayer, TArray<FItemAmount> items)
 {
 	if (!targetPlayer.IsValid())
 		return;
 
-	//TODO get if target player their game support personal vault protocol then store in personal vault instead of sending directly
-
-	//TODO Implement sending to gifting subsystem
-
-
+	if (vaultSubsystem->DoesPlayerAcceptVaultItems(targetPlayer)) {
+		for (FItemAmount item : items) {
+			vaultSubsystem->Store(item, targetPlayer);
+		}
+		return;
+	}
+		
+	for (FItemAmount item : items) {
+		static_cast<AApServerGiftingSubsystem*>(giftingSubsystem)->EnqueueForSending(targetPlayer, item);
+	}
 }
 
 void AApPortalSubsystem::ReQueue(FInventoryItem nextItem) const
 {
 	if (nextItem.IsValid()) {
-		//PriorityPendingOutputQueue.Enqueue(nextItem);
 		vaultSubsystem->Store(FItemAmount(nextItem.GetItemClass(), 1), true);
 	}
 }
@@ -210,5 +205,39 @@ bool AApPortalSubsystem::TryPopFromQueue(FInventoryItem& outItem) {
 void AApPortalSubsystem::ClearQueue() {
 	OutputQueue.Empty();
 }
+
+void AApPortalSubsystem::ProcessAutoVaultStoring() const
+{
+	TMap<FApPlayer, TMap<TSubclassOf<UFGItemDescriptor>, uint64>> itemsToStore;
+
+	for (TActorIterator<AApPortal> actorIterator(GetWorld()); actorIterator; ++actorIterator) {
+		AApPortal* portal = *actorIterator;
+		if (!IsValid(portal) || !portal->targetPlayer.IsValid())
+			continue;
+
+		UFGInventoryComponent* inventory = portal->GetInventory();
+		if (!IsValid(inventory))
+			continue;
+
+		TArray<FInventoryStack> contents;
+		inventory->GetInventoryStacks(contents);
+		inventory->Empty();
+
+		TMap<TSubclassOf<UFGItemDescriptor>, uint64>& itemsForPlayer = itemsToStore.FindOrAdd(portal->targetPlayer);
+		for (const FInventoryStack& stack : contents) {
+			itemsForPlayer.FindOrAdd(stack.Item.GetItemClass()) += stack.NumItems;
+		}
+	}
+
+	 for (const TPair<FApPlayer, TMap<TSubclassOf<UFGItemDescriptor>, uint64>>& playerItems : itemsToStore) {
+		 const FApPlayer& player = playerItems.Key;
+
+		 for (const TPair<TSubclassOf<UFGItemDescriptor>, uint64>& item : playerItems.Value) {
+			 const uint64& amount = item.Value;
+
+		 	vaultSubsystem->Store(FItemAmount(item.Key, static_cast<int32>(FMath::Clamp<int64>(amount, 0, INT32_MAX))));
+		 }
+	 }
+}	
 
 #pragma optimize("", on)

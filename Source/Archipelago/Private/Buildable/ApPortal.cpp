@@ -83,10 +83,7 @@ void AApPortal::Factory_Tick(float dt) {
 void AApPortal::SetTarget(FApPlayer player)
 {
 	 //TODO handle cleaning of inventory
-
 	 // send current inventory
-
-
 
 	targetPlayer = player;
 }
@@ -115,7 +112,12 @@ void AApPortal::Factory_CollectInput_Implementation() {
 	if (!input->Factory_PeekOutput(items) || items.Num() == 0)
 		return;
 
-	//TODO input filtering based on target player accepted traits
+	if (!static_cast<AApVaultSubsystem*>(vaultSubsystem)->DoesPlayerAcceptVaultItems(targetPlayer))
+	{
+		if (!static_cast<AApVaultSubsystem*>(vaultSubsystem)->CanSend(targetPlayer, items[0].GetItemClass()))
+			return; //block input
+	} else if (!static_cast<AApReplicatedGiftingSubsystem*>(replicatedGiftingSubsystem)->CanSend(targetPlayer, items[0].GetItemClass()))
+		return; //block input
 
 	UFGInventoryComponent* targetInventory = input->GetInventory();
 
@@ -129,26 +131,6 @@ void AApPortal::Factory_CollectInput_Implementation() {
 
 		targetInventory->AddItem(item);
 	}
-
-	//if (!input->Factory_GrabOutput(item, offset))
-	//	return;
-
-	/*
-	if (!static_cast<AApReplicatedGiftingSubsystem*>(replicatedGiftingSubsystem)->CanSend(targetPlayer, items[0].GetItemClass()))
-		return; //block input
-
-	FInventoryItem item;
-	float offset;
-
-	if (!input->Factory_GrabOutput(item, offset))
-		return;
-
-	FItemAmount stack;
-	stack.ItemClass = item.GetItemClass();
-	stack.Amount = 1;
-
-	static_cast<AApPortalSubsystem*>(portalSubsystem)->Send(targetPlayer, stack);
-	*/
 }
 
 
@@ -158,6 +140,7 @@ void AApPortal::ServerSendManually() {
 
 	TArray<FInventoryStack> stacks;
 	mInputInventory->GetInventoryStacks(stacks);
+	mInputInventory->Empty();
 
 	TArray<FItemAmount> itemsToSend;
 

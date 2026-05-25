@@ -67,6 +67,8 @@ void AApServerRandomizerSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase,
 		fgcheck(schematicPatcher);
 		mamTreeSubsystem = AApMamTreeSubsystem::Get(world);
 		fgcheck(mamTreeSubsystem);
+		vaultSubsystem = AApVaultSubsystem::Get(world);
+		fgcheck(vaultSubsystem)
 
 		ap->SetItemReceivedCallback([this](int64 itemid, bool isFromServer) { ReceiveItem(itemid, isFromServer); });
 		ap->SetLocationCheckedCallback([this](int64 itemid) { CollectLocation(itemid); });
@@ -111,7 +113,7 @@ bool AApServerRandomizerSubsystem::InitializeTick() {
 
 		ParseScoutedItemsAndCreateRecipiesAndSchematics();
 	}
-	
+
 	return connectionState == EApConnectionState::ConnectionFailed
 		|| (connectionState == EApConnectionState::Connected && areRecipiesAndSchematicsInitialized);
 }
@@ -142,7 +144,8 @@ void AApServerRandomizerSubsystem::ParseScoutedItemsAndCreateRecipiesAndSchemati
 
 			if (isItemSchematic) {
 				ItemSchematics.Add(locationId, schematic);
-			} else {
+			}
+			else {
 				schematicsPerLocation.Add(locationId, schematic);
 			}
 		}
@@ -171,9 +174,9 @@ void AApServerRandomizerSubsystem::ParseScoutedItemsAndCreateRecipiesAndSchemati
 			TSubclassOf<UFGSchematic> schematic = LoadClass<UFGSchematic>(nullptr, *bpName);
 			fgcheck(schematic != nullptr)
 
-			if (!schematicsPerMilestone.Contains(milestoneName)) {
-				schematicsPerMilestone.Add(milestoneName, schematic);
-			}
+				if (!schematicsPerMilestone.Contains(milestoneName)) {
+					schematicsPerMilestone.Add(milestoneName, schematic);
+				}
 
 			if (!locationsPerMilestone.Contains(schematicsPerMilestone[milestoneName])) {
 				locationsPerMilestone.Add(schematic, TArray<FApNetworkItem>{ location });
@@ -182,28 +185,30 @@ void AApServerRandomizerSubsystem::ParseScoutedItemsAndCreateRecipiesAndSchemati
 					itemInfosPerMilestone.Add(tier, TMap<int, TArray<FApNetworkItem>>());
 				}
 				itemInfosPerMilestone[tier].Add(milestone, TArray<FApNetworkItem>{ location });
-			} else {
+			}
+			else {
 				locationsPerMilestone[schematicsPerMilestone[milestoneName]].Add(location);
 
 				itemInfosPerMilestone[tier][milestone].Add(location);
 			}
-		} else if (schematicsPerLocation.Contains(location.location)) {
+		}
+		else if (schematicsPerLocation.Contains(location.location)) {
 			itemInfoPerSchematicId.Add(location);
 
 			ESchematicType type = UFGSchematic::GetType(schematicsPerLocation[location.location]);
 
 			switch (type) {
-				case ESchematicType::EST_MAM:
-					locationPerMamNode.Add(schematicsPerLocation[location.location], location);
-					break;
+			case ESchematicType::EST_MAM:
+				locationPerMamNode.Add(schematicsPerLocation[location.location], location);
+				break;
 
-				case ESchematicType::EST_Alternate:
-					locationPerHardDrive.Add(schematicsPerLocation[location.location], location);
-					break;
+			case ESchematicType::EST_Alternate:
+				locationPerHardDrive.Add(schematicsPerLocation[location.location], location);
+				break;
 
-				case ESchematicType::EST_ResourceSink:
-					locationPerShopNode.Add(schematicsPerLocation[location.location], location);
-					break;
+			case ESchematicType::EST_ResourceSink:
+				locationPerShopNode.Add(schematicsPerLocation[location.location], location);
+				break;
 			}
 		}
 	}
@@ -225,7 +230,8 @@ void AApServerRandomizerSubsystem::ParseScoutedItemsAndCreateRecipiesAndSchemati
 
 		if (!ItemSchematics.Contains(itemId)) {
 			UE_LOGFMT(LogApServerRandomizerSubsystem, Error, "AApSubsystem::ParseScoutedItemsAndCreateRecipiesAndSchematics() Failed to find ItemSchematics for itemId {0}", itemId);
-		} else {
+		}
+		else {
 			SManager->GiveAccessToSchematic(ItemSchematics[itemId], nullptr, ESchematicUnlockFlags::Force);
 		}
 	}
@@ -308,7 +314,7 @@ void AApServerRandomizerSubsystem::BeginPlay() {
 	if (!harddriveRerollHookInitialized) {
 		harddriveRerollHookHandler = SUBSCRIBE_METHOD_AFTER(AFGResearchManager::RerollHardDriveRewards, [this](const AFGResearchManager* self, AFGPlayerController* player, int32 hardDriveId) {
 			OnUnclaimedHardDrivesUpdated();
-		});
+			});
 
 		harddriveRerollHookInitialized = true;
 	}
@@ -510,10 +516,11 @@ void AApServerRandomizerSubsystem::OnSchematicCompleted(TSubclassOf<class UFGSch
 
 		for (const FApNetworkItem* item : itemsToUnlock)
 			unlockedChecks.Add(item->location);
-		
+
 		if (unlockedChecks.Num() > 0)
 			ap->CheckLocation(unlockedChecks);
-	} else {
+	}
+	else {
 		for (const FApNetworkItem* item : itemsToUnlock) {
 			if (item->player == connectionInfo->GetCurrentPlayerSlot())
 				ReceivedItems.Enqueue(TTuple<int64, bool>(item->item, false));
@@ -530,10 +537,10 @@ void AApServerRandomizerSubsystem::OnAvaiableSchematicsChanged() {
 	for (const TPair<TSubclassOf<UFGSchematic>, TArray<FApNetworkItem>>& itemPerMilestone : locationsPerMilestone) {
 		if (UFGSchematic::GetTechTier(itemPerMilestone.Key) <= maxAvailableTechTier) {
 			for (const FApNetworkItem& item : itemPerMilestone.Value) {
-				if (item.player != currentPlayerSlot 
+				if (item.player != currentPlayerSlot
 					&& (item.flags & 0b011) > 0
 					&& !hintedLocations.Contains(item.location))
-						locationHintsToPublish.Add(item.location);
+					locationHintsToPublish.Add(item.location);
 			}
 		}
 	}
@@ -554,16 +561,16 @@ void AApServerRandomizerSubsystem::OnAvaiableSchematicsChanged() {
 				&& (itemPerMamNode.Value.flags & 0b011) > 0
 				&& !hintedLocations.Contains(itemPerMamNode.Value.location)
 				&& visiableMamNodes.Contains(itemPerMamNode.Value.location))
-					locationHintsToPublish.Add(itemPerMamNode.Value.location);
+				locationHintsToPublish.Add(itemPerMamNode.Value.location);
 		}
 	}
 
 	if (SManager->IsSchematicPurchased(ItemSchematics[mappingSubsystem->GetAwesomeShopItemId()])) {
 		for (const TPair<TSubclassOf<UFGSchematic>, FApNetworkItem>& itemPerShopNode : locationPerShopNode) {
-			if (itemPerShopNode.Value.player != currentPlayerSlot 
+			if (itemPerShopNode.Value.player != currentPlayerSlot
 				&& (itemPerShopNode.Value.flags & 0b011) > 0
 				&& !hintedLocations.Contains(itemPerShopNode.Value.location))
-					locationHintsToPublish.Add(itemPerShopNode.Value.location);
+				locationHintsToPublish.Add(itemPerShopNode.Value.location);
 		}
 	}
 
@@ -595,13 +602,13 @@ void AApServerRandomizerSubsystem::AwardItem(int64 itemid, bool isFromServer) {
 				{
 					//portalSubsystem->Enqueue(itemClass, itemInfo->stackSize - numAdded);
 					FItemAmount ItemAmount(itemClass, itemInfo->stackSize - numAdded);
-					vaultSubsystem->Store(ItemAmount);
+					vaultSubsystem->Store(ItemAmount, true);
 				}
 			}
 			else {
 				//portalSubsystem->Enqueue(itemClass, itemInfo->stackSize);
 				FItemAmount ItemAmount(itemInfo->Class, itemInfo->stackSize);
-				vaultSubsystem->Store(ItemAmount);
+				vaultSubsystem->Store(ItemAmount, true);
 			}
 		}
 		else if (mappingSubsystem->ApItems[itemid]->Type == EItemType::Schematic) {
@@ -647,8 +654,8 @@ void AApServerRandomizerSubsystem::HandleCheckedLocations() {
 
 			if (newCheckedLocations.Contains(networkItem.location)) {
 				if (!itemsPerMilestone.Value.ContainsByPredicate([this](FApNetworkItem& item) {
-							return !schematicPatcher->IsCollected(item.location);	
-				})) {
+					return !schematicPatcher->IsCollected(item.location);
+					})) {
 					SManager->GiveAccessToSchematic(itemsPerMilestone.Key, nullptr);
 				}
 			}
@@ -673,8 +680,8 @@ void AApServerRandomizerSubsystem::HandleCheckedLocations() {
 				{
 					if (unclaimedHarddrive.PendingRewardsRerollsExecuted > 0
 						&& !unclaimedHarddrive.PendingRewards.ContainsByPredicate([this](TSubclassOf<UFGSchematic>& harddriveOption) {
-						return !schematicPatcher->IsCollected(FMath::RoundToInt(UFGSchematic::GetMenuPriority(harddriveOption)));
-					})) {
+							return !schematicPatcher->IsCollected(FMath::RoundToInt(UFGSchematic::GetMenuPriority(harddriveOption)));
+							})) {
 						unclaimedHarddrive.PendingRewardsRerollsExecuted--;
 					}
 				}

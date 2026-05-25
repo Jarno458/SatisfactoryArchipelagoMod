@@ -52,8 +52,14 @@
 			"SemVersion": ">=1.0.0"
 		},
 		{
+			"Name": "AdditionalDepots",
+			"Enabled": true,
+			"SemVersion": "^1.0.0"
+		},
+		{
 			"Name": "ReliableMessaging",
-			"Enabled": true
+			"Enabled": true,
+			"BasePlugin": true
 		},
 	],
 	"GameVersion": ">=416835"

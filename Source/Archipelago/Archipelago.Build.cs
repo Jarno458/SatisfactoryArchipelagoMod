@@ -9,6 +9,7 @@ public class Archipelago : ModuleRules
         PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
         CppStandard = CppStandardVersion.Cpp20;
         bUseUnity = false;
+        //OptimizeCode = CodeOptimization.Never;
 
         // FactoryGame transitive dependencies
         // Not all of these are required, but including the extra ones saves you from having to add them later.
@@ -38,7 +39,7 @@ public class Archipelago : ModuleRules
 
         // Header stubs
         PublicDependencyModuleNames.AddRange(new string[] {
-            "DummyHeaders",
+            "DummyHeaders"
         });
 
         // Mod code depdencies
@@ -46,6 +47,7 @@ public class Archipelago : ModuleRules
             "ContentLib",
             "FreeSamples",
             "APCpp",
+            "AdditionalDepots"
         });
 
         if (Target.Type == TargetRules.TargetType.Editor) {
@@ -63,9 +65,5 @@ public class Archipelago : ModuleRules
             //not using client specific code atm
             //PublicDependencyModuleNames.Add("FactoryDedicatedClient");
         }
-
-        CppStandard = CppStandardVersion.Cpp20;
-        //UseUnityBuild = false;
-        OptimizeCode = CodeOptimization.Never;
     }
 }

@@ -63,6 +63,7 @@ private:
 
 	TSet<FApPlayer> vaults;
 	TMap<FString, FVaultItemMapping> acceptedItemsPerGame;
+	TMap<FString, FString> lowerCaseToNormalCaseItemNameMapping;
 
 	void UpdateItemAmount(const AP_SetReply& newData);
 
@@ -72,6 +73,8 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void Store(const FItemAmount& item, bool personal = false);
+
+	void Store(const FItemAmount& item, const FApPlayer& vault);
 
 	UFUNCTION(BlueprintCallable)
 	int32 Take(const FItemAmount& item);
@@ -91,6 +94,8 @@ public:
 	UFUNCTION(BlueprintPure)
 	TArray<TSubclassOf<UFGItemDescriptor>> GetAcceptedItemsPerVault(FApPlayer vault) const;
 
+	bool CanSend(const FApPlayer& targetPlayer, const TSubclassOf<UFGItemDescriptor> itemClass);
+
 private:
 	FString GetItemName(uint64 itemId) const;
 	FString GetItemName(TSubclassOf<UFGItemDescriptor> item) const;
@@ -98,7 +103,7 @@ private:
 	void ParseVaultItemInfo(FString game, FString itemInfoString);
 	void AddPersonalVaults(FString game);
 
-	void SetupPersonalVault() const;
+	void SetupPersonalVault();
 
 public: 
 	UFUNCTION() //required for event hookup

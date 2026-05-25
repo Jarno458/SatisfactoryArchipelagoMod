@@ -52,7 +52,9 @@ protected:
 	UFGInventoryComponent* mInputInventory;
 
 public:
-	FORCEINLINE bool CanReceiveOutput() const { return camReceiveOutput; };
+	FORCEINLINE bool CanReceiveOutput() const { return camReceiveOutput; }
+
+	FORCEINLINE UFGInventoryComponent* GetInventory() const { return mInputInventory; }
 
 	//UFUNCTION(BlueprintCallable) Should only be called through RCO, so not directly from blueprints
 	void SetTarget(FApPlayer player);

@@ -499,18 +499,16 @@ void AApSubsystem::SetRawDataStorageValue(FString key, FString jsonString) const
 		std::string keyString = TCHAR_TO_UTF8(*key);
 		std::string traitJsonString = TCHAR_TO_UTF8(*jsonString);
 
+		AP_DataStorageOperation setOperation;
+		setOperation.operation = "replace";
+		setOperation.value = &traitJsonString;
+
 		AP_SetServerDataRequest setTraitInfoRequest;
 		setTraitInfoRequest.key = keyString;
-
-		AP_DataStorageOperation setDefault;
-		setDefault.operation = "replace";
-		setDefault.value = &traitJsonString;
-
-		std::vector<AP_DataStorageOperation> operations;
-		operations.push_back(setDefault);
-
-		setTraitInfoRequest.operations = operations;
+		setTraitInfoRequest.operations = { setOperation };
 		setTraitInfoRequest.type = AP_DataType::Raw;
+		setTraitInfoRequest.default_value = nullptr;
+		setTraitInfoRequest.want_reply = false;
 
 		AP_SetServerData(&setTraitInfoRequest);
 	});

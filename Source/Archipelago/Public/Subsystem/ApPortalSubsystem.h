@@ -50,25 +50,23 @@ private:
 
 	TDoubleLinkedList<FInventoryItem> OutputQueue;
 
-	TQueue<FInventoryItem, EQueueMode::Mpsc> PriorityPendingOutputQueue;
 	TQueue<FInventoryItem, EQueueMode::Mpsc> PendingOutputQueue;
 
 	int lastUsedPortalIndex;
 	bool isInitialized;
+
+	FDateTime lastAutoSendTime;
 
 public:
 	FORCEINLINE bool IsInitialized() const { return isInitialized; };
 
 	void Enqueue(TSubclassOf<UFGItemDescriptor>& cls, int amount);
 	
-	void Send(FApPlayer targetPlayer, FItemAmount itemStack);
 	void SendBuffer(FApPlayer targetPlayer, TArray<FItemAmount> items);
 
 	void ReQueue(FInventoryItem nextItem) const;
 
 private:
-	void ProcessInputQueue();
-
 	void ProcessPendingOutputQueue();
 	void SendOutputQueueToPortals();
 
@@ -79,4 +77,6 @@ private:
 	void AddToStartOfQueue(FInventoryItem item);
 	bool TryPopFromQueue(FInventoryItem& outItem);
 	void ClearQueue();
+
+	void ProcessAutoVaultStoring() const;
 };
