@@ -71,7 +71,7 @@ public:
 	TArray<TSubclassOf<UFGItemDescriptor>> GetAcceptedItemsPerPlayer(FApPlayer player) const;
 
 private:
-	void UpdateAcceptedGifts();
+	void UpdateAcceptedGifts(const FString& key, const TSharedPtr<FJsonValue>& oldJsonValue, const TSharedPtr<FJsonValue>& newJsonValue, int slot);
 	void UpdateAcceptedGiftTraitsPerPlayerReplicatedValue();
 
 private:

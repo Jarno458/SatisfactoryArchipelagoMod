@@ -39,15 +39,49 @@ struct ARCHIPELAGO_API FBounceDayo
 	FString Reference;
 };
 
-USTRUCT()
-struct ARCHIPELAGO_API FPendingServerData
+enum class EDataType
 {
-	GENERATED_BODY()
-
-	AP_GetServerDataRequest Request;
-	TFunction<void(FString, FString)> Callback;
-	std::string ValueContainer;
+	Number,
+	Object,
+	LargeInteger
 };
+
+struct FPendingServerDataBase
+{
+	FString Key;
+
+	EDataType Type;
+};
+
+template<EDataType JsonType, typename TValue>
+struct FPendingServerData : FPendingServerDataBase
+{
+	FPendingServerData() { Type = JsonType; }
+
+	TFunction<void(const FString&, TValue)> Callback;
+};
+
+struct FUpdatedServerDataBase
+{
+	FString Key;
+
+	EDataType Type;
+};
+
+template<EDataType JsonType, typename TValue>
+struct FUpdatedServerData : FUpdatedServerDataBase
+{
+	FUpdatedServerData() { Type = JsonType; }
+
+	TFunction<void(const FString&, TValue, TValue, int)> Callback;
+};
+
+typedef FPendingServerData<EDataType::Number, const int64*> Int64Get;
+typedef FPendingServerData<EDataType::Object, const TSharedRef<FJsonValue>&> JsonGet;
+
+typedef FUpdatedServerData<EDataType::Number, const int64*> Int64Update;
+typedef FUpdatedServerData<EDataType::Object, const TSharedRef<FJsonValue>&> JsonUpdate;
+typedef FUpdatedServerData<EDataType::LargeInteger, const TSharedRef<FJsonValueNumberString>&> LargeIntegerUpdate;
 
 UCLASS()
 class ARCHIPELAGO_API AApSubsystem : public AModSubsystem
@@ -72,24 +106,24 @@ public:
 
 	void DispatchLifecycleEvent(ELifecyclePhase phase);
 
-	void MonitorDataStoreValue(FString keyFString, TFunction<void()> callback);
-	void MonitorDataStoreValue(TArray<FString> keys, AP_DataType datatype, TFunction<void(AP_SetReply)> callback);
-	void MonitorUnboundedIntergerDataStoreValue(FString keyFString, TFunction<void(AP_SetReply)> callback);
-	void ModifyEnergyLink(int64 amount) const;
-	void ModifyDataStorageInt64(FString key, int64 amount) const;
-	void GetDataStorageJsonFields(TSet<FString> keys, TFunction<void(FString, FString)> callback);
-
+	void MonitorDataStoreJsonObjectValue(const FString& key, TFunction<void(const FString&, const TSharedRef<FJsonValue>&, const TSharedRef<FJsonValue>&, int)> callback);
+	void MonitorInt64DataStoreValue(const TArray<FString>& keys, TFunction<void(const FString&, const int64*, const int64*, int)> callback);
+	void MonitorDataStoreUnboundedNumberValue(const FString& key, TFunction<void(const FString&, const TSharedRef<FJsonValueNumberString>&, const TSharedRef<FJsonValueNumberString>&, int)> callback);
+	void ModifyDataStorageInt64(const FString& key, int64 amount) const;
+	void GetDataStorageJsonFields(const TSet<FString>& keys, TFunction<void(const FString&, const TSharedRef<FJsonValue>&)> callback);
+	void GetDataStorageInt64Fields(const TSet<FString>& keys, TFunction<void(const FString&, const int64*)> callback);
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	FApConfigurationStruct GetConfig() const { return config; };
+	FApConfigurationStruct GetConfig() const { return config; }
 
 	FString GetApItemName(int64 itemId) const;
 
 	void SetGiftBoxState(bool open, const TSet<FString>& acceptedTraits) const;
-	bool SendGift(FApSendGift giftToSend) const;
-	TArray<FApReceiveGift> GetGifts() const;
-	void RejectGift(TSet<FString> ids) const;
-	void AcceptGift(TSet<FString> ids) const;
-	TMap<FApPlayer, FApTraitBits> GetAcceptedTraitsPerPlayer() const;
+	void SendGift(const FApGift& giftToSend) const;
+	//TArray<FApReceiveGift> GetGifts() const;
+	//void RejectGift(TSet<FApReceiveGift> gifts) const;
+	//void AcceptGift(TSet<FString> ids) const;
+	 void ProcessGifts(TSet<FString> acceptedIds, TArray<FApGift> rejectedGifts) const;
+	//TMap<FApPlayer, FApTraitBits> GetAcceptedTraitsPerPlayer() const;
 	TMap<FApPlayer, TTuple<FString, FString>> GetAllApPlayers() const;
 	static TSet<int64> GetAllLocations();
 
@@ -118,31 +152,34 @@ public:
 	void EnableDeathLink() const;
 	void TriggerDeathLink(FString source, FString cause);
 
-	void SetRawDataStorageValue(FString key, FString jsonString) const;
+	//void SetRawDataStorageValue(FString key, FString jsonString) const;
 
 private:
 	AApConnectionInfoSubsystem* connectionInfoSubsystem;
 
 	TSharedPtr<TPromise<TMap<int64, FApNetworkItem>>> locationScoutingPromise = nullptr;
 
-	TMap<FString, TFunction<void(AP_SetReply)>> dataStoreCallbacks;
+	//TMap<FString, TFunction<void(AP_SetReply)>> dataStoreCallbacks;
 	TArray<TFunction<void(int64, bool)>> itemReceivedCallbacks;
 	TArray<TFunction<void(int64)>> locationCheckedCallbacks;
 	TArray<TFunction<void(FString, FString)>> deathLinkReceivedCallbacks;
 	TArray<TFunction<void(void)>> onReconnectCallbacks;
-	TMap<FString, FPendingServerData> dataStorageRetrievalCallbacks;
 
+	TMap<FString, TSharedRef<FPendingServerDataBase>> dataStorageRetrievalCallbacks;
+	TMap<FString, TSharedRef<FUpdatedServerDataBase>> dataStoreReplyCallbacks;
+	TArray<FString> processedCallbacks;
 
 	TSet<FGuid> sendDeathLinkReferences = TSet<FGuid>();
 
-	void SetReplyCallback(AP_SetReply setReply);
 	void LocationScoutedCallback(std::vector<AP_NetworkItem>) const;
 	void DeathLinkReceivedCallback(const FString& source, const FString& cause);
+	void PackageReceivedCallback(const std::string json);
 
 	TQueue<TTuple<int64, bool>> ReceivedItems;
 	TQueue<int64> CheckedLocations;
 	TQueue<TPair<FString, FString>> PendingDeathlinks;
 	TQueue<TPair<FString, FLinearColor>> ChatMessageQueue;
+	TQueue<FString> JsonPackageQueue;
 	std::atomic_bool isReconnect = false;
 
 	FApConfigurationStruct config;
@@ -159,11 +196,20 @@ private:
 	void ProcessReceivedItems();
 	void ProcessCheckedLocations();
 	void ProcessDeadlinks();
-	void ProcessPendingServerDataRequests();
-
+	void ProcessApPackages();
 	void HandleAPMessages();
 
-	// TODO do we want to keep this around or call AApMessagingSubsystem::DisplayMessage directly?
+	void OnRetrievedPackage(const TSharedPtr<FJsonObject> json);
+	void OnSetReply(const TSharedPtr<FJsonObject> Value);
+
+	TSharedRef<FJsonObject> BuildSendGift(const FApGift& giftToSend) const;
+	void Send(const TSharedRef<FJsonObject>& json) const;
+	void Send(const TArray<TSharedRef<FJsonObject>>& jsons) const;
+
+	void CallDataStorageCallbackForRetrieved(FString key, const TSharedPtr<FJsonValue> json);
+	void CallDataStorageCallbackForSetReply(FString key, const TSharedPtr<FJsonValue>& originalValue, const TSharedPtr<FJsonValue>& value, int slot);
+
+    // TODO do we want to keep this around or call AApMessagingSubsystem::DisplayMessage directly?
 	void SendChatMessage(const FString& Message, const FLinearColor& Color) const;
 
 	template<typename RetType>

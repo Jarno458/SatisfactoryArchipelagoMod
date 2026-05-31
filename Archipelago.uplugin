@@ -49,7 +49,7 @@
 		{
 			"Name": "FixClientResourceSinkPoints",
 			"Enabled": true,
-			"SemVersion": ">=1.2.0"
+			"SemVersion": ">=1.1.0"
 		},
 		{
 			"Name": "HoverpackFuseReminder",

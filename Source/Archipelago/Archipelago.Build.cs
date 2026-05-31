@@ -1,6 +1,4 @@
 using UnrealBuildTool;
-using System.IO;
-using System;
 
 public class Archipelago : ModuleRules
 {
@@ -9,7 +7,7 @@ public class Archipelago : ModuleRules
         PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
         CppStandard = CppStandardVersion.Cpp20;
         bUseUnity = false;
-        //OptimizeCode = CodeOptimization.Never;
+        OptimizeCode = CodeOptimization.Never;
 
         // FactoryGame transitive dependencies
         // Not all of these are required, but including the extra ones saves you from having to add them later.

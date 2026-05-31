@@ -1,4 +1,6 @@
 #include "ApServerGiftingSubsystem.h"
+
+#include "StructuredLog.h"
 #include "Data/ApGiftingMappings.h"
 #include "Subsystem/ApVaultSubsystem.h"
 #include "Subsystem/SubsystemActorManager.h"
@@ -71,7 +73,9 @@ void AApServerGiftingSubsystem::Tick(float dt) {
 			SetActorTickInterval(pollInterfall);
 
 			FString giftboxKey = FString::Format(TEXT("GiftBox;{0};{1}"), { connectionInfoSubsystem->GetCurrentPlayerTeam(), connectionInfoSubsystem->GetCurrentPlayerSlot() });
-			ap->MonitorDataStoreValue(giftboxKey, [this]() { PullAllGiftsAsync(); });
+			ap->MonitorDataStoreJsonObjectValue(giftboxKey, [this](const FString& key, const TSharedRef<FJsonValue>& oldValueJson, const TSharedRef<FJsonValue>& newValueJson, int slot) {
+				PullAllGiftsAsync(key, oldValueJson, newValueJson, slot);
+				});
 		}
 		else {
 			return;
@@ -81,17 +85,122 @@ void AApServerGiftingSubsystem::Tick(float dt) {
 	ProcessInputQueue();
 }
 
-void AApServerGiftingSubsystem::PullAllGiftsAsync() {
-	TArray<FApReceiveGift> gifts = ap->GetGifts();
+void AApServerGiftingSubsystem::PullAllGiftsAsync(const FString& key, const TSharedRef<FJsonValue>& oldValueJson, const TSharedRef<FJsonValue>& newValueJson, int slot) {
+	static const UEnum* giftTraitEnum = StaticEnum<EGiftTrait>();
+
+	//TArray<FApReceiveGift> gifts = ap->GetGifts();
+
+	TSharedPtr<FJsonObject>* newValueObject;
+	if (!newValueJson->TryGetObject(newValueObject))
+		return;
+
+	TArray<FApGift> gifts;
+	for (const TPair<FString, TSharedPtr<FJsonValue>>& giftJson : (*newValueObject)->Values) {
+		UE_LOGFMT(LogApServerGiftingSubsystem, Display, "AApServerGiftingSubsystem::PullAllGiftsAsync() received gift {0}", *giftJson.Key);
+
+		TSharedPtr<FJsonObject>* giftObjectPtr;
+		if (!giftJson.Value->TryGetObject(giftObjectPtr))
+		{
+			UE_LOGFMT(LogApServerGiftingSubsystem, Error, "AApServerGiftingSubsystem::PullAllGiftsAsync() Failed to parse gift object for {0}", *giftJson.Key);
+			continue;
+		}
+
+		FApGift gift;
+		gift.Id = *giftJson.Key;
+		
+		if (!(*giftObjectPtr)->TryGetStringField("item_name", gift.ItemName))
+		{
+			UE_LOGFMT(LogApServerGiftingSubsystem, Error, "AApServerGiftingSubsystem::PullAllGiftsAsync() Failed to parse item_name for gift {0}", *giftJson.Key);
+			continue;
+		}
+		if (!(*giftObjectPtr)->TryGetNumberField("amount", gift.Amount))
+		{
+			UE_LOGFMT(LogApServerGiftingSubsystem, Error, "AApServerGiftingSubsystem::PullAllGiftsAsync() Failed to parse amount for gift {0}", *giftJson.Key);
+			continue;
+		}
+		if (!(*giftObjectPtr)->TryGetNumberField("item_value", gift.ItemValue))
+		{
+			gift.ItemValue = 0;
+		}
+
+		FApPlayer sender;
+		if (!(*giftObjectPtr)->TryGetNumberField("sender_team", sender.Team))
+		{
+			UE_LOGFMT(LogApServerGiftingSubsystem, Error, "AApServerGiftingSubsystem::PullAllGiftsAsync() Failed to parse sender_team for gift {0}", *giftJson.Key);
+			continue;
+		}
+		if (!(*giftObjectPtr)->TryGetNumberField("sender_slot", sender.Slot))
+		{
+			UE_LOGFMT(LogApServerGiftingSubsystem, Error, "AApServerGiftingSubsystem::PullAllGiftsAsync() Failed to parse sender_slot for gift {0}", *giftJson.Key);
+			continue;
+		}
+
+		FApPlayer receiver;
+		if (!(*giftObjectPtr)->TryGetNumberField("receiver_team", receiver.Team))
+		{
+			UE_LOGFMT(LogApServerGiftingSubsystem, Error, "AApServerGiftingSubsystem::PullAllGiftsAsync() Failed to parse receiver_team for gift {0}", *giftJson.Key);
+			continue;
+		}
+		if (!(*giftObjectPtr)->TryGetNumberField("receiver_slot", receiver.Slot))
+		{
+			UE_LOGFMT(LogApServerGiftingSubsystem, Error, "AApServerGiftingSubsystem::PullAllGiftsAsync() Failed to parse receiver_slot for gift {0}", *giftJson.Key);
+			continue;
+		}
+
+		gift.Sender = sender;
+		gift.Receiver = receiver;
+		gift.Traits.Empty();
+
+		const TArray<TSharedPtr<FJsonValue>>* traitsJson;
+		if ((*giftObjectPtr)->TryGetArrayField("traits", traitsJson)) //optional value
+		{
+			for (const TSharedPtr<FJsonValue>& traitJson : *traitsJson) {
+				TSharedPtr<FJsonObject>* traitJsonObjectPtr;
+				if (!giftJson.Value->TryGetObject(traitJsonObjectPtr))
+				{
+					UE_LOGFMT(LogApServerGiftingSubsystem, Error, "AApServerGiftingSubsystem::PullAllGiftsAsync() Failed to parse trait for gift {0}", *giftJson.Key);
+					continue;
+				}
+
+				FString traitName;
+				if (!(*traitJsonObjectPtr)->TryGetStringField("trait", traitName))
+				{
+					UE_LOGFMT(LogApServerGiftingSubsystem, Error, "AApServerGiftingSubsystem::PullAllGiftsAsync() Failed to parse trait name for gift {0}", *giftJson.Key);
+					continue;
+				}
+
+				const int64 enumValue = giftTraitEnum->GetValueByNameString(traitName);
+				if (enumValue == INDEX_NONE)
+					continue;
+
+				FApGiftTrait trait;
+				trait.Trait = static_cast<EGiftTrait>(enumValue);
+
+				if (!(*giftObjectPtr)->TryGetNumberField("duration", trait.Duration))
+				{
+					trait.Duration = 1;
+				}
+
+				if (!(*giftObjectPtr)->TryGetNumberField("quality", trait.Quality))
+				{
+					trait.Quality = 1;
+				}
+
+				gift.Traits.Add(trait);
+			}
+		}
+
+		gifts.Add(gift);
+	}
 
 	TSet<FString> giftsToAccept;
-	TSet<FString> giftsToReject;
+	TArray<FApGift> giftsToReject;
 
 	TMap<TSubclassOf<UFGItemDescriptor>, int> itemsToAccepted;
 
 	UpdatedProcessedIds(gifts);
 
-	for (FApReceiveGift& gift : gifts) {
+	for (FApGift& gift : gifts) {
 		UE_LOG(LogApServerGiftingSubsystem, Display, TEXT("AApServerGiftingSubsystem::PullAllGiftsAsync() Received(%s)"), *gift.Id);
 
 		if (ProcessedIds.Contains(gift.Id)) {
@@ -126,7 +235,7 @@ void AApServerGiftingSubsystem::PullAllGiftsAsync() {
 		}
 		else {
 			UE_LOG(LogApServerGiftingSubsystem, Display, TEXT("AApServerGiftingSubsystem::PullAllGiftsAsync() rejecting gift(%s)"), *gift.Id);
-			giftsToReject.Add(gift.Id);
+			giftsToReject.Add(gift);
 			continue;
 		}
 
@@ -145,13 +254,12 @@ void AApServerGiftingSubsystem::PullAllGiftsAsync() {
 		}
 	}
 
-	ap->AcceptGift(giftsToAccept);
-	ap->RejectGift(giftsToReject);
+	ap->ProcessGifts(giftsToAccept, giftsToReject);
 }
 
-void AApServerGiftingSubsystem::UpdatedProcessedIds(TArray<FApReceiveGift>& gifts) {
+void AApServerGiftingSubsystem::UpdatedProcessedIds(TArray<FApGift>& gifts) {
 	TSet<FString> currentGiftIds;
-	for (FApReceiveGift& gift : gifts) {
+	for (FApGift& gift : gifts) {
 		currentGiftIds.Add(gift.Id);
 	}
 
@@ -201,17 +309,19 @@ void AApServerGiftingSubsystem::ProcessInputQueue() {
 void AApServerGiftingSubsystem::Send(TMap<FApPlayer, TMap<TSubclassOf<UFGItemDescriptor>, int>>& itemsToSend) {
 	for (TPair<FApPlayer, TMap<TSubclassOf<UFGItemDescriptor>, int>>& itemsToSendPerPlayer : itemsToSend) {
 		for (TPair<TSubclassOf<UFGItemDescriptor>, int>& stack : itemsToSendPerPlayer.Value) {
-			FApSendGift gift;
+			FApGift gift;
 
 			FString itemName = mappingSubsystem->ItemClassToItemId.Contains(stack.Key)
 				? mappingSubsystem->ItemIdToName[mappingSubsystem->ItemClassToItemId[stack.Key]]
 				: UFGItemDescriptor::GetItemName(stack.Key).ToString();
 
+			gift.Id = FGuid::NewGuid().ToString();
 			gift.ItemName = itemName;
 			gift.Amount = stack.Value;
 			gift.ItemValue = 0;
 			gift.Traits = giftTraitsSubsystem->GetFullTraitsForItem(stack.Key);
-			gift.ReceiverName = playerInfoSubsystem->GetPlayerName(itemsToSendPerPlayer.Key);
+			gift.Sender = connectionInfoSubsystem->GetCurrentPlayer();
+			gift.Receiver = itemsToSendPerPlayer.Key;
 
 			//TODO group all items for the same player together
 			ap->SendGift(gift);

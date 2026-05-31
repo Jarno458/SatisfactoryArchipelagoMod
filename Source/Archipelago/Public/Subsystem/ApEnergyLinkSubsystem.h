@@ -86,6 +86,8 @@ private:
 	EApEnergyLinkState energyLinkState = EApEnergyLinkState::Initializing;
 	bool hooksInitialized = false;
 
+	int currentTeam;
+
 	mutable FCriticalSection localStorageLock;
 
 	FDelegateHandle hookHandlerPowerCircuitTick;
@@ -118,5 +120,5 @@ private:
 
 	double ProcessLocalStorage();
 	void SendEnergyToServer(long amount) const;
-	void OnEnergyLinkValueChanged(AP_SetReply setReply);
+	void OnEnergyLinkValueChanged(const FString&, const TSharedRef<FJsonValue>& oldValueJson, const TSharedRef<FJsonValue>& newValueJson, int slot);
 };

@@ -6,6 +6,7 @@
 
 #include "ApSubsystem.h"
 #include "Subsystem/ApMappingsSubsystem.h"
+#include "../AdditionalDepots/Public/AdditionalDepotsServerSubsystem.h"
 
 #include "Subsystem/ModSubsystem.h"
 
@@ -20,6 +21,7 @@ USTRUCT()
 struct FVaultItemMapping
 {
 	GENERATED_BODY()
+
 	TMap<TSubclassOf<UFGItemDescriptor>, FString> ItemNameByClass;
 };
 
@@ -32,6 +34,7 @@ public:
 	AApVaultSubsystem();
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
 	virtual void BeginPlay() override;
 	void MonitorVaultItems(int team, int slot);
 	virtual void Tick(float dt) override;
@@ -41,19 +44,23 @@ public:
 	static AApVaultSubsystem* Get(const UObject* worldContext);
 
 private:
+	const FName globalVault = FName(TEXT("ApGlobalVault"));
+	const FName personalVault = FName(TEXT("ApPersonalVault"));
+
 	const float pollInterfall = 10.0f;
 
 	bool apInitialized;
-	int itemNameInVaultKeyStartPosition;
+	//int itemNameInVaultKeyStartPosition;
 
 	AApSubsystem* ap;
 	AApConnectionInfoSubsystem* connectionInfoSubsystem;
 	AApMappingsSubsystem* mappingSubsystem;
 	AApPlayerInfoSubsystem* playerInfoSubsystem;
 	AApGiftTraitsSubsystem* giftTraitsSubsystem;
+	AAdditionalDepotsServerSubsystem* additionalDepotsServerSubsystem;
 
-	TMap<FString, int64> globalItemAmounts;
-	TMap<FString, int64> personalItemAmounts;
+	TMap<TSubclassOf<UFGItemDescriptor>, int64> globalItemAmounts;
+	TMap<TSubclassOf<UFGItemDescriptor>, int64> personalItemAmounts;
 
 	UPROPERTY(Replicated, ReplicatedUsing = OnRep_VaultEnabledPlayers)
 	TArray<FApPlayer> vaultEnabledPlayersReplicated;
@@ -63,23 +70,23 @@ private:
 
 	TSet<FApPlayer> vaults;
 	TMap<FString, FVaultItemMapping> acceptedItemsPerGame;
-	TMap<FString, FString> lowerCaseToNormalCaseItemNameMapping;
+	TMap<FString, TSubclassOf<UFGItemDescriptor>> lowerCaseToItemClassMapping;
 
-	void UpdateItemAmount(const AP_SetReply& newData);
+	void UpdateItemAmount(const FString& key, const int64* oldValue, const int64* newValue, int slot);
 
 public:
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FORCEINLINE bool IsInitialized() const { return apInitialized; };
 
-	UFUNCTION(BlueprintCallable)
+	//UFUNCTION(BlueprintCallable)
 	void Store(const FItemAmount& item, bool personal = false);
 
 	void Store(const FItemAmount& item, const FApPlayer& vault);
 
-	UFUNCTION(BlueprintCallable)
-	int32 Take(const FItemAmount& item);
+	//UFUNCTION(BlueprintCallable)
+	int32 Take(const FItemAmount& item, bool personal = false);
 
-	UFUNCTION(BlueprintCallable, BlueprintPure)
+	//UFUNCTION(BlueprintCallable, BlueprintPure)
 	TArray<FItemAmount> GetItems(bool personal = false) const;
 
 	UFUNCTION(BlueprintPure)
@@ -105,7 +112,15 @@ private:
 
 	void SetupPersonalVault();
 
+	void UpdateDepotAmount(FName depot, TSubclassOf<UFGItemDescriptor> item, int64 amount) const;
+
 public: 
 	UFUNCTION() //required for event hookup
 	void OnRep_VaultEnabledPlayers();
+
+	UFUNCTION()
+	void OnItemAdded(FName ListIdentifier, TSubclassOf<UFGItemDescriptor> Class, int Amount, const AFGPlayerState* PlayerState);
+
+	UFUNCTION()
+	void OnItemRemoved(FName ListIdentifier, TSubclassOf<UFGItemDescriptor> Class, int Amount, const AFGPlayerState* PlayerState);
 };

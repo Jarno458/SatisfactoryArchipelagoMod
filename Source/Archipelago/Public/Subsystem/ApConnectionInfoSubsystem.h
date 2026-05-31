@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "ApTypes.h"
 #include "FGSaveInterface.h"
 #include "Subsystem/ModSubsystem.h"
 
@@ -54,6 +55,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FORCEINLINE int GetCurrentPlayerSlot() const { return currentPlayerSlot; };
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	FApPlayer GetCurrentPlayer() const { return FApPlayer(currentPlayerTeam, currentPlayerSlot); };
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FORCEINLINE FString GetRoomSeed() const { return roomSeed; };

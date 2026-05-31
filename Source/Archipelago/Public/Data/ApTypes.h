@@ -26,7 +26,7 @@ public:
 		return Team != Other.Team || Slot != Other.Slot;
 	}
 
-	FApPlayer(int team, uint8 slot) : Team(team), Slot(slot) {}
+	FApPlayer(int team, int slot) : Team(team), Slot(slot) {}
 	FApPlayer() : FApPlayer(-1, -1) {}
 	FApPlayer(const FApPlayer& Other) : Team(Other.Team), Slot(Other.Slot) {}
 
@@ -70,6 +70,8 @@ struct ARCHIPELAGO_API FApGift
 
 public:
 	UPROPERTY()
+	FString Id;
+	UPROPERTY()
 	FString ItemName;
 	UPROPERTY()
 	int Amount;
@@ -77,29 +79,12 @@ public:
 	int64 ItemValue;
 	UPROPERTY()
 	TArray<FApGiftTrait> Traits;
-};
-
-USTRUCT()
-struct ARCHIPELAGO_API FApSendGift : public FApGift
-{
-	GENERATED_BODY()
-
-public:
+	UPROPERTY()
+	bool isRefund = false;
+	UPROPERTY()
+	FApPlayer Sender;
 	UPROPERTY()
 	FApPlayer Receiver;
-
-	UPROPERTY()
-	FString ReceiverName;
-};
-
-USTRUCT()
-struct ARCHIPELAGO_API FApReceiveGift : public FApGift
-{
-	GENERATED_BODY()
-
-public:
-	UPROPERTY()
-	FString Id;
 };
 
 USTRUCT()

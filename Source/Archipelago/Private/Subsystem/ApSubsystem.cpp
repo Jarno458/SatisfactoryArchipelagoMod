@@ -57,26 +57,27 @@ void AApSubsystem::ConnectToArchipelago() {
 	AP_SetItemClearCallback([this]() {
 		ReceivedItems.Empty();
 		isReconnect = true;
-		});
+	});
 	AP_SetItemRecvCallback([this](int64 itemId, bool notify, bool isFromServer) {
 		ReceivedItems.Enqueue(TTuple<int64, bool>(itemId, isFromServer));
-		});
+	});
 	AP_SetLocationCheckedCallback([this](int64 locationId) {
 		CheckedLocations.Enqueue(locationId);
-		});
-	AP_RegisterSetReplyCallback([this](AP_SetReply setPacket) {
-		SetReplyCallback(std::move(setPacket));
-		});
+	});
 	AP_SetLocationInfoCallback([this](std::vector<AP_NetworkItem> scoutedItems) {
 		LocationScoutedCallback(std::move(scoutedItems));
-		});
+	});
 	AP_SetLoggingCallback([this](std::string message) {
 		UE_LOG(LogApSubsystem, Display, TEXT("LogFromAPCpp: %s"), *UApUtils::FStr(message));
-		});
+	});
 	AP_RegisterBouncedCallback([this](AP_Bounce bounce) {
 		BounceReceivedCallback(bounce);
-		});
-	AP_SetGiftingSupported(true);
+	});
+	AP_SetPackageReceivedCallback([this](std::string json) {
+		PackageReceivedCallback(json);
+	});
+
+	AP_SetGiftingSupported(false);
 
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::Starting AP"));
 	AP_Start();
@@ -106,14 +107,14 @@ void AApSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase) {
 		bool dummy = CallOnGameThread<bool>([this]() {
 			ConnectToArchipelago();
 			return true;
-			});
+		});
 
 		UE_LOG(LogApSubsystem, Display, TEXT("Waiting for AP Server connection to succeed..."));
 		FDateTime connectingStartedTime = FDateTime::Now();
 
 		FGenericPlatformProcess::ConditionalSleep([this, connectingStartedTime]() {
 			return InitializeTick(connectingStartedTime, config.Timeout);
-			}, 0.5);
+		}, 0.5);
 	}
 	else if (phase == ELifecyclePhase::POST_INITIALIZATION) {
 		SetActorTickEnabled(true);
@@ -143,8 +144,7 @@ void AApSubsystem::Tick(float DeltaTime) {
 	ProcessReceivedItems();
 	ProcessCheckedLocations();
 	ProcessDeadlinks();
-	ProcessPendingServerDataRequests();
-
+	ProcessApPackages();
 	HandleAPMessages();
 }
 
@@ -204,17 +204,8 @@ void AApSubsystem::DeathLinkReceivedCallback(const FString& source, const FStrin
 	PendingDeathlinks.Enqueue(messagePair);
 }
 
-void AApSubsystem::SetReplyCallback(AP_SetReply setReply) {
-	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::SetReplyCallback(\"%s\")"), *UApUtils::FStr(setReply.key));
-
-	FString key = UApUtils::FStr(setReply.key);
-
-	if (dataStoreCallbacks.Contains(key))
-		dataStoreCallbacks[key](setReply);
-}
-
 void AApSubsystem::LocationScoutedCallback(std::vector<AP_NetworkItem> scoutedLocations) const {
-	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::LocationScoutedCallback(vector[%i])"), scoutedLocations.size());
+	UE_LOGFMT(LogApSubsystem, Display, "AApSubsystem::LocationScoutedCallback(vector[{0}])", scoutedLocations.size());
 
 	TMap<int64, FApNetworkItem> scoutedLocationsResult = TMap<int64, FApNetworkItem>();
 
@@ -235,188 +226,192 @@ void AApSubsystem::LocationScoutedCallback(std::vector<AP_NetworkItem> scoutedLo
 		locationScoutingPromise->SetValue(scoutedLocationsResult);
 }
 
-void AApSubsystem::MonitorDataStoreValue(FString keyFString, TFunction<void()> callback) {
-	TFunction<void(AP_SetReply)> callbackWrapper = [callback](AP_SetReply setReply) { callback(); };
+void AApSubsystem::MonitorDataStoreJsonObjectValue(const FString& key, TFunction<void(const FString&, const TSharedRef<FJsonValue>&, const TSharedRef<FJsonValue>&, int)> callback) {
+	JsonUpdate rawDataUpdate;
+	rawDataUpdate.Callback = callback;
 
-	if (dataStoreCallbacks.Contains(keyFString))
-		dataStoreCallbacks[keyFString] = callbackWrapper;
+	if (dataStoreReplyCallbacks.Contains(key))
+		dataStoreReplyCallbacks[key] = MakeShared<JsonUpdate>(rawDataUpdate);
 	else
-		dataStoreCallbacks.Add(keyFString, callbackWrapper);
+		dataStoreReplyCallbacks.Add(key, MakeShared<JsonUpdate>(rawDataUpdate));
 
-	callback();
+	TArray<TSharedPtr<FJsonValue>> keysArray;
+	keysArray.Add(MakeShared<FJsonValueString>(key));
+
+	TSharedRef<FJsonObject> setNotifyCmd = MakeShared<FJsonObject>();
+	setNotifyCmd->SetStringField("cmd", "SetNotify");
+	setNotifyCmd->SetArrayField("keys", keysArray);
+
+	TArray<TSharedPtr<FJsonValue>> operations;
+
+	TSharedRef<FJsonObject> defaultOperation = MakeShared<FJsonObject>();
+	defaultOperation->SetStringField("operation", "default");
+	defaultOperation->SetObjectField("value", MakeShared<FJsonObject>());
+
+	operations.Add(MakeShared<FJsonValueObject>(defaultOperation));
+
+	TSharedRef<FJsonObject> setCmd = MakeShared<FJsonObject>();
+	setCmd->SetStringField("cmd", "Set");
+	setCmd->SetObjectField("default", MakeShared<FJsonObject>());
+	setCmd->SetArrayField("operations", operations);
+
+	TArray<TSharedRef<FJsonObject>> jsons;
+
+	jsons.Add(setNotifyCmd);
+	jsons.Add(setCmd);
+
+	Send(jsons);
 }
 
-void AApSubsystem::MonitorDataStoreValue(TArray<FString> keys, AP_DataType dataType, TFunction<void(AP_SetReply)> callback) {
-	for (FString keyFString : keys)
-	{
-		if (dataStoreCallbacks.Contains(keyFString))
-			dataStoreCallbacks[keyFString] = callback;
+void AApSubsystem::MonitorInt64DataStoreValue(const TArray<FString>& keys, TFunction<void(const FString&, const int64*, const int64*, int)> callback) {
+	for (const FString& key : keys) {
+		Int64Update int64Update;
+		int64Update.Callback = callback;
+
+		if (dataStoreReplyCallbacks.Contains(key))
+			dataStoreReplyCallbacks[key] = MakeShared<Int64Update>(int64Update);
 		else
-			dataStoreCallbacks.Add(keyFString, callback);
+			dataStoreReplyCallbacks.Add(key, MakeShared<Int64Update>(int64Update));
+
+		Int64Get int64Get;
+		int64Get.Callback = [callback](const FString& callbackKey, const int64* callbackValue)
+		{
+				callback(callbackKey, callbackValue, callbackValue, -1);
+		};
+
+		if (dataStorageRetrievalCallbacks.Contains(key))
+			dataStorageRetrievalCallbacks[key] = MakeShared<Int64Get>(int64Get);
+		else
+			dataStorageRetrievalCallbacks.Add(key, MakeShared<Int64Get>(int64Get));
 	}
 
-	CallOnGameThread<void>([this, keys, dataType]() {
-		std::map<std::string, AP_DataType> Keylist;
+	TArray<TSharedPtr<FJsonValue>> keysArray;
+	for (const FString& key : keys) {
+		keysArray.Add(MakeShared<FJsonValueString>(key));
+	}
 
-		for (FString Key : keys)
-			Keylist[TCHAR_TO_UTF8(*Key)] = dataType;
+	TSharedRef<FJsonObject> setNotifyCmd = MakeShared<FJsonObject>();
+	setNotifyCmd->SetStringField("cmd", "SetNotify");
+	setNotifyCmd->SetArrayField("keys", keysArray);
 
-		AP_SetNotify(Keylist);
-	});
+	TSharedRef<FJsonObject> getCmd = MakeShared<FJsonObject>();
+	getCmd->SetStringField("cmd", "Get");
+	getCmd->SetArrayField("keys", keysArray);
+
+	TArray<TSharedRef<FJsonObject>> jsons;
+
+	jsons.Add(setNotifyCmd);
+	jsons.Add(getCmd);
+
+	Send(jsons);
 }
 
-void AApSubsystem::MonitorUnboundedIntergerDataStoreValue(FString keyFString, TFunction<void(AP_SetReply)> callback) {
-	if (dataStoreCallbacks.Contains(keyFString))
-		dataStoreCallbacks[keyFString] = callback;
+void AApSubsystem::MonitorDataStoreUnboundedNumberValue(const FString& key, TFunction<void(const FString&, const TSharedRef<FJsonValueNumberString>&, const TSharedRef<FJsonValueNumberString>&, int)> callback) {
+	LargeIntegerUpdate rawDataUpdate;
+	rawDataUpdate.Callback = callback;
+
+	if (dataStoreReplyCallbacks.Contains(key))
+		dataStoreReplyCallbacks[key] = MakeShared<LargeIntegerUpdate>(rawDataUpdate);
 	else
-		dataStoreCallbacks.Add(keyFString, callback);
+		dataStoreReplyCallbacks.Add(key, MakeShared<LargeIntegerUpdate>(rawDataUpdate));
 
-	CallOnGameThread<void>([this, keyFString]() {
-		std::string key = TCHAR_TO_UTF8(*keyFString);
-		std::string defaultValue = "0";
+	TArray<TSharedPtr<FJsonValue>> keysArray;
+	keysArray.Add(MakeShared<FJsonValueString>(key));
 
-		AP_SetNotify(key, AP_DataType::Raw);
+	TSharedRef<FJsonObject> setNotifyCmd = MakeShared<FJsonObject>();
+	setNotifyCmd->SetStringField("cmd", "SetNotify");
+	setNotifyCmd->SetArrayField("keys", keysArray);
 
-		//we do not request default through AP_SetNotify, because we use dataType Raw for unbounded integers (like EnergyLink),
-		AP_SetServerDataRequest setDefaultAndRecieveUpdate;
-		setDefaultAndRecieveUpdate.key = key;
+	TArray<TSharedPtr<FJsonValue>> operations;
 
-		AP_DataStorageOperation setDefault;
-		setDefault.operation = "default";
-		setDefault.value = &defaultValue;
+	TSharedRef<FJsonObject> defaultOperation = MakeShared<FJsonObject>();
+	defaultOperation->SetStringField("operation", "default");
+	defaultOperation->SetField("value", MakeShared<FJsonValueNumberString>(FString::FromInt(0)));
 
-		std::vector<AP_DataStorageOperation> operations;
-		operations.push_back(setDefault);
+	operations.Add(MakeShared<FJsonValueObject>(defaultOperation));
 
-		setDefaultAndRecieveUpdate.operations = operations;
-		setDefaultAndRecieveUpdate.default_value = &defaultValue;
-		setDefaultAndRecieveUpdate.type = AP_DataType::Raw;
-		setDefaultAndRecieveUpdate.want_reply = true;
+	TSharedRef<FJsonObject> setCmd = MakeShared<FJsonObject>();
+	setCmd->SetStringField("cmd", "Set");
+	setCmd->SetStringField("key", key);
+	setCmd->SetField("default", MakeShared<FJsonValueNumberString>(FString::FromInt(0)));
+	setCmd->SetArrayField("operations", operations);
 
-		AP_SetServerData(&setDefaultAndRecieveUpdate);
-	});
+	TArray<TSharedRef<FJsonObject>> jsons;
+
+	jsons.Add(setNotifyCmd);
+	jsons.Add(setCmd);
+
+	Send(jsons);
 }
 
-void AApSubsystem::ModifyEnergyLink(int64 amount) const {
-	CallOnGameThread<void>([this, amount]() {
-		AP_SetServerDataRequest sendEnergyLinkUpdate;
-		sendEnergyLinkUpdate.key = "EnergyLink" + std::to_string(connectionInfoSubsystem->currentPlayerTeam);
+void AApSubsystem::ModifyDataStorageInt64(const FString& key, int64 amount) const {
+	TArray<TSharedPtr<FJsonValue>> operations;
 
-		std::string valueToAdd = std::to_string(amount);
-		std::string defaultValue = std::string("0");
+	TSharedRef<FJsonObject> addOperation = MakeShared<FJsonObject>();
+	addOperation->SetStringField("operation", "add");
+	addOperation->SetField("value", MakeShared<FJsonValueNumberString>(FString::FromInt(amount)));
 
-		AP_DataStorageOperation add;
-		add.operation = "add";
-		add.value = &valueToAdd;
+	operations.Add(MakeShared<FJsonValueObject>(addOperation));
 
-		AP_DataStorageOperation lowerBoundry;
-		lowerBoundry.operation = "max";
-		lowerBoundry.value = &defaultValue;
+	if (amount < 0) {
+		TSharedRef<FJsonObject> maxOperation = MakeShared<FJsonObject>();
+		maxOperation->SetStringField("operation", "max");
+		maxOperation->SetField("value", MakeShared<FJsonValueNumberString>(FString::FromInt(0)));
 
-		std::vector<AP_DataStorageOperation> operations;
-		operations.push_back(add);
-		operations.push_back(lowerBoundry);
+		operations.Add(MakeShared<FJsonValueObject>(maxOperation));
+	} else {
+		TSharedRef<FJsonObject> minOperation = MakeShared<FJsonObject>();
+		minOperation->SetStringField("operation", "min");
+		minOperation->SetField("value", MakeShared<FJsonValueNumberString>(FString::FromInt(0)));
 
-		sendEnergyLinkUpdate.operations = operations;
-		sendEnergyLinkUpdate.default_value = &defaultValue;
-		sendEnergyLinkUpdate.type = AP_DataType::Raw;
-		sendEnergyLinkUpdate.want_reply = true;
+		operations.Add(MakeShared<FJsonValueObject>(minOperation));
+	}
 
-		AP_SetServerData(&sendEnergyLinkUpdate);
-	});
+	TSharedRef<FJsonObject> setCmd = MakeShared<FJsonObject>();
+	setCmd->SetStringField("cmd", "Set");
+	setCmd->SetStringField("key", key);
+	setCmd->SetField("default", MakeShared<FJsonValueNumberString>(FString::FromInt(0)));
+	setCmd->SetArrayField("operations", operations);
+
+	Send(setCmd);
 }
 
-void AApSubsystem::ModifyDataStorageInt64(FString key, int64 amount) const {
-	CallOnGameThread<void>([this, key, amount]() {
-		AP_SetServerDataRequest sendUpdate;
-		sendUpdate.key = TCHAR_TO_UTF8(*key);
-
-		int64_t valueToAdd = amount;
-		int64_t minValue = 0;
-		int64_t maxValue = INT64_MAX;
-
-		AP_DataStorageOperation add;
-		add.operation = "add";
-		add.value = &valueToAdd;
-
-		AP_DataStorageOperation boundryGuard;
-		if (amount > 0) {
-			boundryGuard.operation = "min";
-			boundryGuard.value = &maxValue;
-		}
-		else {
-			boundryGuard.operation = "max";
-			boundryGuard.value = &minValue;
-		}
-
-		std::vector<AP_DataStorageOperation> operations;
-		operations.push_back(add);
-		operations.push_back(boundryGuard);
-
-		sendUpdate.operations = operations;
-		sendUpdate.default_value = nullptr;
-		sendUpdate.type = AP_DataType::Int64;
-		sendUpdate.want_reply = true;
-
-		AP_SetServerData(&sendUpdate);
-	});
-}
-
-void AApSubsystem::GetDataStorageJsonFields(TSet<FString> keys, TFunction<void(FString, FString)> callback)
+void AApSubsystem::GetDataStorageJsonFields(const TSet<FString>& keys, TFunction<void(const FString&, const TSharedRef<FJsonValue>&)> callback)
 {
-	for (FString key : keys)
-	{
-		FPendingServerData pendingData;
-		pendingData.Request.key = TCHAR_TO_UTF8(*key);
-		pendingData.Request.type = AP_DataType::Raw;
-		pendingData.ValueContainer = "";
+	TArray<TSharedPtr<FJsonValue>> keysArray;
+	for (const FString& key : keys) {
+		keysArray.Add(MakeShared<FJsonValueString>(key));
+
+		JsonGet pendingData;
 		pendingData.Callback = callback;
 
-		dataStorageRetrievalCallbacks.Add(key, pendingData);
-
-		dataStorageRetrievalCallbacks[key].Request.value = &dataStorageRetrievalCallbacks[key].ValueContainer;
+		dataStorageRetrievalCallbacks.Add(key, MakeShared<JsonGet>(pendingData));
 	}
 
-	CallOnGameThread<void>([this]() {
-		for (TPair<FString, FPendingServerData>& pendingDataRequest : dataStorageRetrievalCallbacks) {
-			AP_BulkGetServerData(&pendingDataRequest.Value.Request);
-		}
+	TSharedRef<FJsonObject> cmd = MakeShared<FJsonObject>();
+	cmd->SetStringField("cmd", "Get");
+	cmd->SetArrayField("keys", keysArray);
 
-		AP_CommitServerData();
-	});
+	Send(cmd);
 }
 
-void AApSubsystem::ProcessPendingServerDataRequests() {
-	if (dataStorageRetrievalCallbacks.Num() == 0)
-		return;
+void AApSubsystem::GetDataStorageInt64Fields(const TSet<FString>& keys, TFunction<void(const FString&, const int64*)> callback)
+{
+	TArray<TSharedPtr<FJsonValue>> keysArray;
+	for (const FString& key : keys) {
+		keysArray.Add(MakeShared<FJsonValueString>(key));
 
-	TArray<FString> keysToDrop;
+		Int64Get pendingData;
+		pendingData.Callback = callback;
 
-	CallOnGameThread<void>([this, &keysToDrop]() {
-		for (const TPair<FString, FPendingServerData>& pendingDataRequest : dataStorageRetrievalCallbacks) {
-			if (pendingDataRequest.Value.Request.status == AP_RequestStatus::Pending)
-				continue;
-
-			FString resultJson = UApUtils::FStr(pendingDataRequest.Value.ValueContainer);
-
-			resultJson = resultJson.LeftChop(1); //remove newline at the end
-
-			if (resultJson == TEXT("null"))
-			{
-				pendingDataRequest.Value.Callback(pendingDataRequest.Key, FString());
-			}
-			else
-			{
-				pendingDataRequest.Value.Callback(pendingDataRequest.Key, resultJson);
-			}
-
-			keysToDrop.Add(pendingDataRequest.Key);
-		}
-	});
-
-	for (const FString& key : keysToDrop) {
-		dataStorageRetrievalCallbacks.Remove(key);
+		dataStorageRetrievalCallbacks.Add(key, MakeShared<Int64Get>(pendingData));
 	}
+
+	TSharedRef<FJsonObject> cmd = MakeShared<FJsonObject>();
+	cmd->SetStringField("cmd", "Get");
+	cmd->SetArrayField("keys", keysArray);
+
+	Send(cmd);
 }
 
 void AApSubsystem::SetItemReceivedCallback(TFunction<void(int64, bool)> onItemReceived) {
@@ -494,25 +489,61 @@ void AApSubsystem::TriggerDeathLink(FString source, FString cause) {
 	CallOnGameThread<void>([bounce]() { AP_SendBounce(bounce); });
 }
 
-void AApSubsystem::SetRawDataStorageValue(FString key, FString jsonString) const {
-	CallOnGameThread<void>([this, key, jsonString]() {
-		std::string keyString = TCHAR_TO_UTF8(*key);
-		std::string traitJsonString = TCHAR_TO_UTF8(*jsonString);
-
-		AP_DataStorageOperation setOperation;
-		setOperation.operation = "replace";
-		setOperation.value = &traitJsonString;
-
-		AP_SetServerDataRequest setTraitInfoRequest;
-		setTraitInfoRequest.key = keyString;
-		setTraitInfoRequest.operations = { setOperation };
-		setTraitInfoRequest.type = AP_DataType::Raw;
-		setTraitInfoRequest.default_value = nullptr;
-		setTraitInfoRequest.want_reply = false;
-
-		AP_SetServerData(&setTraitInfoRequest);
-	});
+void AApSubsystem::Send(const TSharedRef<FJsonObject>& json) const
+{
+	Send(TArray<TSharedRef<FJsonObject>>{ json });
 }
+
+void AApSubsystem::Send(const TArray<TSharedRef<FJsonObject>>& jsons) const
+{
+	TArray<TSharedPtr<FJsonValue>> jsonValues;
+	for (const TSharedRef<FJsonObject>& json : jsons) {
+		jsonValues.Add(MakeShared<FJsonValueObject>(json));
+	}
+
+	FString OutputString;
+	TSharedRef<TJsonWriter<TCHAR, TCondensedJsonPrintPolicy<TCHAR>>> Writer = TJsonWriterFactory<TCHAR, TCondensedJsonPrintPolicy<TCHAR>>::Create(&OutputString);
+
+	FJsonSerializer::Serialize(jsonValues, Writer);
+
+	std::string outputJson = TCHAR_TO_UTF8(*OutputString);
+
+	CallOnGameThread<void>([outputJson]() { AP_Send(outputJson); });
+}
+
+/*void AApSubsystem::SetRawDataStorageValue(FString key, FString jsonString) const {
+	std::string keyString = TCHAR_TO_UTF8(*key);
+	std::string traitJsonString = TCHAR_TO_UTF8(*jsonString);
+
+	UE_LOGFMT(LogApSubsystem, Display, "AApSubsystem::SetRawDataStorageValue({0}), {1}", key, jsonString);
+
+	jsonString = "{}";
+
+	AP_DataStorageOperation setOperation;
+	setOperation.operation = "replace";
+	setOperation.value = &traitJsonString;
+
+	std::string defaultValue = std::string("{}");
+
+	AP_SetServerDataRequest* setTraitInfoRequest = new AP_SetServerDataRequest();
+	setTraitInfoRequest->key = keyString;
+	setTraitInfoRequest->operations = { setOperation };
+	setTraitInfoRequest->type = AP_DataType::Raw;
+	setTraitInfoRequest->default_value = &defaultValue;
+	setTraitInfoRequest->want_reply = false;
+
+	bool dummy = CallOnGameThread<bool>([setTraitInfoRequest]()
+	{
+		AP_SetServerData(setTraitInfoRequest);
+
+		delete setTraitInfoRequest;
+
+		return true;
+	});
+
+	if (!dummy)
+		UE_LOGFMT(LogApSubsystem, Error, "AApSubsystem::SetRawDataStorageValue({0}), {1} - Failed to send request", key);
+}*/
 
 void AApSubsystem::CheckConnectionState() const {
 	if (!IsInGameThread())
@@ -569,6 +600,307 @@ void AApSubsystem::CheckConnectionState() const {
 	}
 }
 
+void AApSubsystem::ProcessApPackages()
+{
+	for (int i = 0; i < 5; i++) { // small batches to not lock up the game thread for too long if there are many packages, the rest will be processed in the next ticks
+		FString queuedMessage;
+
+		if (JsonPackageQueue.Dequeue(queuedMessage)) {
+			const TSharedRef<TJsonReader<>> reader = TJsonReaderFactory<>::Create(*queuedMessage);
+
+			TSharedPtr<FJsonObject> parsedJson;
+			FJsonSerializer::Deserialize(reader, parsedJson);
+
+			if (!parsedJson || !parsedJson.IsValid())
+				UE_LOGFMT(LogApSubsystem, Error, "AApSubsystem::ProcessApPackages(), Failed to parse \"{0}\"", queuedMessage);
+
+			FString cmd = parsedJson->GetStringField("cmd");
+
+			if (cmd == "Retrieved") {
+				OnRetrievedPackage(parsedJson);
+			}
+			else if (cmd == "SetReply") {
+				OnSetReply(parsedJson);
+			}
+		}
+	}
+
+	for (const FString& processedKey : processedCallbacks)
+		dataStorageRetrievalCallbacks.Remove(processedKey);
+}
+
+void AApSubsystem::OnRetrievedPackage(const TSharedPtr<FJsonObject> json)
+{
+	const TSharedPtr<FJsonObject>* keys;
+	if (!json->TryGetObjectField("keys", keys))
+	{
+		UE_LOGFMT(LogApSubsystem, Error, "AApSubsystem::OnRetrievedPackage(): Protocol violation, Retrieved does not contain 'keys' field");
+		return;
+	}
+
+	const TMap<FString, TSharedPtr<FJsonValue>>& values = (*keys)->Values;
+
+	for (const TPair<FString, TSharedPtr<FJsonValue>>& pair : values)
+	{
+		FString key = pair.Key;
+		TSharedPtr<FJsonValue> value = pair.Value;
+
+		CallDataStorageCallbackForRetrieved(pair.Key, value);
+	}
+}
+
+void AApSubsystem::OnSetReply(const TSharedPtr<FJsonObject> json)
+{
+	//TSharedPtr<FJsonObject> keys = json->GetObjectField("keys");
+
+	//const TMap<FString, TSharedPtr<FJsonValue>>& values = keys->Values;
+
+	//for (const TPair<FString, TSharedPtr<FJsonValue>>& pair : values)
+	//{
+	//	FString key = pair.Key;
+	//	TSharedPtr<FJsonValue> value = pair.Value;
+
+	//	CallDataStorageCallback(pair.Key, value);
+	//}
+
+	FString key;
+	if (!json->TryGetStringField("key", key))
+	{
+		UE_LOGFMT(LogApSubsystem, Error, "AApSubsystem::OnSetReply(): Protocol violation, SetReply does not contain 'key' field");
+		return;
+	}
+
+	int slot;
+	if (!json->TryGetNumberField("slot", slot))
+	{
+		UE_LOGFMT(LogApSubsystem, Error, "AApSubsystem::OnSetReply(): Protocol violation, SetReply does not contain 'slot' field");
+		return;
+	}
+
+	TSharedPtr<FJsonValue> value = json->TryGetField("value");
+	if (!value || !value.IsValid())
+	{
+		UE_LOGFMT(LogApSubsystem, Error, "AApSubsystem::OnSetReply(): Protocol violation, SetReply does not contain 'value' field");
+		return;
+	}
+
+	TSharedPtr<FJsonValue> originalValue = json->TryGetField("original_value");
+	if (!originalValue || !originalValue.IsValid())
+	{
+		UE_LOGFMT(LogApSubsystem, Error, "AApSubsystem::OnSetReply(): Protocol violation, SetReply does not contain 'value' field");
+		return;
+	}
+
+	CallDataStorageCallbackForSetReply(key, originalValue, value, slot);
+}
+
+void AApSubsystem::CallDataStorageCallbackForRetrieved(FString key, const TSharedPtr<FJsonValue> json)
+{
+	if (!dataStorageRetrievalCallbacks.Contains(key))
+	{
+		UE_LOGFMT(LogApSubsystem, Error, "AApSubsystem::CallDataStorageCallback({0}): No callback waiting for key", key);
+		return;
+	}
+
+	const TSharedRef<FPendingServerDataBase>& pendingData = dataStorageRetrievalCallbacks[key];
+
+	if (pendingData->Type == EDataType::Number)
+	{
+		const TSharedRef<Int64Get> pendingDataInt64 = StaticCastSharedRef<Int64Get>(pendingData);
+		if (json->IsNull())
+		{
+			pendingDataInt64->Callback(key, nullptr);
+		}
+		else
+		{
+			int64 value;
+			if (!json->TryGetNumber(value))
+			{
+				UE_LOGFMT(LogApSubsystem, Error, "AApSubsystem::CallDataStorageCallback({0}): Failed to get number from JSON", key);
+			}
+			else
+			{
+				pendingDataInt64->Callback(key, &value);
+			}
+		}
+	}
+	else if (pendingData->Type == EDataType::Object)
+	{
+		const TSharedRef<JsonGet> pendingDataJson = StaticCastSharedRef<JsonGet>(pendingData);
+		if (json->IsNull())
+		{
+			pendingDataJson->Callback(key, MakeShared<FJsonValueNull>());
+		}
+		else
+		{
+			const TSharedPtr<FJsonObject>* value;
+			if (!json->TryGetObject(value) || !value)
+			{
+				UE_LOGFMT(LogApSubsystem, Error, "AApSubsystem::CallDataStorageCallback({0}): Failed to get object from JSON", key);
+			}
+			else
+			{
+				pendingDataJson->Callback(key, MakeShared<FJsonValueObject>(*value));
+			}
+		}
+	} 
+	else
+	{
+		UE_LOGFMT(LogApSubsystem, Error, "AApSubsystem::CallDataStorageCallback({0}): No handling implemented for the supplied type");
+	}
+
+	processedCallbacks.Add(key);
+}
+
+void AApSubsystem::CallDataStorageCallbackForSetReply(FString key, const TSharedPtr<FJsonValue>& oldJson, const TSharedPtr<FJsonValue>& json, int slot)
+{
+	if (!dataStoreReplyCallbacks.Contains(key))
+	{
+		UE_LOGFMT(LogApSubsystem, Error, "AApSubsystem::CallDataStorageCallbackForSetReply({0}): No callback waiting for key", key);
+		return;
+	}
+
+	const TSharedRef<FUpdatedServerDataBase>& pendingData = dataStoreReplyCallbacks[key];
+
+	if (pendingData->Type == EDataType::Number)
+	{
+		const TSharedRef<Int64Update> pendingDataInt64 = StaticCastSharedRef<Int64Update>(pendingData);
+		if (oldJson->IsNull())
+		{
+			if (json->IsNull())
+				pendingDataInt64->Callback(key, nullptr, nullptr, slot);
+			else
+			{
+				int64 value;
+				if (!json->TryGetNumber(value))
+				{
+					UE_LOGFMT(LogApSubsystem, Error, "AApSubsystem::CallDataStorageCallback({0}): Failed to get number from JSON", key);
+					return;
+				}
+				else
+				{
+					pendingDataInt64->Callback(key, nullptr, &value, slot);
+				}
+			}
+		}
+		else
+		{
+			int64 oldValue;
+			if (!oldJson->TryGetNumber(oldValue))
+			{
+				UE_LOGFMT(LogApSubsystem, Error, "AApSubsystem::CallDataStorageCallback({0}): Failed to get old number from JSON", key);
+				return;
+			}
+
+			if (json->IsNull())
+			{
+				pendingDataInt64->Callback(key, &oldValue, nullptr, slot);
+			} 
+			else
+			{
+				int64 value;
+				if (!json->TryGetNumber(value))
+				{
+					UE_LOGFMT(LogApSubsystem, Error, "AApSubsystem::CallDataStorageCallback({0}): Failed to get number from JSON", key);
+					return;
+				}
+				else
+				{
+					pendingDataInt64->Callback(key, &oldValue, &value, slot);
+				}
+			}
+		}
+	}
+	else if (pendingData->Type == EDataType::Object)
+	{
+		const TSharedRef<JsonUpdate> pendingDataJson = StaticCastSharedRef<JsonUpdate>(pendingData);
+		if (oldJson->IsNull())
+		{
+			if (json->IsNull())
+			{
+				pendingDataJson->Callback(key, MakeShared<FJsonValueNull>(), MakeShared<FJsonValueNull>(), slot);
+			}
+			else 
+			{
+				const TSharedPtr<FJsonObject>* value;
+				if (!json->TryGetObject(value) || !value)
+				{
+					UE_LOGFMT(LogApSubsystem, Error, "AApSubsystem::CallDataStorageCallback({0}): Failed to get number from JSON", key);
+					return;
+				}
+				else
+				{
+					pendingDataJson->Callback(key, MakeShared<FJsonValueNull>(), MakeShared<FJsonValueObject>(*value), slot);
+				}
+			}
+		}
+		else
+		{
+			const TSharedPtr<FJsonObject>* oldValue;
+			if (!json->TryGetObject(oldValue) || !oldValue)
+			{
+				UE_LOGFMT(LogApSubsystem, Error, "AApSubsystem::CallDataStorageCallback({0}): Failed to get old number from JSON", key);
+				return;
+			}
+
+			if (json->IsNull())
+			{
+				pendingDataJson->Callback(key, MakeShared<FJsonValueObject>(*oldValue), MakeShared<FJsonValueNull>(), slot);
+			}
+			else
+			{
+				const TSharedPtr<FJsonObject>* value;
+				if (!json->TryGetObject(value) || !value)
+				{
+					UE_LOGFMT(LogApSubsystem, Error, "AApSubsystem::CallDataStorageCallback({0}): Failed to get number from JSON", key);
+					return;
+				}
+				else
+				{
+					pendingDataJson->Callback(key, MakeShared<FJsonValueObject>(*oldValue), MakeShared<FJsonValueObject>(*value), slot);
+				}
+			}
+		}
+	}
+	else if (pendingData->Type == EDataType::LargeInteger)
+	{
+		const TSharedRef<LargeIntegerUpdate> pendingDataJson = StaticCastSharedRef<LargeIntegerUpdate>(pendingData);
+		if (oldJson->IsNull())
+		{
+			if (json->IsNull())
+			{
+				pendingDataJson->Callback(key, MakeShared<FJsonValueNumberString>(FString::FromInt(0)), MakeShared<FJsonValueNumberString>(FString::FromInt(0)), slot);
+			}
+			else
+			{
+				//TODO maybe need some sanity checking to ensure the string is actually a number?
+				const TSharedRef<FJsonValueNumberString> value = MakeShared<FJsonValueNumberString>(json->AsString());
+
+				pendingDataJson->Callback(key, MakeShared<FJsonValueNumberString>(FString::FromInt(0)), value, slot);
+			}
+		}
+		else
+		{
+			//TODO maybe need some sanity checking to ensure the string is actually a number?
+			const TSharedRef<FJsonValueNumberString> oldValue = MakeShared<FJsonValueNumberString>(oldJson->AsString());
+
+			if (json->IsNull())
+			{
+				pendingDataJson->Callback(key, oldValue, MakeShared<FJsonValueNumberString>(FString::FromInt(0)), slot);
+			}
+			else
+			{
+				const TSharedRef<FJsonValueNumberString> value = MakeShared<FJsonValueNumberString>(json->AsString());
+				pendingDataJson->Callback(key, oldValue, value, slot);
+			}
+		}
+	}
+	else
+	{
+		UE_LOGFMT(LogApSubsystem, Error, "AApSubsystem::CallDataStorageCallback({0}): No handling implemented for the supplied type");
+	}
+}
+
 void AApSubsystem::AddChatMessage(FText message, FLinearColor color) {
 	ChatMessageQueue.Enqueue(TPair<FString, FLinearColor>(message.ToString(), color));
 }
@@ -588,7 +920,7 @@ void AApSubsystem::HandleAPMessages() {
 				SendChatMessage(UApUtils::FStr(message->text), FLinearColor::White);
 
 				AP_ClearLatestMessage();
-				});
+			});
 		}
 	}
 }
@@ -608,32 +940,57 @@ void AApSubsystem::TimeoutConnection() const {
 	UE_LOG(LogApSubsystem, Error, TEXT("AApSubsystem::TimeoutConnectionIfNotConnected(), Authenticated Failed"));
 }
 
+void AApSubsystem::PackageReceivedCallback(const std::string rawJson)
+{
+	FString json = UApUtils::FStr(rawJson);
+
+	UE_LOGFMT(LogApSubsystem, Display, "AApSubsystem::PackageReceivedCallback({0})", json);
+
+	JsonPackageQueue.Enqueue(json);
+}
+
 FString AApSubsystem::GetApItemName(int64 id) const {
 	return UApUtils::FStr(CallOnGameThread<std::string>([id]() { return AP_GetItemName("Satisfactory", id); }));
 }
 
 void AApSubsystem::SetGiftBoxState(bool open, const TSet<FString>& acceptedTraits) const {
-	AP_RequestStatus result = CallOnGameThread<AP_RequestStatus>([open, acceptedTraits]() {
-		AP_UseGiftAutoReject(true);
+	TArray<TSharedPtr<FJsonValue>> traits;
 
-		std::vector<std::string> desiredTriats;
+	for (const FString& trait : acceptedTraits) {
+		traits.Add(MakeShared<FJsonValueString>(trait));
+	}
 
-		for (const FString& trait : acceptedTraits)
-			desiredTriats.push_back(TCHAR_TO_UTF8(*trait));
+	TSharedRef<FJsonObject> giftBoxObject = MakeShared<FJsonObject>();
+	giftBoxObject->SetField("minimum_gift_data_version", MakeShared<FJsonValueNumberString>(FString::FromInt(3)));
+	giftBoxObject->SetField("maximum_gift_data_version", MakeShared<FJsonValueNumberString>(FString::FromInt(3)));
+	giftBoxObject->SetNumberField("maximum_gift_data_version", 3);
+	giftBoxObject->SetBoolField("is_open", open);
+	giftBoxObject->SetBoolField("accepts_any_gift", false);
+	giftBoxObject->SetArrayField("desired_traits", traits);
 
-		AP_GiftBoxProperties giftbox;
-		giftbox.AcceptsAnyGift = false;
-		giftbox.DesiredTraits = desiredTriats;
-		giftbox.IsOpen = open;
+	TSharedRef<FJsonObject> giftWrapper = MakeShared<FJsonObject>();
+	giftWrapper->SetObjectField(FString::FromInt(connectionInfoSubsystem->GetCurrentPlayerSlot()), giftBoxObject);
 
-		return AP_SetGiftBoxProperties(giftbox);
-		});
+	TArray<TSharedPtr<FJsonValue>> operations;
 
-	if (result != AP_RequestStatus::Done)
-		UE_LOG(LogApSubsystem, Error, TEXT("AApSubsystem::SetGiftBoxState(\"%s\") Updating giftbox metadata failed"), (open ? TEXT("true") : TEXT("false")));
+	TSharedRef<FJsonObject> updateOperation = MakeShared<FJsonObject>();
+	updateOperation->SetStringField("operation", "update");
+	updateOperation->SetObjectField("value", giftWrapper);
+
+	operations.Add(MakeShared<FJsonValueObject>(updateOperation));
+
+	FString key = FString::Format(TEXT("GiftBox;{0}"), { connectionInfoSubsystem->GetCurrentPlayerTeam() });
+
+	TSharedRef<FJsonObject> setCmd = MakeShared<FJsonObject>();
+	setCmd->SetStringField("cmd", "Set");
+	setCmd->SetStringField("key", key);
+	setCmd->SetField("default", MakeShared<FJsonValueNumberString>(FString::FromInt(0)));
+	setCmd->SetArrayField("operations", operations);
+
+	Send(setCmd);
 }
 
-TMap<FApPlayer, FApTraitBits> AApSubsystem::GetAcceptedTraitsPerPlayer() const {
+/*TMap<FApPlayer, FApTraitBits> AApSubsystem::GetAcceptedTraitsPerPlayer() const {
 	std::map<std::pair<int, int>, AP_GiftBoxProperties> giftboxes =
 		CallOnGameThread<std::map<std::pair<int, int>, AP_GiftBoxProperties>>([]() { return AP_QueryGiftBoxes(); });
 
@@ -661,39 +1018,69 @@ TMap<FApPlayer, FApTraitBits> AApSubsystem::GetAcceptedTraitsPerPlayer() const {
 	}
 
 	return openGiftBoxes;
+}*/
+
+void AApSubsystem::SendGift(const FApGift& giftToSend) const {
+	Send(BuildSendGift(giftToSend));
 }
 
-bool AApSubsystem::SendGift(FApSendGift giftToSend) const {
+TSharedRef<FJsonObject> AApSubsystem::BuildSendGift(const FApGift& giftToSend) const
+{
 	static const UEnum* giftTraitEnum = StaticEnum<EGiftTrait>();
 
-	AP_Gift gift;
-	gift.ItemName = TCHAR_TO_UTF8(*giftToSend.ItemName);
-	gift.Amount = giftToSend.Amount;
-	gift.ItemValue = giftToSend.ItemValue;
-	gift.Receiver = TCHAR_TO_UTF8(*giftToSend.ReceiverName);
-	gift.ReceiverTeam = giftToSend.Receiver.Team;
-	gift.Traits = std::vector<AP_GiftTrait>(giftToSend.Traits.Num());
-	gift.IsRefund = false;
+	TArray<TSharedPtr<FJsonValue>> traits;
 
-	for (int i = 0; i < giftToSend.Traits.Num(); i++)
-	{
-		AP_GiftTrait trait;
-		trait.Trait = TCHAR_TO_UTF8(*giftTraitEnum->GetNameStringByValue((int64)giftToSend.Traits[i].Trait));
-		trait.Duration = 1.0;
-		trait.Quality = giftToSend.Traits[i].Quality;
+	for (const FApGiftTrait& trait : giftToSend.Traits) {
+		TSharedRef<FJsonObject> traitObject = MakeShared<FJsonObject>();
+		traitObject->SetStringField("trait", giftTraitEnum->GetNameStringByValue(static_cast<int64>(trait.Trait)));
+		if (!FMath::IsNearlyEqual(trait.Duration, 1.0f))
+			traitObject->SetNumberField("duration", trait.Duration);
+		if (!FMath::IsNearlyEqual(trait.Quality, 1.0f))
+			traitObject->SetNumberField("quality", trait.Quality);
 
-		gift.Traits[i] = trait;
+		traits.Add(MakeShared<FJsonValueObject>(traitObject));
 	}
 
-	AP_RequestStatus result = CallOnGameThread<AP_RequestStatus>([gift]() { return AP_SendGift(gift); });
+	TSharedRef<FJsonObject> giftObject = MakeShared<FJsonObject>();
+	giftObject->SetStringField("id", giftToSend.Id);
+	giftObject->SetStringField("item_name", giftToSend.ItemName);
+	giftObject->SetField("amount", MakeShared<FJsonValueNumberString>(FString::FromInt(giftToSend.Amount)));
+	if (giftToSend.ItemValue > 0)
+		giftObject->SetField("item_value", MakeShared<FJsonValueNumberString>(FString::FromInt(giftToSend.ItemValue)));
+	giftObject->SetField("sender_team", MakeShared<FJsonValueNumberString>(FString::FromInt(connectionInfoSubsystem->GetCurrentPlayerTeam())));
+	giftObject->SetField("sender_slot", MakeShared<FJsonValueNumberString>(FString::FromInt(connectionInfoSubsystem->GetCurrentPlayerSlot())));
+	giftObject->SetField("receiver_team", MakeShared<FJsonValueNumberString>(FString::FromInt(giftToSend.Receiver.Team)));
+	giftObject->SetField("receiver_slot", MakeShared<FJsonValueNumberString>(FString::FromInt(giftToSend.Receiver.Slot)));
+	giftObject->SetField("is_refund", MakeShared<FJsonValueBoolean>(giftToSend.isRefund));
+	giftObject->SetArrayField("traits", traits);
 
-	if (result != AP_RequestStatus::Done)
-		UE_LOG(LogApSubsystem, Error, TEXT("AApSubsystem::SendGift({Name: \"%s\", Amount: %i}) Sending gift failed"), *giftToSend.ItemName, giftToSend.Amount);
+	TSharedRef<FJsonObject> giftWrapper = MakeShared<FJsonObject>();
+	giftWrapper->SetObjectField(giftToSend.Id, giftObject);
 
-	return result != AP_RequestStatus::Error;
+	TArray<TSharedPtr<FJsonValue>> operations;
+
+	TSharedRef<FJsonObject> updateOperation = MakeShared<FJsonObject>();
+	updateOperation->SetStringField("operation", "update");
+	updateOperation->SetObjectField("value", giftWrapper);
+
+	operations.Add(MakeShared<FJsonValueObject>(updateOperation));
+
+	FString key;
+	if (giftToSend.isRefund)
+		key = FString::Format(TEXT("GiftBox;{0};{1}"), { giftToSend.Receiver.Team, giftToSend.Receiver.Slot });
+	else
+		key = FString::Format(TEXT("GiftBox;{0};{1}"), { connectionInfoSubsystem->GetCurrentPlayerTeam(), connectionInfoSubsystem->GetCurrentPlayerSlot() });
+
+	TSharedRef<FJsonObject> setCmd = MakeShared<FJsonObject>();
+	setCmd->SetStringField("cmd", "Set");
+	setCmd->SetStringField("key", key);
+	setCmd->SetField("default", MakeShared<FJsonValueNumberString>(FString::FromInt(0)));
+	setCmd->SetArrayField("operations", operations);
+
+	return setCmd;
 }
 
-TArray<FApReceiveGift> AApSubsystem::GetGifts() const {
+/*TArray<FApReceiveGift> AApSubsystem::GetGifts() const {
 	if (config.SaveMode) {
 		UE_LOG(LogApSubsystem, Warning, TEXT("AApSubsystem::GetGifts() called in Save Mode, ignoring request"));
 		return TArray<FApReceiveGift>();
@@ -729,40 +1116,48 @@ TArray<FApReceiveGift> AApSubsystem::GetGifts() const {
 	}
 
 	return currentGifts;
-}
+}*/
 
-void AApSubsystem::RejectGift(TSet<FString> ids) const {
-	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::RejectGift(count: %i)"), ids.Num());
-	if (ids.Num() == 0)
+
+void AApSubsystem::ProcessGifts(TSet<FString> acceptedIds, TArray<FApGift> rejectedGifts) const
+{
+	if (acceptedIds.Num() == 0 && rejectedGifts.Num() == 0)
 		return;
 
-	std::set<std::string> giftIds;
-	for (FString id : ids) {
-		UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::RejectGift(\"%s\")"), *id);
-		giftIds.insert(TCHAR_TO_UTF8(*id));
+	TArray<TSharedRef<FJsonObject>> packets;
+
+	for (FApGift giftToReject : rejectedGifts)
+	{
+		FApPlayer sender = giftToReject.Sender;
+
+		giftToReject.Sender = giftToReject.Receiver;
+		giftToReject.Receiver = sender;
+		giftToReject.isRefund = true;
+
+		acceptedIds.Add(giftToReject.Id);
+
+		packets.Add(BuildSendGift(giftToReject));
 	}
 
-	AP_RequestStatus result = CallOnGameThread<AP_RequestStatus>([giftIds]() { return AP_RejectGift(giftIds); });
+	TArray<TSharedPtr<FJsonValue>> operations;
 
-	if (result != AP_RequestStatus::Done)
-		UE_LOG(LogApSubsystem, Error, TEXT("AApSubsystem::RejectGift(count: %i) Rejecting gift failed"), ids.Num());
-}
-
-void AApSubsystem::AcceptGift(TSet<FString> ids) const {
-	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::AcceptGift(count: %i)"), ids.Num());
-	if (ids.Num() == 0)
-		return;
-
-	std::set<std::string> giftIds;
-	for (FString id : ids) {
-		UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::AcceptGift(\"%s\")"), *id);
-		giftIds.insert(TCHAR_TO_UTF8(*id));
+	for (FString id : acceptedIds) {
+		TSharedRef<FJsonObject> popOperation = MakeShared<FJsonObject>();
+		popOperation->SetStringField("operation", "pop");
+		popOperation->SetStringField("value", id);
 	}
 
-	AP_RequestStatus result = CallOnGameThread<AP_RequestStatus>([giftIds]() { return AP_AcceptGift(giftIds); });
+	FString key = FString::Format(TEXT("GiftBox;{0};{1}"), { connectionInfoSubsystem->GetCurrentPlayerTeam(), connectionInfoSubsystem->GetCurrentPlayerSlot() });
 
-	if (result != AP_RequestStatus::Done)
-		UE_LOG(LogApSubsystem, Error, TEXT("AApSubsystem::AcceptGift(count: %i) Accepting gift failed"), ids.Num());
+	TSharedRef<FJsonObject> setCmd = MakeShared<FJsonObject>();
+	setCmd->SetStringField("cmd", "Set");
+	setCmd->SetStringField("key", key);
+	setCmd->SetObjectField("default", MakeShared<FJsonObject>());
+	setCmd->SetArrayField("operations", operations);
+
+	packets.Add(setCmd);
+
+	Send(packets);
 }
 
 TMap<FApPlayer, TTuple<FString, FString>> AApSubsystem::GetAllApPlayers() const {
@@ -867,7 +1262,7 @@ void AApSubsystem::CreateLocationHint(const TSet<int64>& locationIds, bool spam)
 
 	CallOnGameThread<void>([&locationsToHint, spam]() {
 		AP_SendLocationScouts(locationsToHint, spam ? 1 : 2);
-	});
+		});
 }
 
 void AApSubsystem::CheckLocation(int64 locationId) const {

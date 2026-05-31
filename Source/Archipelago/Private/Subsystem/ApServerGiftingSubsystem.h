@@ -53,10 +53,10 @@ public:
 	void EnqueueForSending(FApPlayer targetPlayer, FItemAmount itemStack);
 
 private:
-	void PullAllGiftsAsync();
+	void PullAllGiftsAsync(const FString& key, const TSharedRef<FJsonValue>& oldValueJson, const TSharedRef<FJsonValue>& newValueJson, int slot);
 	void ProcessInputQueue();
 
 	void Send(TMap<FApPlayer, TMap<TSubclassOf<UFGItemDescriptor>, int>>& itemsToSend);
 
-	void UpdatedProcessedIds(TArray<FApReceiveGift>& gifts);
+	void UpdatedProcessedIds(TArray<FApGift>& gifts);
 };

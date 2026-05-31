@@ -107,6 +107,7 @@ void AApEnergyLinkSubsystem::Tick(float DeltaTime) {
 			if (connectionState == EApConnectionState::Connecting || connectionState == EApConnectionState::NotYetAttempted) {
 				energyLinkState = EApEnergyLinkState::Initializing;
 			} else if (connectionState == EApConnectionState::Connected) {
+				currentTeam = apConnectionInfo->GetCurrentPlayerTeam();
 				energyLinkState = EApEnergyLinkState::Enabled;
 				PrimaryActorTick.TickInterval = 5.0f;
 			} else {
@@ -119,9 +120,9 @@ void AApEnergyLinkSubsystem::Tick(float DeltaTime) {
 		}
 
 		if (energyLinkState == EApEnergyLinkState::Enabled) {
-			FString key = FString("EnergyLink") + UApUtils::FStr(apConnectionInfo->GetCurrentPlayerTeam());
-			ap->MonitorUnboundedIntergerDataStoreValue(key, [&](AP_SetReply setReply) {
-				OnEnergyLinkValueChanged(setReply);
+			FString key = TEXT("EnergyLink") + FString::FromInt(currentTeam);
+			ap->MonitorDataStoreUnboundedNumberValue(key, [&](const FString& localKey, const TSharedRef<FJsonValue>& oldValueJson, const TSharedRef<FJsonValue>& newValueJson, int slot) {
+				OnEnergyLinkValueChanged(localKey, oldValueJson, newValueJson, slot);
 			});
 		}
 	}
@@ -130,8 +131,12 @@ void AApEnergyLinkSubsystem::Tick(float DeltaTime) {
 	}
 }
 
-void AApEnergyLinkSubsystem::OnEnergyLinkValueChanged(AP_SetReply setReply) {
-	FString intergerValueString = UApUtils::YankParseValueString(setReply);
+void AApEnergyLinkSubsystem::OnEnergyLinkValueChanged(const FString& key, const TSharedRef<FJsonValue>& oldValueJson, const TSharedRef<FJsonValue>& newValueJson, int slot) {
+	FString intergerValueString;
+	if (!newValueJson->TryGetString(intergerValueString)) {
+		UE_LOGFMT(LogApEnergyLink, Error, "Failed to parse integer value from JSON");
+		return;
+	}
 
 	replicatedServerStorageJoules = intergerValueString;
 
@@ -283,9 +288,11 @@ void AApEnergyLinkSubsystem::SendEnergyToServer(long amountMegaJoule) const {
 	if (energyLinkState != EApEnergyLinkState::Enabled)
 		return;
 
+	FString key = TEXT("EnergyLink") + FString::FromInt(currentTeam);
+
 	// correct conversion from MJ to energylink's J is * 1.000.000, 
 	// however for balance reasons use a different conversion here (dont tell the players)
-	ap->ModifyEnergyLink(static_cast<int64>(amountMegaJoule) * ENERGYLINK_MULTIPLIER); 
+	ap->ModifyDataStorageInt64(key, static_cast<int64>(amountMegaJoule) * ENERGYLINK_MULTIPLIER);
 }
 
 TArray<FApGraphInfo> AApEnergyLinkSubsystem::GetEnergyLinkGraphs(UFGPowerCircuit* circuit) const {

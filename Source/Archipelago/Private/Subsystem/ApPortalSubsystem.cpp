@@ -84,7 +84,7 @@ void AApPortalSubsystem::ProcessPendingOutputQueue() {
 	{	 
 		for (FItemAmount vaultItem : personalVaultItems)
 		{
-			int32 taken = vaultSubsystem->Take(vaultItem);
+			int32 taken = vaultSubsystem->Take(vaultItem, true);
 
 			for (int i = 0; i < taken; i++)
 				AddToEndOfQueue(FInventoryItem(vaultItem.ItemClass));
