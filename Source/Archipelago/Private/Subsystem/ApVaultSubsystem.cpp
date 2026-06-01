@@ -154,27 +154,27 @@ void AApVaultSubsystem::MonitorVaultItems(int team, int slot)
 
 	TArray<FString>truncatedKeysToMonitor;
 
-	 for (const FString& key : keysToMonitor) {
-		 if (key.Len() > 100)
-			 break;
-		 truncatedKeysToMonitor.Add(key);
-	 }
+	for (const FString& key : keysToMonitor) {
+		if (key.Len() > 100)
+			break;
+		truncatedKeysToMonitor.Add(key);
+	}
 
-	ap->MonitorInt64DataStoreValue(truncatedKeysToMonitor, [this](const FString& key, const int64* oldValue, const int64* newValue, int slot) {
+	ap->MonitorInt64DataStoreValue(truncatedKeysToMonitor, [this](const FString& key, const uint64* oldValue, const uint64* newValue, int slot) {
 		UpdateItemAmount(key, oldValue, newValue, slot);
-	});
+		});
 }
 
-void AApVaultSubsystem::UpdateItemAmount(const FString& key, const int64* oldValue, const int64* value, int slot) {
+void AApVaultSubsystem::UpdateItemAmount(const FString& key, const uint64* oldValue, const uint64* value, int slot) {
 	int lastDoubleColanIndex;
 	if (!key.FindLastChar(TEXT(':'), lastDoubleColanIndex))
 		return;
 
-	int firstDoubleColanIndex;
-	if (!key.FindChar(TEXT(':'), firstDoubleColanIndex))
-		return;
+	FString left, right;
+	key.Split(TEXT(":"), &left, &right);
+	right.Split(TEXT(":"), &left, &right);
 
-	bool isGlobal = key.Chr(firstDoubleColanIndex + 1) == TEXT("0");
+	bool isGlobal = left == TEXT("0");
 
 	FString itemNameLowerCase = key.RightChop(lastDoubleColanIndex + 1);
 
@@ -183,10 +183,10 @@ void AApVaultSubsystem::UpdateItemAmount(const FString& key, const int64* oldVal
 
 	TSubclassOf<UFGItemDescriptor> itemClass = lowerCaseToItemClassMapping[itemNameLowerCase];
 
-	 if (value == nullptr)
-		 return;
+	if (value == nullptr)
+		return;
 
-	 int64 newValue = *value;
+	int64 newValue = *value;
 
 	if (newValue < 0)
 		newValue = 0;

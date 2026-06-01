@@ -112,7 +112,7 @@ void AApPortal::Factory_CollectInput_Implementation() {
 	if (!input->Factory_PeekOutput(items) || items.Num() == 0)
 		return;
 
-	if (!static_cast<AApVaultSubsystem*>(vaultSubsystem)->DoesPlayerAcceptVaultItems(targetPlayer))
+	if (static_cast<AApVaultSubsystem*>(vaultSubsystem)->DoesPlayerAcceptVaultItems(targetPlayer))
 	{
 		if (!static_cast<AApVaultSubsystem*>(vaultSubsystem)->CanSend(targetPlayer, items[0].GetItemClass()))
 			return; //block input

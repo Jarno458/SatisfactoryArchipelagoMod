@@ -235,7 +235,7 @@ void AApPortalSubsystem::ProcessAutoVaultStoring() const
 		 for (const TPair<TSubclassOf<UFGItemDescriptor>, uint64>& item : playerItems.Value) {
 			 const uint64& amount = item.Value;
 
-		 	vaultSubsystem->Store(FItemAmount(item.Key, static_cast<int32>(FMath::Clamp<int64>(amount, 0, INT32_MAX))));
+		 	vaultSubsystem->Store(FItemAmount(item.Key, static_cast<int32>(FMath::Clamp<int64>(amount, 0, INT32_MAX))), player);
 		 }
 	 }
 }	

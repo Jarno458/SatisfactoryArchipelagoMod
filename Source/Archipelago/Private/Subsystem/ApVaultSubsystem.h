@@ -72,7 +72,7 @@ private:
 	TMap<FString, FVaultItemMapping> acceptedItemsPerGame;
 	TMap<FString, TSubclassOf<UFGItemDescriptor>> lowerCaseToItemClassMapping;
 
-	void UpdateItemAmount(const FString& key, const int64* oldValue, const int64* newValue, int slot);
+	void UpdateItemAmount(const FString& key, const uint64* oldValue, const uint64* newValue, int slot);
 
 public:
 	UFUNCTION(BlueprintCallable, BlueprintPure)

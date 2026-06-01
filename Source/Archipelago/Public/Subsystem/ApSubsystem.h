@@ -76,10 +76,10 @@ struct FUpdatedServerData : FUpdatedServerDataBase
 	TFunction<void(const FString&, TValue, TValue, int)> Callback;
 };
 
-typedef FPendingServerData<EDataType::Number, const int64*> Int64Get;
+typedef FPendingServerData<EDataType::Number, const uint64*> UInt64Get;
 typedef FPendingServerData<EDataType::Object, const TSharedRef<FJsonValue>&> JsonGet;
 
-typedef FUpdatedServerData<EDataType::Number, const int64*> Int64Update;
+typedef FUpdatedServerData<EDataType::Number, const uint64*> UInt64Update;
 typedef FUpdatedServerData<EDataType::Object, const TSharedRef<FJsonValue>&> JsonUpdate;
 typedef FUpdatedServerData<EDataType::LargeInteger, const TSharedRef<FJsonValueNumberString>&> LargeIntegerUpdate;
 
@@ -107,11 +107,11 @@ public:
 	void DispatchLifecycleEvent(ELifecyclePhase phase);
 
 	void MonitorDataStoreJsonObjectValue(const FString& key, TFunction<void(const FString&, const TSharedRef<FJsonValue>&, const TSharedRef<FJsonValue>&, int)> callback);
-	void MonitorInt64DataStoreValue(const TArray<FString>& keys, TFunction<void(const FString&, const int64*, const int64*, int)> callback);
+	void MonitorInt64DataStoreValue(const TArray<FString>& keys, TFunction<void(const FString&, const uint64*, const uint64*, int)> callback);
 	void MonitorDataStoreUnboundedNumberValue(const FString& key, TFunction<void(const FString&, const TSharedRef<FJsonValueNumberString>&, const TSharedRef<FJsonValueNumberString>&, int)> callback);
 	void ModifyDataStorageInt64(const FString& key, int64 amount) const;
 	void GetDataStorageJsonFields(const TSet<FString>& keys, TFunction<void(const FString&, const TSharedRef<FJsonValue>&)> callback);
-	void GetDataStorageInt64Fields(const TSet<FString>& keys, TFunction<void(const FString&, const int64*)> callback);
+	void GetDataStorageInt64Fields(const TSet<FString>& keys, TFunction<void(const FString&, const uint64*)> callback);
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FApConfigurationStruct GetConfig() const { return config; }
 
@@ -135,7 +135,7 @@ public:
 
 	FString GetSlotDataJson() const;
 
-	void CreateLocationHint(int64 locationId, bool spam = false);
+	void CreateLocationHint(int64 locationId, bool spam = false) const;
 	void CreateLocationHint(const TSet<int64>& locationIds, bool spam = false) const;
 
 	void CheckLocation(int64 locationId) const;
