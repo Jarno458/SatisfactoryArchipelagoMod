@@ -59,8 +59,8 @@ private:
 	AApGiftTraitsSubsystem* giftTraitsSubsystem;
 	AAdditionalDepotsServerSubsystem* additionalDepotsServerSubsystem;
 
-	TMap<TSubclassOf<UFGItemDescriptor>, int64> globalItemAmounts;
-	TMap<TSubclassOf<UFGItemDescriptor>, int64> personalItemAmounts;
+	TMap<TSubclassOf<UFGItemDescriptor>, uint64> globalItemAmounts;
+	TMap<TSubclassOf<UFGItemDescriptor>, uint64> personalItemAmounts;
 
 	UPROPERTY(Replicated, ReplicatedUsing = OnRep_VaultEnabledPlayers)
 	TArray<FApPlayer> vaultEnabledPlayersReplicated;

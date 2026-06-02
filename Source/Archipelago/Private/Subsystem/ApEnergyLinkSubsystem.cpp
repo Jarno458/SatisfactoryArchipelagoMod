@@ -256,7 +256,7 @@ void AApEnergyLinkSubsystem::EnergyLinkTick(float deltaTime) {
 }
 
 double AApEnergyLinkSubsystem::ProcessLocalStorage() {
-	int wholeIntsToSend = 0;
+	uint64 wholeIntsToSend = 0;
 	double returnValue = 0.0f;
 
 	{
@@ -267,7 +267,7 @@ double AApEnergyLinkSubsystem::ProcessLocalStorage() {
 			returnValue = 0.0f;
 		}
 		else if (localAvailableMegaJoule != 0.0f) {
-			wholeIntsToSend = (int)(localAvailableMegaJoule * ENERYLINK_DEPOSIT_REDUCTION_FACTOR);
+			wholeIntsToSend = static_cast<uint64>(localAvailableMegaJoule * ENERYLINK_DEPOSIT_REDUCTION_FACTOR);
 
 			localAvailableMegaJoule -= wholeIntsToSend * (1 / ENERYLINK_DEPOSIT_REDUCTION_FACTOR);
 
@@ -284,7 +284,7 @@ double AApEnergyLinkSubsystem::ProcessLocalStorage() {
 	return returnValue;
 }
 
-void AApEnergyLinkSubsystem::SendEnergyToServer(long amountMegaJoule) const {
+void AApEnergyLinkSubsystem::SendEnergyToServer(uint64 amountMegaJoule) const {
 	if (energyLinkState != EApEnergyLinkState::Enabled)
 		return;
 
@@ -292,7 +292,7 @@ void AApEnergyLinkSubsystem::SendEnergyToServer(long amountMegaJoule) const {
 
 	// correct conversion from MJ to energylink's J is * 1.000.000, 
 	// however for balance reasons use a different conversion here (dont tell the players)
-	ap->ModifyDataStorageInt64(key, static_cast<int64>(amountMegaJoule) * ENERGYLINK_MULTIPLIER);
+	ap->ModifyDataStorageInt64(key, static_cast<int64>(amountMegaJoule * ENERGYLINK_MULTIPLIER));
 }
 
 TArray<FApGraphInfo> AApEnergyLinkSubsystem::GetEnergyLinkGraphs(UFGPowerCircuit* circuit) const {

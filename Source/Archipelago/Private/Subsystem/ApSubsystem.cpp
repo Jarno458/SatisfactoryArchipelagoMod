@@ -352,7 +352,7 @@ void AApSubsystem::ModifyDataStorageInt64(const FString& key, int64 amount) cons
 
 	TSharedRef<FJsonObject> addOperation = MakeShared<FJsonObject>();
 	addOperation->SetStringField("operation", "add");
-	addOperation->SetField("value", MakeShared<FJsonValueNumberString>(FString::FromInt(amount)));
+	addOperation->SetField("value", MakeShared<FJsonValueNumberString>(LexToString(amount)));
 
 	operations.Add(MakeShared<FJsonValueObject>(addOperation));
 
@@ -689,13 +689,14 @@ void AApSubsystem::CallDataStorageCallbackForRetrieved(FString key, const TShare
 		else
 		{
 			uint64 value;
-			if (!json->TryGetNumber(value))
+			FString valueString = json->AsString();
+
+			if (!valueString.IsNumeric())
 			{
-				UE_LOGFMT(LogApSubsystem, Error, "AApSubsystem::CallDataStorageCallback({0}): Failed to get number from JSON", key);
+				UE_LOGFMT(LogApSubsystem, Error, "AApSubsystem::CallDataStorageCallback({0}): Invalid number string in JSON", key);
 			}
 			else
 			{
-				FString valueString = json->AsString();
 				LexFromString(value, *valueString);
 
 				pendingDataInt64->Callback(key, &value);
@@ -739,7 +740,6 @@ void AApSubsystem::CallDataStorageCallbackForSetReply(FString key, const TShared
 	}
 
 	const TSharedRef<FUpdatedServerDataBase>& pendingData = dataStoreReplyCallbacks[key];
-
 	if (pendingData->Type == EDataType::Number)
 	{
 		const TSharedRef<UInt64Update> pendingDataInt64 = StaticCastSharedRef<UInt64Update>(pendingData);
@@ -779,7 +779,7 @@ void AApSubsystem::CallDataStorageCallbackForSetReply(FString key, const TShared
 			if (json->IsNull())
 			{
 				pendingDataInt64->Callback(key, &oldValue, nullptr, slot);
-			} 
+			}
 			else
 			{
 				uint64 value;
@@ -807,7 +807,7 @@ void AApSubsystem::CallDataStorageCallbackForSetReply(FString key, const TShared
 			{
 				pendingDataJson->Callback(key, MakeShared<FJsonValueNull>(), MakeShared<FJsonValueNull>(), slot);
 			}
-			else 
+			else
 			{
 				const TSharedPtr<FJsonObject>* value;
 				if (!json->TryGetObject(value) || !value)
@@ -860,16 +860,28 @@ void AApSubsystem::CallDataStorageCallbackForSetReply(FString key, const TShared
 			}
 			else
 			{
-				//TODO maybe need some sanity checking to ensure the string is actually a number?
-				const TSharedRef<FJsonValueNumberString> value = MakeShared<FJsonValueNumberString>(json->AsString());
+				FString valueString = json->AsString();
+				if (!valueString.IsNumeric())
+				{
+					UE_LOGFMT(LogApSubsystem, Error, "AApSubsystem::CallDataStorageCallback({0}): Invalid number string in JSON", key);
+					return;
+				}
+
+				const TSharedRef<FJsonValueNumberString> value = MakeShared<FJsonValueNumberString>(valueString);
 
 				pendingDataJson->Callback(key, MakeShared<FJsonValueNumberString>(FString::FromInt(0)), value, slot);
 			}
 		}
 		else
 		{
-			//TODO maybe need some sanity checking to ensure the string is actually a number?
-			const TSharedRef<FJsonValueNumberString> oldValue = MakeShared<FJsonValueNumberString>(oldJson->AsString());
+			FString oldValueString = oldJson->AsString();
+			if (!oldValueString.IsNumeric())
+			{
+				UE_LOGFMT(LogApSubsystem, Error, "AApSubsystem::CallDataStorageCallback({0}): Invalid number string in JSON", key);
+				return;
+			}
+
+			const TSharedRef<FJsonValueNumberString> oldValue = MakeShared<FJsonValueNumberString>(oldValueString);
 
 			if (json->IsNull())
 			{
@@ -877,7 +889,15 @@ void AApSubsystem::CallDataStorageCallbackForSetReply(FString key, const TShared
 			}
 			else
 			{
-				const TSharedRef<FJsonValueNumberString> value = MakeShared<FJsonValueNumberString>(json->AsString());
+				FString valueString = json->AsString();
+				if (!valueString.IsNumeric())
+				{
+					UE_LOGFMT(LogApSubsystem, Error, "AApSubsystem::CallDataStorageCallback({0}): Invalid number string in JSON", key);
+					return;
+				}
+
+				const TSharedRef<FJsonValueNumberString> value = MakeShared<FJsonValueNumberString>(valueString);
+
 				pendingDataJson->Callback(key, oldValue, value, slot);
 			}
 		}

@@ -162,7 +162,7 @@ void AApVaultSubsystem::MonitorVaultItems(int team, int slot)
 
 	ap->MonitorInt64DataStoreValue(truncatedKeysToMonitor, [this](const FString& key, const uint64* oldValue, const uint64* newValue, int slot) {
 		UpdateItemAmount(key, oldValue, newValue, slot);
-		});
+	});
 }
 
 void AApVaultSubsystem::UpdateItemAmount(const FString& key, const uint64* oldValue, const uint64* value, int slot) {
@@ -186,7 +186,7 @@ void AApVaultSubsystem::UpdateItemAmount(const FString& key, const uint64* oldVa
 	if (value == nullptr)
 		return;
 
-	int64 newValue = *value;
+	uint64 newValue = *value;
 
 	if (newValue < 0)
 		newValue = 0;
@@ -296,7 +296,7 @@ void AApVaultSubsystem::Store(const FItemAmount& item, const FApPlayer& vault)
 }
 
 void AApVaultSubsystem::Store(const FItemAmount& item, const bool personal) {
-	if (!apInitialized || item.Amount == 0)
+	if (!apInitialized || item.Amount <= 0 || !IsValid(item.ItemClass))
 		return;
 
 	FString itemName = GetItemName(item.ItemClass);
@@ -313,8 +313,8 @@ void AApVaultSubsystem::Store(const FItemAmount& item, const bool personal) {
 
 	if (personal) {
 		if (personalItemAmounts.Contains(item.ItemClass)) {
-			if (personalItemAmounts[item.ItemClass] + static_cast<uint64>(item.Amount) > INT64_MAX) {
-				personalItemAmounts[item.ItemClass] = INT64_MAX;
+			if (personalItemAmounts[item.ItemClass] > UINT64_MAX - static_cast<uint64>(item.Amount)) {
+				personalItemAmounts[item.ItemClass] = UINT64_MAX;
 			}
 			else {
 				personalItemAmounts[item.ItemClass] += item.Amount;
@@ -326,8 +326,8 @@ void AApVaultSubsystem::Store(const FItemAmount& item, const bool personal) {
 	}
 	else {
 		if (globalItemAmounts.Contains(item.ItemClass)) {
-			if (globalItemAmounts[item.ItemClass] + static_cast<uint64>(item.Amount) > INT64_MAX) {
-				globalItemAmounts[item.ItemClass] = INT64_MAX;
+			if (globalItemAmounts[item.ItemClass] > UINT64_MAX - static_cast<uint64>(item.Amount)) {
+				globalItemAmounts[item.ItemClass] = UINT64_MAX;
 			}
 			else {
 				globalItemAmounts[item.ItemClass] += item.Amount;
@@ -363,7 +363,7 @@ int32 AApVaultSubsystem::Take(const FItemAmount& item, bool personal) {
 	if (personal)
 	{
 		if (personalItemAmounts.Contains(item.ItemClass) && requested > 0) {
-			int64& personalAmount = personalItemAmounts[item.ItemClass];
+			uint64& personalAmount = personalItemAmounts[item.ItemClass];
 			if (personalAmount < requested)
 			{
 				yield = personalAmount;
@@ -378,7 +378,7 @@ int32 AApVaultSubsystem::Take(const FItemAmount& item, bool personal) {
 	else
 	{
 		if (globalItemAmounts.Contains(item.ItemClass) && requested > 0) {
-			int64& globalAmount = globalItemAmounts[item.ItemClass];
+			uint64& globalAmount = globalItemAmounts[item.ItemClass];
 			if (globalAmount < requested)
 			{
 				yield = globalAmount;
@@ -392,7 +392,7 @@ int32 AApVaultSubsystem::Take(const FItemAmount& item, bool personal) {
 		}
 	}
 
-	ap->ModifyDataStorageInt64(key, yield);
+	ap->ModifyDataStorageInt64(key, -yield);
 
 	return yield;
 }
@@ -403,14 +403,14 @@ TArray<FItemAmount> AApVaultSubsystem::GetItems(bool personal) const {
 	if (!apInitialized)
 		return result;
 
-	const TMap<TSubclassOf<UFGItemDescriptor>, int64>& sourceMap = personal ? personalItemAmounts : globalItemAmounts;
+	const TMap<TSubclassOf<UFGItemDescriptor>, uint64>& sourceMap = personal ? personalItemAmounts : globalItemAmounts;
 
-	for (const TPair<TSubclassOf<UFGItemDescriptor>, int64>& kv : sourceMap) {
+	for (const TPair<TSubclassOf<UFGItemDescriptor>, uint64>& kv : sourceMap) {
 		const TSubclassOf<UFGItemDescriptor>& itemClass = kv.Key;
 
 		int64 amount64 = kv.Value;
 
-		FItemAmount entry(itemClass, static_cast<int32>(FMath::Clamp<int64>(amount64, 0, INT32_MAX)));
+		FItemAmount entry(itemClass, static_cast<int32>(FMath::Clamp<uint64>(amount64, 0, INT32_MAX)));
 		result.Add(entry);
 	}
 

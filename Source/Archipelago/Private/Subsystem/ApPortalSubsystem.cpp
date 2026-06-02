@@ -77,30 +77,27 @@ void AApPortalSubsystem::ProcessPendingOutputQueue() {
 		AddToEndOfQueue(pendingItem);
 	}
 
+	 //TODO only fill outputqueue if its empty or something, actually assign do this per building or something as filters can differ
+
 	//TODO only take what is requested by filters, likely the portals themzelf will take the items and handle filtering
-
 	TArray<FItemAmount> personalVaultItems = vaultSubsystem->GetItems(true);
-	if (!personalVaultItems.IsEmpty())
-	{	 
-		for (FItemAmount vaultItem : personalVaultItems)
-		{
-			int32 taken = vaultSubsystem->Take(vaultItem, true);
 
-			for (int i = 0; i < taken; i++)
-				AddToEndOfQueue(FInventoryItem(vaultItem.ItemClass));
-		}
+	if (personalVaultItems.IsEmpty())
+		return;
+
+	const int32 randomIndex = personalVaultItems.IsEmpty() ? INDEX_NONE : FMath::RandHelper(personalVaultItems.Num());
+
+	if (randomIndex != INDEX_NONE)
+	{
+		FItemAmount randomItem = personalVaultItems[randomIndex];
+
+		randomItem.Amount = static_cast<int32>(FMath::Clamp<uint64>(randomItem.Amount, 0, UFGItemDescriptor::GetStackSizeConverted(randomItem.ItemClass)));;
+
+		int32 taken = vaultSubsystem->Take(randomItem, true);
+
+		for (int i = 0; i < taken; i++)
+			AddToEndOfQueue(FInventoryItem(randomItem.ItemClass));
 	}
-	
-	
-	/*else { // from global should only be done if explicitly requested
-		TArray<FItemAmount> globalVaultItems = vaultSubsystem->GetItems(false);
-
-		for (FItemAmount vaultItem : globalVaultItems)
-		{
-			for (int i = 0; i < vaultItem.Amount; i++)
-				AddToEndOfQueue(FInventoryItem(vaultItem.ItemClass));
-		}
-	}*/
 }
 
 void AApPortalSubsystem::SendOutputQueueToPortals() {

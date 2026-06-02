@@ -119,6 +119,6 @@ private:
 	void TickCircuitSubsystem(TCallScope<void(*)(AFGCircuitSubsystem*, float)>& func, AFGCircuitSubsystem* self, float deltaTime);
 
 	double ProcessLocalStorage();
-	void SendEnergyToServer(long amount) const;
+	void SendEnergyToServer(uint64 amount) const;
 	void OnEnergyLinkValueChanged(const FString&, const TSharedRef<FJsonValue>& oldValueJson, const TSharedRef<FJsonValue>& newValueJson, int slot);
 };
