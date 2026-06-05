@@ -60,14 +60,14 @@ void AApPortalSubsystem::Tick(float dt) {
 		SendOutputQueueToPortals();
 	}
 
-	 if (lastAutoSendTime + FTimespan::FromSeconds(VAULT_SEND_INTERVAL) < FDateTime::Now()) {
+	if (lastAutoSendTime + FTimespan::FromSeconds(VAULT_SEND_INTERVAL) < FDateTime::Now()) {
 
-		 ProcessPendingOutputQueue();
+		ProcessPendingOutputQueue();
 
-		 ProcessAutoVaultStoring();
+		ProcessAutoVaultStoring();
 
-		 lastAutoSendTime = FDateTime::Now();
-	 }
+		lastAutoSendTime = FDateTime::Now();
+	}
 }
 
 void AApPortalSubsystem::ProcessPendingOutputQueue() {
@@ -77,10 +77,10 @@ void AApPortalSubsystem::ProcessPendingOutputQueue() {
 		AddToEndOfQueue(pendingItem);
 	}
 
-	 //TODO only fill outputqueue if its empty or something, actually assign do this per building or something as filters can differ
-
+	//TODO only fill outputqueue if its empty or something, actually assign do this per building or something as filters can differ
+		
 	//TODO only take what is requested by filters, likely the portals themzelf will take the items and handle filtering
-	TArray<FItemAmount> personalVaultItems = vaultSubsystem->GetItems(true);
+	TArray<FItemAmount> personalVaultItems = TArray<FItemAmount>(); //vaultSubsystem->GetItems(true);
 
 	if (personalVaultItems.IsEmpty())
 		return;
@@ -126,7 +126,7 @@ void AApPortalSubsystem::Enqueue(TSubclassOf<UFGItemDescriptor>& cls, int amount
 	}
 }
 
-void AApPortalSubsystem::SendBuffer(FApPlayer targetPlayer, TArray<FItemAmount> items)
+void AApPortalSubsystem::SendBuffer(FApPlayer targetPlayer, TArray<FItemAmount> items) const
 {
 	if (!targetPlayer.IsValid())
 		return;
@@ -137,7 +137,7 @@ void AApPortalSubsystem::SendBuffer(FApPlayer targetPlayer, TArray<FItemAmount> 
 		}
 		return;
 	}
-		
+
 	for (FItemAmount item : items) {
 		static_cast<AApServerGiftingSubsystem*>(giftingSubsystem)->EnqueueForSending(targetPlayer, item);
 	}
@@ -226,15 +226,15 @@ void AApPortalSubsystem::ProcessAutoVaultStoring() const
 		}
 	}
 
-	 for (const TPair<FApPlayer, TMap<TSubclassOf<UFGItemDescriptor>, uint64>>& playerItems : itemsToStore) {
-		 const FApPlayer& player = playerItems.Key;
+	for (const TPair<FApPlayer, TMap<TSubclassOf<UFGItemDescriptor>, uint64>>& playerItems : itemsToStore) {
+		const FApPlayer& player = playerItems.Key;
 
-		 for (const TPair<TSubclassOf<UFGItemDescriptor>, uint64>& item : playerItems.Value) {
-			 const uint64& amount = item.Value;
+		for (const TPair<TSubclassOf<UFGItemDescriptor>, uint64>& item : playerItems.Value) {
+			const uint64& amount = item.Value;
 
-		 	vaultSubsystem->Store(FItemAmount(item.Key, static_cast<int32>(FMath::Clamp<int64>(amount, 0, INT32_MAX))), player);
-		 }
-	 }
-}	
+			vaultSubsystem->Store(FItemAmount(item.Key, static_cast<int32>(FMath::Clamp<int64>(amount, 0, INT32_MAX))), player);
+		}
+	}
+}
 
 #pragma optimize("", on)

@@ -106,24 +106,28 @@ public:
 
 	void DispatchLifecycleEvent(ELifecyclePhase phase);
 
+	 //data storage
 	void MonitorDataStoreJsonObjectValue(const FString& key, TFunction<void(const FString&, const TSharedRef<FJsonValue>&, const TSharedRef<FJsonValue>&, int)> callback);
 	void MonitorInt64DataStoreValue(const TArray<FString>& keys, TFunction<void(const FString&, const uint64*, const uint64*, int)> callback);
 	void MonitorDataStoreUnboundedNumberValue(const FString& key, TFunction<void(const FString&, const TSharedRef<FJsonValueNumberString>&, const TSharedRef<FJsonValueNumberString>&, int)> callback);
+	void ModifyDataStorageInt64NoCap(const FString& key, int64 amount) const;
 	void ModifyDataStorageInt64(const FString& key, int64 amount) const;
+	void ModifyDataStorageInt64(const TMap<FString, int64>& adjustmentsPerKey) const;
 	void GetDataStorageJsonFields(const TSet<FString>& keys, TFunction<void(const FString&, const TSharedRef<FJsonValue>&)> callback);
 	void GetDataStorageInt64Fields(const TSet<FString>& keys, TFunction<void(const FString&, const uint64*)> callback);
+	void SetDataStorageJsonField(const FString& key, const TSharedRef<FJsonObject>& json) const;
+
+	void SetVaultState(const TMap<FString, TMap<FString, float>>& vaultItemTraitMapping) const;
+	void SetGiftBoxState(bool open, const TSet<FString>& acceptedTraits) const;
+	void SendGift(const FApGift& giftToSend) const;
+	void ProcessGifts(const TSet<FString>& acceptedIds, const TArray<FApGift>& rejectedGifts) const;
+	//
+
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FApConfigurationStruct GetConfig() const { return config; }
 
 	FString GetApItemName(int64 itemId) const;
 
-	void SetGiftBoxState(bool open, const TSet<FString>& acceptedTraits) const;
-	void SendGift(const FApGift& giftToSend) const;
-	//TArray<FApReceiveGift> GetGifts() const;
-	//void RejectGift(TSet<FApReceiveGift> gifts) const;
-	//void AcceptGift(TSet<FString> ids) const;
-	 void ProcessGifts(TSet<FString> acceptedIds, TArray<FApGift> rejectedGifts) const;
-	//TMap<FApPlayer, FApTraitBits> GetAcceptedTraitsPerPlayer() const;
 	TMap<FApPlayer, TTuple<FString, FString>> GetAllApPlayers() const;
 	static TSet<int64> GetAllLocations();
 
@@ -152,14 +156,11 @@ public:
 	void EnableDeathLink() const;
 	void TriggerDeathLink(FString source, FString cause);
 
-	//void SetRawDataStorageValue(FString key, FString jsonString) const;
-
 private:
 	AApConnectionInfoSubsystem* connectionInfoSubsystem;
 
 	TSharedPtr<TPromise<TMap<int64, FApNetworkItem>>> locationScoutingPromise = nullptr;
 
-	//TMap<FString, TFunction<void(AP_SetReply)>> dataStoreCallbacks;
 	TArray<TFunction<void(int64, bool)>> itemReceivedCallbacks;
 	TArray<TFunction<void(int64)>> locationCheckedCallbacks;
 	TArray<TFunction<void(FString, FString)>> deathLinkReceivedCallbacks;
@@ -202,12 +203,16 @@ private:
 	void OnRetrievedPackage(const TSharedPtr<FJsonObject> json);
 	void OnSetReply(const TSharedPtr<FJsonObject> Value);
 
+	 //internal data storage functions
 	TSharedRef<FJsonObject> BuildSendGift(const FApGift& giftToSend) const;
+	static TSharedRef<FJsonObject> BuildNumericSetPacket(const FString& key, int64 value, uint64 kappa = 0);
+
 	void Send(const TSharedRef<FJsonObject>& json) const;
 	void Send(const TArray<TSharedRef<FJsonObject>>& jsons) const;
 
 	void CallDataStorageCallbackForRetrieved(FString key, const TSharedPtr<FJsonValue> json);
 	void CallDataStorageCallbackForSetReply(FString key, const TSharedPtr<FJsonValue>& originalValue, const TSharedPtr<FJsonValue>& value, int slot);
+	 //
 
     // TODO do we want to keep this around or call AApMessagingSubsystem::DisplayMessage directly?
 	void SendChatMessage(const FString& Message, const FLinearColor& Color) const;

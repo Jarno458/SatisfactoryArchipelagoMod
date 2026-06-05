@@ -62,7 +62,7 @@ public:
 
 	void Enqueue(TSubclassOf<UFGItemDescriptor>& cls, int amount);
 	
-	void SendBuffer(FApPlayer targetPlayer, TArray<FItemAmount> items);
+	void SendBuffer(FApPlayer targetPlayer, TArray<FItemAmount> items) const;
 
 	void ReQueue(FInventoryItem nextItem) const;
 

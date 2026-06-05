@@ -7,6 +7,7 @@
 #include "FGFactoryConnectionComponent.h"
 #include "FGPowerInfoComponent.h"
 
+#include "Subsystem/ApVaultSubsystem.h"
 #include "Subsystem/ModSubsystem.h"
 #include "Data/ApTypes.h"
 
@@ -26,15 +27,12 @@ public:
 	UPROPERTY(SaveGame, Replicated, BlueprintReadOnly)
 	FApPlayer targetPlayer;
 
-	UPROPERTY(SaveGame)
-	TArray<FItemAmount> inputBuffer;
-
 private:
 	bool initialized = false;
 
 	AModSubsystem* portalSubsystem;
 	AModSubsystem* replicatedGiftingSubsystem;
-	AModSubsystem* vaultSubsystem;
+	AApVaultSubsystem* vaultSubsystem;
 
 	UFGFactoryConnectionComponent* input = nullptr;
 	UFGFactoryConnectionComponent* output = nullptr;
@@ -47,8 +45,14 @@ private:
 	UPROPERTY(SaveGame)
 	FInventoryItem nextItemToOutput = FInventoryItem::NullInventoryItem;
 
+	UPROPERTY(SaveGame)
+	int roundRobinIndex;
+
+	UPROPERTY(SaveGame)
+	TArray<TSubclassOf<UFGItemDescriptor>> allowedOutput;
+
 protected:
-	UPROPERTY()
+	UPROPERTY() //Sqve?
 	UFGInventoryComponent* mInputInventory;
 
 public:

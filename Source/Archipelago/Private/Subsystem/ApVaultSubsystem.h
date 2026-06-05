@@ -50,7 +50,6 @@ private:
 	const float pollInterfall = 10.0f;
 
 	bool apInitialized;
-	//int itemNameInVaultKeyStartPosition;
 
 	AApSubsystem* ap;
 	AApConnectionInfoSubsystem* connectionInfoSubsystem;
@@ -59,8 +58,11 @@ private:
 	AApGiftTraitsSubsystem* giftTraitsSubsystem;
 	AAdditionalDepotsServerSubsystem* additionalDepotsServerSubsystem;
 
-	TMap<TSubclassOf<UFGItemDescriptor>, uint64> globalItemAmounts;
-	TMap<TSubclassOf<UFGItemDescriptor>, uint64> personalItemAmounts;
+	TMap<TSubclassOf<UFGItemDescriptor>, uint64> globalAdjustedItemAmounts;
+	TMap<TSubclassOf<UFGItemDescriptor>, int64> pendingGlobalAdjustments;
+	TMap<TSubclassOf<UFGItemDescriptor>, uint64> personalAdjustedItemAmounts;
+	TMap<TSubclassOf<UFGItemDescriptor>, int64> pendingPersonalAdjustments;
+	TMap<FString, int64> externalVaultAdjustments;
 
 	UPROPERTY(Replicated, ReplicatedUsing = OnRep_VaultEnabledPlayers)
 	TArray<FApPlayer> vaultEnabledPlayersReplicated;
@@ -71,6 +73,7 @@ private:
 	TSet<FApPlayer> vaults;
 	TMap<FString, FVaultItemMapping> acceptedItemsPerGame;
 	TMap<FString, TSubclassOf<UFGItemDescriptor>> lowerCaseToItemClassMapping;
+	TMap<TSubclassOf<UFGItemDescriptor>, FString> itemClassToLowerCaseMapping;
 
 	void UpdateItemAmount(const FString& key, const uint64* oldValue, const uint64* newValue, int slot);
 
@@ -78,16 +81,11 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FORCEINLINE bool IsInitialized() const { return apInitialized; };
 
-	//UFUNCTION(BlueprintCallable)
 	void Store(const FItemAmount& item, bool personal = false);
-
 	void Store(const FItemAmount& item, const FApPlayer& vault);
-
-	//UFUNCTION(BlueprintCallable)
 	int32 Take(const FItemAmount& item, bool personal = false);
 
-	//UFUNCTION(BlueprintCallable, BlueprintPure)
-	TArray<FItemAmount> GetItems(bool personal = false) const;
+	bool TryGetSingleItem(TSubclassOf<UFGItemDescriptor> itemClass);
 
 	UFUNCTION(BlueprintPure)
 	TSet<FApPlayer> GetVaultEnabledPlayers() const;
@@ -99,20 +97,25 @@ public:
 	bool DoesPlayerAcceptVaultItems(const FApPlayer& player) const;
 
 	UFUNCTION(BlueprintPure)
-	TArray<TSubclassOf<UFGItemDescriptor>> GetAcceptedItemsPerVault(FApPlayer vault) const;
+	TArray<TSubclassOf<UFGItemDescriptor>> GetAcceptedItemsPerVault(const FApPlayer& vault) const;
 
 	bool CanSend(const FApPlayer& targetPlayer, const TSubclassOf<UFGItemDescriptor> itemClass);
 
-private:
-	FString GetItemName(uint64 itemId) const;
-	FString GetItemName(TSubclassOf<UFGItemDescriptor> item) const;
 
-	void ParseVaultItemInfo(FString game, FString itemInfoString);
-	void AddPersonalVaults(FString game);
+private:
+	void ParseVaultItemInfo(const FString& game, const TSharedRef<FJsonValue>& value);
+	void AddPersonalVaults(const FString& game);
 
 	void SetupPersonalVault();
 
-	void UpdateDepotAmount(FName depot, TSubclassOf<UFGItemDescriptor> item, int64 amount) const;
+	void UpdateDepotAmount(TSubclassOf<UFGItemDescriptor> item, bool personal) const;
+
+	void SyncPendingVaultUpdates();
+
+	void StoreToLocallyBufferedVault(const FItemAmount& item, bool personal = false);
+	void StoreToExternalPlayerVault(const FItemAmount& item, const FApPlayer& vault);
+
+	 void UpdatePendingAmount(TSubclassOf<UFGItemDescriptor> itemClass, bool personal, int64 changeInPendingAmount);
 
 public: 
 	UFUNCTION() //required for event hookup

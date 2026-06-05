@@ -292,7 +292,7 @@ void AApEnergyLinkSubsystem::SendEnergyToServer(uint64 amountMegaJoule) const {
 
 	// correct conversion from MJ to energylink's J is * 1.000.000, 
 	// however for balance reasons use a different conversion here (dont tell the players)
-	ap->ModifyDataStorageInt64(key, static_cast<int64>(amountMegaJoule * ENERGYLINK_MULTIPLIER));
+	ap->ModifyDataStorageInt64NoCap(key, static_cast<int64>(amountMegaJoule * ENERGYLINK_MULTIPLIER));
 }
 
 TArray<FApGraphInfo> AApEnergyLinkSubsystem::GetEnergyLinkGraphs(UFGPowerCircuit* circuit) const {

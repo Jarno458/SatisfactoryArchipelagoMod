@@ -9,6 +9,30 @@
 
 #pragma optimize("", off)
 
+/*
+ * Design pattern for vaults:
+ *
+ * We can only Take from our own vault
+ * Store and Take from our own vaults will update the corresponding Adjustments, and cause the depots to update 
+ *		(this might be bottleneck if 100 vaults update at 1200/min)
+ * Store on another player their vault will create pending updates
+ * Adjustments and other pending updates are synced with the server every interval
+ * 
+ * When we receive updates values from the server, we check who updated the value, 
+ * if the update came from us, we know it was the sync from adjustments to the server, 
+ * so we subtract the change from our adjustments
+ * either way we update the current amount with the value from the server
+ * 
+ * NEW PLAN
+ * 
+ * since we global/personal item amounts are only editied in the UpdateItemAmount callback from setnotify
+ * we can instead store the whole adjusted amount in there, this allow us have the adjust amount readily available for other parts
+ * such as GetItems and Take
+ * 
+ * Portals can try to get a single item from the vault at rapid speeds
+ * 
+ */
+
 DEFINE_LOG_CATEGORY(LogApVaultSubsystem);
 
 AApVaultSubsystem* AApVaultSubsystem::Get(const UObject* worldContext) {
@@ -24,7 +48,7 @@ AApVaultSubsystem* AApVaultSubsystem::Get(const UWorld* world) {
 	return SubsystemActorManager->GetSubsystemActor<AApVaultSubsystem>();
 }
 
-AApVaultSubsystem::AApVaultSubsystem() : Super() {
+AApVaultSubsystem::AApVaultSubsystem() {
 	UE_LOGFMT(LogApVaultSubsystem, Display, "AApVaultSubsystem::AApVaultSubsystem()");
 
 	ReplicationPolicy = ESubsystemReplicationPolicy::SpawnOnServer_Replicate;
@@ -91,6 +115,7 @@ void AApVaultSubsystem::Tick(float dt) {
 					continue;
 
 				lowerCaseToItemClassMapping.Add(itemNameLowerCase, itemClass);
+				itemClassToLowerCaseMapping.Add(itemClass, itemNameLowerCase);
 			}
 
 			int team = connectionInfoSubsystem->GetCurrentPlayerTeam();
@@ -102,7 +127,6 @@ void AApVaultSubsystem::Tick(float dt) {
 
 			MonitorVaultItems(team, slot);
 
-			/* //TODO cross game implementation disabled due to crashes
 			TArray<FString> allGames = playerInfoSubsystem->GetAllGames();
 
 			TSet<FString> gameItemInfoKeys;
@@ -111,18 +135,18 @@ void AApVaultSubsystem::Tick(float dt) {
 			}
 			gameItemInfoKeys.Remove(TEXT("VSatisfactory"));
 
-			ap->GetDataStorageJsonFields(gameItemInfoKeys, [this](FString key, FString value) {
-				if (value.IsEmpty())
+			ap->GetDataStorageJsonFields(gameItemInfoKeys, [this](const FString& key, const TSharedRef<FJsonValue>& value) {
+				if (value->IsNull())
 					return;
 
 				FString game = key.RightChop(1);
-
 				if (game == TEXT("Satisfactory"))
 					return;
 
 				ParseVaultItemInfo(game, value);
+
 				AddPersonalVaults(game);
-			});*/
+			});
 
 			SetupPersonalVault();
 			AddPersonalVaults(TEXT("Satisfactory"));
@@ -133,7 +157,7 @@ void AApVaultSubsystem::Tick(float dt) {
 		}
 	}
 	else {
-		//ProcessVaultStoreQueue();
+		SyncPendingVaultUpdates();
 	}
 }
 
@@ -166,51 +190,69 @@ void AApVaultSubsystem::MonitorVaultItems(int team, int slot)
 }
 
 void AApVaultSubsystem::UpdateItemAmount(const FString& key, const uint64* oldValue, const uint64* value, int slot) {
-	int lastDoubleColanIndex;
-	if (!key.FindLastChar(TEXT(':'), lastDoubleColanIndex))
+	if (value == nullptr)
 		return;
 
 	FString left, right;
 	key.Split(TEXT(":"), &left, &right);
 	right.Split(TEXT(":"), &left, &right);
 
-	bool isGlobal = left == TEXT("0");
+	bool personal = left != TEXT("0");
 
-	FString itemNameLowerCase = key.RightChop(lastDoubleColanIndex + 1);
+	FString itemNameLowerCase = right;
 
 	if (!lowerCaseToItemClassMapping.Contains(itemNameLowerCase))
 		return;
 
 	TSubclassOf<UFGItemDescriptor> itemClass = lowerCaseToItemClassMapping[itemNameLowerCase];
 
-	if (value == nullptr)
-		return;
-
 	uint64 newValue = *value;
 
-	if (newValue < 0)
-		newValue = 0;
+	uint64& adjustedAmount = personal ? personalAdjustedItemAmounts.FindOrAdd(itemClass) : globalAdjustedItemAmounts.FindOrAdd(itemClass);
+	int64& pendingAdjustment = personal ? pendingPersonalAdjustments.FindOrAdd(itemClass) : pendingGlobalAdjustments.FindOrAdd(itemClass);
 
-	if (isGlobal) {
-		if (globalItemAmounts.Contains(itemClass)) {
-			globalItemAmounts[itemClass] = newValue;
+	// update pending adjustments if this callback is in response to our periodic sync
+	if (slot == connectionInfoSubsystem->GetCurrentPlayerSlot())
+	{
+		const uint64 previousValue = oldValue ? *oldValue : 0;
+
+		if (newValue == previousValue)
+			return;
+
+		int64 change;
+		if (newValue >= previousValue)
+		{
+			const uint64 delta = newValue - previousValue;
+			change = delta > static_cast<uint64>(INT64_MAX)
+				? INT64_MAX
+				: static_cast<int64>(delta);
 		}
-		else {
-			globalItemAmounts.Add(itemClass, newValue);
+		else
+		{
+			const uint64 delta = previousValue - newValue;
+			change = delta > static_cast<uint64>(INT64_MAX)
+				? INT64_MIN
+				: -static_cast<int64>(delta);
 		}
 
-		UpdateDepotAmount(globalVault, itemClass, newValue);
+		pendingAdjustment -= change;
+	}
+
+	if (pendingAdjustment < 0) {
+		const uint64 decrease = pendingAdjustment == MIN_int64
+			? static_cast<uint64>(INT64_MAX) + 1ULL
+			: static_cast<uint64>(-pendingAdjustment);
+		adjustedAmount = decrease >= newValue ? 0 : newValue - decrease;
+	}
+	else if (pendingAdjustment > 0) {
+		const uint64 increase = static_cast<uint64>(pendingAdjustment);
+		adjustedAmount = newValue > UINT64_MAX - increase ? UINT64_MAX : newValue + increase;
 	}
 	else {
-		if (personalItemAmounts.Contains(itemClass)) {
-			personalItemAmounts[itemClass] = newValue;
-		}
-		else {
-			personalItemAmounts.Add(itemClass, newValue);
-		}
-
-		UpdateDepotAmount(personalVault, itemClass, newValue);
+		adjustedAmount = newValue;
 	}
+
+	UpdateDepotAmount(itemClass, personal);
 }
 
 void AApVaultSubsystem::SetupPersonalVault()
@@ -219,138 +261,176 @@ void AApVaultSubsystem::SetupPersonalVault()
 
 	FVaultItemMapping itemMappings;
 
-	TSharedRef<FJsonObject> jsonObject = MakeShareable(new FJsonObject());
+	TMap<FString, TMap<FString, float>> vaultItemTraitMapping;
 
 	for (const TPair<TSubclassOf<UFGItemDescriptor>, FApTraitValues>& traitsPerItem : giftTraitsSubsystem->TraitsPerItem)
 	{
 		if (!mappingSubsystem->ItemClassToItemId.Contains(traitsPerItem.Key))
-			UE_LOGFMT(LogApVaultSubsystem, Fatal, "AApVaultSubsystem::SetupPersonalVault() itemid not found for class {0}", UFGItemDescriptor::GetItemName(traitsPerItem.Key).ToString());
+			UE_LOGFMT(LogApVaultSubsystem, Fatal, "AApVaultSubsystem::SetupPersonalVault() item-id not found for class {0}", UFGItemDescriptor::GetItemName(traitsPerItem.Key).ToString());
 
 		int64 itemId = mappingSubsystem->ItemClassToItemId[traitsPerItem.Key];
 		FString itemName = mappingSubsystem->ItemIdToName[itemId].ToLower();
 
 		itemMappings.ItemNameByClass.Add(traitsPerItem.Key, itemName);
 
-		TSharedRef<FJsonObject> traitsJsonObject = MakeShareable(new FJsonObject());
+		TMap<FString, float> traitsMap;
 
 		for (const TPair<EGiftTrait, float>& traitValues : traitsPerItem.Value.TraitsValues)
 		{
 			FString traitName = giftTraitEnum->GetNameStringByValue(static_cast<int64>(traitValues.Key));
 
-			double rounded = FMath::RoundToDouble(traitValues.Value * 1000.0) / 1000.0; //round to 3 decimals
-			FString chopped = FString::Printf(TEXT("%.3f"), rounded); // cut off trailing decimals
-			double minified = FCString::Atod(*chopped);
-
-			traitsJsonObject->SetNumberField(traitName, minified);
+			traitsMap.Add(traitName, traitValues.Value);
 		}
 
-		jsonObject->SetObjectField(itemName, traitsJsonObject);
+		vaultItemTraitMapping.Add(itemName, traitsMap);
 	}
 
 	acceptedItemsPerGame.Add(TEXT("Satisfactory"), itemMappings);
 
-	/* //TODO cross game implementation disabled due to crashes
-	FString json;
-	const TSharedRef<TJsonWriter<TCHAR, TCondensedJsonPrintPolicy<TCHAR>>> Writer = TJsonWriterFactory<TCHAR, TCondensedJsonPrintPolicy<TCHAR>>::Create(&json);
-	FJsonSerializer::Serialize(jsonObject, Writer);
-
-
-	ap->SetRawDataStorageValue("VSatisfactory", json);
-	*/
+	ap->SetVaultState(vaultItemTraitMapping);
 }
 
-void AApVaultSubsystem::UpdateDepotAmount(FName depot, TSubclassOf<UFGItemDescriptor> item, int64 amount) const
+void AApVaultSubsystem::UpdateDepotAmount(TSubclassOf<UFGItemDescriptor> item, bool personal) const
 {
-	int32 newAmount = static_cast<int32>(FMath::Clamp<int64>(amount, 0, INT32_MAX));
+	uint64 adjustedAmount = personal ? personalAdjustedItemAmounts.FindRef(item) : globalAdjustedItemAmounts.FindRef(item);
 
-	additionalDepotsServerSubsystem->SetItem(depot, item, newAmount);
+	int32 adjustedAmount32 = static_cast<int32>(FMath::Clamp<uint64>(adjustedAmount, 0, INT32_MAX));
+
+	FName vault = personal ? personalVault : globalVault;
+
+	additionalDepotsServerSubsystem->SetItem(vault, item, adjustedAmount32);
+}
+
+void AApVaultSubsystem::SyncPendingVaultUpdates()
+{
+	int team = connectionInfoSubsystem->GetCurrentPlayerTeam();
+	int slot = connectionInfoSubsystem->GetCurrentPlayerSlot();
+
+	for (const TPair<TSubclassOf<UFGItemDescriptor>, int64>& globalAdjustment : pendingGlobalAdjustments) {
+		if (!itemClassToLowerCaseMapping.Contains(globalAdjustment.Key))
+			continue;
+
+		FString itemName = itemClassToLowerCaseMapping[globalAdjustment.Key];
+		FString key = FString::Format(TEXT("V{0}:{1}:{2}"), { team, GLOBAL_VAULT_SLOT, itemName });
+
+		externalVaultAdjustments.Add(key, globalAdjustment.Value);
+	}
+
+	for (const TPair<TSubclassOf<UFGItemDescriptor>, int64>& personalAdjustment : pendingPersonalAdjustments) {
+		if (!itemClassToLowerCaseMapping.Contains(personalAdjustment.Key))
+			continue;
+
+		FString itemName = itemClassToLowerCaseMapping[personalAdjustment.Key];
+		FString key = FString::Format(TEXT("V{0}:{1}:{2}"), { team, slot, itemName });
+
+		externalVaultAdjustments.Add(key, personalAdjustment.Value);
+	}
+
+	ap->ModifyDataStorageInt64(externalVaultAdjustments);
+
+	externalVaultAdjustments.Empty();
 }
 
 void AApVaultSubsystem::Store(const FItemAmount& item, const FApPlayer& vault)
 {
-	if (!apInitialized || item.Amount == 0 || !vault.IsValid())
+	if (!apInitialized || item.Amount == 0 || !vault.IsValid() || !itemClassToLowerCaseMapping.Contains(item.ItemClass))
 		return;
 
 	if (vault.Team == connectionInfoSubsystem->GetCurrentPlayerTeam())
 	{
 		if (vault.Slot == connectionInfoSubsystem->GetCurrentPlayerSlot())
 		{
-			Store(item, true);
+			StoreToLocallyBufferedVault(item, true);
 			return;
 		}
 
 		if (vault.Slot == GLOBAL_VAULT_SLOT)
 		{
-			Store(item, false);
+			StoreToLocallyBufferedVault(item, false);
 			return;
 		}
 	}
 
-	FString itemName = GetItemName(item.ItemClass);
-	if (itemName.IsEmpty())
-		return;
-
-	FString key = FString::Format(TEXT("V{0}:{1}:{2}"), { vault.Team, vault.Slot, itemName.ToLower() });
-
-	ap->ModifyDataStorageInt64(key, item.Amount);
+	StoreToExternalPlayerVault(item, vault);
 }
 
 void AApVaultSubsystem::Store(const FItemAmount& item, const bool personal) {
-	if (!apInitialized || item.Amount <= 0 || !IsValid(item.ItemClass))
+	StoreToLocallyBufferedVault(item, personal);
+}
+
+void AApVaultSubsystem::StoreToLocallyBufferedVault(const FItemAmount& item, bool personal)
+{
+	if (!apInitialized || item.Amount <= 0 || !IsValid(item.ItemClass) || !itemClassToLowerCaseMapping.Contains(item.ItemClass))
 		return;
 
-	FString itemName = GetItemName(item.ItemClass);
-	if (itemName.IsEmpty())
-		return;
+	UpdatePendingAmount(item.ItemClass, personal, item.Amount);
+}
 
-	int team = connectionInfoSubsystem->GetCurrentPlayerTeam();
-	int slot = GLOBAL_VAULT_SLOT;
+void AApVaultSubsystem::StoreToExternalPlayerVault(const FItemAmount& item, const FApPlayer& vault)
+{
+	FString itemName = itemClassToLowerCaseMapping[item.ItemClass];
+	FString key = FString::Format(TEXT("V{0}:{1}:{2}"), { vault.Team, vault.Slot, itemName });
 
-	if (personal)
-		slot = connectionInfoSubsystem->GetCurrentPlayerSlot();
+	externalVaultAdjustments.FindOrAdd(key) += item.Amount;
+}
 
-	FString key = FString::Format(TEXT("V{0}:{1}:{2}"), { team, slot, itemName.ToLower() });
+void AApVaultSubsystem::UpdatePendingAmount(TSubclassOf<UFGItemDescriptor> itemClass, bool personal, int64 changeInPendingAmount)
+{
+	uint64& adjustedAmount = personal ? personalAdjustedItemAmounts.FindOrAdd(itemClass) : globalAdjustedItemAmounts.FindOrAdd(itemClass);
+	int64& pendingAdjustment = personal ? pendingPersonalAdjustments.FindOrAdd(itemClass) : pendingGlobalAdjustments.FindOrAdd(itemClass);
 
-	if (personal) {
-		if (personalItemAmounts.Contains(item.ItemClass)) {
-			if (personalItemAmounts[item.ItemClass] > UINT64_MAX - static_cast<uint64>(item.Amount)) {
-				personalItemAmounts[item.ItemClass] = UINT64_MAX;
-			}
-			else {
-				personalItemAmounts[item.ItemClass] += item.Amount;
-			}
-		}
-		else {
-			personalItemAmounts.Add(item.ItemClass, item.Amount);
-		}
+	uint64 normalizedAmount = adjustedAmount;
+	if (pendingAdjustment < 0) {
+		const uint64 decrease = pendingAdjustment == MIN_int64
+			? static_cast<uint64>(INT64_MAX) + 1ULL
+			: static_cast<uint64>(-pendingAdjustment);
+		normalizedAmount = decrease >= adjustedAmount ? 0 : adjustedAmount - decrease;
+	}
+	else if (pendingAdjustment > 0) {
+		const uint64 increase = static_cast<uint64>(pendingAdjustment);
+		normalizedAmount = adjustedAmount > UINT64_MAX - increase ? UINT64_MAX : adjustedAmount + increase;
+	}
+
+	if (changeInPendingAmount > 0)
+	{
+		if (pendingAdjustment > INT64_MAX - changeInPendingAmount)
+			pendingAdjustment = INT64_MAX;
+		else
+			pendingAdjustment += changeInPendingAmount;
+	}
+	else if (changeInPendingAmount < 0)
+	{
+		if (pendingAdjustment < INT64_MIN - changeInPendingAmount)
+			pendingAdjustment = INT64_MIN;
+		else
+			pendingAdjustment += changeInPendingAmount;
+	}
+
+	if (pendingAdjustment < 0) {
+		const uint64 decrease = pendingAdjustment == MIN_int64
+			? static_cast<uint64>(INT64_MAX) + 1ULL
+			: static_cast<uint64>(-pendingAdjustment);
+		adjustedAmount = decrease >= normalizedAmount ? 0 : normalizedAmount - decrease;
+	}
+	else if (pendingAdjustment > 0) {
+		const uint64 increase = static_cast<uint64>(pendingAdjustment);
+		adjustedAmount = normalizedAmount > UINT64_MAX - increase ? UINT64_MAX : normalizedAmount + increase;
 	}
 	else {
-		if (globalItemAmounts.Contains(item.ItemClass)) {
-			if (globalItemAmounts[item.ItemClass] > UINT64_MAX - static_cast<uint64>(item.Amount)) {
-				globalItemAmounts[item.ItemClass] = UINT64_MAX;
-			}
-			else {
-				globalItemAmounts[item.ItemClass] += item.Amount;
-			}
-		}
-		else {
-			globalItemAmounts.Add(item.ItemClass, item.Amount);
-		}
+		adjustedAmount = normalizedAmount;
 	}
 
-	ap->ModifyDataStorageInt64(key, item.Amount);
+	UpdateDepotAmount(itemClass, personal);
 }
 
 int32 AApVaultSubsystem::Take(const FItemAmount& item, bool personal) {
 	int32 requested = item.Amount;
-	int32 yield = 0;
+	uint64 yield = 0;
 
-	if (!apInitialized || requested <= 0)
+	if (!apInitialized || requested <= 0 || !IsValid(item.ItemClass) || !itemClassToLowerCaseMapping.Contains(item.ItemClass))
 		return yield;
 
-	FString itemName = GetItemName(item.ItemClass);
-	if (itemName.IsEmpty())
-		return yield;
+	FString itemName = itemClassToLowerCaseMapping[item.ItemClass];
 
 	int team = connectionInfoSubsystem->GetCurrentPlayerTeam();
 	int slot = GLOBAL_VAULT_SLOT;
@@ -358,63 +438,27 @@ int32 AApVaultSubsystem::Take(const FItemAmount& item, bool personal) {
 	if (personal)
 		slot = connectionInfoSubsystem->GetCurrentPlayerSlot();
 
-	FString key = FString::Format(TEXT("V{0}:{1}:{2}"), { team, slot, itemName.ToLower() });
+	FString key = FString::Format(TEXT("V{0}:{1}:{2}"), { team, slot, itemName });
 
-	if (personal)
-	{
-		if (personalItemAmounts.Contains(item.ItemClass) && requested > 0) {
-			uint64& personalAmount = personalItemAmounts[item.ItemClass];
-			if (personalAmount < requested)
-			{
-				yield = personalAmount;
-				personalAmount = 0;
-			}
-			else {
-				yield = requested;
-				personalAmount -= requested;
-			}
-		}
-	}
+	uint64 adjustedAmount = personal ? personalAdjustedItemAmounts.FindRef(item.ItemClass) : globalAdjustedItemAmounts.FindRef(item.ItemClass);
+	if (adjustedAmount < requested)
+		yield = adjustedAmount;
 	else
-	{
-		if (globalItemAmounts.Contains(item.ItemClass) && requested > 0) {
-			uint64& globalAmount = globalItemAmounts[item.ItemClass];
-			if (globalAmount < requested)
-			{
-				yield = globalAmount;
-				globalAmount = 0;
-			}
-			else {
-				yield = requested;
-				globalAmount -= requested;
-			}
+		yield = requested;
 
-		}
-	}
-
-	ap->ModifyDataStorageInt64(key, -yield);
-
-	return yield;
+	return static_cast<int32>(FMath::Clamp<uint64>(yield, 0, INT32_MAX));
 }
 
-TArray<FItemAmount> AApVaultSubsystem::GetItems(bool personal) const {
-	TArray<FItemAmount> result;
+bool AApVaultSubsystem::TryGetSingleItem(TSubclassOf<UFGItemDescriptor> itemClass)
+{
+	if (personalAdjustedItemAmounts.FindRef(itemClass) > 0)
+	{
+		UpdatePendingAmount(itemClass, true, -1);
 
-	if (!apInitialized)
-		return result;
-
-	const TMap<TSubclassOf<UFGItemDescriptor>, uint64>& sourceMap = personal ? personalItemAmounts : globalItemAmounts;
-
-	for (const TPair<TSubclassOf<UFGItemDescriptor>, uint64>& kv : sourceMap) {
-		const TSubclassOf<UFGItemDescriptor>& itemClass = kv.Key;
-
-		int64 amount64 = kv.Value;
-
-		FItemAmount entry(itemClass, static_cast<int32>(FMath::Clamp<uint64>(amount64, 0, INT32_MAX)));
-		result.Add(entry);
+		return true;
 	}
 
-	return result;
+	return false;
 }
 
 TSet<FApPlayer> AApVaultSubsystem::GetVaultEnabledPlayers() const
@@ -433,7 +477,7 @@ bool AApVaultSubsystem::DoesPlayerAcceptVaultItems(const FApPlayer& player) cons
 	return vaults.Contains(player);
 }
 
-TArray<TSubclassOf<UFGItemDescriptor>> AApVaultSubsystem::GetAcceptedItemsPerVault(FApPlayer vault) const
+TArray<TSubclassOf<UFGItemDescriptor>> AApVaultSubsystem::GetAcceptedItemsPerVault(const FApPlayer& vault) const
 {
 	if (!vault.IsValid())
 		return TArray<TSubclassOf<UFGItemDescriptor>>();
@@ -469,34 +513,12 @@ bool AApVaultSubsystem::CanSend(const FApPlayer& vault, const TSubclassOf<UFGIte
 	return acceptedItemsPerGame[game].ItemNameByClass.Contains(itemClass);
 }
 
-FString AApVaultSubsystem::GetItemName(uint64 itemId) const {
-	return mappingSubsystem->ItemIdToName[itemId];
-}
-
-FString AApVaultSubsystem::GetItemName(TSubclassOf<UFGItemDescriptor> item) const {
-	if (!mappingSubsystem->ItemClassToItemId.Contains(item))
-	{
-		UE_LOGFMT(LogApVaultSubsystem, Error, "AApVaultSubsystem::GetItemName({0}) unknown item", UFGItemDescriptor::GetItemName(item).ToString());
-		return TEXT("");
-	}
-
-	return GetItemName(mappingSubsystem->ItemClassToItemId[item]);
-}
-
-void AApVaultSubsystem::ParseVaultItemInfo(FString game, FString itemInfoString)
+void AApVaultSubsystem::ParseVaultItemInfo(const FString& game, const TSharedRef<FJsonValue>& parsedJson)
 {
 	static const UEnum* giftTraitEnum = StaticEnum<EGiftTrait>();
 
-	const TSharedRef<TJsonReader<>> reader = TJsonReaderFactory<>::Create(*itemInfoString);
-
-	TSharedPtr<FJsonValue> parsedJson;
-	FJsonSerializer::Deserialize(reader, parsedJson);
-
-	if (!parsedJson.IsValid())
-		return;
-
-	//parsedJson can be string array like ["item1", "otheritem"]
-	// or it can be object like {"item1": { "TraitA": 0.3}, "otheritem": { "TraitB": 0.6, "TraitC": 1}}
+	//parsedJson can be string array like ["item1", "other item"]
+	// or it can be object like {"item1": { "TraitA": 0.3}, "other item": { "TraitB": 0.6, "TraitC": 1}}
 
 	FVaultItemMapping itemMappings;
 
@@ -575,7 +597,7 @@ void AApVaultSubsystem::ParseVaultItemInfo(FString game, FString itemInfoString)
 		acceptedItemsPerGame.Add(game, itemMappings);
 }
 
-void AApVaultSubsystem::AddPersonalVaults(FString game)
+void AApVaultSubsystem::AddPersonalVaults(const FString& game)
 {
 	//TODO this is bad as it re-replicated for each game it receives players for
 	vaults.Append(playerInfoSubsystem->GetAllPlayersPlayingGame(game));

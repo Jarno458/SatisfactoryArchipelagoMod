@@ -57,25 +57,25 @@ void AApSubsystem::ConnectToArchipelago() {
 	AP_SetItemClearCallback([this]() {
 		ReceivedItems.Empty();
 		isReconnect = true;
-	});
+		});
 	AP_SetItemRecvCallback([this](int64 itemId, bool notify, bool isFromServer) {
 		ReceivedItems.Enqueue(TTuple<int64, bool>(itemId, isFromServer));
-	});
+		});
 	AP_SetLocationCheckedCallback([this](int64 locationId) {
 		CheckedLocations.Enqueue(locationId);
-	});
+		});
 	AP_SetLocationInfoCallback([this](std::vector<AP_NetworkItem> scoutedItems) {
 		LocationScoutedCallback(std::move(scoutedItems));
-	});
+		});
 	AP_SetLoggingCallback([this](std::string message) {
 		UE_LOG(LogApSubsystem, Display, TEXT("LogFromAPCpp: %s"), *UApUtils::FStr(message));
-	});
+		});
 	AP_RegisterBouncedCallback([this](AP_Bounce bounce) {
 		BounceReceivedCallback(bounce);
-	});
+		});
 	AP_SetPackageReceivedCallback([this](std::string json) {
 		PackageReceivedCallback(json);
-	});
+		});
 
 	AP_SetGiftingSupported(false);
 
@@ -107,14 +107,14 @@ void AApSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase) {
 		bool dummy = CallOnGameThread<bool>([this]() {
 			ConnectToArchipelago();
 			return true;
-		});
+			});
 
 		UE_LOG(LogApSubsystem, Display, TEXT("Waiting for AP Server connection to succeed..."));
 		FDateTime connectingStartedTime = FDateTime::Now();
 
 		FGenericPlatformProcess::ConditionalSleep([this, connectingStartedTime]() {
 			return InitializeTick(connectingStartedTime, config.Timeout);
-		}, 0.5);
+			}, 0.5);
 	}
 	else if (phase == ELifecyclePhase::POST_INITIALIZATION) {
 		SetActorTickEnabled(true);
@@ -252,6 +252,7 @@ void AApSubsystem::MonitorDataStoreJsonObjectValue(const FString& key, TFunction
 
 	TSharedRef<FJsonObject> setCmd = MakeShared<FJsonObject>();
 	setCmd->SetStringField("cmd", "Set");
+	setCmd->SetStringField("key", key);
 	setCmd->SetObjectField("default", MakeShared<FJsonObject>());
 	setCmd->SetArrayField("operations", operations);
 
@@ -275,9 +276,9 @@ void AApSubsystem::MonitorInt64DataStoreValue(const TArray<FString>& keys, TFunc
 
 		UInt64Get int64Get;
 		int64Get.Callback = [callback](const FString& callbackKey, const uint64* callbackValue)
-		{
-			callback(callbackKey, callbackValue, callbackValue, -1);
-		};
+			{
+				callback(callbackKey, callbackValue, callbackValue, -1);
+			};
 
 		if (dataStorageRetrievalCallbacks.Contains(key))
 			dataStorageRetrievalCallbacks[key] = MakeShared<UInt64Get>(int64Get);
@@ -344,39 +345,26 @@ void AApSubsystem::MonitorDataStoreUnboundedNumberValue(const FString& key, TFun
 	Send(jsons);
 }
 
+void AApSubsystem::ModifyDataStorageInt64NoCap(const FString& key, int64 amount) const
+{
+	Send(BuildNumericSetPacket(key, amount));
+}
+
 void AApSubsystem::ModifyDataStorageInt64(const FString& key, int64 amount) const {
-	TArray<TSharedPtr<FJsonValue>> operations;
+	Send(BuildNumericSetPacket(key, amount, UINT64_MAX));
+}
 
-	if (amount == 0)
-		return;
+void AApSubsystem::ModifyDataStorageInt64(const TMap<FString, int64>& adjustmentsPerKey) const
+{
+	TArray<TSharedRef<FJsonObject>> setPackets;
 
-	TSharedRef<FJsonObject> addOperation = MakeShared<FJsonObject>();
-	addOperation->SetStringField("operation", "add");
-	addOperation->SetField("value", MakeShared<FJsonValueNumberString>(LexToString(amount)));
-
-	operations.Add(MakeShared<FJsonValueObject>(addOperation));
-
-	if (amount < 0) {
-		TSharedRef<FJsonObject> minOperation = MakeShared<FJsonObject>();
-		minOperation->SetStringField("operation", "min");
-		minOperation->SetField("value", MakeShared<FJsonValueNumberString>(FString::FromInt(0)));
-
-		operations.Add(MakeShared<FJsonValueObject>(minOperation));
-	} else {
-		TSharedRef<FJsonObject> maxOperation = MakeShared<FJsonObject>();
-		maxOperation->SetStringField("operation", "max");
-		maxOperation->SetField("value", MakeShared<FJsonValueNumberString>(FString::FromInt(0)));
-
-		operations.Add(MakeShared<FJsonValueObject>(maxOperation));
+	for (const TPair<FString, int64>& adjustment : adjustmentsPerKey)
+	{
+		if (adjustment.Value != 0)
+			setPackets.Add(BuildNumericSetPacket(adjustment.Key, adjustment.Value, UINT64_MAX));
 	}
 
-	TSharedRef<FJsonObject> setCmd = MakeShared<FJsonObject>();
-	setCmd->SetStringField("cmd", "Set");
-	setCmd->SetStringField("key", key);
-	setCmd->SetField("default", MakeShared<FJsonValueNumberString>(FString::FromInt(0)));
-	setCmd->SetArrayField("operations", operations);
-
-	Send(setCmd);
+	Send(setPackets);
 }
 
 void AApSubsystem::GetDataStorageJsonFields(const TSet<FString>& keys, TFunction<void(const FString&, const TSharedRef<FJsonValue>&)> callback)
@@ -415,6 +403,25 @@ void AApSubsystem::GetDataStorageInt64Fields(const TSet<FString>& keys, TFunctio
 	cmd->SetArrayField("keys", keysArray);
 
 	Send(cmd);
+}
+
+void AApSubsystem::SetDataStorageJsonField(const FString& key, const TSharedRef<FJsonObject>& json) const
+{
+	TArray<TSharedPtr<FJsonValue>> operations;
+
+	TSharedRef<FJsonObject> replaceOperation = MakeShared<FJsonObject>();
+	replaceOperation->SetStringField("operation", "replace");
+	replaceOperation->SetObjectField("value", json);
+
+	operations.Add(MakeShared<FJsonValueObject>(replaceOperation));
+
+	TSharedRef<FJsonObject> setCmd = MakeShared<FJsonObject>();
+	setCmd->SetStringField("cmd", "Set");
+	setCmd->SetStringField("key", key);
+	setCmd->SetObjectField("default", MakeShared<FJsonObject>());
+	setCmd->SetArrayField("operations", operations);
+
+	Send(setCmd);
 }
 
 void AApSubsystem::SetItemReceivedCallback(TFunction<void(int64, bool)> onItemReceived) {
@@ -584,8 +591,8 @@ void AApSubsystem::ProcessApPackages()
 	nValue->TryGetNumber(val);
 
 	uint64 val2;
-	 FString output2 = nValue->AsString();
-	 LexFromString(val2, *output2);
+	FString output2 = nValue->AsString();
+	LexFromString(val2, *output2);
 
 	FString output = LexToString(val);
 
@@ -722,7 +729,7 @@ void AApSubsystem::CallDataStorageCallbackForRetrieved(FString key, const TShare
 				pendingDataJson->Callback(key, MakeShared<FJsonValueObject>(*value));
 			}
 		}
-	} 
+	}
 	else
 	{
 		UE_LOGFMT(LogApSubsystem, Error, "AApSubsystem::CallDataStorageCallback({0}): No handling implemented for the supplied type");
@@ -927,7 +934,7 @@ void AApSubsystem::HandleAPMessages() {
 				SendChatMessage(UApUtils::FStr(message->text), FLinearColor::White);
 
 				AP_ClearLatestMessage();
-			});
+				});
 		}
 	}
 }
@@ -958,6 +965,26 @@ void AApSubsystem::PackageReceivedCallback(const std::string rawJson)
 
 FString AApSubsystem::GetApItemName(int64 id) const {
 	return UApUtils::FStr(CallOnGameThread<std::string>([id]() { return AP_GetItemName("Satisfactory", id); }));
+}
+
+void AApSubsystem::SetVaultState(const TMap<FString, TMap<FString, float>>& vaultItemTraitMapping) const
+{
+	TSharedRef<FJsonObject> traitsJsonObject = MakeShareable(new FJsonObject());
+
+	for (const TPair<FString, TMap<FString, float>>& traitsPerItem : vaultItemTraitMapping)
+	{
+		TSharedRef<FJsonObject> traitJsonObject = MakeShareable(new FJsonObject());
+
+		for (const TPair<FString, float>& traitValues : traitsPerItem.Value)
+		{
+			const float Rounded = FMath::RoundToFloat(traitValues.Value * 1000.0f) / 1000.0f;  //round to 3 decimals
+			traitJsonObject->SetField(traitValues.Key, MakeShared<FJsonValueNumberString>(FString::SanitizeFloat(Rounded)));
+		}
+
+		traitsJsonObject->SetObjectField(traitsPerItem.Key, traitJsonObject);
+	}
+
+	 SetDataStorageJsonField("VSatisfactory", traitsJsonObject);
 }
 
 void AApSubsystem::SetGiftBoxState(bool open, const TSet<FString>& acceptedTraits) const {
@@ -1057,8 +1084,44 @@ TSharedRef<FJsonObject> AApSubsystem::BuildSendGift(const FApGift& giftToSend) c
 	return setCmd;
 }
 
-void AApSubsystem::ProcessGifts(TSet<FString> acceptedIds, TArray<FApGift> rejectedGifts) const
+TSharedRef<FJsonObject> AApSubsystem::BuildNumericSetPacket(const FString& key, int64 amount, uint64 kappa)
 {
+	TArray<TSharedPtr<FJsonValue>> operations;
+
+	TSharedRef<FJsonObject> addOperation = MakeShared<FJsonObject>();
+	addOperation->SetStringField("operation", "add");
+	addOperation->SetField("value", MakeShared<FJsonValueNumberString>(LexToString(amount)));
+
+	operations.Add(MakeShared<FJsonValueObject>(addOperation));
+
+	if (amount < 0) {
+		TSharedRef<FJsonObject> maxOperation = MakeShared<FJsonObject>();
+		maxOperation->SetStringField("operation", "max");
+		maxOperation->SetField("value", MakeShared<FJsonValueNumberString>(FString::FromInt(0)));
+
+		operations.Add(MakeShared<FJsonValueObject>(maxOperation));
+	}
+	else if (kappa != 0) {
+		TSharedRef<FJsonObject> minOperation = MakeShared<FJsonObject>();
+		minOperation->SetStringField("operation", "min");
+		minOperation->SetField("value", MakeShared<FJsonValueNumberString>(LexToString(kappa))); //should be UINT64 Max right?
+
+		operations.Add(MakeShared<FJsonValueObject>(minOperation));
+	}
+
+	TSharedRef<FJsonObject> setCmd = MakeShared<FJsonObject>();
+	setCmd->SetStringField("cmd", "Set");
+	setCmd->SetStringField("key", key);
+	setCmd->SetField("default", MakeShared<FJsonValueNumberString>(FString::FromInt(0)));
+	setCmd->SetArrayField("operations", operations);
+
+	return setCmd;
+}
+
+void AApSubsystem::ProcessGifts(const TSet<FString>& acceptedIds, const TArray<FApGift>& rejectedGifts) const
+{
+	TSet<FString> acceptedIdsCopy = acceptedIds;
+
 	if (acceptedIds.Num() == 0 && rejectedGifts.Num() == 0)
 		return;
 
@@ -1072,14 +1135,14 @@ void AApSubsystem::ProcessGifts(TSet<FString> acceptedIds, TArray<FApGift> rejec
 		giftToReject.Receiver = sender;
 		giftToReject.isRefund = true;
 
-		acceptedIds.Add(giftToReject.Id);
+		acceptedIdsCopy.Add(giftToReject.Id);
 
 		packets.Add(BuildSendGift(giftToReject));
 	}
 
 	TArray<TSharedPtr<FJsonValue>> operations;
 
-	for (FString id : acceptedIds) {
+	for (FString id : acceptedIdsCopy) {
 		TSharedRef<FJsonObject> popOperation = MakeShared<FJsonObject>();
 		popOperation->SetStringField("operation", "pop");
 		popOperation->SetStringField("value", id);
@@ -1233,7 +1296,7 @@ FString AApSubsystem::GetSlotDataJson() const {
 	return CallOnGameThread<FString>([]() {
 		std::string slotData = AP_GetSlotData();
 		return UApUtils::FStr(slotData);
-	});
+		});
 }
 
 template<typename RetType>
@@ -1245,7 +1308,7 @@ RetType AApSubsystem::CallOnGameThread(TFunction<RetType()> InFunction) const {
 
 	AsyncTask(ENamedThreads::GameThread, [Promise, InFunction]() {
 		Promise->SetValue(InFunction());
-	});
+		});
 
 	return Promise->GetFuture().Get();
 }
@@ -1256,7 +1319,7 @@ void AApSubsystem::CallOnGameThread(TFunction<void()> InFunction) const {
 
 	AsyncTask(ENamedThreads::GameThread, [InFunction]() {
 		InFunction();
-	});
+		});
 }
 
 #undef LOCTEXT_NAMESPACE

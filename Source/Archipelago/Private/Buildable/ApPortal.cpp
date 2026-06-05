@@ -4,7 +4,6 @@
 #include "UnrealNetwork.h"
 #include "Subsystem/ApPortalSubsystem.h"
 #include "Subsystem/ApReplicatedGiftingSubsystem.h"
-#include "Subsystem/ApVaultSubsystem.h"
 
 #pragma optimize("", off)
 
@@ -20,7 +19,10 @@ AApPortal::AApPortal() : Super() {
 
 	PrimaryActorTick.bCanEverTick = true;
 	PrimaryActorTick.bStartWithTickEnabled = true;
-	PrimaryActorTick.TickInterval = 0.1f;
+
+	//needs to thick atleast 1200 times per minute to keep up with a 1200 belt, 1200 / 60sec = 20x per second
+	//0.048 is ~20.8 times per second
+	PrimaryActorTick.TickInterval = 0.048f;
 }
 
 void AApPortal::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const {
@@ -55,11 +57,35 @@ void AApPortal::BeginPlay() {
 			output = connection;
 		}
 	}
+
+	 //TODO Remove for testing only
+	AApMappingsSubsystem* mappingSubsystem = AApMappingsSubsystem::Get(world);
+	
+	allowedOutput.Empty();
+	
+	allowedOutput.Add(StaticCastSharedRef<FApItem>(mappingSubsystem->ApItems[1338087])->Class);  //quickwire
+	allowedOutput.Add(StaticCastSharedRef<FApItem>(mappingSubsystem->ApItems[1338115])->Class);  //wire
+	allowedOutput.Add(StaticCastSharedRef<FApItem>(mappingSubsystem->ApItems[1338017])->Class);  //cable
+	allowedOutput.Add(StaticCastSharedRef<FApItem>(mappingSubsystem->ApItems[1338025])->Class);  //concrete
 }
 
 bool AApPortal::CanProduce_Implementation() const {
 	return HasPower();
 }
+
+/*
+ * Plan
+ * 
+ * Every tick, as time critical get items vault
+ * Compare to filter and select a random availble item
+ * Assign it as nextItemToOutput
+ * 
+ * TODO Find a way to not make everyone slap a portal on each miner
+ * // Maybe simply disallow sending directly to your own personal vault
+ *
+ * TODO default item filter for new building should be set to block all output None
+ */
+
 
 void AApPortal::Factory_Tick(float dt) {
 	Super::Factory_Tick(dt);
@@ -67,15 +93,36 @@ void AApPortal::Factory_Tick(float dt) {
 	if (!HasAuthority())
 		return;
 
+	FScopeTryLock lock(&outputLock);
+	if (!lock.IsLocked())
+		return;
+
 	camReceiveOutput = IsValid(this) && CanProduce() && IsValid(output) && output->IsConnected();
 
 	if (!camReceiveOutput) {
-		FScopeTryLock lock(&outputLock);
-		if (lock.IsLocked()) {
-			if (nextItemToOutput.IsValid())
-				static_cast<AApPortalSubsystem*>(portalSubsystem)->ReQueue(nextItemToOutput);
+		if (nextItemToOutput.IsValid())
+			vaultSubsystem->Store(FItemAmount(nextItemToOutput.GetItemClass(), 1), true);
 
-			nextItemToOutput = FInventoryItem::NullInventoryItem;
+		nextItemToOutput = FInventoryItem::NullInventoryItem;
+
+	} else {
+		if (nextItemToOutput.IsValid())
+			return;
+
+		if (allowedOutput.IsEmpty())
+			return;
+
+		const int32 startIndex = roundRobinIndex;
+		for (int32 i = 0; i < allowedOutput.Num(); ++i)
+		{
+			const int32 currentIndex = (startIndex + i) % allowedOutput.Num();
+			roundRobinIndex = (currentIndex + 1) % allowedOutput.Num();
+
+			if (vaultSubsystem->TryGetSingleItem(allowedOutput[currentIndex]))
+			{
+				nextItemToOutput = FInventoryItem(allowedOutput[currentIndex]);
+				break;
+			}
 		}
 	}
 }
