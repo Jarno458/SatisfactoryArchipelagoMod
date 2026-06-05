@@ -127,7 +127,7 @@ void AApPortal::Factory_Tick(float dt) {
 	}
 }
 
-void AApPortal::SetTarget(FApPlayer player)
+void AApPortal::SetTarget(const FApPlayer& player)
 {
 	 //TODO handle cleaning of inventory
 	 // send current inventory
@@ -135,7 +135,8 @@ void AApPortal::SetTarget(FApPlayer player)
 	targetPlayer = player;
 }
 
-bool AApPortal::TrySetOutput(FInventoryItem item) {
+/*
+bool AApPortal::TrySetOutput(const FInventoryItem& item) {
 	if (!IsValid(this) || !camReceiveOutput)
 		return false;
 
@@ -147,6 +148,7 @@ bool AApPortal::TrySetOutput(FInventoryItem item) {
 	nextItemToOutput = item;
 	return true;
 }
+*/
 
 void AApPortal::Factory_CollectInput_Implementation() {
 	if (static_cast<AApReplicatedGiftingSubsystem*>(replicatedGiftingSubsystem)->GetState() != EApGiftingServiceState::Ready

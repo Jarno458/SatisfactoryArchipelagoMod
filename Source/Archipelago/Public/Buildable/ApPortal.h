@@ -61,12 +61,12 @@ public:
 	FORCEINLINE UFGInventoryComponent* GetInventory() const { return mInputInventory; }
 
 	//UFUNCTION(BlueprintCallable) Should only be called through RCO, so not directly from blueprints
-	void SetTarget(FApPlayer player);
+	void SetTarget(const FApPlayer& player);
 
 	UFUNCTION(BlueprintPure, Category = "FactoryGame|Factory|Inventory")
 	FORCEINLINE UFGInventoryComponent* GetInputInventory() const { return mInputInventory; }
 
-	bool TrySetOutput(FInventoryItem item);
+	//bool TrySetOutput(const FInventoryItem& item);
 
 	void ServerSendManually();
 

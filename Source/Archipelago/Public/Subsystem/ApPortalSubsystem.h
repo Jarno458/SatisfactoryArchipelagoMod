@@ -43,16 +43,16 @@ private:
 	AApConnectionInfoSubsystem* connectionInfoSubsystem;
 	class AApVaultSubsystem* vaultSubsystem;
 	
-	UPROPERTY(SaveGame)
-	TArray<int64> OutputQueueSave;
+	//UPROPERTY(SaveGame)
+	//TArray<int64> OutputQueueSave;
 
-	FInventoryItem nextItemToOutput;
+	//FInventoryItem nextItemToOutput;
 
-	TDoubleLinkedList<FInventoryItem> OutputQueue;
+	//TDoubleLinkedList<FInventoryItem> OutputQueue;
 
-	TQueue<FInventoryItem, EQueueMode::Mpsc> PendingOutputQueue;
+	//TQueue<FInventoryItem, EQueueMode::Mpsc> PendingOutputQueue;
 
-	int lastUsedPortalIndex;
+	//int lastUsedPortalIndex;
 	bool isInitialized;
 
 	FDateTime lastAutoSendTime;
@@ -60,23 +60,23 @@ private:
 public:
 	FORCEINLINE bool IsInitialized() const { return isInitialized; };
 
-	void Enqueue(TSubclassOf<UFGItemDescriptor>& cls, int amount);
+	//void Enqueue(TSubclassOf<UFGItemDescriptor>& cls, int amount);
 	
 	void SendBuffer(FApPlayer targetPlayer, TArray<FItemAmount> items) const;
 
-	void ReQueue(FInventoryItem nextItem) const;
+	//void ReQueue(FInventoryItem nextItem) const;
 
 private:
-	void ProcessPendingOutputQueue();
-	void SendOutputQueueToPortals();
+	//void ProcessPendingOutputQueue();
+	//void SendOutputQueueToPortals();
 
-	void StoreQueueForSave();
-	void RebuildQueueFromSave();
+	//void StoreQueueForSave();
+	//void RebuildQueueFromSave();
 
-	void AddToEndOfQueue(FInventoryItem item);
-	void AddToStartOfQueue(FInventoryItem item);
-	bool TryPopFromQueue(FInventoryItem& outItem);
-	void ClearQueue();
+	//void AddToEndOfQueue(FInventoryItem item);
+	//void AddToStartOfQueue(FInventoryItem item);
+	//bool TryPopFromQueue(FInventoryItem& outItem);
+	//void ClearQueue();
 
 	void ProcessAutoVaultStoring() const;
 };

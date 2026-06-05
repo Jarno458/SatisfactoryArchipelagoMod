@@ -52,17 +52,17 @@ void AApPortalSubsystem::Tick(float dt) {
 	Super::Tick(dt);
 
 	if (!isInitialized) {
-		RebuildQueueFromSave();
+		//RebuildQueueFromSave();
 
 		isInitialized = true;
 	}
 	else {
-		SendOutputQueueToPortals();
+		//SendOutputQueueToPortals();
 	}
 
 	if (lastAutoSendTime + FTimespan::FromSeconds(VAULT_SEND_INTERVAL) < FDateTime::Now()) {
 
-		ProcessPendingOutputQueue();
+		//ProcessPendingOutputQueue();
 
 		ProcessAutoVaultStoring();
 
@@ -70,6 +70,7 @@ void AApPortalSubsystem::Tick(float dt) {
 	}
 }
 
+/*
 void AApPortalSubsystem::ProcessPendingOutputQueue() {
 	FInventoryItem pendingItem;
 
@@ -99,7 +100,9 @@ void AApPortalSubsystem::ProcessPendingOutputQueue() {
 			AddToEndOfQueue(FInventoryItem(randomItem.ItemClass));
 	}
 }
+*/
 
+/*
 void AApPortalSubsystem::SendOutputQueueToPortals() {
 	for (TActorIterator<AApPortal> actorIterator(GetWorld()); actorIterator; ++actorIterator) {
 		AApPortal* portal = *actorIterator;
@@ -115,7 +118,9 @@ void AApPortalSubsystem::SendOutputQueueToPortals() {
 			nextItemToOutput = FInventoryItem::NullInventoryItem;
 	}
 }
+*/
 
+/*
 void AApPortalSubsystem::Enqueue(TSubclassOf<UFGItemDescriptor>& cls, int amount) {
 	UE_LOG(LogApPortalSubsystem, Display, TEXT("AApPortalSubsystem::Enqueue(%s, %i)"), *UFGItemDescriptor::GetItemName(cls).ToString(), amount);
 
@@ -125,6 +130,7 @@ void AApPortalSubsystem::Enqueue(TSubclassOf<UFGItemDescriptor>& cls, int amount
 		PendingOutputQueue.Enqueue(item);
 	}
 }
+*/
 
 void AApPortalSubsystem::SendBuffer(FApPlayer targetPlayer, TArray<FItemAmount> items) const
 {
@@ -143,25 +149,28 @@ void AApPortalSubsystem::SendBuffer(FApPlayer targetPlayer, TArray<FItemAmount> 
 	}
 }
 
+/*
 void AApPortalSubsystem::ReQueue(FInventoryItem nextItem) const
 {
 	if (nextItem.IsValid()) {
 		vaultSubsystem->Store(FItemAmount(nextItem.GetItemClass(), 1), true);
 	}
 }
+*/
 
 void AApPortalSubsystem::PreSaveGame_Implementation(int32 saveVersion, int32 gameVersion) {
 	SetActorTickEnabled(false);
 
-	StoreQueueForSave();
+	//StoreQueueForSave();
 }
 
 void AApPortalSubsystem::PostSaveGame_Implementation(int32 saveVersion, int32 gameVersion) {
-	RebuildQueueFromSave();
+	//RebuildQueueFromSave();
 
 	SetActorTickEnabled(true);
 }
 
+/*
 void AApPortalSubsystem::StoreQueueForSave() {
 	FInventoryItem item;
 	while (TryPopFromQueue(item)) {
@@ -202,6 +211,7 @@ bool AApPortalSubsystem::TryPopFromQueue(FInventoryItem& outItem) {
 void AApPortalSubsystem::ClearQueue() {
 	OutputQueue.Empty();
 }
+*/
 
 void AApPortalSubsystem::ProcessAutoVaultStoring() const
 {
