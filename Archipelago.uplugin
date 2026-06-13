@@ -37,11 +37,6 @@
 			"SemVersion": "^1.9.0"
 		},
 		{
-			"Name": "FreeSamples",
-			"Enabled": true,
-			"SemVersion": "^2.0.0"
-		},
-		{
 			"Name": "MAMTips",
 			"Enabled": true,
 			"SemVersion": ">=1.9.0"

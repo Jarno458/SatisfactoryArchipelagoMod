@@ -1,12 +1,12 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "ApGiftTraitsSubsystem.h"
-#include "ApPlayerInfoSubsystem.h"
+#include "Subsystem/ApGiftTraitsSubsystem.h"
+#include "Subsystem/ApPlayerInfoSubsystem.h"
 
-#include "ApSubsystem.h"
+#include "Subsystem/ApSubsystem.h"
 #include "Subsystem/ApMappingsSubsystem.h"
-#include "../AdditionalDepots/Public/AdditionalDepotsServerSubsystem.h"
+#include "AdditionalDepotsServerSubsystem.h"
 
 #include "Subsystem/ModSubsystem.h"
 

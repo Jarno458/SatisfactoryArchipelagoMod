@@ -1,6 +1,6 @@
 #include "Subsystem/ApSubsystem.h"
 
-#include "ApMessagingSubsystem.h"
+#include "Subsystem/ApMessagingSubsystem.h"
 #include "Subsystem/ApSlotDataSubsystem.h"
 #include "ApUtils.h"
 #include "JsonObjectConverter.h"

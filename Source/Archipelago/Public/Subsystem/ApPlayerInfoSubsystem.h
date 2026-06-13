@@ -5,14 +5,15 @@
 
 #include "Data/ApTypes.h"
 
-#include "ApSubsystem.h"
-#include "BlueprintHookingTypes.h"
+#include "Subsystem/ApSubsystem.h"
+#include "Patching/BlueprintHookingTypes.h"
+#include "NativeGameplayTags.h"
+
 
 #include "ApPlayerInfoSubsystem.generated.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(LogApPlayerInfoSubsystem, Log, All);
-
-constexpr uint8 RELIABLE_MESSAGING_CHANNEL_ID_PLAYER_INFO = 156; //random value to avoid collisions with other subsystems
+UE_DECLARE_GAMEPLAY_TAG_EXTERN(ApPlayerInfoSubsystemReplication);
 
 USTRUCT(BlueprintType)
 struct ARCHIPELAGO_API FReplicatedFApPlayerInfo : public FApPlayer
@@ -88,6 +89,7 @@ private:
 	AApConnectionInfoSubsystem* connectionInfoSubsystem;
 
 	bool isInitialized;
+	FGameplayTag ReplicationTag;
 
 	TMap<FApPlayer, FString> PlayerGamesMap;
 	TMap<FApPlayer, FString> PlayerNamesMap;
@@ -137,7 +139,7 @@ public:
 
 protected:
 	/** Handles a reliable message */
-	void OnRawDataReceived(TArray<uint8>&& InMessageData);
+	void OnRawDataReceived(FGameplayTag tag, TArray<uint8>&& InMessageData);
 	/** Sends a a reliable message */
 	void SendRawMessage(const APlayerController* PlayerController, EPlayerInfoSubsystemMessageId MessageId, const TFunctionRef<void(FArchive&)>& MessageSerializer) const;
 

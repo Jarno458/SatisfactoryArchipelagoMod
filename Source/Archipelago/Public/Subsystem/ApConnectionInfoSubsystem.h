@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "ApTypes.h"
+#include "Data\ApTypes.h"
 #include "FGSaveInterface.h"
 #include "Subsystem/ModSubsystem.h"
 

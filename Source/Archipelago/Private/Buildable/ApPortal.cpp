@@ -1,16 +1,14 @@
 #include "Buildable/ApPortal.h"
 
-#include "ScopeTryLock.h"
-#include "UnrealNetwork.h"
+#include "Misc/ScopeTryLock.h"
+#include "Net/UnrealNetwork.h"
 #include "Subsystem/ApPortalSubsystem.h"
 #include "Subsystem/ApReplicatedGiftingSubsystem.h"
-
-#pragma optimize("", off)
 
 AApPortal::AApPortal() : Super() {
 	bReplicates = true;
 
-	mPowerConsumption = 10;
+	SetmPowerConsumption(10);
 
 	mInputInventory = CreateDefaultSubobject<UFGInventoryComponent>(TEXT("InputInventory"));
 	mInputInventory->SetDefaultSize(10);

@@ -1,8 +1,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "ApMappingsSubsystem.h"
-#include "ApTypes.h"
+#include "Subsystem/ApMappingsSubsystem.h"
+#include "Data/ApTypes.h"
 #include "FGResourceSinkSubsystem.h"
 
 #include "Subsystem/ModSubsystem.h"

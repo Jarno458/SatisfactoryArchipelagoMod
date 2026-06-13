@@ -1,13 +1,12 @@
 #include "Subsystem/ApPlayerInfoSubsystem.h"
 
 #include "EngineUtils.h"
-#include "NameAsStringProxyArchive.h"
+#include "Serialization/NameAsStringProxyArchive.h"
 #include "ReliableMessagingPlayerComponent.h"
-#include "SubsystemActorManager.h"
+#include "Subsystem/SubsystemActorManager.h"
 
 DEFINE_LOG_CATEGORY(LogApPlayerInfoSubsystem);
-
-#pragma optimize("", off)
+UE_DEFINE_GAMEPLAY_TAG(ApPlayerInfoSubsystemReplication, "ApPlayerInfoSubsystem.Replication");
 
 FArchive& operator<<(FArchive& Ar, FReplicatedFApPlayerInfo& Info)
 {
@@ -66,6 +65,8 @@ void AApPlayerInfoSubsystem::BeginPlay() {
 		ap = AApSubsystem::Get(world);
 		connectionInfoSubsystem = AApConnectionInfoSubsystem::Get(world);
 	}
+
+	ReplicationTag = FGameplayTag::RequestGameplayTag(TEXT("ApPlayerInfoSubsystem.Replication"));
 }
 
 void AApPlayerInfoSubsystem::Tick(float dt) {
@@ -286,7 +287,7 @@ void AApPlayerInfoSubsystem::OnPlayerControllerBeginPlay(const APlayerController
 		if (UReliableMessagingPlayerComponent* PlayerComponent = UReliableMessagingPlayerComponent::GetFromPlayer(PlayerController))
 		{
 			UE_LOG(LogApPlayerInfoSubsystem, Log, TEXT("Registered message handler for local player"));
-			PlayerComponent->RegisterMessageHandler(RELIABLE_MESSAGING_CHANNEL_ID_PLAYER_INFO,
+			PlayerComponent->RegisterTaggedMessageHandler(ReplicationTag,
 				UReliableMessagingPlayerComponent::FOnBulkDataReplicationPayloadReceived::CreateUObject(this, &AApPlayerInfoSubsystem::OnRawDataReceived));
 		}
 	}
@@ -305,12 +306,18 @@ void AApPlayerInfoSubsystem::SendRawMessage(const APlayerController* PlayerContr
 	if (ensure(PlayerComponent))
 	{
 		UE_LOG(LogApPlayerInfoSubsystem, Log, TEXT("Sending Message ID %d with %d bytes of payload to player %s"), MessageId, RawMessageData.Num(), *GetPathName(GetOwner()));
-		PlayerComponent->SendMessage(RELIABLE_MESSAGING_CHANNEL_ID_PLAYER_INFO, MoveTemp(RawMessageData));
+		PlayerComponent->SendTaggedMessage(ApPlayerInfoSubsystemReplication, MoveTemp(RawMessageData));
 	}
 }
 
-void AApPlayerInfoSubsystem::OnRawDataReceived(TArray<uint8>&& InMessageData)
+void AApPlayerInfoSubsystem::OnRawDataReceived(FGameplayTag tag, TArray<uint8>&& InMessageData)
 {
+	if (tag != ReplicationTag)
+	{
+		UE_LOGFMT(LogApPlayerInfoSubsystem, Warning, "AApPlayerInfoSubsystem::OnRawDataReceived() Received message with invalid tag {0}, expected {1}", tag.ToString(), ReplicationTag.ToString());
+		return;
+	}
+
 	FMemoryReader RawMessageMemoryReader(InMessageData);
 	FNameAsStringProxyArchive NameAsStringProxyArchive(RawMessageMemoryReader);
 
@@ -366,5 +373,3 @@ void AApPlayerInfoSubsystem::ReceiveInitialReplicationData(const FPlayerInfoSubs
 		}
 	}
 }
-
-#pragma optimize("", on)

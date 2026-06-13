@@ -43,7 +43,7 @@ public class Archipelago : ModuleRules
         // Mod code depdencies
         PrivateDependencyModuleNames.AddRange(new string[] { 
             "ContentLib",
-            "FreeSamples",
+            //"FreeSamples",
             "APCpp",
             "AdditionalDepots"
         });

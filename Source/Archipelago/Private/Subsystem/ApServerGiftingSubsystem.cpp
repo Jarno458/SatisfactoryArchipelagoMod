@@ -1,6 +1,6 @@
 #include "ApServerGiftingSubsystem.h"
 
-#include "StructuredLog.h"
+#include "Logging/StructuredLog.h"
 #include "Data/ApGiftingMappings.h"
 #include "Subsystem/ApVaultSubsystem.h"
 #include "Subsystem/SubsystemActorManager.h"

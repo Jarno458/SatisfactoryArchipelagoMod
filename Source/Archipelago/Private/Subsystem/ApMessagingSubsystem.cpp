@@ -1,7 +1,7 @@
 #include "Subsystem/ApMessagingSubsystem.h"
 #include "ApUtils.h"
 #include "FGChatManager.h"
-#include "UnrealNetwork.h"
+#include "Net/UnrealNetwork.h"
 
 DEFINE_LOG_CATEGORY(LogApChat);
 

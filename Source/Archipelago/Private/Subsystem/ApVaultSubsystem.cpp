@@ -1,10 +1,10 @@
 #include "ApVaultSubsystem.h"
 
-#include "ApSubsystem.h"
+#include "Subsystem/ApSubsystem.h"
 #include "ApUtils.h"
-#include "StructuredLog.h"
-#include "SubsystemActorManager.h"
-#include "UnrealNetwork.h"
+#include "Logging/StructuredLog.h"
+#include "Subsystem/SubsystemActorManager.h"
+#include "Net/UnrealNetwork.h"
 #include "Subsystem/ApMappingsSubsystem.h"
 
 #pragma optimize("", off)

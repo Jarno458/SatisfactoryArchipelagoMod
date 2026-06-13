@@ -4,7 +4,7 @@
 #include "Resources/FGItemDescriptor.h"
 #include "ApBlueprintDataBridge.h"
 #include "Archipelago.h"
-#include "BigInt.h"
+#include "Math/BigInt.h"
 #include "Module/ApGameInstanceModule.h"
 #include "Data/ApTypes.h"
 #include "Subsystem/SubsystemActorManager.h"

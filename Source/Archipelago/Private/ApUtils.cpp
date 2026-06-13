@@ -2,7 +2,7 @@
 
 #include <string>
 
-#include "StructuredLog.h"
+#include "Logging/StructuredLog.h"
 #include "Reflection/ClassGenerator.h"
 #include "Module/GameInstanceModuleManager.h"
 #include "Module/ApGameInstanceModule.h"

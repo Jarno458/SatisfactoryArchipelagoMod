@@ -1,8 +1,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "ApSlotDataSubsystem.h"
-#include "ApSubsystem.h"
+#include "Subsystem/ApSlotDataSubsystem.h"
+#include "Subsystem/ApSubsystem.h"
 
 #include "Subsystem/ModSubsystem.h"
 

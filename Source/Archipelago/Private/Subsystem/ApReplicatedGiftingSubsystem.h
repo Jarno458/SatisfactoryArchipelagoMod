@@ -1,8 +1,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "ApGiftTraitsSubsystem.h"
-#include "ApPlayerInfoSubsystem.h"
+#include "Subsystem/ApGiftTraitsSubsystem.h"
+#include "Subsystem/ApPlayerInfoSubsystem.h"
 
 #include "Subsystem/ModSubsystem.h"
 #include "Subsystem/ApConnectionInfoSubsystem.h"

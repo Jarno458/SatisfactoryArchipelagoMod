@@ -1,7 +1,7 @@
 #include "Subsystem/ApServerRandomizerSubsystem.h"
 
-#include "ConfigPropertyBool.h"
-#include "ConfigPropertyInteger.h"
+#include "Configuration/Properties/ConfigPropertyBool.h"
+#include "Configuration/Properties/ConfigPropertyInteger.h"
 #include "FGGamePhase.h"
 #include "Logging/StructuredLog.h"
 #include "FGEventSubsystem.h"

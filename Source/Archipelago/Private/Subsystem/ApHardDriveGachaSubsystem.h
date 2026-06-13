@@ -6,6 +6,7 @@
 #include "Patching/NativeHookManager.h"
 #include "FGSchematicManager.h"
 #include "FGResearchManager.h"
+#include "Registry/ModContentRegistry.h"
 
 #include "ApHardDriveGachaSubsystem.generated.h"
 

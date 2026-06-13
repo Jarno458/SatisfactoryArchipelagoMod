@@ -10,7 +10,7 @@
 #include "Subsystem/ModSubsystem.h"
 #include "Templates/SubclassOf.h"
 
-#include "ApTrapSubsystem.h"
+#include "Subsystem/ApTrapSubsystem.h"
 #include "ApVaultSubsystem.h"
 #include "Data/ApTypes.h"
 #include "Subsystem/ApPortalSubsystem.h"
