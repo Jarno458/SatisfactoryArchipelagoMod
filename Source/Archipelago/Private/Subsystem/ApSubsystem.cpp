@@ -173,7 +173,7 @@ void AApSubsystem::BounceReceivedCallback(AP_Bounce bounce)
 
 		FString referenceString;
 		FGuid reference;
-		if (parsedJson->TryGetStringField("reference", referenceString) && FGuid::Parse(referenceString, reference))
+		if (parsedJson->TryGetStringField(TEXT("reference"), referenceString) && FGuid::Parse(referenceString, reference))
 		{
 			if (sendDeathLinkReferences.Contains(reference)) {
 				sendDeathLinkReferences.Remove(reference);
@@ -182,11 +182,11 @@ void AApSubsystem::BounceReceivedCallback(AP_Bounce bounce)
 		}
 
 		FString source;
-		if (!parsedJson->TryGetStringField("source", source))
+		if (!parsedJson->TryGetStringField(TEXT("source"), source))
 			source = "Unknown";
 
 		FString cause;
-		if (!parsedJson->TryGetStringField("cause", cause))
+		if (!parsedJson->TryGetStringField(TEXT("cause"), cause))
 			cause = "";
 
 		DeathLinkReceivedCallback(source, cause);
@@ -578,24 +578,6 @@ void AApSubsystem::CheckConnectionState() const {
 
 void AApSubsystem::ProcessApPackages()
 {
-	FString test = TEXT("{ \"n\": 20446744073709551615 }");
-
-	const TSharedRef<TJsonReader<>> reader2 = TJsonReaderFactory<>::Create(*test);
-
-	TSharedPtr<FJsonObject> parsedJson2;
-	FJsonSerializer::Deserialize(reader2, parsedJson2);
-
-	TSharedPtr<FJsonValue> nValue = parsedJson2->TryGetField("n");
-
-	uint64 val;
-	nValue->TryGetNumber(val);
-
-	uint64 val2;
-	FString output2 = nValue->AsString();
-	LexFromString(val2, *output2);
-
-	FString output = LexToString(val);
-
 	for (int i = 0; i < 5; i++) { // small batches to not lock up the game thread for too long if there are many packages, the rest will be processed in the next ticks
 		FString queuedMessage;
 
@@ -608,12 +590,11 @@ void AApSubsystem::ProcessApPackages()
 			if (!parsedJson || !parsedJson.IsValid())
 				UE_LOGFMT(LogApSubsystem, Error, "AApSubsystem::ProcessApPackages(), Failed to parse \"{0}\"", queuedMessage);
 
-			FString cmd = parsedJson->GetStringField("cmd");
-
-			if (cmd == "Retrieved") {
+			FString cmd = parsedJson->GetStringField(TEXT("cmd"));
+			if (cmd == TEXT("Retrieved")) {
 				OnRetrievedPackage(parsedJson);
 			}
-			else if (cmd == "SetReply") {
+			else if (cmd == TEXT("SetReply")) {
 				OnSetReply(parsedJson);
 			}
 		}
@@ -626,7 +607,7 @@ void AApSubsystem::ProcessApPackages()
 void AApSubsystem::OnRetrievedPackage(const TSharedPtr<FJsonObject> json)
 {
 	const TSharedPtr<FJsonObject>* keys;
-	if (!json->TryGetObjectField("keys", keys))
+	if (!json->TryGetObjectField(TEXT("keys"), keys))
 	{
 		UE_LOGFMT(LogApSubsystem, Error, "AApSubsystem::OnRetrievedPackage(): Protocol violation, Retrieved does not contain 'keys' field");
 		return;
@@ -646,27 +627,27 @@ void AApSubsystem::OnRetrievedPackage(const TSharedPtr<FJsonObject> json)
 void AApSubsystem::OnSetReply(const TSharedPtr<FJsonObject> json)
 {
 	FString key;
-	if (!json->TryGetStringField("key", key))
+	if (!json->TryGetStringField(TEXT("key"), key))
 	{
 		UE_LOGFMT(LogApSubsystem, Error, "AApSubsystem::OnSetReply(): Protocol violation, SetReply does not contain 'key' field");
 		return;
 	}
 
 	int slot;
-	if (!json->TryGetNumberField("slot", slot))
+	if (!json->TryGetNumberField(TEXT("slot"), slot))
 	{
 		UE_LOGFMT(LogApSubsystem, Error, "AApSubsystem::OnSetReply(): Protocol violation, SetReply does not contain 'slot' field");
 		return;
 	}
 
-	TSharedPtr<FJsonValue> value = json->TryGetField("value");
+	TSharedPtr<FJsonValue> value = json->TryGetField(TEXT("value"));
 	if (!value || !value.IsValid())
 	{
 		UE_LOGFMT(LogApSubsystem, Error, "AApSubsystem::OnSetReply(): Protocol violation, SetReply does not contain 'value' field");
 		return;
 	}
 
-	TSharedPtr<FJsonValue> originalValue = json->TryGetField("original_value");
+	TSharedPtr<FJsonValue> originalValue = json->TryGetField(TEXT("original_value"));
 	if (!originalValue || !originalValue.IsValid())
 	{
 		UE_LOGFMT(LogApSubsystem, Error, "AApSubsystem::OnSetReply(): Protocol violation, SetReply does not contain 'value' field");
@@ -1071,9 +1052,9 @@ TSharedRef<FJsonObject> AApSubsystem::BuildSendGift(const FApGift& giftToSend) c
 
 	FString key;
 	if (giftToSend.isRefund)
-		key = FString::Format(TEXT("GiftBox;{0};{1}"), { giftToSend.Receiver.Team, giftToSend.Receiver.Slot });
+		key = FString::Format(TEXT("GiftBox;{0};{1}"), { giftToSend.Sender.Team, giftToSend.Sender.Slot });
 	else
-		key = FString::Format(TEXT("GiftBox;{0};{1}"), { connectionInfoSubsystem->GetCurrentPlayerTeam(), connectionInfoSubsystem->GetCurrentPlayerSlot() });
+		key = FString::Format(TEXT("GiftBox;{0};{1}"), { giftToSend.Receiver.Team, giftToSend.Receiver.Slot });
 
 	TSharedRef<FJsonObject> setCmd = MakeShared<FJsonObject>();
 	setCmd->SetStringField("cmd", "Set");
@@ -1129,10 +1110,6 @@ void AApSubsystem::ProcessGifts(const TSet<FString>& acceptedIds, const TArray<F
 
 	for (FApGift giftToReject : rejectedGifts)
 	{
-		FApPlayer sender = giftToReject.Sender;
-
-		giftToReject.Sender = giftToReject.Receiver;
-		giftToReject.Receiver = sender;
 		giftToReject.isRefund = true;
 
 		acceptedIdsCopy.Add(giftToReject.Id);
@@ -1146,6 +1123,8 @@ void AApSubsystem::ProcessGifts(const TSet<FString>& acceptedIds, const TArray<F
 		TSharedRef<FJsonObject> popOperation = MakeShared<FJsonObject>();
 		popOperation->SetStringField("operation", "pop");
 		popOperation->SetStringField("value", id);
+
+		operations.Add(MakeShared<FJsonValueObject>(popOperation));
 	}
 
 	FString key = FString::Format(TEXT("GiftBox;{0};{1}"), { connectionInfoSubsystem->GetCurrentPlayerTeam(), connectionInfoSubsystem->GetCurrentPlayerSlot() });

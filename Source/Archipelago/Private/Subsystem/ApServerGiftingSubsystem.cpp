@@ -61,10 +61,8 @@ void AApServerGiftingSubsystem::Tick(float dt) {
 			static const UEnum* giftTraitEnum = StaticEnum<EGiftTrait>();
 
 			TSet<FString> allTraits;
-			for (int32 i = 0; i < (giftTraitEnum->NumEnums() - 1); i++) {
-				for (EGiftTrait trait : TEnumRange<EGiftTrait>())
+			for (int32 i = 0; i < (giftTraitEnum->NumEnums() - 1); i++)
 					allTraits.Add(giftTraitEnum->GetNameStringByIndex(i));
-			}
 
 			ap->SetGiftBoxState(true, allTraits);
 
@@ -108,40 +106,40 @@ void AApServerGiftingSubsystem::PullAllGiftsAsync(const FString& key, const TSha
 		FApGift gift;
 		gift.Id = *giftJson.Key;
 		
-		if (!(*giftObjectPtr)->TryGetStringField("item_name", gift.ItemName))
+		if (!(*giftObjectPtr)->TryGetStringField(TEXT("item_name"), gift.ItemName))
 		{
 			UE_LOGFMT(LogApServerGiftingSubsystem, Error, "AApServerGiftingSubsystem::PullAllGiftsAsync() Failed to parse item_name for gift {0}", *giftJson.Key);
 			continue;
 		}
-		if (!(*giftObjectPtr)->TryGetNumberField("amount", gift.Amount))
+		if (!(*giftObjectPtr)->TryGetNumberField(TEXT("amount"), gift.Amount))
 		{
 			UE_LOGFMT(LogApServerGiftingSubsystem, Error, "AApServerGiftingSubsystem::PullAllGiftsAsync() Failed to parse amount for gift {0}", *giftJson.Key);
 			continue;
 		}
-		if (!(*giftObjectPtr)->TryGetNumberField("item_value", gift.ItemValue))
+		if (!(*giftObjectPtr)->TryGetNumberField(TEXT("item_value"), gift.ItemValue))
 		{
 			gift.ItemValue = 0;
 		}
 
 		FApPlayer sender;
-		if (!(*giftObjectPtr)->TryGetNumberField("sender_team", sender.Team))
+		if (!(*giftObjectPtr)->TryGetNumberField(TEXT("sender_team"), sender.Team))
 		{
 			UE_LOGFMT(LogApServerGiftingSubsystem, Error, "AApServerGiftingSubsystem::PullAllGiftsAsync() Failed to parse sender_team for gift {0}", *giftJson.Key);
 			continue;
 		}
-		if (!(*giftObjectPtr)->TryGetNumberField("sender_slot", sender.Slot))
+		if (!(*giftObjectPtr)->TryGetNumberField(TEXT("sender_slot"), sender.Slot))
 		{
 			UE_LOGFMT(LogApServerGiftingSubsystem, Error, "AApServerGiftingSubsystem::PullAllGiftsAsync() Failed to parse sender_slot for gift {0}", *giftJson.Key);
 			continue;
 		}
 
 		FApPlayer receiver;
-		if (!(*giftObjectPtr)->TryGetNumberField("receiver_team", receiver.Team))
+		if (!(*giftObjectPtr)->TryGetNumberField(TEXT("receiver_team"), receiver.Team))
 		{
 			UE_LOGFMT(LogApServerGiftingSubsystem, Error, "AApServerGiftingSubsystem::PullAllGiftsAsync() Failed to parse receiver_team for gift {0}", *giftJson.Key);
 			continue;
 		}
-		if (!(*giftObjectPtr)->TryGetNumberField("receiver_slot", receiver.Slot))
+		if (!(*giftObjectPtr)->TryGetNumberField(TEXT("receiver_slot"), receiver.Slot))
 		{
 			UE_LOGFMT(LogApServerGiftingSubsystem, Error, "AApServerGiftingSubsystem::PullAllGiftsAsync() Failed to parse receiver_slot for gift {0}", *giftJson.Key);
 			continue;
@@ -152,18 +150,18 @@ void AApServerGiftingSubsystem::PullAllGiftsAsync(const FString& key, const TSha
 		gift.Traits.Empty();
 
 		const TArray<TSharedPtr<FJsonValue>>* traitsJson;
-		if ((*giftObjectPtr)->TryGetArrayField("traits", traitsJson)) //optional value
+		if ((*giftObjectPtr)->TryGetArrayField(TEXT("traits"), traitsJson)) //optional value
 		{
 			for (const TSharedPtr<FJsonValue>& traitJson : *traitsJson) {
 				TSharedPtr<FJsonObject>* traitJsonObjectPtr;
-				if (!giftJson.Value->TryGetObject(traitJsonObjectPtr))
+				if (!traitJson->TryGetObject(traitJsonObjectPtr))
 				{
 					UE_LOGFMT(LogApServerGiftingSubsystem, Error, "AApServerGiftingSubsystem::PullAllGiftsAsync() Failed to parse trait for gift {0}", *giftJson.Key);
 					continue;
 				}
 
 				FString traitName;
-				if (!(*traitJsonObjectPtr)->TryGetStringField("trait", traitName))
+				if (!(*traitJsonObjectPtr)->TryGetStringField(TEXT("trait"), traitName))
 				{
 					UE_LOGFMT(LogApServerGiftingSubsystem, Error, "AApServerGiftingSubsystem::PullAllGiftsAsync() Failed to parse trait name for gift {0}", *giftJson.Key);
 					continue;
@@ -176,12 +174,12 @@ void AApServerGiftingSubsystem::PullAllGiftsAsync(const FString& key, const TSha
 				FApGiftTrait trait;
 				trait.Trait = static_cast<EGiftTrait>(enumValue);
 
-				if (!(*giftObjectPtr)->TryGetNumberField("duration", trait.Duration))
+				if (!(*giftObjectPtr)->TryGetNumberField(TEXT("duration"), trait.Duration))
 				{
 					trait.Duration = 1;
 				}
 
-				if (!(*giftObjectPtr)->TryGetNumberField("quality", trait.Quality))
+				if (!(*giftObjectPtr)->TryGetNumberField(TEXT("quality"), trait.Quality))
 				{
 					trait.Quality = 1;
 				}
@@ -249,8 +247,6 @@ void AApServerGiftingSubsystem::PullAllGiftsAsync(const FString& key, const TSha
 			FItemAmount ItemAmount(ItemsToAccepted.Key, ItemsToAccepted.Value);
 
 			vaultSubsystem->Store(ItemAmount, true);
-
-			//portalSubSystem->Enqueue(ItemsToAccepted.Key, ItemsToAccepted.Value);
 		}
 	}
 

@@ -10,8 +10,6 @@
 
 DEFINE_LOG_CATEGORY(LogApPortalSubsystem);
 
-#pragma optimize("", off)
-
 #define VAULT_SEND_INTERVAL 10.0f
 
 AApPortalSubsystem* AApPortalSubsystem::Get(UWorld* world) {
@@ -29,7 +27,8 @@ AApPortalSubsystem::AApPortalSubsystem() : Super() {
 
 	//needs to thick atleast 1200 times per minute to keep up with a 1200 belt, 1200 / 60sec = 20x per second
 	//0.048 is ~20.8 times per second
-	PrimaryActorTick.TickInterval = 0.048f; //TODO might want to change this is portals take care of thier own output
+	//PrimaryActorTick.TickInterval = 0.048f; // Not needed anymore as portals take care of their own output
+	PrimaryActorTick.TickInterval = 1.0f;
 
 	ReplicationPolicy = ESubsystemReplicationPolicy::SpawnOnServer;
 }
@@ -41,8 +40,6 @@ void AApPortalSubsystem::BeginPlay() {
 
 	UWorld* world = GetWorld();
 	giftingSubsystem = AApServerGiftingSubsystem::Get(world);
-	mappings = AApMappingsSubsystem::Get(world);
-	connectionInfoSubsystem = AApConnectionInfoSubsystem::Get(world);
 	vaultSubsystem = AApVaultSubsystem::Get(world);
 
 	lastAutoSendTime = FDateTime::Now();
@@ -52,85 +49,15 @@ void AApPortalSubsystem::Tick(float dt) {
 	Super::Tick(dt);
 
 	if (!isInitialized) {
-		//RebuildQueueFromSave();
-
 		isInitialized = true;
-	}
-	else {
-		//SendOutputQueueToPortals();
 	}
 
 	if (lastAutoSendTime + FTimespan::FromSeconds(VAULT_SEND_INTERVAL) < FDateTime::Now()) {
-
-		//ProcessPendingOutputQueue();
-
 		ProcessAutoVaultStoring();
 
 		lastAutoSendTime = FDateTime::Now();
 	}
 }
-
-/*
-void AApPortalSubsystem::ProcessPendingOutputQueue() {
-	FInventoryItem pendingItem;
-
-	while (PendingOutputQueue.Dequeue(pendingItem)) {
-		AddToEndOfQueue(pendingItem);
-	}
-
-	//TODO only fill outputqueue if its empty or something, actually assign do this per building or something as filters can differ
-		
-	//TODO only take what is requested by filters, likely the portals themzelf will take the items and handle filtering
-	TArray<FItemAmount> personalVaultItems = TArray<FItemAmount>(); //vaultSubsystem->GetItems(true);
-
-	if (personalVaultItems.IsEmpty())
-		return;
-
-	const int32 randomIndex = personalVaultItems.IsEmpty() ? INDEX_NONE : FMath::RandHelper(personalVaultItems.Num());
-
-	if (randomIndex != INDEX_NONE)
-	{
-		FItemAmount randomItem = personalVaultItems[randomIndex];
-
-		randomItem.Amount = static_cast<int32>(FMath::Clamp<uint64>(randomItem.Amount, 0, UFGItemDescriptor::GetStackSizeConverted(randomItem.ItemClass)));;
-
-		int32 taken = vaultSubsystem->Take(randomItem, true);
-
-		for (int i = 0; i < taken; i++)
-			AddToEndOfQueue(FInventoryItem(randomItem.ItemClass));
-	}
-}
-*/
-
-/*
-void AApPortalSubsystem::SendOutputQueueToPortals() {
-	for (TActorIterator<AApPortal> actorIterator(GetWorld()); actorIterator; ++actorIterator) {
-		AApPortal* portal = *actorIterator;
-		if (!IsValid(portal))
-			continue;
-
-		if (!nextItemToOutput.IsValid())
-			TryPopFromQueue(nextItemToOutput);
-		if (!nextItemToOutput.IsValid())
-			return;
-
-		if (portal->TrySetOutput(nextItemToOutput))
-			nextItemToOutput = FInventoryItem::NullInventoryItem;
-	}
-}
-*/
-
-/*
-void AApPortalSubsystem::Enqueue(TSubclassOf<UFGItemDescriptor>& cls, int amount) {
-	UE_LOG(LogApPortalSubsystem, Display, TEXT("AApPortalSubsystem::Enqueue(%s, %i)"), *UFGItemDescriptor::GetItemName(cls).ToString(), amount);
-
-	const FInventoryItem item(cls);
-
-	for (int i = 0; i < amount; i++) {
-		PendingOutputQueue.Enqueue(item);
-	}
-}
-*/
 
 void AApPortalSubsystem::SendBuffer(FApPlayer targetPlayer, TArray<FItemAmount> items) const
 {
@@ -149,69 +76,13 @@ void AApPortalSubsystem::SendBuffer(FApPlayer targetPlayer, TArray<FItemAmount> 
 	}
 }
 
-/*
-void AApPortalSubsystem::ReQueue(FInventoryItem nextItem) const
-{
-	if (nextItem.IsValid()) {
-		vaultSubsystem->Store(FItemAmount(nextItem.GetItemClass(), 1), true);
-	}
-}
-*/
-
 void AApPortalSubsystem::PreSaveGame_Implementation(int32 saveVersion, int32 gameVersion) {
 	SetActorTickEnabled(false);
-
-	//StoreQueueForSave();
 }
 
 void AApPortalSubsystem::PostSaveGame_Implementation(int32 saveVersion, int32 gameVersion) {
-	//RebuildQueueFromSave();
-
 	SetActorTickEnabled(true);
 }
-
-/*
-void AApPortalSubsystem::StoreQueueForSave() {
-	FInventoryItem item;
-	while (TryPopFromQueue(item)) {
-		OutputQueueSave.Add(mappings->ItemClassToItemId[item.GetItemClass()]);
-	}
-}
-
-void AApPortalSubsystem::RebuildQueueFromSave() {
-	ClearQueue();
-
-	for (int64 itemId : OutputQueueSave) {
-		TSubclassOf<UFGItemDescriptor> cls = StaticCastSharedRef<FApItem>(mappings->ApItems[itemId])->Class;
-		AddToEndOfQueue(FInventoryItem(cls));
-	}
-
-	OutputQueueSave.Empty();
-}
-
-void AApPortalSubsystem::AddToEndOfQueue(FInventoryItem item) {
-	OutputQueue.AddHead(item);
-}
-
-void AApPortalSubsystem::AddToStartOfQueue(FInventoryItem item) {
-	OutputQueue.AddTail(item);
-}
-
-bool AApPortalSubsystem::TryPopFromQueue(FInventoryItem& outItem) {
-	if (!OutputQueue.IsEmpty()) {
-		TDoubleLinkedList<FInventoryItem>::TDoubleLinkedListNode* head = OutputQueue.GetHead();
-		outItem = head->GetValue();
-		OutputQueue.RemoveNode(head);
-		return true;
-	}
-
-	return false;
-}
-
-void AApPortalSubsystem::ClearQueue() {
-	OutputQueue.Empty();
-}
-*/
 
 void AApPortalSubsystem::ProcessAutoVaultStoring() const
 {
@@ -219,7 +90,7 @@ void AApPortalSubsystem::ProcessAutoVaultStoring() const
 
 	for (TActorIterator<AApPortal> actorIterator(GetWorld()); actorIterator; ++actorIterator) {
 		AApPortal* portal = *actorIterator;
-		if (!IsValid(portal) || !portal->targetPlayer.IsValid())
+		if (!IsValid(portal) || !portal->targetPlayer.IsValid() || !vaultSubsystem->DoesPlayerAcceptVaultItems(portal->targetPlayer))
 			continue;
 
 		UFGInventoryComponent* inventory = portal->GetInventory();
@@ -246,5 +117,3 @@ void AApPortalSubsystem::ProcessAutoVaultStoring() const
 		}
 	}
 }
-
-#pragma optimize("", on)

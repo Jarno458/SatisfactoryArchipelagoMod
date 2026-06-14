@@ -125,10 +125,9 @@ void AApPortal::Factory_Tick(float dt) {
 	}
 }
 
-void AApPortal::SetTarget(const FApPlayer& player)
+void AApPortal::ServerSetTarget(const FApPlayer& player)
 {
-	 //TODO handle cleaning of inventory
-	 // send current inventory
+	ServerSendManually();
 
 	targetPlayer = player;
 }
@@ -181,7 +180,8 @@ void AApPortal::Factory_CollectInput_Implementation() {
 }
 
 
-void AApPortal::ServerSendManually() {
+void AApPortal::ServerSendManually() const
+{
 	if (!IsValid(this))
 		return;
 
