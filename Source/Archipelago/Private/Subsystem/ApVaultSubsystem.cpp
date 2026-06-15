@@ -13,24 +13,24 @@
  * Design pattern for vaults:
  *
  * We can only Take from our own vault
- * Store and Take from our own vaults will update the corresponding Adjustments, and cause the depots to update 
+ * Store and Take from our own vaults will update the corresponding Adjustments, and cause the depots to update
  *		(this might be bottleneck if 100 vaults update at 1200/min)
  * Store on another player their vault will create pending updates
  * Adjustments and other pending updates are synced with the server every interval
- * 
- * When we receive updates values from the server, we check who updated the value, 
- * if the update came from us, we know it was the sync from adjustments to the server, 
+ *
+ * When we receive updates values from the server, we check who updated the value,
+ * if the update came from us, we know it was the sync from adjustments to the server,
  * so we subtract the change from our adjustments
  * either way we update the current amount with the value from the server
- * 
+ *
  * NEW PLAN
- * 
+ *
  * since we global/personal item amounts are only editied in the UpdateItemAmount callback from setnotify
  * we can instead store the whole adjusted amount in there, this allow us have the adjust amount readily available for other parts
  * such as GetItems and Take
- * 
+ *
  * Portals can try to get a single item from the vault at rapid speeds
- * 
+ *
  */
 
 DEFINE_LOG_CATEGORY(LogApVaultSubsystem);
@@ -146,7 +146,7 @@ void AApVaultSubsystem::Tick(float dt) {
 				ParseVaultItemInfo(game, value);
 
 				AddPersonalVaults(game);
-			});
+				});
 
 			SetupPersonalVault();
 			AddPersonalVaults(TEXT("Satisfactory"));
@@ -186,7 +186,7 @@ void AApVaultSubsystem::MonitorVaultItems(int team, int slot)
 
 	ap->MonitorInt64DataStoreValue(truncatedKeysToMonitor, [this](const FString& key, const uint64* oldValue, const uint64* newValue, int slot) {
 		UpdateItemAmount(key, oldValue, newValue, slot);
-	});
+		});
 }
 
 void AApVaultSubsystem::UpdateItemAmount(const FString& key, const uint64* oldValue, const uint64* value, int slot) {
@@ -511,6 +511,16 @@ bool AApVaultSubsystem::CanSend(const FApPlayer& vault, const TSubclassOf<UFGIte
 		return false;
 
 	return acceptedItemsPerGame[game].ItemNameByClass.Contains(itemClass);
+}
+
+TArray<TSubclassOf<UFGItemDescriptor>> AApVaultSubsystem::GetItemsStoredInPersonalVault() const
+{
+	TArray<TSubclassOf<UFGItemDescriptor>> items;
+
+	for (const FItemAmount& item : additionalDepotsServerSubsystem->GetItems(personalVault))
+		items.Add(item.ItemClass);
+
+	return items;
 }
 
 void AApVaultSubsystem::ParseVaultItemInfo(const FString& game, const TSharedRef<FJsonValue>& parsedJson)

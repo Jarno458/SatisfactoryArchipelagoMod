@@ -78,7 +78,7 @@ private:
 	void UpdateItemAmount(const FString& key, const uint64* oldValue, const uint64* newValue, int slot);
 
 public:
-	UFUNCTION(BlueprintCallable, BlueprintPure)
+	UFUNCTION(BlueprintPure)
 	FORCEINLINE bool IsInitialized() const { return apInitialized; };
 
 	void Store(const FItemAmount& item, bool personal = false);
@@ -101,6 +101,8 @@ public:
 
 	bool CanSend(const FApPlayer& targetPlayer, const TSubclassOf<UFGItemDescriptor> itemClass);
 
+	UFUNCTION(BlueprintCallable)
+	TArray<TSubclassOf<UFGItemDescriptor>> GetItemsStoredInPersonalVault() const;
 
 private:
 	void ParseVaultItemInfo(const FString& game, const TSharedRef<FJsonValue>& value);
