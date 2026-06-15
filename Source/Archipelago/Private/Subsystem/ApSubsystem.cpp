@@ -347,15 +347,30 @@ void AApSubsystem::MonitorDataStoreUnboundedNumberValue(const FString& key, TFun
 
 void AApSubsystem::ModifyDataStorageInt64NoCap(const FString& key, int64 amount) const
 {
+	if (config.SaveMode) {
+		UE_LOG(LogApSubsystem, Warning, TEXT("AApSubsystem::ModifyDataStorageInt64NoCap() called in Safe Mode, ignoring request"));
+		return;
+	}
+
 	Send(BuildNumericSetPacket(key, amount));
 }
 
 void AApSubsystem::ModifyDataStorageInt64(const FString& key, int64 amount) const {
+	if (config.SaveMode) {
+		UE_LOG(LogApSubsystem, Warning, TEXT("AApSubsystem::ModifyDataStorageInt64() called in Safe Mode, ignoring request"));
+		return;
+	}
+
 	Send(BuildNumericSetPacket(key, amount, UINT64_MAX));
 }
 
 void AApSubsystem::ModifyDataStorageInt64(const TMap<FString, int64>& adjustmentsPerKey) const
 {
+	if (config.SaveMode) {
+		UE_LOG(LogApSubsystem, Warning, TEXT("AApSubsystem::ModifyDataStorageInt64() called in Safe Mode, ignoring request"));
+		return;
+	}
+
 	TArray<TSharedRef<FJsonObject>> setPackets;
 
 	for (const TPair<FString, int64>& adjustment : adjustmentsPerKey)
@@ -369,6 +384,11 @@ void AApSubsystem::ModifyDataStorageInt64(const TMap<FString, int64>& adjustment
 
 void AApSubsystem::GetDataStorageJsonFields(const TSet<FString>& keys, TFunction<void(const FString&, const TSharedRef<FJsonValue>&)> callback)
 {
+	if (config.SaveMode) {
+		UE_LOG(LogApSubsystem, Warning, TEXT("AApSubsystem::GetDataStorageJsonFields() called in Safe Mode, ignoring request"));
+		return;
+	}
+
 	TArray<TSharedPtr<FJsonValue>> keysArray;
 	for (const FString& key : keys) {
 		keysArray.Add(MakeShared<FJsonValueString>(key));
@@ -388,6 +408,11 @@ void AApSubsystem::GetDataStorageJsonFields(const TSet<FString>& keys, TFunction
 
 void AApSubsystem::GetDataStorageInt64Fields(const TSet<FString>& keys, TFunction<void(const FString&, const uint64*)> callback)
 {
+	if (config.SaveMode) {
+		UE_LOG(LogApSubsystem, Warning, TEXT("AApSubsystem::GetDataStorageInt64Fields() called in Safe Mode, ignoring request"));
+		return;
+	}
+
 	TArray<TSharedPtr<FJsonValue>> keysArray;
 	for (const FString& key : keys) {
 		keysArray.Add(MakeShared<FJsonValueString>(key));
@@ -407,6 +432,11 @@ void AApSubsystem::GetDataStorageInt64Fields(const TSet<FString>& keys, TFunctio
 
 void AApSubsystem::SetDataStorageJsonField(const FString& key, const TSharedRef<FJsonObject>& json) const
 {
+	if (config.SaveMode) {
+		UE_LOG(LogApSubsystem, Warning, TEXT("AApSubsystem::SetDataStorageJsonField() called in Safe Mode, ignoring request"));
+		return;
+	}
+
 	TArray<TSharedPtr<FJsonValue>> operations;
 
 	TSharedRef<FJsonObject> replaceOperation = MakeShared<FJsonObject>();
@@ -475,6 +505,11 @@ void AApSubsystem::EnableDeathLink() const {
 }
 
 void AApSubsystem::TriggerDeathLink(FString source, FString cause) {
+	if (config.SaveMode) {
+		UE_LOG(LogApSubsystem, Warning, TEXT("AApSubsystem::TriggerDeathLink() called in Safe Mode, ignoring request"));
+		return;
+	}
+
 	AP_Bounce bounce;
 	std::string tag = "DeathLink";
 	std::vector<std::string> tagsArray = { tag };
@@ -950,6 +985,11 @@ FString AApSubsystem::GetApItemName(int64 id) const {
 
 void AApSubsystem::SetVaultState(const TMap<FString, TMap<FString, float>>& vaultItemTraitMapping) const
 {
+	if (config.SaveMode) {
+		UE_LOG(LogApSubsystem, Warning, TEXT("AApSubsystem::SetVaultState() called in Safe Mode, ignoring request"));
+		return;
+	}
+
 	TSharedRef<FJsonObject> traitsJsonObject = MakeShareable(new FJsonObject());
 
 	for (const TPair<FString, TMap<FString, float>>& traitsPerItem : vaultItemTraitMapping)
@@ -969,6 +1009,11 @@ void AApSubsystem::SetVaultState(const TMap<FString, TMap<FString, float>>& vaul
 }
 
 void AApSubsystem::SetGiftBoxState(bool open, const TSet<FString>& acceptedTraits) const {
+	if (config.SaveMode) {
+		UE_LOG(LogApSubsystem, Warning, TEXT("AApSubsystem::SetGiftBoxState() called in Safe Mode, ignoring request"));
+		return;
+	}
+
 	TArray<TSharedPtr<FJsonValue>> traits;
 
 	for (const FString& trait : acceptedTraits) {
@@ -1006,6 +1051,11 @@ void AApSubsystem::SetGiftBoxState(bool open, const TSet<FString>& acceptedTrait
 }
 
 void AApSubsystem::SendGift(const FApGift& giftToSend) const {
+	if (config.SaveMode) {
+		UE_LOG(LogApSubsystem, Warning, TEXT("AApSubsystem::SendGift() called in Safe Mode, ignoring request"));
+		return;
+	}
+
 	Send(BuildSendGift(giftToSend));
 }
 
@@ -1101,6 +1151,11 @@ TSharedRef<FJsonObject> AApSubsystem::BuildNumericSetPacket(const FString& key, 
 
 void AApSubsystem::ProcessGifts(const TSet<FString>& acceptedIds, const TArray<FApGift>& rejectedGifts) const
 {
+	if (config.SaveMode) {
+		UE_LOG(LogApSubsystem, Warning, TEXT("AApSubsystem::ProcessGifts() called in Safe Mode, ignoring request"));
+		return;
+	}
+
 	TSet<FString> acceptedIdsCopy = acceptedIds;
 
 	if (acceptedIds.Num() == 0 && rejectedGifts.Num() == 0)
@@ -1171,7 +1226,7 @@ TSet<int64> AApSubsystem::GetAllLocations() {
 
 void AApSubsystem::MarkGameAsDone() const {
 	if (config.SaveMode) {
-		UE_LOG(LogApSubsystem, Warning, TEXT("AApSubsystem::MarkGameAsDone() called in Save Mode, ignoring request"));
+		UE_LOG(LogApSubsystem, Warning, TEXT("AApSubsystem::MarkGameAsDone() called in Safe Mode, ignoring request"));
 		return;
 	}
 
@@ -1231,7 +1286,7 @@ void AApSubsystem::CreateLocationHint(const TSet<int64>& locationIds, bool spam)
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::CreateLocationHint(set: %i, %s)"), locationIds.Num(), spam ? TEXT("true") : TEXT("false"));
 
 	if (config.SaveMode) {
-		UE_LOG(LogApSubsystem, Warning, TEXT("AApSubsystem::CreateLocationHint() called in Save Mode, ignoring request"));
+		UE_LOG(LogApSubsystem, Warning, TEXT("AApSubsystem::CreateLocationHint() called in Safe Mode, ignoring request"));
 		return;
 	}
 
@@ -1256,7 +1311,7 @@ void AApSubsystem::CheckLocation(const TSet<int64>& locationIds) const {
 	UE_LOG(LogApSubsystem, Display, TEXT("AApSubsystem::CheckLocation(set: %i)"), locationIds.Num());
 
 	if (config.SaveMode) {
-		UE_LOG(LogApSubsystem, Warning, TEXT("AApSubsystem::CheckLocation() called in Save Mode, ignoring request"));
+		UE_LOG(LogApSubsystem, Warning, TEXT("AApSubsystem::CheckLocation() called in Safe Mode, ignoring request"));
 		return;
 	}
 

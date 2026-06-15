@@ -1,0 +1,8 @@
+//Archipelago/Schematics/AP_ItemSchematics/AP_1338804.AP_1338804_C
+{
+    "$schema": "https://raw.githubusercontent.com/budak7273/ContentLib_Documentation/main/JsonSchemas/CL_Schematic.json",
+    "Recipes": [
+        "Recipe_FluidTruck",
+        "Recipe_FluidTruckStation"
+    ]
+}

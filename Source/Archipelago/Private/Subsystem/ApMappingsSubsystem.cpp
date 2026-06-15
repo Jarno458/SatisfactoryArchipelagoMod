@@ -379,6 +379,7 @@ const TMap<FName, const FAssetData> AApMappingsSubsystem::GetRecipeAssets(IAsset
 	recipeAssets.Append(GetBlueprintAssetsIn(registery, "/Game/FactoryGame/Equipment", TArray<FString>{ "Recipe_" }));
 	recipeAssets.Append(GetBlueprintAssetsIn(registery, "/Game/FactoryGame/Buildable/Factory", TArray<FString>{ "Recipe_" }));
 	recipeAssets.Append(GetBlueprintAssetsIn(registery, "/Game/FactoryGame/Buildable/Building", TArray<FString>{ "Recipe_" }));
+	recipeAssets.Append(GetBlueprintAssetsIn(registery, "/Game/FactoryGame/Buildable/Vehicle", TArray<FString>{ "Recipe_" }));
 	recipeAssets.Append(GetBlueprintAssetsIn(registery, "/Game/FactoryGame/Events/Christmas/Parts", TArray<FString>{ "Recipe_" }, false));
 	recipeAssets.Append(GetBlueprintAssetsIn(registery, "/Game/FactoryGame/Events/Christmas/Fireworks", TArray<FString>{ "Recipe_" }, false));
 	recipeAssets.Append(GetBlueprintAssetsIn(registery, "/Game/FactoryGame/Events/Christmas/Buildings", TArray<FString>{ "Recipe_" }));
