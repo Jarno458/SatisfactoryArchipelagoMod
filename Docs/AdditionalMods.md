@@ -19,7 +19,7 @@ when you install it using the Satisfactory Mod Manager:
 
 - [ContentLib](https://ficsit.app/mod/ContentLib) - Runtime content generation.
 - [Free Samples](https://ficsit.app/mod/FreeSamples) - Used to implement the Free Samples options. Even if you don't have this game option enabled, the mod will still be present, but its functionality will be disabled.
-- ~~[MAM Enhancer](https://ficsit.app/mod/MAMTips) - Allows viewing MAM research nodes in detail. Enables you to hover over the items/unlocks of a node to see more info, especially important when their names get long.~~, temporary disables due to issues
+- [MAM Enhancer](https://ficsit.app/mod/MAMTips) - Allows viewing MAM research nodes in detail. Enables you to hover over the items/unlocks of a node to see more info, especially important when their names get long.
 - [FixClientResourceSinkPoints](https://ficsit.app/mod/FixClientResourceSinkPoints) - Fixes a bug where AWESOME Sink point values aren't loaded properly on multiplayer clients.
 - [Hover Pack Fuse Reminder](https://ficsit.app/mod/HoverpackFuseReminder) - Randomization means pioneers can get access to hoverpacks while their power grids can't yet handle the power draw. This mod reminds the player if they're wearing a hoverpack when resetting fuses.
 
@@ -43,6 +43,7 @@ The following mods have been used successfully by other players but have not bee
 
 - [Infinite Zoop](https://ficsit.app/mod/InfiniteZoop) - Adds a research tree in the MAM where you can improve your Zoop capacity. Also enables multi-row & column Wall and Foundation construction.
 - [Doggo Transportation](https://ficsit.app/mod/DoggoTransportation) - Easily relocate tamed Lizard Doggos. They can provide some fun out-of-logic resources.
+- [Crash Site Beacons](https://ficsit.app/mod/CrashSiteBeacons) - Places a custom map marker at every unopened crash site on the map.
 
 ### New Content
 
