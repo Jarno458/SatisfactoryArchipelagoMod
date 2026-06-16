@@ -68,9 +68,4 @@ public:
 
 	virtual void Factory_Tick(float dt) override;
 	virtual void Factory_CollectInput_Implementation() override;
-
-public:
-	/** Set this to filter out what items are allowed and not allowed in the inventory */
-	UFUNCTION()
-	bool FilterInventoryClasses(TSubclassOf<UObject> object, int32 idx) const;
 };
