@@ -64,6 +64,8 @@ private:
 	TMap<TSubclassOf<UFGItemDescriptor>, int64> pendingPersonalAdjustments;
 	TMap<FString, int64> externalVaultAdjustments;
 
+	TMap<TSubclassOf<UFGItemDescriptor>, TUniquePtr<FCriticalSection>> adjustmentsLocks;
+
 	UPROPERTY(Replicated, ReplicatedUsing = OnRep_VaultEnabledPlayers)
 	TArray<FApPlayer> vaultEnabledPlayersReplicated;
 

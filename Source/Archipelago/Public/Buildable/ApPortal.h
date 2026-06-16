@@ -39,12 +39,6 @@ private:
 
 	bool camReceiveOutput = false;
 
-	//mutable as used in Factory_*Output_Implementation const methods
-	mutable FCriticalSection outputLock;
-
-	UPROPERTY(SaveGame)
-	FInventoryItem nextItemToOutput = FInventoryItem::NullInventoryItem;
-
 	UPROPERTY(SaveGame)
 	int roundRobinIndex;
 
@@ -52,8 +46,11 @@ private:
 	TArray<TSubclassOf<UFGItemDescriptor>> allowedOutput;
 
 protected:
-	UPROPERTY() //Sqve?
+	UPROPERTY(SaveGame) //Save?
 	UFGInventoryComponent* mInputInventory;
+
+	UPROPERTY(SaveGame) //Save?
+	UFGInventoryComponent* mOutputInventory;
 
 public:
 	FORCEINLINE bool CanReceiveOutput() const { return camReceiveOutput; }
@@ -65,15 +62,11 @@ public:
 	UFUNCTION(BlueprintPure, Category = "FactoryGame|Factory|Inventory")
 	FORCEINLINE UFGInventoryComponent* GetInputInventory() const { return mInputInventory; }
 
-	//bool TrySetOutput(const FInventoryItem& item);
-
 	void ServerSendManually() const;
 
 	virtual bool CanProduce_Implementation() const override;
 
 	virtual void Factory_Tick(float dt) override;
-	virtual bool Factory_PeekOutput_Implementation(const class UFGFactoryConnectionComponent* connection, TArray<FInventoryItem>& out_items, TSubclassOf<UFGItemDescriptor> type) const override;
-	virtual bool Factory_GrabOutput_Implementation(class UFGFactoryConnectionComponent* connection, FInventoryItem& out_item, float& out_OffsetBeyond, TSubclassOf<UFGItemDescriptor> type) override;
 	virtual void Factory_CollectInput_Implementation() override;
 
 public:

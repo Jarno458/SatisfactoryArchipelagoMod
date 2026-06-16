@@ -1,9 +1,17 @@
 #include "Buildable/ApPortal.h"
 
-#include "Misc/ScopeTryLock.h"
 #include "Net/UnrealNetwork.h"
 #include "Subsystem/ApPortalSubsystem.h"
 #include "Subsystem/ApReplicatedGiftingSubsystem.h"
+
+/*
+ * Plan
+ *
+ * Every factory tick,
+ * Try to get 1 item from vault of our output inventory is empty
+ * Compare to filter and select a random availble item
+ * using a round robin approach to make sure every selected itemclass gets a chance to send items if there are multiple
+ */
 
 AApPortal::AApPortal() : Super() {
 	bReplicates = true;
@@ -13,14 +21,10 @@ AApPortal::AApPortal() : Super() {
 	mInputInventory = CreateDefaultSubobject<UFGInventoryComponent>(TEXT("InputInventory"));
 	mInputInventory->SetDefaultSize(10);
 
+	mOutputInventory = CreateDefaultSubobject<UFGInventoryComponent>(TEXT("OutputInventory"));
+	mOutputInventory->SetDefaultSize(1);
+
 	targetPlayer = FApPlayer();
-
-	PrimaryActorTick.bCanEverTick = true;
-	PrimaryActorTick.bStartWithTickEnabled = true;
-
-	//needs to thick atleast 1200 times per minute to keep up with a 1200 belt, 1200 / 60sec = 20x per second
-	//0.048 is ~20.8 times per second
-	PrimaryActorTick.TickInterval = 0.048f;
 }
 
 void AApPortal::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const {
@@ -37,7 +41,7 @@ void AApPortal::BeginPlay() {
 		return;
 
 	mInputInventory->SetReplicationRelevancyOwner(this);
-	mInputInventory->mItemFilter.BindUObject(this, &AApPortal::FilterInventoryClasses);
+	mOutputInventory->SetReplicationRelevancyOwner(this);
 
 	UWorld* world = GetWorld();
 	portalSubsystem = AApPortalSubsystem::Get(world);
@@ -53,6 +57,9 @@ void AApPortal::BeginPlay() {
 		else
 		{
 			output = connection;
+
+			connection->SetInventory(mOutputInventory);
+			connection->SetInventoryAccessIndex(0);
 		}
 	}
 
@@ -71,40 +78,26 @@ bool AApPortal::CanProduce_Implementation() const {
 	return HasPower();
 }
 
-/*
- * Plan
- * 
- * Every tick, as time critical get items vault
- * Compare to filter and select a random availble item
- * Assign it as nextItemToOutput
- * 
- * TODO Find a way to not make everyone slap a portal on each miner
- * // Maybe simply disallow sending directly to your own personal vault
- *
- * TODO default item filter for new building should be set to block all output None
- */
-
-
 void AApPortal::Factory_Tick(float dt) {
 	Super::Factory_Tick(dt);
 
 	if (!HasAuthority())
 		return;
 
-	FScopeTryLock lock(&outputLock);
-	if (!lock.IsLocked())
-		return;
-
 	camReceiveOutput = IsValid(this) && CanProduce() && IsValid(output) && output->IsConnected();
 
+	FInventoryStack itemStack;
+	bool hasItem = mOutputInventory->GetStackFromIndex(0, itemStack) && itemStack.HasItems();
+
 	if (!camReceiveOutput) {
-		if (nextItemToOutput.IsValid())
-			vaultSubsystem->Store(FItemAmount(nextItemToOutput.GetItemClass(), 1), true);
-
-		nextItemToOutput = FInventoryItem::NullInventoryItem;
-
-	} else {
-		if (nextItemToOutput.IsValid())
+		if (hasItem)
+		{
+			vaultSubsystem->Store(FItemAmount(itemStack.Item.GetItemClass(), itemStack.NumItems), true);
+			mOutputInventory->Empty();
+		}
+	}
+	else {
+		if (hasItem)
 			return;
 
 		if (allowedOutput.IsEmpty())
@@ -118,7 +111,7 @@ void AApPortal::Factory_Tick(float dt) {
 
 			if (vaultSubsystem->TryGetSingleItem(allowedOutput[currentIndex]))
 			{
-				nextItemToOutput = FInventoryItem(allowedOutput[currentIndex]);
+				mOutputInventory->AddStackToIndex_Unsafe(0, FInventoryStack(1, allowedOutput[currentIndex]));
 				break;
 			}
 		}
@@ -132,21 +125,6 @@ void AApPortal::ServerSetTarget(const FApPlayer& player)
 	targetPlayer = player;
 }
 
-/*
-bool AApPortal::TrySetOutput(const FInventoryItem& item) {
-	if (!IsValid(this) || !camReceiveOutput)
-		return false;
-
-	FScopeTryLock lock(&outputLock);
-
-	if (!lock.IsLocked() || nextItemToOutput.IsValid())
-		return false;
-
-	nextItemToOutput = item;
-	return true;
-}
-*/
-
 void AApPortal::Factory_CollectInput_Implementation() {
 	if (static_cast<AApReplicatedGiftingSubsystem*>(replicatedGiftingSubsystem)->GetState() != EApGiftingServiceState::Ready
 		|| !IsValid(input)
@@ -158,11 +136,13 @@ void AApPortal::Factory_CollectInput_Implementation() {
 	if (!input->Factory_PeekOutput(items) || items.Num() == 0)
 		return;
 
+	 TSubclassOf<UFGItemDescriptor> itemClass = items[0].GetItemClass();
+
 	if (static_cast<AApVaultSubsystem*>(vaultSubsystem)->DoesPlayerAcceptVaultItems(targetPlayer))
 	{
-		if (!static_cast<AApVaultSubsystem*>(vaultSubsystem)->CanSend(targetPlayer, items[0].GetItemClass()))
+		if (!static_cast<AApVaultSubsystem*>(vaultSubsystem)->CanSend(targetPlayer, itemClass))
 			return; //block input
-	} else if (!static_cast<AApReplicatedGiftingSubsystem*>(replicatedGiftingSubsystem)->CanSend(targetPlayer, items[0].GetItemClass()))
+	} else if (!static_cast<AApReplicatedGiftingSubsystem*>(replicatedGiftingSubsystem)->CanSend(targetPlayer, itemClass))
 		return; //block input
 
 	UFGInventoryComponent* targetInventory = input->GetInventory();
@@ -172,7 +152,7 @@ void AApPortal::Factory_CollectInput_Implementation() {
 		FInventoryItem item;
 		float offset;
 
-		if (!input->Factory_GrabOutput(item, offset))
+		if (!input->Factory_GrabOutput(item, offset, itemClass))
 			return;
 
 		targetInventory->AddItem(item);
@@ -218,47 +198,6 @@ void AApPortal::ServerSendManually() const
 	}
 
 	static_cast<AApPortalSubsystem*>(portalSubsystem)->SendBuffer(targetPlayer, itemsToSend);
-}
-
-bool AApPortal::Factory_PeekOutput_Implementation(const class UFGFactoryConnectionComponent* connection, TArray<FInventoryItem>& out_items, TSubclassOf<UFGItemDescriptor> type) const {
-	if (!Factory_HasPower())
-		return false;
-
-	FScopeTryLock lock(&outputLock);
-	if (lock.IsLocked() && nextItemToOutput.IsValid()) {
-		out_items.Emplace(nextItemToOutput);
-		return true;
-	}
-	else {
-		return false;
-	}
-}
-
-
-bool AApPortal::Factory_GrabOutput_Implementation(class UFGFactoryConnectionComponent* connection, FInventoryItem& out_item, float& out_OffsetBeyond, TSubclassOf<UFGItemDescriptor> type) {
-	out_OffsetBeyond = 0;
-
-	if (!Factory_HasPower()) {
-		return false;
-	}
-
-	//hardlock we need to yield some output here
-	FScopeTryLock lock(&outputLock);
-	if (lock.IsLocked() && nextItemToOutput.IsValid()) {
-		out_item = nextItemToOutput;
-		nextItemToOutput = FInventoryItem::NullInventoryItem;
-		return true;
-	}
-	else {
-		return false;
-	}
-}
-
-
-bool AApPortal::FilterInventoryClasses(TSubclassOf<UObject> object, int32 idx) const
-{
-	//TODO filter on player accepted traits
-	return true;
 }
 
 #pragma optimize("", on)

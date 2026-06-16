@@ -3,6 +3,7 @@
 #include "Subsystem/ApSubsystem.h"
 #include "ApUtils.h"
 #include "Logging/StructuredLog.h"
+#include "Misc/ScopeTryLock.h"
 #include "Subsystem/SubsystemActorManager.h"
 #include "Net/UnrealNetwork.h"
 #include "Subsystem/ApMappingsSubsystem.h"
@@ -186,7 +187,7 @@ void AApVaultSubsystem::MonitorVaultItems(int team, int slot)
 
 	ap->MonitorInt64DataStoreValue(truncatedKeysToMonitor, [this](const FString& key, const uint64* oldValue, const uint64* newValue, int slot) {
 		UpdateItemAmount(key, oldValue, newValue, slot);
-		});
+	});
 }
 
 void AApVaultSubsystem::UpdateItemAmount(const FString& key, const uint64* oldValue, const uint64* value, int slot) {
@@ -211,45 +212,49 @@ void AApVaultSubsystem::UpdateItemAmount(const FString& key, const uint64* oldVa
 	uint64& adjustedAmount = personal ? personalAdjustedItemAmounts.FindOrAdd(itemClass) : globalAdjustedItemAmounts.FindOrAdd(itemClass);
 	int64& pendingAdjustment = personal ? pendingPersonalAdjustments.FindOrAdd(itemClass) : pendingGlobalAdjustments.FindOrAdd(itemClass);
 
-	// update pending adjustments if this callback is in response to our periodic sync
-	if (slot == connectionInfoSubsystem->GetCurrentPlayerSlot())
 	{
-		const uint64 previousValue = oldValue ? *oldValue : 0;
+		FScopeLock lock(adjustmentsLocks.FindOrAdd(itemClass, MakeUnique<FCriticalSection>()).Get());
 
-		if (newValue == previousValue)
-			return;
-
-		int64 change;
-		if (newValue >= previousValue)
+		// update pending adjustments if this callback is in response to our periodic sync
+		if (slot == connectionInfoSubsystem->GetCurrentPlayerSlot())
 		{
-			const uint64 delta = newValue - previousValue;
-			change = delta > static_cast<uint64>(INT64_MAX)
-				? INT64_MAX
-				: static_cast<int64>(delta);
-		}
-		else
-		{
-			const uint64 delta = previousValue - newValue;
-			change = delta > static_cast<uint64>(INT64_MAX)
-				? INT64_MIN
-				: -static_cast<int64>(delta);
+			const uint64 previousValue = oldValue ? *oldValue : 0;
+
+			if (newValue == previousValue)
+				return;
+
+			int64 change;
+			if (newValue >= previousValue)
+			{
+				const uint64 delta = newValue - previousValue;
+				change = delta > static_cast<uint64>(INT64_MAX)
+					? INT64_MAX
+					: static_cast<int64>(delta);
+			}
+			else
+			{
+				const uint64 delta = previousValue - newValue;
+				change = delta > static_cast<uint64>(INT64_MAX)
+					? INT64_MIN
+					: -static_cast<int64>(delta);
+			}
+
+			pendingAdjustment -= change;
 		}
 
-		pendingAdjustment -= change;
-	}
-
-	if (pendingAdjustment < 0) {
-		const uint64 decrease = pendingAdjustment == MIN_int64
-			? static_cast<uint64>(INT64_MAX) + 1ULL
-			: static_cast<uint64>(-pendingAdjustment);
-		adjustedAmount = decrease >= newValue ? 0 : newValue - decrease;
-	}
-	else if (pendingAdjustment > 0) {
-		const uint64 increase = static_cast<uint64>(pendingAdjustment);
-		adjustedAmount = newValue > UINT64_MAX - increase ? UINT64_MAX : newValue + increase;
-	}
-	else {
-		adjustedAmount = newValue;
+		if (pendingAdjustment < 0) {
+			const uint64 decrease = pendingAdjustment == MIN_int64
+				? static_cast<uint64>(INT64_MAX) + 1ULL
+				: static_cast<uint64>(-pendingAdjustment);
+			adjustedAmount = decrease >= newValue ? 0 : newValue - decrease;
+		}
+		else if (pendingAdjustment > 0) {
+			const uint64 increase = static_cast<uint64>(pendingAdjustment);
+			adjustedAmount = newValue > UINT64_MAX - increase ? UINT64_MAX : newValue + increase;
+		}
+		else {
+			adjustedAmount = newValue;
+		}
 	}
 
 	UpdateDepotAmount(itemClass, personal);
@@ -363,7 +368,13 @@ void AApVaultSubsystem::StoreToLocallyBufferedVault(const FItemAmount& item, boo
 	if (!apInitialized || item.Amount <= 0 || !IsValid(item.ItemClass) || !itemClassToLowerCaseMapping.Contains(item.ItemClass))
 		return;
 
-	UpdatePendingAmount(item.ItemClass, personal, item.Amount);
+	{
+		FScopeLock lock(adjustmentsLocks.FindOrAdd(item.ItemClass, MakeUnique<FCriticalSection>()).Get());
+
+		UpdatePendingAmount(item.ItemClass, personal, item.Amount);
+	}
+
+	UpdateDepotAmount(item.ItemClass, personal);
 }
 
 void AApVaultSubsystem::StoreToExternalPlayerVault(const FItemAmount& item, const FApPlayer& vault)
@@ -379,48 +390,50 @@ void AApVaultSubsystem::UpdatePendingAmount(TSubclassOf<UFGItemDescriptor> itemC
 	uint64& adjustedAmount = personal ? personalAdjustedItemAmounts.FindOrAdd(itemClass) : globalAdjustedItemAmounts.FindOrAdd(itemClass);
 	int64& pendingAdjustment = personal ? pendingPersonalAdjustments.FindOrAdd(itemClass) : pendingGlobalAdjustments.FindOrAdd(itemClass);
 
-	uint64 normalizedAmount = adjustedAmount;
-	if (pendingAdjustment < 0) {
-		const uint64 decrease = pendingAdjustment == MIN_int64
-			? static_cast<uint64>(INT64_MAX) + 1ULL
-			: static_cast<uint64>(-pendingAdjustment);
-		normalizedAmount = decrease >= adjustedAmount ? 0 : adjustedAmount - decrease;
-	}
-	else if (pendingAdjustment > 0) {
-		const uint64 increase = static_cast<uint64>(pendingAdjustment);
-		normalizedAmount = adjustedAmount > UINT64_MAX - increase ? UINT64_MAX : adjustedAmount + increase;
-	}
-
-	if (changeInPendingAmount > 0)
 	{
-		if (pendingAdjustment > INT64_MAX - changeInPendingAmount)
-			pendingAdjustment = INT64_MAX;
-		else
-			pendingAdjustment += changeInPendingAmount;
-	}
-	else if (changeInPendingAmount < 0)
-	{
-		if (pendingAdjustment < INT64_MIN - changeInPendingAmount)
-			pendingAdjustment = INT64_MIN;
-		else
-			pendingAdjustment += changeInPendingAmount;
-	}
+		FScopeLock lock(adjustmentsLocks.FindOrAdd(itemClass, MakeUnique<FCriticalSection>()).Get());
 
-	if (pendingAdjustment < 0) {
-		const uint64 decrease = pendingAdjustment == MIN_int64
-			? static_cast<uint64>(INT64_MAX) + 1ULL
-			: static_cast<uint64>(-pendingAdjustment);
-		adjustedAmount = decrease >= normalizedAmount ? 0 : normalizedAmount - decrease;
-	}
-	else if (pendingAdjustment > 0) {
-		const uint64 increase = static_cast<uint64>(pendingAdjustment);
-		adjustedAmount = normalizedAmount > UINT64_MAX - increase ? UINT64_MAX : normalizedAmount + increase;
-	}
-	else {
-		adjustedAmount = normalizedAmount;
-	}
+		uint64 normalizedAmount = adjustedAmount;
+		if (pendingAdjustment < 0) {
+			const uint64 decrease = pendingAdjustment == MIN_int64
+				? static_cast<uint64>(INT64_MAX) + 1ULL
+				: static_cast<uint64>(-pendingAdjustment);
+			normalizedAmount = decrease >= adjustedAmount ? 0 : adjustedAmount - decrease;
+		}
+		else if (pendingAdjustment > 0) {
+			const uint64 increase = static_cast<uint64>(pendingAdjustment);
+			normalizedAmount = adjustedAmount > UINT64_MAX - increase ? UINT64_MAX : adjustedAmount + increase;
+		}
 
-	UpdateDepotAmount(itemClass, personal);
+		if (changeInPendingAmount > 0)
+		{
+			if (pendingAdjustment > INT64_MAX - changeInPendingAmount)
+				pendingAdjustment = INT64_MAX;
+			else
+				pendingAdjustment += changeInPendingAmount;
+		}
+		else if (changeInPendingAmount < 0)
+		{
+			if (pendingAdjustment < INT64_MIN - changeInPendingAmount)
+				pendingAdjustment = INT64_MIN;
+			else
+				pendingAdjustment += changeInPendingAmount;
+		}
+
+		if (pendingAdjustment < 0) {
+			const uint64 decrease = pendingAdjustment == MIN_int64
+				? static_cast<uint64>(INT64_MAX) + 1ULL
+				: static_cast<uint64>(-pendingAdjustment);
+			adjustedAmount = decrease >= normalizedAmount ? 0 : normalizedAmount - decrease;
+		}
+		else if (pendingAdjustment > 0) {
+			const uint64 increase = static_cast<uint64>(pendingAdjustment);
+			adjustedAmount = normalizedAmount > UINT64_MAX - increase ? UINT64_MAX : normalizedAmount + increase;
+		}
+		else {
+			adjustedAmount = normalizedAmount;
+		}
+	}
 }
 
 int32 AApVaultSubsystem::Take(const FItemAmount& item, bool personal) {
@@ -430,35 +443,41 @@ int32 AApVaultSubsystem::Take(const FItemAmount& item, bool personal) {
 	if (!apInitialized || requested <= 0 || !IsValid(item.ItemClass) || !itemClassToLowerCaseMapping.Contains(item.ItemClass))
 		return yield;
 
-	FString itemName = itemClassToLowerCaseMapping[item.ItemClass];
-
-	int team = connectionInfoSubsystem->GetCurrentPlayerTeam();
-	int slot = GLOBAL_VAULT_SLOT;
-
-	if (personal)
-		slot = connectionInfoSubsystem->GetCurrentPlayerSlot();
-
-	FString key = FString::Format(TEXT("V{0}:{1}:{2}"), { team, slot, itemName });
-
 	uint64 adjustedAmount = personal ? personalAdjustedItemAmounts.FindRef(item.ItemClass) : globalAdjustedItemAmounts.FindRef(item.ItemClass);
 	if (adjustedAmount < requested)
 		yield = adjustedAmount;
 	else
 		yield = requested;
 
+	{
+		FScopeLock lock(adjustmentsLocks.FindOrAdd(item.ItemClass, MakeUnique<FCriticalSection>()).Get());
+
+		//TODO UpdatePendingAmount should likely return the amound changed
+		UpdatePendingAmount(item.ItemClass, personal, -static_cast<int64>(yield));
+	}
+
+	UpdateDepotAmount(item.ItemClass, personal);
+
 	return static_cast<int32>(FMath::Clamp<uint64>(yield, 0, INT32_MAX));
 }
 
 bool AApVaultSubsystem::TryGetSingleItem(TSubclassOf<UFGItemDescriptor> itemClass)
 {
-	if (personalAdjustedItemAmounts.FindRef(itemClass) > 0)
+	bool hasResult = false;
+
+	FScopeTryLock lock(adjustmentsLocks.FindOrAdd(itemClass, MakeUnique<FCriticalSection>()).Get());
+
+	if (lock.IsLocked() && personalAdjustedItemAmounts.FindRef(itemClass) > 0)
 	{
 		UpdatePendingAmount(itemClass, true, -1);
 
-		return true;
+		hasResult = true;
 	}
 
-	return false;
+	if (hasResult)
+		UpdateDepotAmount(itemClass, true);
+
+	return hasResult;
 }
 
 TSet<FApPlayer> AApVaultSubsystem::GetVaultEnabledPlayers() const
