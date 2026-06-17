@@ -43,11 +43,9 @@ private:
 
 	AApSubsystem* ap;
 	AApConnectionInfoSubsystem* connectionInfoSubsystem;
-	AApPortalSubsystem* portalSubSystem;
 	AApMappingsSubsystem* mappingSubsystem;
 	AApGiftTraitsSubsystem* giftTraitsSubsystem;
 	AApVaultSubsystem* vaultSubsystem;
-	AApPlayerInfoSubsystem* playerInfoSubsystem;
 
 public:
 	void EnqueueForSending(FApPlayer targetPlayer, FItemAmount itemStack);

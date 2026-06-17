@@ -542,6 +542,11 @@ TArray<TSubclassOf<UFGItemDescriptor>> AApVaultSubsystem::GetItemsStoredInPerson
 	return items;
 }
 
+TArray<TSubclassOf<UFGItemDescriptor>> AApVaultSubsystem::GetAllAcceptedItems() const
+{
+	return giftTraitsSubsystem->GetAllItems();
+}
+
 void AApVaultSubsystem::ParseVaultItemInfo(const FString& game, const TSharedRef<FJsonValue>& parsedJson)
 {
 	static const UEnum* giftTraitEnum = StaticEnum<EGiftTrait>();

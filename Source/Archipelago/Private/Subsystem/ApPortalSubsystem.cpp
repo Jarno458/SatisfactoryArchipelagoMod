@@ -4,9 +4,9 @@
 #include "Containers/List.h"
 #include "EngineUtils.h"
 #include "Buildable/ApPortal.h"
-#include "Subsystem/ApServerGiftingSubsystem.h"
-#include "Subsystem/ApConnectionInfoSubsystem.h"
 #include "Subsystem/SubsystemActorManager.h"
+#include "Subsystem/ApReplicatedGiftingSubsystem.h"
+#include "Subsystem/ApServerGiftingSubsystem.h"
 
 DEFINE_LOG_CATEGORY(LogApPortalSubsystem);
 
@@ -40,6 +40,7 @@ void AApPortalSubsystem::BeginPlay() {
 
 	UWorld* world = GetWorld();
 	giftingSubsystem = AApServerGiftingSubsystem::Get(world);
+	replicatedGiftingSubsystem = AApReplicatedGiftingSubsystem::Get(world);
 	vaultSubsystem = AApVaultSubsystem::Get(world);
 
 	lastAutoSendTime = FDateTime::Now();
@@ -72,8 +73,18 @@ void AApPortalSubsystem::SendBuffer(FApPlayer targetPlayer, TArray<FItemAmount> 
 	}
 
 	for (FItemAmount item : items) {
-		static_cast<AApServerGiftingSubsystem*>(giftingSubsystem)->EnqueueForSending(targetPlayer, item);
+		giftingSubsystem->EnqueueForSending(targetPlayer, item);
 	}
+}
+
+bool AApPortalSubsystem::DoesPlayerAccept(const FApPlayer& targetPlayer, TSubclassOf<UFGItemDescriptor> itemClass) const
+{
+	if (vaultSubsystem->DoesPlayerAcceptVaultItems(targetPlayer))
+	{
+		return vaultSubsystem->CanSend(targetPlayer, itemClass);
+	}
+	
+	return replicatedGiftingSubsystem->CanSend(targetPlayer, itemClass);
 }
 
 void AApPortalSubsystem::PreSaveGame_Implementation(int32 saveVersion, int32 gameVersion) {

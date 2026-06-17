@@ -26,4 +26,7 @@ public:
 
 	UFUNCTION(BlueprintCallable, Reliable, Server)
 	void ServerSendPortalGifts(AApPortal* Building);
+
+	UFUNCTION(BlueprintCallable, Reliable, Server)
+	void ServerSetPortalOutputFilter(AApPortal* Building, const TArray<TSubclassOf<UFGItemDescriptor>>& outputFilter);
 };

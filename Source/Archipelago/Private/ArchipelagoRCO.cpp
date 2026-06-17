@@ -9,6 +9,16 @@ void UArchipelagoRCO::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 	DOREPLIFETIME(UArchipelagoRCO, Dummy);
 }
 
+void UArchipelagoRCO::ServerSetPortalOutputFilter_Implementation(AApPortal* Building, const TArray<TSubclassOf<UFGItemDescriptor>>& outputFilter)
+{
+	if (!Building)
+		return;
+
+	UE_LOGFMT(LogApReplication, Display, "RCO Server Set PortalOutputFilter outputFilter[{0}]", outputFilter.Num());
+
+	Building->ServerSetAllowedOutput(outputFilter);
+}
+
 void UArchipelagoRCO::ServerSetPortalTargetPlayer_Implementation(AApPortal* Building, FApPlayer Player) {
 	if (!Building)
 		return;

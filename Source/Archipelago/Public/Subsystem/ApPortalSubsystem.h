@@ -38,8 +38,10 @@ protected:
 	// End IFSaveInterface
 
 private:
-	AModSubsystem* giftingSubsystem;
+	class AApServerGiftingSubsystem* giftingSubsystem;
+	class AApReplicatedGiftingSubsystem* replicatedGiftingSubsystem;
 	class AApVaultSubsystem* vaultSubsystem;
+
 	
 	bool isInitialized;
 
@@ -49,6 +51,8 @@ public:
 	FORCEINLINE bool IsInitialized() const { return isInitialized; };
 
 	void SendBuffer(FApPlayer targetPlayer, TArray<FItemAmount> items) const;
+
+	bool DoesPlayerAccept(const FApPlayer& targetPlayer, TSubclassOf<UFGItemDescriptor> itemClass) const;
 
 private:
 	void ProcessAutoVaultStoring() const;

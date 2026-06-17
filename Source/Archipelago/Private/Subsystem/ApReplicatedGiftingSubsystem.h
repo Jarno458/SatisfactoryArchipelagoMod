@@ -42,7 +42,6 @@ public:
 private:
 	AApSubsystem* ap;
 	AApConnectionInfoSubsystem* connectionInfoSubsystem;
-	AApPortalSubsystem* portalSubsystem;
 	AApPlayerInfoSubsystem* playerInfoSubsystem;
 	AApGiftTraitsSubsystem* giftTraitsSubsystem;
 

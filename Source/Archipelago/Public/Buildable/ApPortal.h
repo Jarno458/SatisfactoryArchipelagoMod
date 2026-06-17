@@ -8,7 +8,6 @@
 #include "FGPowerInfoComponent.h"
 
 #include "Subsystem/ApVaultSubsystem.h"
-#include "Subsystem/ModSubsystem.h"
 #include "Data/ApTypes.h"
 
 #include "ApPortal.generated.h"
@@ -27,12 +26,17 @@ public:
 	UPROPERTY(SaveGame, Replicated, BlueprintReadOnly)
 	FApPlayer targetPlayer;
 
+	UPROPERTY(SaveGame, Replicated, BlueprintReadOnly)
+	TArray<TSubclassOf<UFGItemDescriptor>> configuredOutputFilter;
+
+	UPROPERTY(BlueprintReadWrite) //Set from BP
+	TSubclassOf<UFGItemDescriptor> WildcardDescriptor;
+
 private:
 	bool initialized = false;
 
-	AModSubsystem* portalSubsystem;
-	AModSubsystem* replicatedGiftingSubsystem;
-	AApVaultSubsystem* vaultSubsystem;
+	class AApPortalSubsystem* portalSubsystem;
+	class AApVaultSubsystem* vaultSubsystem;
 
 	UFGFactoryConnectionComponent* input = nullptr;
 	UFGFactoryConnectionComponent* output = nullptr;
@@ -43,19 +47,21 @@ private:
 	int roundRobinIndex;
 
 	UPROPERTY(SaveGame)
-	TArray<TSubclassOf<UFGItemDescriptor>> allowedOutput;
+	TArray<TSubclassOf<UFGItemDescriptor>> usedOutputFilter;
 
 protected:
-	UPROPERTY(SaveGame) //Save?
+	UPROPERTY(SaveGame)
 	UFGInventoryComponent* mInputInventory;
 
-	UPROPERTY(SaveGame) //Save?
+	UPROPERTY(SaveGame)
 	UFGInventoryComponent* mOutputInventory;
 
 public:
 	FORCEINLINE bool CanReceiveOutput() const { return camReceiveOutput; }
 
 	FORCEINLINE UFGInventoryComponent* GetInventory() const { return mInputInventory; }
+
+	void ServerSetAllowedOutput(const TArray<TSubclassOf<UFGItemDescriptor>>& newAllowedOutput);
 
 	void ServerSetTarget(const FApPlayer& player);
 
@@ -68,4 +74,8 @@ public:
 
 	virtual void Factory_Tick(float dt) override;
 	virtual void Factory_CollectInput_Implementation() override;
+
+public:
+	UFUNCTION() // for event binding
+	bool FilterInventoryClasses(TSubclassOf<UObject> object, int32 idx) const;
 };

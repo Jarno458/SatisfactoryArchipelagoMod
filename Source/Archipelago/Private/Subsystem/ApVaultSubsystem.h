@@ -106,6 +106,8 @@ public:
 	UFUNCTION(BlueprintCallable)
 	TArray<TSubclassOf<UFGItemDescriptor>> GetItemsStoredInPersonalVault() const;
 
+	TArray<TSubclassOf<UFGItemDescriptor>> GetAllAcceptedItems() const;
+
 private:
 	void ParseVaultItemInfo(const FString& game, const TSharedRef<FJsonValue>& value);
 	void AddPersonalVaults(const FString& game);

@@ -31,8 +31,8 @@ void AApPortal::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetim
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(AApPortal, targetPlayer);
+	DOREPLIFETIME(AApPortal, configuredOutputFilter);
 }
-
 
 void AApPortal::BeginPlay() {
 	Super::BeginPlay();
@@ -43,9 +43,10 @@ void AApPortal::BeginPlay() {
 	mInputInventory->SetReplicationRelevancyOwner(this);
 	mOutputInventory->SetReplicationRelevancyOwner(this);
 
+	mInputInventory->mItemFilter.BindUObject(this, &AApPortal::FilterInventoryClasses);
+
 	UWorld* world = GetWorld();
 	portalSubsystem = AApPortalSubsystem::Get(world);
-	replicatedGiftingSubsystem = AApReplicatedGiftingSubsystem::Get(world);
 	vaultSubsystem = AApVaultSubsystem::Get(world);
 
 	for (UFGFactoryConnectionComponent* connection : GetConnectionComponents()) {
@@ -62,20 +63,37 @@ void AApPortal::BeginPlay() {
 			connection->SetInventoryAccessIndex(0);
 		}
 	}
-
-	 //TODO Remove for testing only
-	AApMappingsSubsystem* mappingSubsystem = AApMappingsSubsystem::Get(world);
-	
-	allowedOutput.Empty();
-	
-	allowedOutput.Add(StaticCastSharedRef<FApItem>(mappingSubsystem->ApItems[1338087])->Class);  //quickwire
-	allowedOutput.Add(StaticCastSharedRef<FApItem>(mappingSubsystem->ApItems[1338115])->Class);  //wire
-	allowedOutput.Add(StaticCastSharedRef<FApItem>(mappingSubsystem->ApItems[1338017])->Class);  //cable
-	allowedOutput.Add(StaticCastSharedRef<FApItem>(mappingSubsystem->ApItems[1338025])->Class);  //concrete
 }
 
 bool AApPortal::CanProduce_Implementation() const {
 	return HasPower();
+}
+
+void AApPortal::ServerSetAllowedOutput(const TArray<TSubclassOf<UFGItemDescriptor>>& newAllowedOutput)
+{
+	if (!HasAuthority())
+		return;
+
+	configuredOutputFilter = newAllowedOutput;
+
+	if (newAllowedOutput.Contains(WildcardDescriptor))
+	{
+		usedOutputFilter = vaultSubsystem->GetAllAcceptedItems();
+	}
+	else
+	{
+		usedOutputFilter = configuredOutputFilter;
+	}
+}
+
+void AApPortal::ServerSetTarget(const FApPlayer& player)
+{
+	if (!HasAuthority())
+		return;
+
+	ServerSendManually();
+
+	targetPlayer = player;
 }
 
 void AApPortal::Factory_Tick(float dt) {
@@ -100,65 +118,27 @@ void AApPortal::Factory_Tick(float dt) {
 		if (hasItem)
 			return;
 
-		if (allowedOutput.IsEmpty())
+		if (usedOutputFilter.IsEmpty())
 			return;
 
 		const int32 startIndex = roundRobinIndex;
-		for (int32 i = 0; i < allowedOutput.Num(); ++i)
+		for (int32 i = 0; i < usedOutputFilter.Num(); ++i)
 		{
-			const int32 currentIndex = (startIndex + i) % allowedOutput.Num();
-			roundRobinIndex = (currentIndex + 1) % allowedOutput.Num();
+			const int32 currentIndex = (startIndex + i) % usedOutputFilter.Num();
+			roundRobinIndex = (currentIndex + 1) % usedOutputFilter.Num();
 
-			if (vaultSubsystem->TryGetSingleItem(allowedOutput[currentIndex]))
+			if (vaultSubsystem->TryGetSingleItem(usedOutputFilter[currentIndex]))
 			{
-				mOutputInventory->AddStackToIndex_Unsafe(0, FInventoryStack(1, allowedOutput[currentIndex]));
+				mOutputInventory->AddStackToIndex_Unsafe(0, FInventoryStack(1, usedOutputFilter[currentIndex]));
 				break;
 			}
 		}
 	}
 }
 
-void AApPortal::ServerSetTarget(const FApPlayer& player)
-{
-	ServerSendManually();
-
-	targetPlayer = player;
-}
-
 void AApPortal::Factory_CollectInput_Implementation() {
-	if (static_cast<AApReplicatedGiftingSubsystem*>(replicatedGiftingSubsystem)->GetState() != EApGiftingServiceState::Ready
-		|| !IsValid(input)
-		|| !input->IsConnected()
-		|| !targetPlayer.IsValid())
-		return;
-
-	TArray<FInventoryItem> items;
-	if (!input->Factory_PeekOutput(items) || items.Num() == 0)
-		return;
-
-	 TSubclassOf<UFGItemDescriptor> itemClass = items[0].GetItemClass();
-
-	if (static_cast<AApVaultSubsystem*>(vaultSubsystem)->DoesPlayerAcceptVaultItems(targetPlayer))
-	{
-		if (!static_cast<AApVaultSubsystem*>(vaultSubsystem)->CanSend(targetPlayer, itemClass))
-			return; //block input
-	} else if (!static_cast<AApReplicatedGiftingSubsystem*>(replicatedGiftingSubsystem)->CanSend(targetPlayer, itemClass))
-		return; //block input
-
-	UFGInventoryComponent* targetInventory = input->GetInventory();
-
-	if (targetInventory->HasEnoughSpaceForItem(items[0]))
-	{
-		FInventoryItem item;
-		float offset;
-
-		if (!input->Factory_GrabOutput(item, offset, itemClass))
-			return;
-
-		targetInventory->AddItem(item);
-	}
+	PullItemFromConnectionToInventory(input, mInputInventory);
 }
-
 
 void AApPortal::ServerSendManually() const
 {
@@ -197,7 +177,15 @@ void AApPortal::ServerSendManually() const
 		}
 	}
 
-	static_cast<AApPortalSubsystem*>(portalSubsystem)->SendBuffer(targetPlayer, itemsToSend);
+	portalSubsystem->SendBuffer(targetPlayer, itemsToSend);
 }
 
-#pragma optimize("", on)
+bool AApPortal::FilterInventoryClasses(TSubclassOf<UObject> object, int32 idx) const
+{
+	TSubclassOf<UFGItemDescriptor> itemClass = TSubclassOf<UFGItemDescriptor>(object);
+
+	return IsValid(portalSubsystem) 
+		&& targetPlayer.IsValid() 
+		&& IsValid(itemClass) 
+		&& portalSubsystem->DoesPlayerAccept(targetPlayer, TSubclassOf<UFGItemDescriptor>(object));
+}

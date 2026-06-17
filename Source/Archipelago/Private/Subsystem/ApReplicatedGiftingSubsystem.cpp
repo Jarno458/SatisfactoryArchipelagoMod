@@ -59,7 +59,6 @@ void AApReplicatedGiftingSubsystem::BeginPlay() {
 	if (HasAuthority()) {
 		ap = AApSubsystem::Get(world);
 		connectionInfoSubsystem = AApConnectionInfoSubsystem::Get(world);
-		portalSubsystem = AApPortalSubsystem::Get(world);
 		playerInfoSubsystem = AApPlayerInfoSubsystem::Get(world);
 	}
 }
@@ -76,7 +75,7 @@ void AApReplicatedGiftingSubsystem::Tick(float dt) {
 		ServiceState = EApGiftingServiceState::Offline;
 	}
 	else {
-		if (!giftTraitsSubsystem->HasLoadedItemTraits() || !portalSubsystem->IsInitialized() || !playerInfoSubsystem->IsInitialized()) {
+		if (!giftTraitsSubsystem->HasLoadedItemTraits() || !playerInfoSubsystem->IsInitialized()) {
 			ServiceState = EApGiftingServiceState::Initializing;
 		}
 		else {

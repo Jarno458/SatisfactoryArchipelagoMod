@@ -41,10 +41,8 @@ void AApServerGiftingSubsystem::BeginPlay() {
 		ap = AApSubsystem::Get(world);
 		connectionInfoSubsystem = AApConnectionInfoSubsystem::Get(world);
 		mappingSubsystem = AApMappingsSubsystem::Get(world);
-		portalSubSystem = AApPortalSubsystem::Get(world);
 		giftTraitsSubsystem = AApGiftTraitsSubsystem::Get(world);
 		vaultSubsystem = AApVaultSubsystem::Get(world);
-		playerInfoSubsystem = AApPlayerInfoSubsystem::Get(world);
 	}
 }
 
@@ -54,9 +52,7 @@ void AApServerGiftingSubsystem::Tick(float dt) {
 	if (!apInitialized) {
 		if (connectionInfoSubsystem->GetConnectionState() == EApConnectionState::Connected
 			&& giftTraitsSubsystem->HasLoadedItemTraits()
-			&& mappingSubsystem->HasLoadedItemNameMappings()
-			&& portalSubSystem->IsInitialized()
-			&& playerInfoSubsystem->IsInitialized())
+			&& mappingSubsystem->HasLoadedItemNameMappings())
 		{
 			static const UEnum* giftTraitEnum = StaticEnum<EGiftTrait>();
 
@@ -73,7 +69,7 @@ void AApServerGiftingSubsystem::Tick(float dt) {
 			FString giftboxKey = FString::Format(TEXT("GiftBox;{0};{1}"), { connectionInfoSubsystem->GetCurrentPlayerTeam(), connectionInfoSubsystem->GetCurrentPlayerSlot() });
 			ap->MonitorDataStoreJsonObjectValue(giftboxKey, [this](const FString& key, const TSharedRef<FJsonValue>& oldValueJson, const TSharedRef<FJsonValue>& newValueJson, int slot) {
 				PullAllGiftsAsync(key, oldValueJson, newValueJson, slot);
-				});
+			});
 		}
 		else {
 			return;
