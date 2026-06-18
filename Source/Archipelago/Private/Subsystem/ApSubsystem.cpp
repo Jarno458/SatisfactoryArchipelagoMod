@@ -541,6 +541,9 @@ void AApSubsystem::Send(const TSharedRef<FJsonObject>& json) const
 
 void AApSubsystem::Send(const TArray<TSharedRef<FJsonObject>>& jsons) const
 {
+	if (jsons.IsEmpty())
+		return;
+
 	TArray<TSharedPtr<FJsonValue>> jsonValues;
 	for (const TSharedRef<FJsonObject>& json : jsons) {
 		jsonValues.Add(MakeShared<FJsonValueObject>(json));

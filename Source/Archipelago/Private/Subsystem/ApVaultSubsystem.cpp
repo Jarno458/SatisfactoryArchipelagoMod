@@ -117,6 +117,8 @@ void AApVaultSubsystem::Tick(float dt) {
 
 				lowerCaseToItemClassMapping.Add(itemNameLowerCase, itemClass);
 				itemClassToLowerCaseMapping.Add(itemClass, itemNameLowerCase);
+
+				adjustmentsLocks.Add(itemClass, MakeUnique<FCriticalSection>());
 			}
 
 			int team = connectionInfoSubsystem->GetCurrentPlayerTeam();
@@ -213,7 +215,7 @@ void AApVaultSubsystem::UpdateItemAmount(const FString& key, const uint64* oldVa
 	int64& pendingAdjustment = personal ? pendingPersonalAdjustments.FindOrAdd(itemClass) : pendingGlobalAdjustments.FindOrAdd(itemClass);
 
 	{
-		FScopeLock lock(adjustmentsLocks.FindOrAdd(itemClass, MakeUnique<FCriticalSection>()).Get());
+		FScopeLock lock(adjustmentsLocks[itemClass].Get());
 
 		// update pending adjustments if this callback is in response to our periodic sync
 		if (slot == connectionInfoSubsystem->GetCurrentPlayerSlot())
@@ -312,7 +314,7 @@ void AApVaultSubsystem::SyncPendingVaultUpdates()
 	int slot = connectionInfoSubsystem->GetCurrentPlayerSlot();
 
 	for (const TPair<TSubclassOf<UFGItemDescriptor>, int64>& globalAdjustment : pendingGlobalAdjustments) {
-		if (!itemClassToLowerCaseMapping.Contains(globalAdjustment.Key))
+		if (!itemClassToLowerCaseMapping.Contains(globalAdjustment.Key) || globalAdjustment.Value == 0)
 			continue;
 
 		FString itemName = itemClassToLowerCaseMapping[globalAdjustment.Key];
@@ -322,7 +324,7 @@ void AApVaultSubsystem::SyncPendingVaultUpdates()
 	}
 
 	for (const TPair<TSubclassOf<UFGItemDescriptor>, int64>& personalAdjustment : pendingPersonalAdjustments) {
-		if (!itemClassToLowerCaseMapping.Contains(personalAdjustment.Key))
+		if (!itemClassToLowerCaseMapping.Contains(personalAdjustment.Key) || personalAdjustment.Value == 0)
 			continue;
 
 		FString itemName = itemClassToLowerCaseMapping[personalAdjustment.Key];
@@ -369,7 +371,7 @@ void AApVaultSubsystem::StoreToLocallyBufferedVault(const FItemAmount& item, boo
 		return;
 
 	{
-		FScopeLock lock(adjustmentsLocks.FindOrAdd(item.ItemClass, MakeUnique<FCriticalSection>()).Get());
+		FScopeLock lock(adjustmentsLocks[item.ItemClass].Get());
 
 		UpdatePendingAmount(item.ItemClass, personal, item.Amount);
 	}
@@ -390,49 +392,48 @@ void AApVaultSubsystem::UpdatePendingAmount(TSubclassOf<UFGItemDescriptor> itemC
 	uint64& adjustedAmount = personal ? personalAdjustedItemAmounts.FindOrAdd(itemClass) : globalAdjustedItemAmounts.FindOrAdd(itemClass);
 	int64& pendingAdjustment = personal ? pendingPersonalAdjustments.FindOrAdd(itemClass) : pendingGlobalAdjustments.FindOrAdd(itemClass);
 
+	// first convert AdjustedAmount back to the normalized amount by removing the pending adjustment
+	uint64 unAdjustedAmount = adjustedAmount;
+	if (pendingAdjustment < 0) {
+		const uint64 decrease = pendingAdjustment == MIN_int64
+			? static_cast<uint64>(INT64_MAX) + 1ULL
+			: static_cast<uint64>(-pendingAdjustment);
+		unAdjustedAmount = adjustedAmount > UINT64_MAX - decrease ? UINT64_MAX : adjustedAmount + decrease; //increment to undo the previous decrement
+	}
+	else if (pendingAdjustment > 0) {
+		const uint64 increase = static_cast<uint64>(pendingAdjustment);
+		unAdjustedAmount = increase >= adjustedAmount ? 0 : adjustedAmount - increase; //decrement to undo the previous increment
+	}
+
+	// then calculate the new total pending adjustment
+	if (changeInPendingAmount > 0)
 	{
-		FScopeLock lock(adjustmentsLocks.FindOrAdd(itemClass, MakeUnique<FCriticalSection>()).Get());
+		if (pendingAdjustment > INT64_MAX - changeInPendingAmount)
+			pendingAdjustment = INT64_MAX;
+		else
+			pendingAdjustment += changeInPendingAmount;
+	}
+	else if (changeInPendingAmount < 0)
+	{
+		if (pendingAdjustment < INT64_MIN - changeInPendingAmount)
+			pendingAdjustment = INT64_MIN;
+		else
+			pendingAdjustment += changeInPendingAmount;
+	}
 
-		uint64 normalizedAmount = adjustedAmount;
-		if (pendingAdjustment < 0) {
-			const uint64 decrease = pendingAdjustment == MIN_int64
-				? static_cast<uint64>(INT64_MAX) + 1ULL
-				: static_cast<uint64>(-pendingAdjustment);
-			normalizedAmount = decrease >= adjustedAmount ? 0 : adjustedAmount - decrease;
-		}
-		else if (pendingAdjustment > 0) {
-			const uint64 increase = static_cast<uint64>(pendingAdjustment);
-			normalizedAmount = adjustedAmount > UINT64_MAX - increase ? UINT64_MAX : adjustedAmount + increase;
-		}
-
-		if (changeInPendingAmount > 0)
-		{
-			if (pendingAdjustment > INT64_MAX - changeInPendingAmount)
-				pendingAdjustment = INT64_MAX;
-			else
-				pendingAdjustment += changeInPendingAmount;
-		}
-		else if (changeInPendingAmount < 0)
-		{
-			if (pendingAdjustment < INT64_MIN - changeInPendingAmount)
-				pendingAdjustment = INT64_MIN;
-			else
-				pendingAdjustment += changeInPendingAmount;
-		}
-
-		if (pendingAdjustment < 0) {
-			const uint64 decrease = pendingAdjustment == MIN_int64
-				? static_cast<uint64>(INT64_MAX) + 1ULL
-				: static_cast<uint64>(-pendingAdjustment);
-			adjustedAmount = decrease >= normalizedAmount ? 0 : normalizedAmount - decrease;
-		}
-		else if (pendingAdjustment > 0) {
-			const uint64 increase = static_cast<uint64>(pendingAdjustment);
-			adjustedAmount = normalizedAmount > UINT64_MAX - increase ? UINT64_MAX : normalizedAmount + increase;
-		}
-		else {
-			adjustedAmount = normalizedAmount;
-		}
+	// finally calculate the new adjusted amount by applying the new pending adjustment to the unadjusted amount
+	if (pendingAdjustment < 0) {
+		const uint64 decrease = pendingAdjustment == MIN_int64
+			? static_cast<uint64>(INT64_MAX) + 1ULL
+			: static_cast<uint64>(-pendingAdjustment);
+		adjustedAmount = decrease >= unAdjustedAmount ? 0 : unAdjustedAmount - decrease;
+	}
+	else if (pendingAdjustment > 0) {
+		const uint64 increase = static_cast<uint64>(pendingAdjustment);
+		adjustedAmount = unAdjustedAmount > UINT64_MAX - increase ? UINT64_MAX : unAdjustedAmount + increase;
+	}
+	else {
+		adjustedAmount = unAdjustedAmount;
 	}
 }
 
@@ -450,7 +451,7 @@ int32 AApVaultSubsystem::Take(const FItemAmount& item, bool personal) {
 		yield = requested;
 
 	{
-		FScopeLock lock(adjustmentsLocks.FindOrAdd(item.ItemClass, MakeUnique<FCriticalSection>()).Get());
+		FScopeLock lock(adjustmentsLocks[item.ItemClass].Get());
 
 		//TODO UpdatePendingAmount should likely return the amound changed
 		UpdatePendingAmount(item.ItemClass, personal, -static_cast<int64>(yield));
@@ -463,15 +464,20 @@ int32 AApVaultSubsystem::Take(const FItemAmount& item, bool personal) {
 
 bool AApVaultSubsystem::TryGetSingleItem(TSubclassOf<UFGItemDescriptor> itemClass)
 {
+	if (!apInitialized || !IsValid(itemClass) || !adjustmentsLocks.Contains(itemClass))
+		return false;
+
 	bool hasResult = false;
 
-	FScopeTryLock lock(adjustmentsLocks.FindOrAdd(itemClass, MakeUnique<FCriticalSection>()).Get());
-
-	if (lock.IsLocked() && personalAdjustedItemAmounts.FindRef(itemClass) > 0)
 	{
-		UpdatePendingAmount(itemClass, true, -1);
+		FScopeTryLock lock(adjustmentsLocks[itemClass].Get());
 
-		hasResult = true;
+		if (lock.IsLocked() && personalAdjustedItemAmounts.FindRef(itemClass) > 0)
+		{
+			UpdatePendingAmount(itemClass, true, -1);
+
+			hasResult = true;
+		}
 	}
 
 	if (hasResult)
