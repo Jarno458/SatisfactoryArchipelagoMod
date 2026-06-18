@@ -61,14 +61,23 @@ public:
 
 	FORCEINLINE UFGInventoryComponent* GetInventory() const { return mInputInventory; }
 
+	UFUNCTION(BlueprintPure, Category = "FactoryGame|Factory|Inventory")
+	FORCEINLINE UFGInventoryComponent* GetInputInventory() const { return mInputInventory; }
+
+	UFUNCTION(BlueprintCallable)
+	void SetWithClientDesync(const FApPlayer& player, const TArray<TSubclassOf<UFGItemDescriptor>>& OutputFilter)
+	{
+		targetPlayer = player;
+		configuredOutputFilter = OutputFilter;
+	}
+
+	// Server RCO
 	void ServerSetAllowedOutput(const TArray<TSubclassOf<UFGItemDescriptor>>& newAllowedOutput);
 
 	void ServerSetTarget(const FApPlayer& player);
 
-	UFUNCTION(BlueprintPure, Category = "FactoryGame|Factory|Inventory")
-	FORCEINLINE UFGInventoryComponent* GetInputInventory() const { return mInputInventory; }
-
 	void ServerSendManually() const;
+	//
 
 	virtual bool CanProduce_Implementation() const override;
 
