@@ -42,13 +42,12 @@ private:
 	class AApReplicatedGiftingSubsystem* replicatedGiftingSubsystem;
 	class AApVaultSubsystem* vaultSubsystem;
 
-	
 	bool isInitialized;
 
 	FDateTime lastAutoSendTime;
 
 public:
-	FORCEINLINE bool IsInitialized() const { return isInitialized; };
+	FORCEINLINE bool IsInitialized() const { return isInitialized; }
 
 	void SendBuffer(FApPlayer targetPlayer, TArray<FItemAmount> items) const;
 

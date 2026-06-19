@@ -82,8 +82,6 @@ void AApServerGiftingSubsystem::Tick(float dt) {
 void AApServerGiftingSubsystem::PullAllGiftsAsync(const FString& key, const TSharedRef<FJsonValue>& oldValueJson, const TSharedRef<FJsonValue>& newValueJson, int slot) {
 	static const UEnum* giftTraitEnum = StaticEnum<EGiftTrait>();
 
-	//TArray<FApReceiveGift> gifts = ap->GetGifts();
-
 	TSharedPtr<FJsonObject>* newValueObject;
 	if (!newValueJson->TryGetObject(newValueObject))
 		return;

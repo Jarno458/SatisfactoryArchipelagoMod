@@ -87,7 +87,7 @@ void AApReplicatedGiftingSubsystem::Tick(float dt) {
 				FString giftboxKey = FString::Format(TEXT("GiftBoxes;{0}"), { team });
 				ap->MonitorDataStoreJsonObjectValue(giftboxKey, [this](const FString& key, const TSharedPtr<FJsonValue>& oldJsonValue, const TSharedPtr<FJsonValue>& newJsonValue, int slot) {
 					UpdateAcceptedGifts(key, oldJsonValue, newJsonValue, slot);
-				});
+					});
 			}
 
 			ServiceState = EApGiftingServiceState::Ready;
@@ -135,38 +135,6 @@ TArray<TSubclassOf<UFGItemDescriptor>> AApReplicatedGiftingSubsystem::GetAccepte
 	return giftTraitsSubsystem->GetItemsWithOverlappingTraits(AcceptedGiftTraitsPerPlayer[player]);
 }
 
-/*
-TMap<FApPlayer, FApTraitBits> AApSubsystem::GetAcceptedTraitsPerPlayer() const {
-	std::map<std::pair<int, int>, AP_GiftBoxProperties> giftboxes =
-		CallOnGameThread<std::map<std::pair<int, int>, AP_GiftBoxProperties>>([]() { return AP_QueryGiftBoxes(); });
-
-	static const UEnum* giftTraitEnum = StaticEnum<EGiftTrait>();
-
-	TMap<FApPlayer, FApTraitBits> openGiftBoxes;
-	for (const auto& giftbox : giftboxes) {
-		if (giftbox.second.IsOpen) {
-			FApPlayer player;
-			player.Team = giftbox.first.first;
-			player.Slot = giftbox.first.second;
-
-			TSet<EGiftTrait> acceptedTraits;
-			for (std::string trait : giftbox.second.DesiredTraits) {
-				const int64 enumValue = giftTraitEnum->GetValueByNameString(UApUtils::FStr(trait));
-				if (enumValue != INDEX_NONE) {
-					acceptedTraits.Add(static_cast<EGiftTrait>(enumValue));
-				}
-			}
-
-			FApTraitBits metaData(giftbox.second.AcceptsAnyGift, acceptedTraits);
-
-			openGiftBoxes.Add(player, metaData);
-		}
-	}
-
-	return openGiftBoxes;
-}
-*/
-
 void AApReplicatedGiftingSubsystem::UpdateAcceptedGifts(const FString& key, const TSharedPtr<FJsonValue>& oldJsonValue, const TSharedPtr<FJsonValue>& newJsonValue, int triggeringSlot) {
 	if (!HasAuthority())
 		return;
@@ -186,62 +154,59 @@ void AApReplicatedGiftingSubsystem::UpdateAcceptedGifts(const FString& key, cons
 	TMap<FApPlayer, FApTraitBits> newAcceptedGiftTraitsPerPlayer;
 
 	for (const TPair<FString, TSharedPtr<FJsonValue>>& giftJson : (*newValueObject)->Values) {
-		 if (!FCString::IsNumeric(*giftJson.Key))
-			 continue;
+		if (!FCString::IsNumeric(*giftJson.Key))
+			continue;
 
-		 int slot = FCString::Atoi(*giftJson.Key);
+		int slot = FCString::Atoi(*giftJson.Key);
 
-		 TSharedPtr<FJsonObject>* giftboxProperties;
-		 if (!giftJson.Value->TryGetObject(giftboxProperties))
-			 continue;
-		 
-		 int minimal_supported_version;
-		 if (!(*giftboxProperties)->TryGetNumberField("minimum_gift_data_version", minimal_supported_version))
-		 {
-			 minimal_supported_version = 999;
-		 }
+		FApPlayer player{ team, slot };
 
-		 int maximum_supported_version;
-		 if (!(*giftboxProperties)->TryGetNumberField("maximum_gift_data_version", maximum_supported_version))
-		 {
-			 maximum_supported_version = 1;
-		 }
+		if (player == connectionInfoSubsystem->GetCurrentPlayer())
+			continue; //no self gifting
 
-		  if (minimal_supported_version > 3 || maximum_supported_version < 3)
-			  continue; //we cant deal with this data
+		TSharedPtr<FJsonObject>* giftboxProperties;
+		if (!giftJson.Value->TryGetObject(giftboxProperties))
+			continue;
 
-		  bool isOpen;
-		  if (!(*giftboxProperties)->TryGetBoolField("is_open", isOpen) || !isOpen)
-		  {
-			  continue;
-		  }
+		int minimal_supported_version;
+		if (!(*giftboxProperties)->TryGetNumberField(TEXT("minimum_gift_data_version"), minimal_supported_version))
+			continue;
 
-		  bool acceptsAll;
-		  if (!(*giftboxProperties)->TryGetBoolField("accepts_any_gift", acceptsAll))
-		  {
-			  acceptsAll = false;
-		  }
+		int maximum_supported_version;
+		if (!(*giftboxProperties)->TryGetNumberField(TEXT("maximum_gift_data_version"), maximum_supported_version))
+			continue;
 
-		  TSet<EGiftTrait> acceptedTraits;
+		if (minimal_supported_version > 3 || maximum_supported_version < 3)
+			continue; //we cant deal with this data
 
-		  const TArray<TSharedPtr<FJsonValue>>* traitsJson;
-		  if ((*giftboxProperties)->TryGetArrayField("desired_traits", traitsJson)) //optional value
-		  {
-				for (const TSharedPtr<FJsonValue>& traitJson : *traitsJson) {
-					FString traitName;
-					if (!traitJson->TryGetString(traitName))
-						continue;
+		bool isOpen;
+		if (!(*giftboxProperties)->TryGetBoolField(TEXT("is_open"), isOpen) || !isOpen)
+			continue;
 
-					const int64 enumValue = giftTraitEnum->GetValueByNameString(traitName);
-					if (enumValue == INDEX_NONE)
-						continue;
+		bool acceptsAll;
+		if (!(*giftboxProperties)->TryGetBoolField(TEXT("accepts_any_gift"), acceptsAll))
+			acceptsAll = false;
 
-					EGiftTrait trait = static_cast<EGiftTrait>(enumValue);
-					acceptedTraits.Add(trait);
-				}
-		  }
+		TSet<EGiftTrait> acceptedTraits;
 
-		  newAcceptedGiftTraitsPerPlayer.Add(FApPlayer{team, slot}, FApTraitBits{acceptsAll, acceptedTraits});
+		const TArray<TSharedPtr<FJsonValue>>* traitsJson;
+		if ((*giftboxProperties)->TryGetArrayField(TEXT("desired_traits"), traitsJson)) //optional value
+		{
+			for (const TSharedPtr<FJsonValue>& traitJson : *traitsJson) {
+				FString traitName;
+				if (!traitJson->TryGetString(traitName))
+					continue;
+
+				const int64 enumValue = giftTraitEnum->GetValueByNameString(traitName);
+				if (enumValue == INDEX_NONE)
+					continue;
+
+				EGiftTrait trait = static_cast<EGiftTrait>(enumValue);
+				acceptedTraits.Add(trait);
+			}
+		}
+
+		newAcceptedGiftTraitsPerPlayer.Add(player, FApTraitBits{ acceptsAll, acceptedTraits });
 	}
 
 	AcceptedGiftTraitsPerPlayer = newAcceptedGiftTraitsPerPlayer;

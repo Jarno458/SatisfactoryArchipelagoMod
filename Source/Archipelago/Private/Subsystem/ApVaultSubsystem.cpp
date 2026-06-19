@@ -641,6 +641,12 @@ void AApVaultSubsystem::AddPersonalVaults(const FString& game)
 {
 	//TODO this is bad as it re-replicated for each game it receives players for
 	vaults.Append(playerInfoSubsystem->GetAllPlayersPlayingGame(game));
+
+	if (allowSelfGifting)
+		vaults.Add(connectionInfoSubsystem->GetCurrentPlayer());
+	else
+		vaults.Remove(connectionInfoSubsystem->GetCurrentPlayer());
+	
 	vaultEnabledPlayersReplicated = vaults.Array();
 }
 
@@ -666,6 +672,16 @@ void AApVaultSubsystem::OnItemRemoved(FName ListIdentifier, TSubclassOf<UFGItemD
 	itemAmount.Amount = Amount;
 
 	Take(itemAmount, ListIdentifier == personalVault);
+}
+
+void AApVaultSubsystem::AllowSelfGifting(bool maybe)
+{
+	allowSelfGifting = maybe;
+
+	if (allowSelfGifting)
+		vaults.Add(connectionInfoSubsystem->GetCurrentPlayer());
+	else
+		vaults.Remove(connectionInfoSubsystem->GetCurrentPlayer());
 }
 
 #pragma optimize("", on)

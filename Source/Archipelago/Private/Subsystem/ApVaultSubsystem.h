@@ -49,7 +49,9 @@ private:
 
 	const float pollInterfall = 10.0f;
 
-	bool apInitialized;
+	bool apInitialized = false;
+
+	bool allowSelfGifting = false;
 
 	AApSubsystem* ap;
 	AApConnectionInfoSubsystem* connectionInfoSubsystem;
@@ -132,4 +134,6 @@ public:
 
 	UFUNCTION()
 	void OnItemRemoved(FName ListIdentifier, TSubclassOf<UFGItemDescriptor> Class, int Amount, const AFGPlayerState* PlayerState);
+
+	void AllowSelfGifting(bool maybe);
 };

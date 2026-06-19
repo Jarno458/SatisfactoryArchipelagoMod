@@ -101,7 +101,7 @@ EApSlotDataState AApSlotDataSubsystem::TryLoadSlotDataFromServer(FString slotDat
 	}
 
 	const TSharedPtr<FJsonObject>* dataJsonPointer = nullptr;
-	if (!parsedJson->TryGetObjectField("Data", dataJsonPointer)) {
+	if (!parsedJson->TryGetObjectField(TEXT("Data"), dataJsonPointer)) {
 		UE_LOGFMT(LogApSlotDataSubsystem, Error, "AApSlotDataSubsystem::SetSlotDataJson() failed to parse slotdata: {0}", slotDataJson);
 		lastError = FText::Format(LOCTEXT("SlotDataFailedToParse", "Failed to parse SlotData json: {0}"), FText::FromString(slotDataJson));
 		return EApSlotDataState::Failed;
@@ -110,7 +110,7 @@ EApSlotDataState AApSlotDataSubsystem::TryLoadSlotDataFromServer(FString slotDat
 	const TSharedPtr<FJsonObject> dataJson = *dataJsonPointer;
 
 	int slotDataVersion = -1;
-	if (!dataJson->TryGetNumberField("SlotDataVersion", slotDataVersion) || slotDataVersion < EXPECTED_SLOTDATA_VERSION) {
+	if (!dataJson->TryGetNumberField(TEXT("SlotDataVersion"), slotDataVersion) || slotDataVersion < EXPECTED_SLOTDATA_VERSION) {
 		UE_LOGFMT(LogApSlotDataSubsystem, Error, "AApSlotDataSubsystem::SetSlotDataJson() failed to parse slotdata of version {0}", slotDataVersion);
 		lastError = FText::Format(LOCTEXT("SlotDataFailedVersionMissMatch", "Failed to parse SlotData of version {0}, expected version {1}"), slotDataVersion, EXPECTED_SLOTDATA_VERSION);
 		return EApSlotDataState::Failed;
@@ -118,7 +118,7 @@ EApSlotDataState AApSlotDataSubsystem::TryLoadSlotDataFromServer(FString slotDat
 
 	TArray<FApReplicatedHubLayoutEntry> parsedHubCostEntries;
 	int tierNumber = 0;
-	for (TSharedPtr<FJsonValue> tier : dataJson->GetArrayField("HubLayout")) {
+	for (TSharedPtr<FJsonValue> tier : dataJson->GetArrayField(TEXT("HubLayout"))) {
 		int milestoneNumber = 0;
 		for (TSharedPtr<FJsonValue> milestone : tier->AsArray()) {
 			for (TPair<FString, TSharedPtr<FJsonValue>> cost : milestone->AsObject()->Values) {
@@ -139,7 +139,7 @@ EApSlotDataState AApSlotDataSubsystem::TryLoadSlotDataFromServer(FString slotDat
 	ReconstructHubLayout();
 
 	TArray<FApReplicatedCostAmount> parsedExplorationCosts;
-	for (TPair<FString, TSharedPtr<FJsonValue>> cost : dataJson->GetObjectField("ExplorationCosts")->Values) {
+	for (TPair<FString, TSharedPtr<FJsonValue>> cost : dataJson->GetObjectField(TEXT("ExplorationCosts"))->Values) {
 		int64 itemId = FCString::Atoi64(*cost.Key);
 		uint32 amount;
 		cost.Value->TryGetNumber(amount);
@@ -150,9 +150,9 @@ EApSlotDataState AApSlotDataSubsystem::TryLoadSlotDataFromServer(FString slotDat
 	MARK_PROPERTY_DIRTY_FROM_NAME(AApSlotDataSubsystem, replicatedExplorationCost, this);
 	ReconstructExplorationCost();
 
-	TSharedPtr<FJsonObject> options = dataJson->GetObjectField("Options");
+	TSharedPtr<FJsonObject> options = dataJson->GetObjectField(TEXT("Options"));
 
-	TArray<TSharedPtr<FJsonValue>> starting_items_array = options->GetArrayField("StartingRecipies");
+	TArray<TSharedPtr<FJsonValue>> starting_items_array = options->GetArrayField(TEXT("StartingRecipies"));
 	starterRecipeIds.SetNum(starting_items_array.Num());
 	for (size_t i = 0; i < starting_items_array.Num(); i++)
 	{
@@ -163,20 +163,20 @@ EApSlotDataState AApSlotDataSubsystem::TryLoadSlotDataFromServer(FString slotDat
 	MARK_PROPERTY_DIRTY_FROM_NAME(AApSlotDataSubsystem, starterRecipeIds, this);
 
 	//using Try methods as it allow for unsinged ints
-	int goalRequirement = options->GetIntegerField("GoalRequirement");
+	int goalRequirement = options->GetIntegerField(TEXT("GoalRequirement"));
 	bool requiresAnyGoal = goalRequirement == 0;
 
 	uint8 finalSpaceElevatorTier;
-	if (!options->TryGetNumberField("FinalElevatorPhase", finalSpaceElevatorTier)) {
-		options->TryGetNumberField("FinalElevatorTier", finalSpaceElevatorTier); //legacy support
+	if (!options->TryGetNumberField(TEXT("FinalElevatorPhase"), finalSpaceElevatorTier)) {
+		options->TryGetNumberField(TEXT("FinalElevatorTier"), finalSpaceElevatorTier); //legacy support
 	}
 	uint64 finalResourceSinkPoints; 
-	options->TryGetNumberField("FinalResourceSinkPointsTotal", finalResourceSinkPoints);
+	options->TryGetNumberField(TEXT("FinalResourceSinkPointsTotal"), finalResourceSinkPoints);
 	uint64 finalResourceSinkPointsPerMinute;
-	options->TryGetNumberField("FinalResourceSinkPointsPerMinute", finalResourceSinkPointsPerMinute);
+	options->TryGetNumberField(TEXT("FinalResourceSinkPointsPerMinute"), finalResourceSinkPointsPerMinute);
 
 	TArray<FString> goalSelection; 
-	options->TryGetStringArrayField("GoalSelection", goalSelection);
+	options->TryGetStringArrayField(TEXT("GoalSelection"), goalSelection);
 	bool isSpaceElevatorGoalEnabled = goalSelection.Contains("Space Elevator Phase") ||
 												 goalSelection.Contains("Space Elevator Tier"); //legacy support
 	bool isResourceSinkGoalEnabled = goalSelection.Contains("AWESOME Sink Points (total)");
@@ -188,14 +188,14 @@ EApSlotDataState AApSlotDataSubsystem::TryLoadSlotDataFromServer(FString slotDat
 		isExplorationGoalEnabled, isFicsmasGoalEnabled,
 		finalSpaceElevatorTier, finalResourceSinkPoints, finalResourceSinkPointsPerMinute);
 
-	FreeSampleEquipment = options->GetIntegerField("FreeSampleEquipment");
-	FreeSampleBuildings = options->GetIntegerField("FreeSampleBuildings");
-	FreeSampleParts = options->GetIntegerField("FreeSampleParts");
-	FreeSampleRadioactive = options->GetBoolField("FreeSampleRadioactive");
+	FreeSampleEquipment = options->GetIntegerField(TEXT("FreeSampleEquipment"));
+	FreeSampleBuildings = options->GetIntegerField(TEXT("FreeSampleBuildings"));
+	FreeSampleParts = options->GetIntegerField(TEXT("FreeSampleParts"));
+	FreeSampleRadioactive = options->GetBoolField(TEXT("FreeSampleRadioactive"));
 
-	if (!options->TryGetBoolField("EnergyLink", EnergyLink))
+	if (!options->TryGetBoolField(TEXT("EnergyLink"), EnergyLink))
 		EnergyLink = false;
-	if (!parsedJson->TryGetBoolField("DeathLink", DeathLink))
+	if (!parsedJson->TryGetBoolField(TEXT("DeathLink"), DeathLink))
 		DeathLink = false;
 
 	hasLoadedSlotData = true;
