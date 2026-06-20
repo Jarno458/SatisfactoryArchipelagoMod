@@ -29,7 +29,7 @@
 		{
 			"Name": "SML",
 			"Enabled": true,
-			"SemVersion": "^3.11.3"
+			"SemVersion": "^3.12.0"
 		},
 		{
 			"Name": "ContentLib",
@@ -39,28 +39,33 @@
 		{
 			"Name": "MAMTips",
 			"Enabled": true,
-			"SemVersion": ">=1.9.0"
+			"SemVersion": ">=1.9.1"
 		},
 		{
 			"Name": "FixClientResourceSinkPoints",
 			"Enabled": true,
-			"SemVersion": ">=1.1.0"
+			"SemVersion": ">=1.2.1"
 		},
 		{
 			"Name": "HoverpackFuseReminder",
 			"Enabled": true,
-			"SemVersion": ">=1.0.0"
+			"SemVersion": ">=1.0.1"
 		},
 		{
 			"Name": "AdditionalDepots",
 			"Enabled": true,
-			"SemVersion": "^1.0.0"
+			"SemVersion": "^1.1.0"
 		},
 		{
 			"Name": "ReliableMessaging",
 			"Enabled": true,
 			"BasePlugin": true
-		}
+		},
+		{
+			"Name": "FreeSamples",
+			"Enabled": true,
+			"SemVersion": "^2.1.0"
+		},
 	],
-	"GameVersion": ">=416835"
+	"GameVersion": ">=491125"
 }

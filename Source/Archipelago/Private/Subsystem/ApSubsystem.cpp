@@ -950,19 +950,42 @@ void AApSubsystem::HandleAPMessages() {
 					return;
 
 				AP_Message* message = AP_GetLatestMessage();
-				SendChatMessage(UApUtils::FStr(message->text), FLinearColor::White);
+
+				switch (message->type)
+				{
+					case AP_MessageType::ItemSend:
+						SendChatMessage(EApMessageType::ItemSend, UApUtils::FStr(message->text), FLinearColor::Green);
+						break;
+					case AP_MessageType::ItemRecv:
+						SendChatMessage(EApMessageType::ItemReceived, UApUtils::FStr(message->text), FLinearColor::Blue);
+						break;
+					case AP_MessageType::Hint:
+						SendChatMessage(EApMessageType::Hint, UApUtils::FStr(message->text), FLinearColor::Yellow);
+						break;
+					case AP_MessageType::Countdown:
+						SendChatMessage(EApMessageType::Countdown, UApUtils::FStr(message->text), FLinearColor::Red);
+						break;
+					default:
+						SendChatMessage(EApMessageType::Other, UApUtils::FStr(message->text), FLinearColor::White);
+						break;
+				}
 
 				AP_ClearLatestMessage();
-				});
+			});
 		}
 	}
 }
 
 void AApSubsystem::SendChatMessage(const FString& Message, const FLinearColor& Color) const {
+	SendChatMessage(EApMessageType::ApSystem, Message, Color);
+}
+
+void AApSubsystem::SendChatMessage(EApMessageType type, const FString& Message, const FLinearColor& Color) const
+{
 	UE_LOG(LogApSubsystem, Display, TEXT("Archipelago Cpp Chat Message: %s"), *Message);
 	AApMessagingSubsystem* messaging = AApMessagingSubsystem::Get(GetWorld());
 	fgcheck(messaging);
-	messaging->DisplayMessage(Message, Color);
+	messaging->DisplayMessage(type, Message, Color);
 }
 
 void AApSubsystem::TimeoutConnection() const {

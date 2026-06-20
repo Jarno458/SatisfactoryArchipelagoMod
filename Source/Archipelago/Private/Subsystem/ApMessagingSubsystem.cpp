@@ -15,7 +15,7 @@ AApMessagingSubsystem* AApMessagingSubsystem::Get(class UWorld* worldContext) {
 	return UApUtils::GetSubsystemActorIncludingParentClases<AApMessagingSubsystem>(worldContext);
 }
 
-void AApMessagingSubsystem::DisplayMessage_Implementation(const FString& Message, const FLinearColor& Color) {
+void AApMessagingSubsystem::DisplayMessage_Implementation(EApMessageType type, const FString& Message, const FLinearColor& Color) {
 	UE_LOG(LogArchipelagoCpp, Error, TEXT("No DisplayMessage C++ implementation, why is this getting called instead of the BP one?"));
 }
 

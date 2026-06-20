@@ -14,6 +14,7 @@
 #include "Templates/SubclassOf.h"
 #include "Module/ModModule.h"
 #include "ApConfigurationStruct.h"
+#include "ApMessagingSubsystem.h"
 #include "Data/ApTypes.h"
 #include "Subsystem/ApConnectionInfoSubsystem.h"
 
@@ -216,6 +217,7 @@ private:
 
     // TODO do we want to keep this around or call AApMessagingSubsystem::DisplayMessage directly?
 	void SendChatMessage(const FString& Message, const FLinearColor& Color) const;
+	void SendChatMessage(EApMessageType type, const FString& Message, const FLinearColor& Color) const;
 
 	template<typename RetType>
 	RetType CallOnGameThread(TFunction<RetType()> InFunction) const;

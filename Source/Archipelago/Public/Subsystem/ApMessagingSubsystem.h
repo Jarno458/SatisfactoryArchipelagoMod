@@ -7,6 +7,17 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(LogApChat, All, All);
 
+UENUM(BlueprintType)
+enum class EApMessageType : uint8 {
+	ApSystem UMETA(DisplayName = "Mod System Messages"),
+	ItemSend UMETA(DisplayName = "Item Sent"),
+	ItemReceived UMETA(DisplayName = "Item Received"),
+	Hint UMETA(DisplayName = "Hint"),
+	Countdown UMETA(DisplayName = "Countdown"),
+	Other UMETA(DisplayName = "Other"),
+};
+
+
 /**
   * A message to display to the user at a later point
   */
@@ -38,7 +49,7 @@ public:
 
 	// Sends a chat message to all connected Satisfactory players
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
-	void DisplayMessage(const FString& Message, const FLinearColor& Color);
+	void DisplayMessage(EApMessageType type, const FString& Message, const FLinearColor& Color);
 	
 	UFUNCTION(BlueprintPure, Category = "Archipelago", DisplayName = "GetArchipelagoMessagingSubsystem", Meta = (DefaultToSelf = "worldContext"))
 	static AApMessagingSubsystem* Get(class UWorld* worldContext);
