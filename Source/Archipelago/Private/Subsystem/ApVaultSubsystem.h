@@ -53,6 +53,8 @@ private:
 
 	bool allowSelfGifting = false;
 
+	TQueue<TTuple<bool, FItemAmount>, EQueueMode::Mpsc> locallyBufferedItemQueue;
+
 	AApSubsystem* ap;
 	AApConnectionInfoSubsystem* connectionInfoSubsystem;
 	AApMappingsSubsystem* mappingSubsystem;

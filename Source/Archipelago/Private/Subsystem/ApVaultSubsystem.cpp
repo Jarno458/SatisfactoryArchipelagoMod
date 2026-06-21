@@ -149,7 +149,7 @@ void AApVaultSubsystem::Tick(float dt) {
 				ParseVaultItemInfo(game, value);
 
 				AddPersonalVaults(game);
-				});
+			});
 
 			SetupPersonalVault();
 			AddPersonalVaults(TEXT("Satisfactory"));
@@ -157,6 +157,10 @@ void AApVaultSubsystem::Tick(float dt) {
 			vaultEnabledPlayersReplicated = vaults.Array();
 
 			apInitialized = true;
+
+			TTuple<bool, FItemAmount> bufferedItem;
+			while (locallyBufferedItemQueue.Dequeue(bufferedItem))
+				StoreToLocallyBufferedVault(bufferedItem.Value, bufferedItem.Key);
 		}
 	}
 	else {
@@ -367,7 +371,16 @@ void AApVaultSubsystem::Store(const FItemAmount& item, const bool personal) {
 
 void AApVaultSubsystem::StoreToLocallyBufferedVault(const FItemAmount& item, bool personal)
 {
-	if (!apInitialized || item.Amount <= 0 || !IsValid(item.ItemClass) || !itemClassToLowerCaseMapping.Contains(item.ItemClass))
+	if (item.Amount <= 0 || !IsValid(item.ItemClass))
+		return;
+
+	if (!apInitialized)
+	{
+		locallyBufferedItemQueue.Enqueue(TTuple<bool, FItemAmount>(personal, item));
+		return;
+	}
+
+	if (!itemClassToLowerCaseMapping.Contains(item.ItemClass))
 		return;
 
 	{
