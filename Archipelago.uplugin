@@ -34,7 +34,7 @@
 		{
 			"Name": "ContentLib",
 			"Enabled": true,
-			"SemVersion": "^1.9.0"
+			"SemVersion": "^1.10.0"
 		},
 		{
 			"Name": "MAMTips",
@@ -57,15 +57,15 @@
 			"SemVersion": "^1.1.0"
 		},
 		{
-			"Name": "ReliableMessaging",
-			"Enabled": true,
-			"BasePlugin": true
-		},
-		{
 			"Name": "FreeSamples",
 			"Enabled": true,
 			"SemVersion": "^2.1.0"
 		},
+		{
+			"Name": "ReliableMessaging",
+			"Enabled": true,
+			"BasePlugin": true
+		}
 	],
 	"GameVersion": ">=491125"
 }
