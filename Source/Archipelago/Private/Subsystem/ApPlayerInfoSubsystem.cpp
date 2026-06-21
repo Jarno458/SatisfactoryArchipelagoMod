@@ -138,7 +138,7 @@ FString AApPlayerInfoSubsystem::GetPlayerName(FApPlayer player) const {
 }
 
 FString AApPlayerInfoSubsystem::GetPlayerGame(FApPlayer player) const {
-	if (PlayerGamesMap.Contains(player)) {
+	if (isInitialized && player.IsValid() && PlayerGamesMap.Contains(player)) {
 		return PlayerGamesMap[player];
 	}
 

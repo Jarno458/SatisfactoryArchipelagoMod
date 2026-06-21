@@ -25,6 +25,18 @@ struct FVaultItemMapping
 	TMap<TSubclassOf<UFGItemDescriptor>, FString> ItemNameByClass;
 };
 
+USTRUCT()
+struct FReplicatedItemsPerGame
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	FString Game;
+
+	UPROPERTY()
+	TArray<TSubclassOf<UFGItemDescriptor>> Items;
+};
+
 UCLASS()
 class AApVaultSubsystem : public AModSubsystem
 {
@@ -73,6 +85,9 @@ private:
 	UPROPERTY(Replicated, ReplicatedUsing = OnRep_VaultEnabledPlayers)
 	TArray<FApPlayer> vaultEnabledPlayersReplicated;
 
+	UPROPERTY(Replicated, ReplicatedUsing = OnRep_AcceptedItemsPerGame)
+	TArray<FReplicatedItemsPerGame> acceptedItemsPerGameReplicated;
+
 	UPROPERTY(Replicated)
 	FApPlayer currentPlayerGlobalVault;
 
@@ -107,9 +122,6 @@ public:
 
 	bool CanSend(const FApPlayer& targetPlayer, const TSubclassOf<UFGItemDescriptor> itemClass);
 
-	UFUNCTION(BlueprintCallable)
-	TArray<TSubclassOf<UFGItemDescriptor>> GetItemsStoredInPersonalVault() const;
-
 	TArray<TSubclassOf<UFGItemDescriptor>> GetAllAcceptedItems() const;
 
 private:
@@ -130,6 +142,9 @@ private:
 public: 
 	UFUNCTION() //required for event hookup
 	void OnRep_VaultEnabledPlayers();
+
+	UFUNCTION() //required for event hookup
+	void OnRep_AcceptedItemsPerGame();
 
 	UFUNCTION()
 	void OnItemAdded(FName ListIdentifier, TSubclassOf<UFGItemDescriptor> Class, int Amount, const AFGPlayerState* PlayerState);

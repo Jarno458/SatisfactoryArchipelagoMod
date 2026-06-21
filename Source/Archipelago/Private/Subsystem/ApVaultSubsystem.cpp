@@ -64,6 +64,7 @@ void AApVaultSubsystem::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Ou
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(AApVaultSubsystem, vaultEnabledPlayersReplicated);
+	DOREPLIFETIME(AApVaultSubsystem, acceptedItemsPerGameReplicated);
 	DOREPLIFETIME(AApVaultSubsystem, currentPlayerGlobalVault);
 }
 
@@ -76,14 +77,13 @@ void AApVaultSubsystem::BeginPlay() {
 	fgcheck(world != nullptr);
 
 	giftTraitsSubsystem = AApGiftTraitsSubsystem::Get(world);
+	playerInfoSubsystem = AApPlayerInfoSubsystem::Get(world);
 
 	if (HasAuthority()) {
 		ap = AApSubsystem::Get(world);
 		connectionInfoSubsystem = AApConnectionInfoSubsystem::Get(world);
 		mappingSubsystem = AApMappingsSubsystem::Get(world);
-		playerInfoSubsystem = AApPlayerInfoSubsystem::Get(world);
 		additionalDepotsServerSubsystem = AAdditionalDepotsServerSubsystem::Get(world);
-
 		additionalDepotsServerSubsystem->OnItemAdded.AddDynamic(this, &AApVaultSubsystem::OnItemAdded);
 		additionalDepotsServerSubsystem->OnItemRemoved.AddDynamic(this, &AApVaultSubsystem::OnItemRemoved);
 	}
@@ -268,6 +268,9 @@ void AApVaultSubsystem::UpdateItemAmount(const FString& key, const uint64* oldVa
 
 void AApVaultSubsystem::SetupPersonalVault()
 {
+	if (!HasAuthority())
+		return;
+
 	static const UEnum* giftTraitEnum = StaticEnum<EGiftTrait>();
 
 	FVaultItemMapping itemMappings;
@@ -297,6 +300,13 @@ void AApVaultSubsystem::SetupPersonalVault()
 	}
 
 	acceptedItemsPerGame.Add(TEXT("Satisfactory"), itemMappings);
+
+	FReplicatedItemsPerGame replicatedItemMapping;
+
+	replicatedItemMapping.Game = TEXT("Satisfactory");
+	itemMappings.ItemNameByClass.GenerateKeyArray(replicatedItemMapping.Items);
+
+	acceptedItemsPerGameReplicated.Add(replicatedItemMapping);
 
 	ap->SetVaultState(vaultItemTraitMapping);
 }
@@ -551,16 +561,6 @@ bool AApVaultSubsystem::CanSend(const FApPlayer& vault, const TSubclassOf<UFGIte
 	return acceptedItemsPerGame[game].ItemNameByClass.Contains(itemClass);
 }
 
-TArray<TSubclassOf<UFGItemDescriptor>> AApVaultSubsystem::GetItemsStoredInPersonalVault() const
-{
-	TArray<TSubclassOf<UFGItemDescriptor>> items;
-
-	for (const FItemAmount& item : additionalDepotsServerSubsystem->GetItems(personalVault))
-		items.Add(item.ItemClass);
-
-	return items;
-}
-
 TArray<TSubclassOf<UFGItemDescriptor>> AApVaultSubsystem::GetAllAcceptedItems() const
 {
 	return giftTraitsSubsystem->GetAllItems();
@@ -647,7 +647,16 @@ void AApVaultSubsystem::ParseVaultItemInfo(const FString& game, const TSharedRef
 	}
 
 	if (!itemMappings.ItemNameByClass.IsEmpty())
+	{
 		acceptedItemsPerGame.Add(game, itemMappings);
+
+		FReplicatedItemsPerGame replicatedItemMapping;
+
+		replicatedItemMapping.Game = game;
+		itemMappings.ItemNameByClass.GenerateKeyArray(replicatedItemMapping.Items);
+
+		acceptedItemsPerGameReplicated.Add(replicatedItemMapping);
+	}
 }
 
 void AApVaultSubsystem::AddPersonalVaults(const FString& game)
@@ -667,6 +676,21 @@ void AApVaultSubsystem::OnRep_VaultEnabledPlayers()
 {
 	vaults.Empty();
 	vaults.Append(vaultEnabledPlayersReplicated);
+}
+
+void AApVaultSubsystem::OnRep_AcceptedItemsPerGame()
+{
+	acceptedItemsPerGame.Empty();
+
+	 for (const FReplicatedItemsPerGame& itemsPerGame: acceptedItemsPerGameReplicated)
+	 {
+		 FVaultItemMapping clientItemMapping;
+
+		 for (const TSubclassOf<UFGItemDescriptor>& item : itemsPerGame.Items)
+			 clientItemMapping.ItemNameByClass.Add(item, TEXT("")); // client does not care about item name
+
+		 acceptedItemsPerGame.Add(itemsPerGame.Game, clientItemMapping);
+	 }
 }
 
 void AApVaultSubsystem::OnItemAdded(FName ListIdentifier, TSubclassOf<UFGItemDescriptor> Class, int Amount, const AFGPlayerState* PlayerState)
