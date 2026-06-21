@@ -6,7 +6,6 @@
 #include "Data/ApTypes.h"
 
 #include "Subsystem/ApSubsystem.h"
-#include "Patching/BlueprintHookingTypes.h"
 #include "NativeGameplayTags.h"
 
 
@@ -27,7 +26,7 @@ public:
 	FString Game;
 
 	// Value constructor
-	FReplicatedFApPlayerInfo(int team, uint8 slot, FString name, FString game) : FApPlayer(team, slot), Name(name), Game(game)
+	FReplicatedFApPlayerInfo(int team, int slot, FString name, FString game) : FApPlayer(team, slot), Name(name), Game(game)
 	{
 	}
 
