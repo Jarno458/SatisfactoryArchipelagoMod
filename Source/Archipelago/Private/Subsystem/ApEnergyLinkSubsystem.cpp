@@ -256,18 +256,19 @@ void AApEnergyLinkSubsystem::EnergyLinkTick(float deltaTime) {
 }
 
 double AApEnergyLinkSubsystem::ProcessLocalStorage() {
-	uint64 wholeIntsToSend = 0;
-	double returnValue = 0.0f;
+	int64 wholeIntsToSend = 0;
+	double returnValue;
 
 	{
 		UE::TScopeLock<FCriticalSection> lock(localStorageLock);
 
-		if (localAvailableMegaJoule <= 0 && serverAvailableMegaWattHour == 0) {
+		if (localAvailableMegaJoule <= 0 && FMath::IsNearlyZero(serverAvailableMegaWattHour)) {
 			localAvailableMegaJoule = 0.0f; //trip powah
 			returnValue = 0.0f;
 		}
 		else if (localAvailableMegaJoule != 0.0f) {
-			wholeIntsToSend = static_cast<uint64>(localAvailableMegaJoule * ENERYLINK_DEPOSIT_REDUCTION_FACTOR);
+			const double reducedMegaJoule = localAvailableMegaJoule * ENERYLINK_DEPOSIT_REDUCTION_FACTOR;
+			wholeIntsToSend = static_cast<int64>(FMath::TruncToDouble(reducedMegaJoule));
 
 			localAvailableMegaJoule -= wholeIntsToSend * (1 / ENERYLINK_DEPOSIT_REDUCTION_FACTOR);
 
@@ -296,8 +297,8 @@ void AApEnergyLinkSubsystem::SendEnergyToServer(uint64 amountMegaJoule) const {
 }
 
 TArray<FApGraphInfo> AApEnergyLinkSubsystem::GetEnergyLinkGraphs(UFGPowerCircuit* circuit) const {
-	const FLinearColor circuitChargeColor(0.2f, 0.5f, 0.1f);
-	const FLinearColor circuitDrainColor(1.0f, 0.2f, 0.1f);
+	constexpr FLinearColor circuitChargeColor(0.2f, 0.5f, 0.1f);
+	constexpr FLinearColor circuitDrainColor(1.0f, 0.2f, 0.1f);
 
 	TArray<FApGraphInfo> graphs;
 

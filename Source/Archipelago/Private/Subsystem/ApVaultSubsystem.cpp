@@ -215,35 +215,35 @@ void AApVaultSubsystem::UpdateItemAmount(const FString& key, const uint64* oldVa
 
 	uint64 newValue = *value;
 
-	uint64& adjustedAmount = personal ? personalAdjustedItemAmounts.FindOrAdd(itemClass) : globalAdjustedItemAmounts.FindOrAdd(itemClass);
-	int64& pendingAdjustment = personal ? pendingPersonalAdjustments.FindOrAdd(itemClass) : pendingGlobalAdjustments.FindOrAdd(itemClass);
+	int64 change;
+	const uint64 previousValue = oldValue ? *oldValue : 0;
+
+	if (newValue >= previousValue)
+	{
+		const uint64 delta = newValue - previousValue;
+		change = delta > static_cast<uint64>(INT64_MAX)
+			? INT64_MAX
+			: static_cast<int64>(delta);
+	}
+	else
+	{
+		const uint64 delta = previousValue - newValue;
+		change = delta > static_cast<uint64>(INT64_MAX)
+			? INT64_MIN
+			: -static_cast<int64>(delta);
+	}
 
 	{
 		FScopeLock lock(adjustmentsLocks[itemClass].Get());
 
+		uint64& adjustedAmount = personal ? personalAdjustedItemAmounts.FindOrAdd(itemClass) : globalAdjustedItemAmounts.FindOrAdd(itemClass);
+		int64& pendingAdjustment = personal ? pendingPersonalAdjustments.FindOrAdd(itemClass) : pendingGlobalAdjustments.FindOrAdd(itemClass);
+
 		// update pending adjustments if this callback is in response to our periodic sync
 		if (slot == connectionInfoSubsystem->GetCurrentPlayerSlot())
 		{
-			const uint64 previousValue = oldValue ? *oldValue : 0;
-
 			if (newValue == previousValue)
 				return;
-
-			int64 change;
-			if (newValue >= previousValue)
-			{
-				const uint64 delta = newValue - previousValue;
-				change = delta > static_cast<uint64>(INT64_MAX)
-					? INT64_MAX
-					: static_cast<int64>(delta);
-			}
-			else
-			{
-				const uint64 delta = previousValue - newValue;
-				change = delta > static_cast<uint64>(INT64_MAX)
-					? INT64_MIN
-					: -static_cast<int64>(delta);
-			}
 
 			pendingAdjustment -= change;
 		}
@@ -264,6 +264,17 @@ void AApVaultSubsystem::UpdateItemAmount(const FString& key, const uint64* oldVa
 	}
 
 	UpdateDepotAmount(itemClass, personal);
+
+	if (slot != connectionInfoSubsystem->GetCurrentPlayerSlot() && change > 0)
+	{
+		constexpr FLinearColor vaultMessageColor(0.08f, 0.67f, 0.11f);
+		FString sender = playerInfoSubsystem->GetPlayerName(FApPlayer(connectionInfoSubsystem->GetCurrentPlayerTeam(), slot));
+		FString itemName = mappingSubsystem->ItemClassToItemId.Contains(itemClass)
+			? mappingSubsystem->ItemIdToName[mappingSubsystem->ItemClassToItemId[itemClass]]
+			: UFGItemDescriptor::GetItemName(itemClass).ToString();
+		FString message = FString::Printf(TEXT("%s send %lli %s into your Personal Vault"), *sender, change, *itemName);
+		ap->SendChatMessage(EApMessageType::VaultReceived, message, vaultMessageColor);
+	}
 }
 
 void AApVaultSubsystem::SetupPersonalVault()

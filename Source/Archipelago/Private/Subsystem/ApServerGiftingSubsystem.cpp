@@ -43,6 +43,7 @@ void AApServerGiftingSubsystem::BeginPlay() {
 		mappingSubsystem = AApMappingsSubsystem::Get(world);
 		giftTraitsSubsystem = AApGiftTraitsSubsystem::Get(world);
 		vaultSubsystem = AApVaultSubsystem::Get(world);
+		playerInfoSubsystem = AApPlayerInfoSubsystem::Get(world);
 	}
 }
 
@@ -52,13 +53,14 @@ void AApServerGiftingSubsystem::Tick(float dt) {
 	if (!apInitialized) {
 		if (connectionInfoSubsystem->GetConnectionState() == EApConnectionState::Connected
 			&& giftTraitsSubsystem->HasLoadedItemTraits()
-			&& mappingSubsystem->HasLoadedItemNameMappings())
+			&& mappingSubsystem->HasLoadedItemNameMappings()
+			&& playerInfoSubsystem->IsInitialized())
 		{
 			static const UEnum* giftTraitEnum = StaticEnum<EGiftTrait>();
 
 			TSet<FString> allTraits;
 			for (int32 i = 0; i < (giftTraitEnum->NumEnums() - 1); i++)
-					allTraits.Add(giftTraitEnum->GetNameStringByIndex(i));
+				allTraits.Add(giftTraitEnum->GetNameStringByIndex(i));
 
 			ap->SetGiftBoxState(true, allTraits);
 
@@ -77,6 +79,13 @@ void AApServerGiftingSubsystem::Tick(float dt) {
 	}
 
 	ProcessInputQueue();
+
+	if (pullMore)
+	{
+		FString giftboxKey = FString::Format(TEXT("GiftBox;{0};{1}"), { connectionInfoSubsystem->GetCurrentPlayerTeam(), connectionInfoSubsystem->GetCurrentPlayerSlot() });
+		ap->TickleDataStorageKey(giftboxKey);
+		pullMore = false;
+	}
 }
 
 void AApServerGiftingSubsystem::PullAllGiftsAsync(const FString& key, const TSharedRef<FJsonValue>& oldValueJson, const TSharedRef<FJsonValue>& newValueJson, int slot) {
@@ -86,9 +95,15 @@ void AApServerGiftingSubsystem::PullAllGiftsAsync(const FString& key, const TSha
 	if (!newValueJson->TryGetObject(newValueObject))
 		return;
 
+	int count = 0;
 	TArray<FApGift> gifts;
 	for (const TPair<FString, TSharedPtr<FJsonValue>>& giftJson : (*newValueObject)->Values) {
 		UE_LOGFMT(LogApServerGiftingSubsystem, Display, "AApServerGiftingSubsystem::PullAllGiftsAsync() received gift {0}", *giftJson.Key);
+
+		if (++count > 50) {
+			UE_LOG(LogApServerGiftingSubsystem, Warning, TEXT("AApServerGiftingSubsystem::PullAllGiftsAsync() More than 50 gifts in the gift box, skipping the rest"));
+			break;
+		}
 
 		TSharedPtr<FJsonObject>* giftObjectPtr;
 		if (!giftJson.Value->TryGetObject(giftObjectPtr))
@@ -99,7 +114,7 @@ void AApServerGiftingSubsystem::PullAllGiftsAsync(const FString& key, const TSha
 
 		FApGift gift;
 		gift.Id = *giftJson.Key;
-		
+
 		if (!(*giftObjectPtr)->TryGetStringField(TEXT("item_name"), gift.ItemName))
 		{
 			UE_LOGFMT(LogApServerGiftingSubsystem, Error, "AApServerGiftingSubsystem::PullAllGiftsAsync() Failed to parse item_name for gift {0}", *giftJson.Key);
@@ -220,10 +235,16 @@ void AApServerGiftingSubsystem::PullAllGiftsAsync(const FString& key, const TSha
 		}
 
 		if (itemClass != nullptr) {
-			if (!itemsToAccepted.Contains(itemClass))
-				itemsToAccepted.Add(itemClass, gift.Amount);
-			else
-				itemsToAccepted[itemClass] += gift.Amount;
+			int& amount = itemsToAccepted.FindOrAdd(itemClass);
+			amount += gift.Amount;
+
+			constexpr FLinearColor giftMessageColor(0.82f, 0.71f, 0.041f);
+			FString sender = playerInfoSubsystem->GetPlayerName(gift.Sender);
+			FString itemName = mappingSubsystem->ItemClassToItemId.Contains(itemClass)
+				? mappingSubsystem->ItemIdToName[mappingSubsystem->ItemClassToItemId[itemClass]]
+				: UFGItemDescriptor::GetItemName(itemClass).ToString();
+			FString message = FString::Printf(TEXT("Accepted gift from %s of %i %s that turned into %i %s"), *sender, gift.Amount, *gift.ItemName, amount, *itemName);
+			ap->SendChatMessage(EApMessageType::GiftsReceived, message, giftMessageColor);
 		}
 		else {
 			UE_LOG(LogApServerGiftingSubsystem, Display, TEXT("AApServerGiftingSubsystem::PullAllGiftsAsync() rejecting gift(%s)"), *gift.Id);
@@ -245,6 +266,9 @@ void AApServerGiftingSubsystem::PullAllGiftsAsync(const FString& key, const TSha
 	}
 
 	ap->ProcessGifts(giftsToAccept, giftsToReject);
+
+	if (count >= 50)
+		pullMore = true;
 }
 
 void AApServerGiftingSubsystem::UpdatedProcessedIds(TArray<FApGift>& gifts) {

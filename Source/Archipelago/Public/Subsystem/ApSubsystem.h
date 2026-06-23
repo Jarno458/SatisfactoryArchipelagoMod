@@ -122,6 +122,7 @@ public:
 	void SetGiftBoxState(bool open, const TSet<FString>& acceptedTraits) const;
 	void SendGift(const FApGift& giftToSend) const;
 	void ProcessGifts(const TSet<FString>& acceptedIds, const TArray<FApGift>& rejectedGifts) const;
+	void TickleDataStorageKey(const FString& key) const;
 	//
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
@@ -156,6 +157,10 @@ public:
 
 	void EnableDeathLink() const;
 	void TriggerDeathLink(FString source, FString cause);
+
+	// TODO do we want to keep this around or call AApMessagingSubsystem::DisplayMessage directly?
+	void SendChatMessage(const FString& Message, const FLinearColor& Color) const;
+	void SendChatMessage(EApMessageType type, const FString& Message, const FLinearColor& Color) const;
 
 private:
 	AApConnectionInfoSubsystem* connectionInfoSubsystem;
@@ -214,10 +219,6 @@ private:
 	void CallDataStorageCallbackForRetrieved(FString key, const TSharedPtr<FJsonValue> json);
 	void CallDataStorageCallbackForSetReply(FString key, const TSharedPtr<FJsonValue>& originalValue, const TSharedPtr<FJsonValue>& value, int slot);
 	 //
-
-    // TODO do we want to keep this around or call AApMessagingSubsystem::DisplayMessage directly?
-	void SendChatMessage(const FString& Message, const FLinearColor& Color) const;
-	void SendChatMessage(EApMessageType type, const FString& Message, const FLinearColor& Color) const;
 
 	template<typename RetType>
 	RetType CallOnGameThread(TFunction<RetType()> InFunction) const;

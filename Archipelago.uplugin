@@ -1,8 +1,8 @@
 {
 	"FileVersion": 3,
 	"Version": 2,
-	"VersionName": "2.4.2",
-	"SemVersion": "2.4.2",
+	"VersionName": "2.4.5",
+	"SemVersion": "2.4.5",
 	"FriendlyName": "Archipelago",
 	"Description": "Provides connection to an Archipelago multiworld",
 	"Category": "Modding",
@@ -54,7 +54,7 @@
 		{
 			"Name": "AdditionalDepots",
 			"Enabled": true,
-			"SemVersion": "^1.1.0"
+			"SemVersion": "^1.1.1"
 		},
 		{
 			"Name": "FreeSamples",

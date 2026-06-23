@@ -1221,6 +1221,18 @@ void AApSubsystem::ProcessGifts(const TSet<FString>& acceptedIds, const TArray<F
 	Send(packets);
 }
 
+void AApSubsystem::TickleDataStorageKey(const FString& key) const
+{
+	TArray<TSharedPtr<FJsonValue>> operations;
+
+	TSharedRef<FJsonObject> setCmd = MakeShared<FJsonObject>();
+	setCmd->SetStringField("cmd", "Set");
+	setCmd->SetStringField("key", key);
+	setCmd->SetArrayField("operations", operations);
+
+	Send(setCmd);
+}
+
 TMap<FApPlayer, TTuple<FString, FString>> AApSubsystem::GetAllApPlayers() const {
 	std::vector<AP_NetworkPlayer> apPlayers =
 		CallOnGameThread<std::vector<AP_NetworkPlayer>>([]() { return AP_GetAllPlayers(); });

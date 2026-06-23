@@ -35,7 +35,9 @@ public:
 private:
 	const float pollInterfall = 10.0f;
 
-	bool apInitialized;
+	bool pullMore = false;
+
+	bool apInitialized = false;
 
 	TMap<FApPlayer, TSharedPtr<TQueue<FItemAmount, EQueueMode::Mpsc>>> InputQueue;
 
@@ -46,6 +48,7 @@ private:
 	AApMappingsSubsystem* mappingSubsystem;
 	AApGiftTraitsSubsystem* giftTraitsSubsystem;
 	AApVaultSubsystem* vaultSubsystem;
+	AApPlayerInfoSubsystem* playerInfoSubsystem;
 
 public:
 	void EnqueueForSending(FApPlayer targetPlayer, FItemAmount itemStack);

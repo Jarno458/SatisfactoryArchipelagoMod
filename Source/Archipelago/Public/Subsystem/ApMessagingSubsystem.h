@@ -15,6 +15,8 @@ enum class EApMessageType : uint8 {
 	Hint UMETA(DisplayName = "Hint"),
 	Countdown UMETA(DisplayName = "Countdown"),
 	Other UMETA(DisplayName = "Other"),
+	GiftsReceived UMETA(DisplayName = "Gifts Received"),
+	VaultReceived UMETA(DisplayName = "Vault Item Received")
 };
 
 

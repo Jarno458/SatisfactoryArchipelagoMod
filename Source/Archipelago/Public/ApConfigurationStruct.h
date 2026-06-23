@@ -33,6 +33,12 @@ public:
     UPROPERTY(BlueprintReadWrite)
     bool HintMessages{};
 
+    UPROPERTY(BlueprintReadWrite)
+    bool GiftMessages{};
+
+    UPROPERTY(BlueprintReadWrite)
+    bool VaultMessages{};
+
 	 /* Retrieves active configuration value and returns object of this struct containing it */
     static FApConfigurationStruct GetActiveConfig(UWorld* WorldContext) {
         FApConfigurationStruct ConfigStruct{};
