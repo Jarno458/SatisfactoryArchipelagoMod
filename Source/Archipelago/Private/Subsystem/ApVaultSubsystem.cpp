@@ -265,7 +265,7 @@ void AApVaultSubsystem::UpdateItemAmount(const FString& key, const uint64* oldVa
 
 	UpdateDepotAmount(itemClass, personal);
 
-	if (slot != connectionInfoSubsystem->GetCurrentPlayerSlot() && change > 0)
+	if (personal && slot != connectionInfoSubsystem->GetCurrentPlayerSlot() && change > 0)
 	{
 		constexpr FLinearColor vaultMessageColor(0.08f, 0.67f, 0.11f);
 		FString sender = playerInfoSubsystem->GetPlayerName(FApPlayer(connectionInfoSubsystem->GetCurrentPlayerTeam(), slot));
