@@ -2,7 +2,7 @@
 
 The vault protocol serves as a shared inventory buffer, where anyone can dump some of their excess items and thereby making them available for other players to use
 
-## V 0.8 Beta, its currently under discussion ands improves can still be made
+## V 1 is released and currently in use in Satisfactory
 
 ### Its not Gifting
 The Vault protocol and the [Gifting API](<https://github.com/agilbert1412/Archipelago.Gifting.Net/blob/main/Documentation/Gifting%20API.md>) share a similar goal where you can make some of you items available to other players but both protocols achieve this in their own way with their own pro's and cons
@@ -44,13 +44,13 @@ Be aware some keys will have a value of `null` if there never was an item with t
 ## Global vault (level 1)
 ### Storing items to a vault
 Storing items to the vault is as simple as incrementing the key corresponding to the item name and vault.  
-Make sure the value never exceeds an 64 bit interger (9223372036854775807).  
+Make sure the value never exceeds an unsinged 64 bit interger (18446744073709551615).  
 Item names are in lowercase.  
 If you plan to add multiple instances of the same item to the same vault, its best to cache them locally and only send them to the server in bulk to preserve bandwidth.  
 So if we want to add a 4 shotgun to the global vault we would do it like this:
 ```json
 // (In this example your Team = 1, your Slot = 3, global vault Slot = 0)
-{"cmd": "Set", "key": "V1:0:shotgun", "operations": [{"operation": "add", "value": 4}, {"operation": "min", "value": 9223372036854775807}]}
+{"cmd": "Set", "key": "V1:0:shotgun", "operations": [{"operation": "add", "value": 4}, {"operation": "min", "value": 18446744073709551615}]}
 ```
 We don't have to specify any default, as the default value will default to `0` anyway.
 
@@ -109,7 +109,7 @@ Here is an example for how this could look for Timespinner:
 
 ## Setting up personal vault with item traits (Level 3)
 The more complete and complex way of supporting a personal vault with item traits for cross game compatability requires you to setup gifting item trait per item.  
-Traits allow the sending game to decide a good enough match for an item in their game to add it to your personal vault under a different item name that your game understands. For simplicity the traits follow the same guidelines are those for the [Gifting API](<https://github.com/agilbert1412/Archipelago.Gifting.Net/blob/main/Documentation/Gifting%20API.md#gifttrait-specification>) so games don't have to maintain duplicate lists.  
+Traits allow the sending game to decide a good enough match for an item in their game to add it to your personal vault under a different item name that your game understands. For simplicity the traits follow the same guidelines are those for the [Gifting API](<https://github.com/agilbert1412/Archipelago.Gifting.Net/blob/main/Documentation/Gifting%20API.md#gifttrait-specification>) so games don't have to maintain duplicate lists. Unlike gifting the vault protocol only uses a single float value per trait/
 This is done by storing and object with the lowercase item names as keys and item traits as values.  
 The item namnes object is stored in the data storage under a key named with your game prefixed by a V.  
 The object should be a dictionary for lowercase item names, to specify traits for an item, its value should be quality value corresponding to the trait. For example a normal item of wood could have the `wood` trait with value 1.0, while an item that is made out of twice as expansive wood can have a `wood` trait value of 2.0
@@ -118,8 +118,8 @@ Here is an example for how this setup could look for Satisfactory:
 ```json
 {"cmd": "Set", "key": "VSatisfactory", "operations": [{"operation": "replace", "value": { 
     "iron ore": {"Iron": 0.856, "Ore": 0.856, "Mineral": 1},
-    "golden nut statue": {"Gold": [2.56]},
-    "medical inhaler": {"Healing": [1.0, 0.5]},
+    "golden nut statue": {"Gold": 2.56},
+    "medical inhaler": {"Healing": 1.0},
 }}]}
 ```
 
@@ -131,9 +131,9 @@ Your game should only take items that you know, so you can just check the vaults
 
 ## Storing items to the an personal vault
 Storing items to a personal vault is the same as the global vault, however it makes no sense to store items to a personal vault that the game of that slot does not know how to process. 
-Just like with global vault, make sure the value never exceeds an 64 bit interger (9223372036854775807).  
+Just like with global vault, make sure the value never exceeds an 64 bit interger (18446744073709551615).  
 Therefor before adding anything to a personal vault, we first need to check what item names the target slots its game can receive as described abonve in [Checking what games support personal vaults](#checking-what-games-support-personal-vaults).
 If the results is `null` that slot does not support a personal vault so you cant store an item there, maybe you can store it in global vault instead.  
 If the result is an array, then make sure any item name you try to store in that personal vault as in that array as those are the only item names that slot can process.  
 If the result is an object, then make sure any item name you try to store in that personal vault corresponds to an key on the object.  
-If the result is an object ideally you should at look the traits of each item, try make an educated guess on what item would be the best match in the target game. The simplest way to find the best matching item is to define traits for your own game item and then find the item in the target get with the most matching traits, and if there is a tie for multiple items, check each trait's `quality` and `duration` for the item that has the least deviation from your own game item. 
+If the result is an object ideally you should at look the traits of each item, try make an educated guess on what item would be the best match in the target game. The simplest way to find the best matching item is to define traits for your own game item and then find the item in the target get with the most matching traits, and if there is a tie for multiple items, check each trait's float value for the item that has the least deviation from your own game item. 
