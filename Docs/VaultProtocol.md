@@ -2,7 +2,7 @@
 
 The vault protocol serves as a shared inventory buffer, where anyone can dump some of their excess items and thereby making them available for other players to use
 
-## V 1 is released and currently in use in Satisfactory
+## V1 is released and currently in use in Satisfactory
 
 ### Its not Gifting
 The Vault protocol and the [Gifting API](<https://github.com/agilbert1412/Archipelago.Gifting.Net/blob/main/Documentation/Gifting%20API.md>) share a similar goal where you can make some of you items available to other players but both protocols achieve this in their own way with their own pro's and cons
