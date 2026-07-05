@@ -98,9 +98,9 @@ void AApSchematicPatcherSubsystem::TryInitialize() {
 	if (connectionInfo) //sometimes they are already avaialble before this subsystem is avaiable itzelf
 		connectionInfoSubsustemAvailable = true;
 
-	slotDataSubsystem = AApSlotDataSubsystem::Get(world);
-	if (slotDataSubsystem) //sometimes they are already avaialble before this subsystem is avaiable itzelf
-		slotDataSubsystemAvailable = true;
+	//slotDataSubsystem = AApServerSlotDataSubsystem::Get(world);
+	//if (slotDataSubsystem) //sometimes they are already avaialble before this subsystem is avaiable itzelf
+	//	slotDataSubsystemAvailable = true;
 
 	if (!HasAuthority() && (!baseGameSubsystemsAvailable || !connectionInfoSubsustemAvailable || !slotDataSubsystemAvailable))
 		return;
@@ -110,7 +110,7 @@ void AApSchematicPatcherSubsystem::TryInitialize() {
 	contentLibSubsystem = world->GetGameInstance()->GetSubsystem<UContentLibSubsystem>();
 	fgcheck(contentLibSubsystem)
 	fgcheck(connectionInfo);
-	fgcheck(slotDataSubsystem);
+	//fgcheck(slotDataSubsystem);
 	mappingSubsystem = AApMappingsSubsystem::Get(world);
 	fgcheck(mappingSubsystem)
 	RManager = AFGResearchManager::Get(world);

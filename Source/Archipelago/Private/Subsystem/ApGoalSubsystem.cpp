@@ -36,7 +36,7 @@ void AApGoalSubsystem::BeginPlay() {
 
 	ap = AApSubsystem::Get(world);
 	connectionInfoSubsystem = AApConnectionInfoSubsystem::Get(world);
-	slotData = AApSlotDataSubsystem::Get(world);
+	slotData = AApServerSlotDataSubsystem::Get(world);
 
 	AApSchematicPatcherSubsystem* schematicPatcher = AApSchematicPatcherSubsystem::Get(world);
 	explorationGoalSchematic = schematicPatcher->GetExplorationSchematic();

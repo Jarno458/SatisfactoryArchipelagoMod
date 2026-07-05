@@ -42,7 +42,7 @@ void AApPlayerSubsystem::BeginPlay() {
 
 	ap = AApSubsystem::Get(world);
 	fgcheck(ap);
-	slotData = AApSlotDataSubsystem::Get(world);
+	slotData = AApServerSlotDataSubsystem::Get(world);
 	fgcheck(slotData);
 }
 

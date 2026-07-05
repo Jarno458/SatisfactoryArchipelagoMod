@@ -583,7 +583,7 @@ void AApSubsystem::CheckConnectionState() const {
 				connectionInfoSubsystem->currentPlayerSlot = AP_GetPlayerID();
 				connectionInfoSubsystem->ConnectionState = EApConnectionState::Connected;
 
-				AApSlotDataSubsystem* slotDataSubsystem = AApSlotDataSubsystem::Get(GetWorld());
+				AApServerSlotDataSubsystem* slotDataSubsystem = AApServerSlotDataSubsystem::Get(GetWorld());
 				fgcheck(slotDataSubsystem);
 
 				//TODO: i dont like this dependency graph where ApSubsystem depends on ApSlotDataSubsystem which depends on ApSubsystem

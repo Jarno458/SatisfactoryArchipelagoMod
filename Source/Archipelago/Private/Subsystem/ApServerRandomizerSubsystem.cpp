@@ -51,7 +51,7 @@ void AApServerRandomizerSubsystem::DispatchLifecycleEvent(ELifecyclePhase phase,
 		fgcheck(ap);
 		connectionInfo = AApConnectionInfoSubsystem::Get(world);
 		fgcheck(connectionInfo);
-		slotData = AApSlotDataSubsystem::Get(world);
+		slotData = AApServerSlotDataSubsystem::Get(world);
 		fgcheck(slotData);
 		mappingSubsystem = AApMappingsSubsystem::Get(world);
 		fgcheck(mappingSubsystem)

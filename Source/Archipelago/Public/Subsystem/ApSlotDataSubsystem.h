@@ -141,12 +141,12 @@ public:
 };
 
 UCLASS()
-class ARCHIPELAGO_API AApSlotDataSubsystem : public AModSubsystem, public IFGSaveInterface
+class ARCHIPELAGO_API AApServerSlotDataSubsystem : public AModSubsystem, public IFGSaveInterface
 {
 	GENERATED_BODY()
 
 public:
-	AApSlotDataSubsystem();
+	AApServerSlotDataSubsystem();
 
 	virtual void BeginPlay() override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
@@ -163,9 +163,9 @@ public:
 
 public:
 	// Get subsystem. Server-side only, null on clients
-	static AApSlotDataSubsystem* Get(class UWorld* world);
+	static AApServerSlotDataSubsystem* Get(class UWorld* world);
 	UFUNCTION(BlueprintPure, Category = "Schematic", DisplayName = "Get Archipelago Slot Data Subsystem", Meta = (DefaultToSelf = "worldContext"))
-	static AApSlotDataSubsystem* Get(UObject* worldContext);
+	static AApServerSlotDataSubsystem* Get(UObject* worldContext);
 
 	UFUNCTION(BlueprintCallable)
 	bool HasLoadedSlotData();

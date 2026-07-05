@@ -11,39 +11,39 @@ DEFINE_LOG_CATEGORY(LogApSlotDataSubsystem);
 #define LOCTEXT_NAMESPACE "Archipelago"
 #define EXPECTED_SLOTDATA_VERSION 1
 
-AApSlotDataSubsystem::AApSlotDataSubsystem() {
+AApServerSlotDataSubsystem::AApServerSlotDataSubsystem() {
 	PrimaryActorTick.bCanEverTick = false;
 	PrimaryActorTick.bStartWithTickEnabled = false;
 
 	ReplicationPolicy = ESubsystemReplicationPolicy::SpawnOnServer_Replicate;
 }
 
-AApSlotDataSubsystem* AApSlotDataSubsystem::Get(UObject* worldContext) {
+AApServerSlotDataSubsystem* AApServerSlotDataSubsystem::Get(UObject* worldContext) {
 	UWorld* world = GEngine->GetWorldFromContextObject(worldContext, EGetWorldErrorMode::Assert);
 
 	return Get(world);
 }
 
-AApSlotDataSubsystem* AApSlotDataSubsystem::Get(UWorld* world) {
+AApServerSlotDataSubsystem* AApServerSlotDataSubsystem::Get(UWorld* world) {
 	USubsystemActorManager* SubsystemActorManager = world->GetSubsystem<USubsystemActorManager>();
 	fgcheck(SubsystemActorManager);
 
-	return SubsystemActorManager->GetSubsystemActor<AApSlotDataSubsystem>();
+	return SubsystemActorManager->GetSubsystemActor<AApServerSlotDataSubsystem>();
 }
 
-void AApSlotDataSubsystem::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const {
+void AApServerSlotDataSubsystem::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	FDoRepLifetimeParams replicationParams;
 	replicationParams.bIsPushBased = true;
 
-	DOREPLIFETIME_WITH_PARAMS_FAST(AApSlotDataSubsystem, hubCostEntriesReplicated, replicationParams);
-	DOREPLIFETIME_WITH_PARAMS_FAST(AApSlotDataSubsystem, replicatedExplorationCost, replicationParams);
-	DOREPLIFETIME_WITH_PARAMS_FAST(AApSlotDataSubsystem, starterRecipeIds, replicationParams);
-	DOREPLIFETIME(AApSlotDataSubsystem, Goals);
+	DOREPLIFETIME_WITH_PARAMS_FAST(AApServerSlotDataSubsystem, hubCostEntriesReplicated, replicationParams);
+	DOREPLIFETIME_WITH_PARAMS_FAST(AApServerSlotDataSubsystem, replicatedExplorationCost, replicationParams);
+	DOREPLIFETIME_WITH_PARAMS_FAST(AApServerSlotDataSubsystem, starterRecipeIds, replicationParams);
+	DOREPLIFETIME(AApServerSlotDataSubsystem, Goals);
 }
 
-void AApSlotDataSubsystem::BeginPlay() {
+void AApServerSlotDataSubsystem::BeginPlay() {
 	Super::BeginPlay();
 
 	if (!hasLoadedSlotData || !hasLoadedExplorationData) {
@@ -51,7 +51,7 @@ void AApSlotDataSubsystem::BeginPlay() {
 	}
 }
 
-bool AApSlotDataSubsystem::HasLoadedSlotData() {
+bool AApServerSlotDataSubsystem::HasLoadedSlotData() {
 	slotDataState = EApSlotDataState::NotLoaded;
 
 	if (hasLoadedSlotData && hasLoadedExplorationData) {
@@ -80,7 +80,7 @@ bool AApSlotDataSubsystem::HasLoadedSlotData() {
 	return slotDataState == EApSlotDataState::Ready;
 }
 
-EApSlotDataState AApSlotDataSubsystem::TryLoadSlotDataFromServer(FString slotDataJson) {
+EApSlotDataState AApServerSlotDataSubsystem::TryLoadSlotDataFromServer(FString slotDataJson) {
 	hasLoadedSlotData = false;
 	hasLoadedExplorationData = false;
 
@@ -135,7 +135,7 @@ EApSlotDataState AApSlotDataSubsystem::TryLoadSlotDataFromServer(FString slotDat
 		tierNumber++;
 	}
 	hubCostEntriesReplicated = parsedHubCostEntries;
-	MARK_PROPERTY_DIRTY_FROM_NAME(AApSlotDataSubsystem, hubCostEntriesReplicated, this);
+	MARK_PROPERTY_DIRTY_FROM_NAME(AApServerSlotDataSubsystem, hubCostEntriesReplicated, this);
 	ReconstructHubLayout();
 
 	TArray<FApReplicatedCostAmount> parsedExplorationCosts;
@@ -147,7 +147,7 @@ EApSlotDataState AApSlotDataSubsystem::TryLoadSlotDataFromServer(FString slotDat
 		parsedExplorationCosts.Add(FApReplicatedCostAmount(itemId, amount));
 	}
 	replicatedExplorationCost = parsedExplorationCosts;
-	MARK_PROPERTY_DIRTY_FROM_NAME(AApSlotDataSubsystem, replicatedExplorationCost, this);
+	MARK_PROPERTY_DIRTY_FROM_NAME(AApServerSlotDataSubsystem, replicatedExplorationCost, this);
 	ReconstructExplorationCost();
 
 	TSharedPtr<FJsonObject> options = dataJson->GetObjectField(TEXT("Options"));
@@ -160,7 +160,7 @@ EApSlotDataState AApSlotDataSubsystem::TryLoadSlotDataFromServer(FString slotDat
 		starting_items_array[i]->TryGetNumber(itemId);
 		starterRecipeIds[i] = itemId;
 	}
-	MARK_PROPERTY_DIRTY_FROM_NAME(AApSlotDataSubsystem, starterRecipeIds, this);
+	MARK_PROPERTY_DIRTY_FROM_NAME(AApServerSlotDataSubsystem, starterRecipeIds, this);
 
 	//using Try methods as it allow for unsinged ints
 	int goalRequirement = options->GetIntegerField(TEXT("GoalRequirement"));
@@ -204,7 +204,7 @@ EApSlotDataState AApSlotDataSubsystem::TryLoadSlotDataFromServer(FString slotDat
 	return EApSlotDataState::Ready;
 }
 
-void AApSlotDataSubsystem::ReconstructHubLayout() {
+void AApServerSlotDataSubsystem::ReconstructHubLayout() {
 	//reconstruct hubLayout based on saved HubCostEntries
 	if (!hubCostEntriesReplicated.IsEmpty()) {
 		for (const FApReplicatedHubLayoutEntry& hubCostEntry : hubCostEntriesReplicated) {
@@ -224,7 +224,7 @@ void AApSlotDataSubsystem::ReconstructHubLayout() {
 	}
 }
 
-void AApSlotDataSubsystem::ReconstructExplorationCost() {
+void AApServerSlotDataSubsystem::ReconstructExplorationCost() {
 	if (!replicatedExplorationCost.IsEmpty()) {
 		for (const FApReplicatedCostAmount& costEntry : replicatedExplorationCost) {
 			explorationCosts.Add(costEntry.GetItemId(), costEntry.GetAmount());
@@ -234,7 +234,7 @@ void AApSlotDataSubsystem::ReconstructExplorationCost() {
 	}
 }
 
-const TMap<int64, int> AApSlotDataSubsystem::GetCostsForMilestone(int tier, int milestone) {
+const TMap<int64, int> AApServerSlotDataSubsystem::GetCostsForMilestone(int tier, int milestone) {
 	int8 correctedTier = tier - 1;
 	int8 correctedMilestone = milestone - 1;
 
@@ -249,15 +249,15 @@ const TMap<int64, int> AApSlotDataSubsystem::GetCostsForMilestone(int tier, int 
 	}
 }
 
-const TMap<int64, int> AApSlotDataSubsystem::GetExplorationGoalCosts() {
+const TMap<int64, int> AApServerSlotDataSubsystem::GetExplorationGoalCosts() {
 	return explorationCosts;
 }
 
-int AApSlotDataSubsystem::GetNumberOfHubTiers() {
+int AApServerSlotDataSubsystem::GetNumberOfHubTiers() {
 	return hubLayout.Num();
 }
 
-int AApSlotDataSubsystem::GetNumberOfMilestonesForTier(int tier) {
+int AApServerSlotDataSubsystem::GetNumberOfMilestonesForTier(int tier) {
 	int8 correctedTier = tier - 1;
 
 	if (correctedTier <= (hubLayout.Num() - 1)) {
@@ -267,12 +267,12 @@ int AApSlotDataSubsystem::GetNumberOfMilestonesForTier(int tier) {
 	return 0;
 }
 
-TArray<int64> AApSlotDataSubsystem::GetStarterRecipeIds() {
+TArray<int64> AApServerSlotDataSubsystem::GetStarterRecipeIds() {
 	return starterRecipeIds;
 }
 
 // is also fired when loading a fresh save
-void AApSlotDataSubsystem::PostLoadGame_Implementation(int32 saveVersion, int32 gameVersion) {
+void AApServerSlotDataSubsystem::PostLoadGame_Implementation(int32 saveVersion, int32 gameVersion) {
 	UE_LOG(LogApSlotDataSubsystem, Display, TEXT("AApSlotDataSubsystem::PostLoadGame_Implementation(saveVersion: %i, gameVersion: %i)"), saveVersion, gameVersion);
 
 	ReconstructHubLayout();

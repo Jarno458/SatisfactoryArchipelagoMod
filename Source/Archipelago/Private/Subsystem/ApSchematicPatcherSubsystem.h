@@ -174,7 +174,7 @@ private:
 	UPROPERTY(ReplicatedUsing = OnRep_ConnectionInfoAvailable)
 	AApConnectionInfoSubsystem* connectionInfo;
 	UPROPERTY(ReplicatedUsing = OnRep_SlotDataAvailable)
-	AApSlotDataSubsystem* slotDataSubsystem;
+	//AApSlotDataSubsystem* slotDataSubsystem;
 
 	//on client available locally
 	AApMappingsSubsystem* mappingSubsystem;

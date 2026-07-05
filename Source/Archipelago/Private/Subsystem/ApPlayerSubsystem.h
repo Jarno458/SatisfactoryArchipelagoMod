@@ -27,7 +27,7 @@ public:
 
 private:
 	AApSubsystem* ap;
-	AApSlotDataSubsystem* slotData;
+	AApServerSlotDataSubsystem* slotData;
 
 	bool isInitialized = false;
 	bool canTriggerDeathlinks = false;

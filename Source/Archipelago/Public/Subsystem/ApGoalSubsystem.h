@@ -46,7 +46,7 @@ private:
 
 	AApSubsystem* ap;
 	AApConnectionInfoSubsystem* connectionInfoSubsystem;
-	AApSlotDataSubsystem* slotData;
+	AApServerSlotDataSubsystem* slotData;
 
 	TSubclassOf<class UFGSchematic> explorationGoalSchematic;
 	TSubclassOf<class UFGSchematic> finalFicsmasSchematic;

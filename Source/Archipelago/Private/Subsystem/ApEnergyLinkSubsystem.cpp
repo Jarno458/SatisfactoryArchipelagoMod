@@ -91,7 +91,7 @@ void AApEnergyLinkSubsystem::Tick(float DeltaTime) {
 	if (energyLinkState == EApEnergyLinkState::Initializing) {
 		UWorld* world = GetWorld();
 
-		AApSlotDataSubsystem* slotDataSubsystem = AApSlotDataSubsystem::Get(world);
+		AApServerSlotDataSubsystem* slotDataSubsystem = AApServerSlotDataSubsystem::Get(world);
 		AApConnectionInfoSubsystem* apConnectionInfo = AApConnectionInfoSubsystem::Get(world);
 		AApServerRandomizerSubsystem* apRandoSubsystem = AApServerRandomizerSubsystem::Get(world);
 

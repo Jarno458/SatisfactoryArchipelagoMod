@@ -83,7 +83,7 @@ private:
 
 	AApSubsystem* ap;
 	AApConnectionInfoSubsystem* connectionInfo;
-	AApSlotDataSubsystem* slotData;
+	AApServerSlotDataSubsystem* slotData;
 	AApSchematicPatcherSubsystem* schematicPatcher;
 	AApPortalSubsystem* portalSubsystem;
 	AApVaultSubsystem* vaultSubsystem;
