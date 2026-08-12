@@ -39,7 +39,8 @@
 		{
 			"Name": "MAMTips",
 			"Enabled": true,
-			"SemVersion": ">=1.9.1"
+			"SemVersion": ">=1.9.1",
+			"optional": true
 		},
 		{
 			"Name": "FixClientResourceSinkPoints",
