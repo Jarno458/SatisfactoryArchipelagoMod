@@ -39,6 +39,7 @@ void AApSchematicPatcherSubsystem::GetLifetimeReplicatedProps(TArray<FLifetimePr
 	DOREPLIFETIME_WITH_PARAMS_FAST(AApSchematicPatcherSubsystem, replicatedMilestones, replicationParams);
 	DOREPLIFETIME_WITH_PARAMS_FAST(AApSchematicPatcherSubsystem, replicatedCollectedLocations, replicationParams);
 	DOREPLIFETIME_WITH_PARAMS_FAST(AApSchematicPatcherSubsystem, replicatedStarterRecipes, replicationParams);
+	DOREPLIFETIME_WITH_PARAMS_FAST(AApSchematicPatcherSubsystem, replicatedStarterRecipes, replicationParams);
 }
 
 void AApSchematicPatcherSubsystem::BeginPlay() {
@@ -79,13 +80,13 @@ void AApSchematicPatcherSubsystem::OnRep_ConnectionInfoAvailable() {
 	TryInitialize();
 }
 
-void AApSchematicPatcherSubsystem::OnRep_SlotDataAvailable() {
+/*void AApSchematicPatcherSubsystem::OnRep_SlotDataAvailable() {
 	UE_LOG(LogApSchematicPatcherSubsystem, Display, TEXT("AApSchematicPatcherSubsystem::OnRep_SlotDataAvailable()"));
 
 	slotDataSubsystemAvailable = true;
 
 	TryInitialize();
-}
+}*/
 
 void AApSchematicPatcherSubsystem::TryInitialize() {
 	UE_LOG(LogApSchematicPatcherSubsystem, Display, TEXT("AApSchematicPatcherSubsystem::TryInitialize()"));
@@ -102,7 +103,7 @@ void AApSchematicPatcherSubsystem::TryInitialize() {
 	//if (slotDataSubsystem) //sometimes they are already avaialble before this subsystem is avaiable itzelf
 	//	slotDataSubsystemAvailable = true;
 
-	if (!HasAuthority() && (!baseGameSubsystemsAvailable || !connectionInfoSubsustemAvailable || !slotDataSubsystemAvailable))
+	if (!HasAuthority() && (!baseGameSubsystemsAvailable || !connectionInfoSubsustemAvailable))
 		return;
 
 	UE_LOG(LogApSchematicPatcherSubsystem, Display, TEXT("AApSchematicPatcherSubsystem::Initialize()"));
@@ -129,7 +130,7 @@ void AApSchematicPatcherSubsystem::Tick(float DeltaTime) {
 		&& receivedItemInfos
 		&& receivedMilestones
 		&& receivedStarterRecipes
-		&& slotDataSubsystem->HasLoadedSlotData()) {
+		&& receivedSlotData) {
 
 		InitializeSchematicsBasedOnScoutedData();
 

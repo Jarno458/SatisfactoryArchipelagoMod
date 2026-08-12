@@ -209,11 +209,11 @@ public:
 	TArray<int64> starterRecipeIds;
 
 private:
-	UPROPERTY(SaveGame, ReplicatedUsing = ReconstructHubLayout)
+	UPROPERTY(SaveGame/*, ReplicatedUsing = ReconstructHubLayout*/)
 	TArray<FApReplicatedHubLayoutEntry> hubCostEntriesReplicated;
 	TArray<TArray<TMap<int64, int>>> hubLayout; //build based on hubCostEntries
 
-	UPROPERTY(SaveGame, ReplicatedUsing = ReconstructExplorationCost)
+	UPROPERTY(SaveGame/*, ReplicatedUsing = ReconstructExplorationCost*/)
 	TArray<FApReplicatedCostAmount> replicatedExplorationCost;
 	TMap<int64, int> explorationCosts; //build based on replicatedExplorationCost
 
@@ -256,9 +256,9 @@ public:
 private:
 	EApSlotDataState TryLoadSlotDataFromServer(FString json);
 
-	UFUNCTION() //required for event hookup
-	void ReconstructHubLayout();
+	//UFUNCTION() //required for event hookup
+	//void ReconstructHubLayout();
 
-	UFUNCTION() //required for event hookup
-	void ReconstructExplorationCost();
+	//UFUNCTION() //required for event hookup
+	//void ReconstructExplorationCost();
 };

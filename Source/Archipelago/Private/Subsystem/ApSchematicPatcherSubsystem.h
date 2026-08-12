@@ -109,6 +109,41 @@ public:
 	TArray<TSubclassOf<UFGRecipe>> alternativeRecipes;
 };
 
+USTRUCT()
+struct ARCHIPELAGO_API FApReplicatedSlotData
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY()
+	bool IsExplorationGoalEnabled;
+
+	UPROPERTY()
+	bool RequireAllGoals;
+
+	UPROPERTY()
+	TMap<int64, int> ExplorationGoalCosts;
+
+	UPROPERTY()
+	TArray<TArray<TMap<int64, int>>> hubLayout;
+
+	const TMap<int64, int> GetCostsForMilestone(int tier, int milestone)
+	{
+		int8 correctedTier = tier - 1;
+		int8 correctedMilestone = milestone - 1;
+
+		fgcheck(correctedTier >= 0);
+		fgcheck(correctedMilestone >= 0);
+
+		if ((correctedTier <= (hubLayout.Num() - 1)) && (correctedMilestone <= (hubLayout[correctedTier].Num() - 1))) {
+			return hubLayout[correctedTier][correctedMilestone];
+		}
+		else {
+			return TMap<int64, int>();
+		}
+	}
+};
+
 UCLASS(Abstract, Blueprintable)
 class ARCHIPELAGO_API AApSchematicPatcherSubsystem : public AModSubsystem
 {
@@ -167,13 +202,16 @@ private:
 	UPROPERTY(ReplicatedUsing = OnRep_StarterRecipesReplicated)
 	TArray<FApReplicatedItemInfo> replicatedStarterRecipes;
 
+	UPROPERTY(ReplicatedUsing = OnRep_SlotDataReplicated)
+	FApReplicatedSlotData replicatedSlotData;
+
 	//on client available at game instance level
 	UContentLibSubsystem* contentLibSubsystem;
 
 	//on client replicated to check availability
 	UPROPERTY(ReplicatedUsing = OnRep_ConnectionInfoAvailable)
 	AApConnectionInfoSubsystem* connectionInfo;
-	UPROPERTY(ReplicatedUsing = OnRep_SlotDataAvailable)
+	//UPROPERTY(ReplicatedUsing = OnRep_SlotDataAvailable)
 	//AApSlotDataSubsystem* slotDataSubsystem;
 
 	//on client available locally
@@ -194,6 +232,7 @@ private:
 	bool receivedItemInfos = false;
 	bool receivedMilestones = false;
 	bool receivedStarterRecipes = false;
+	bool receivedSlotData = false;
 	bool isInitialized = false;
 	bool hasPatchedSchematics = false;
 
@@ -239,8 +278,10 @@ private:
 	void OnBaseGameSubsystemsAvailable();
 	UFUNCTION() //required for event hookup
 	void OnRep_ConnectionInfoAvailable();
+	//UFUNCTION() //required for event hookup
+	//void OnRep_SlotDataAvailable();
 	UFUNCTION() //required for event hookup
-	void OnRep_SlotDataAvailable();
+	void OnRep_SlotDataReplicated();
 
 public:
 	UFUNCTION(BlueprintImplementableEvent)
