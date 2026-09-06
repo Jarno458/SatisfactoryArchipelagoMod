@@ -1065,7 +1065,7 @@ void AApSubsystem::SetGiftBoxState(bool open, const TSet<FString>& acceptedTrait
 
 	operations.Add(MakeShared<FJsonValueObject>(updateOperation));
 
-	FString key = FString::Format(TEXT("GiftBox;{0}"), { connectionInfoSubsystem->GetCurrentPlayerTeam() });
+	FString key = FString::Format(TEXT("GiftBoxes;{0}"), { connectionInfoSubsystem->GetCurrentPlayerTeam() });
 
 	TSharedRef<FJsonObject> setCmd = MakeShared<FJsonObject>();
 	setCmd->SetStringField("cmd", "Set");
