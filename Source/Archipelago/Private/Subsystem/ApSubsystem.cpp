@@ -1049,7 +1049,6 @@ void AApSubsystem::SetGiftBoxState(bool open, const TSet<FString>& acceptedTrait
 	TSharedRef<FJsonObject> giftBoxObject = MakeShared<FJsonObject>();
 	giftBoxObject->SetField("minimum_gift_data_version", MakeShared<FJsonValueNumberString>(FString::FromInt(3)));
 	giftBoxObject->SetField("maximum_gift_data_version", MakeShared<FJsonValueNumberString>(FString::FromInt(3)));
-	giftBoxObject->SetNumberField("maximum_gift_data_version", 3);
 	giftBoxObject->SetBoolField("is_open", open);
 	giftBoxObject->SetBoolField("accepts_any_gift", false);
 	giftBoxObject->SetArrayField("desired_traits", traits);
