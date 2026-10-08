@@ -19,8 +19,9 @@ when you install it using the Satisfactory Mod Manager:
 
 - [ContentLib](https://ficsit.app/mod/ContentLib) - Runtime content generation.
 - [Free Samples](https://ficsit.app/mod/FreeSamples) - Used to implement the Free Samples options. Even if you don't have this game option enabled, the mod will still be present, but its functionality will be disabled.
+- [Additional Depots](https://ficsit.app/mod/AdditionalDepots) - Implements additional separate Dimensional Depot pools you can build from. Bundles get delivered here, except for your starting inventory, which goes directly to the host's inventory, with overflow going here.
 - [MAM Enhancer](https://ficsit.app/mod/MAMTips) - Allows viewing MAM research nodes in detail. Enables you to hover over the items/unlocks of a node to see more info, especially important when their names get long.
-- [FixClientResourceSinkPoints](https://ficsit.app/mod/FixClientResourceSinkPoints) - Fixes a bug where AWESOME Sink point values aren't loaded properly on multiplayer clients.
+- [Fix Client Resource Sink Points](https://ficsit.app/mod/FixClientResourceSinkPoints) - Fixes a bug where AWESOME Sink point values aren't loaded properly on multiplayer clients.
 - [Hover Pack Fuse Reminder](https://ficsit.app/mod/HoverpackFuseReminder) - Randomization means pioneers can get access to hoverpacks while their power grids can't yet handle the power draw. This mod reminds the player if they're wearing a hoverpack when resetting fuses.
 
 ## Certified Compatible Mods
