@@ -294,7 +294,7 @@ const TMap<int64, const TArray<FString>> UApMappings::ItemIdToGameRecipe = {
 	{1338277, {TEXT("Recipe_Alternate_BoltedFrame")}},
 	{1338278, {TEXT("Recipe_Alternate_ModularFrame")}},
 	{1338279, {TEXT("Recipe_ModularFrameHeavy")}},
-	{1338280, {TEXT("Recipe_Alternate_FlexibleFramework")}},
+	{1338280, {TEXT("/Script/Engine.Blueprint'/Game/FactoryGame/Recipes/AlternateRecipes/New_Update3/Recipe_Alternate_HeavyFlexibleFrame.Recipe_Alternate_HeavyFlexibleFrame'")}},
 	{1338281, {TEXT("Recipe_Alternate_ModularFrameHeavy")}},
 	{1338282, {TEXT("Recipe_EncasedIndustrialBeam")}},
 	{1338283, {TEXT("Recipe_Alternate_EncasedIndustrialBeam")}},
